@@ -1,8 +1,8 @@
 ---
 kind: technique
 title: "Oracles: how an agent knows a mod actually works"
-tags: [verification, testing, trace-replay, round-trip, screenshots, measurement, circuit-breaker]
-date: 2026-09-30
+tags: [verification, testing, trace-replay, round-trip, screenshots, measurement, circuit-breaker, stale-capture]
+date: 2026-10-01
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["@rehan_shei"]
 links: []
@@ -50,8 +50,23 @@ Rules that make oracles work for agents:
 3. **"Works in the fake host" isn't "works in the game".**
    - **Cause:** the real game adds things the fake can't model (pause menus, idle cameras, window focus).
    - **Fix:** keep the fake for fast iteration, and run the real game before calling it done.
+4. **The screenshot oracle froze and kept answering.** (2026-10-01, `um win shot` = Windows.Graphics.Capture,
+   with ReShade post-processing active in the game.)
+   - **Symptom:** three captures taken minutes apart were **byte-identical** (same SHA-256), yet the process
+     was demonstrably rendering — 7.2 s of CPU time per 5 s of wall clock. The frames *looked* plausible, so
+     the oracle kept returning a confident answer about a frame that had not changed.
+   - **Cause:** once the swapchain goes through ReShade / independent flip, Graphics.Capture stops tracking
+     the window and replays its last composed frame.
+   - **Fix:** prove the oracle is live before trusting it — take two captures a second apart and compare
+     hashes; if they match while the game is animating, the oracle is dead. Then use a screenshot taken from
+     *inside* the thing you are measuring (ReShade's own `Print Screen` writes the post-processed frame next
+     to its DLL). Beware the reverse trap too: a legitimately static scene makes two identical captures, so
+     check the process is actually burning CPU.
+   - **Why this one matters:** a frozen oracle inverts conclusions. Here it would have said "the shader is
+     not running" when the truth was "the shader runs fine and the depth it reads is empty".
 
 ## Seen in
 - [Minecraft inside GTA V](../games/gta-v/minecraft-passthrough.md)
 - [Eye of Cthulhu RL agent](../games/terraria/eye-of-cthulhu-rl-agent.md)
 - [San Franciscans civ](../games/age-of-empires-ii-de/san-franciscans-civ.md)
+- [Black Myth: Wukong — ReShade depth dead end](../games/black-myth-wukong/reshade-depth-dead-end.md) (Gotcha 4)
