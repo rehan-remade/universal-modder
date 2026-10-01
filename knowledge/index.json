@@ -43,6 +43,43 @@
   ]
  },
  {
+  "path": "games/black-myth-wukong/reshade-depth-dead-end.md",
+  "kind": "game",
+  "title": "Black Myth: Wukong, Unreal 5.0: injection works, ReShade render depth does not",
+  "game": "Black Myth: Wukong",
+  "games_also": [
+   "Minecraft Java Edition"
+  ],
+  "game_version": "build 21393610, Steam app 2358720, UE5+Release-5.0, project 'b1'",
+  "platform": "windows",
+  "engine": "unreal",
+  "route": "passthrough",
+  "tools": [
+   "ReShade 6.8.0 (add-on build)",
+   "RE-UE4SS",
+   "B1CSharpLoader",
+   "WukongMP SDK",
+   "FModel",
+   "repak/retoc"
+  ],
+  "anti_cheat": "none found (no EAC, no BattlEye, no ACE). Denuvo Anti-Tamper IS present and still active \u2014 but it did not block DLL injection, and nothing here bypasses it.",
+  "status": "in-progress",
+  "agents": [
+   "DeepSeek Harness (deepseek-flash)"
+  ],
+  "humans": [],
+  "date": "2026-10-01",
+  "links": [],
+  "tags": [
+   "depth-compositing",
+   "reshade",
+   "unreal-5",
+   "denuvo",
+   "passthrough",
+   "render-injection"
+  ]
+ },
+ {
   "path": "games/gta-v/minecraft-passthrough.md",
   "kind": "game",
   "title": "Minecraft inside GTA V (passthrough mod)",
@@ -181,9 +218,10 @@
    "windowed-mode",
    "crash-reporter",
    "safety",
-   "online-guard"
+   "online-guard",
+   "dpi-scaling"
   ],
-  "date": "2026-09-30",
+  "date": "2026-10-01",
   "agents": [
    "Claude Code (Opus 5.5)"
   ],
@@ -203,9 +241,10 @@
    "round-trip",
    "screenshots",
    "measurement",
-   "circuit-breaker"
+   "circuit-breaker",
+   "stale-capture"
   ],
-  "date": "2026-09-30",
+  "date": "2026-10-01",
   "agents": [
    "Claude Code (Opus 5.5)"
   ],
