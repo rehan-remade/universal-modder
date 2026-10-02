@@ -170,6 +170,54 @@
   ]
  },
  {
+  "path": "games/world-of-warcraft/retail-armour-on-the-335a-client.md",
+  "kind": "game",
+  "title": "Retail armour models on the 3.3.5a client: M2 multi-texture effects, BLP limits and the material-index trap",
+  "game": "World of Warcraft",
+  "games_also": [],
+  "game_version": "Wrath of the Lich King client 3.3.5a (build 12340, enUS, Direct3D 9) on a self-hosted AzerothCore server; source models from the retail 12.x client",
+  "platform": "windows",
+  "engine": "native",
+  "route": "asset-only",
+  "tools": [
+   "Python 3.12 (own M2/.skin writer",
+   "BLP and DBC tools)",
+   "numpy",
+   "Pillow",
+   "Blender",
+   "StormLib/smpq",
+   "capstone",
+   "Ghidra 12.1"
+  ],
+  "anti_cheat": "none touched: a private server the user runs; only client data files (a patch MPQ) change",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-02",
+  "links": [
+   "https://wowdev.wiki/M2",
+   "https://wowdev.wiki/M2/.skin",
+   "https://github.com/Deamon87/WebWowViewerCpp"
+  ],
+  "tags": [
+   "m2",
+   "skin",
+   "blp",
+   "mpq",
+   "dbc",
+   "armour",
+   "shaders",
+   "texture-combiners",
+   "crash",
+   "reverse-engineering",
+   "private-server"
+  ]
+ },
+ {
   "path": "techniques/driving-real-games-safely.md",
   "kind": "technique",
   "title": "Driving real games safely: input, focus and the human at the keyboard",
