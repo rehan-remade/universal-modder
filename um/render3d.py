@@ -42,10 +42,24 @@ MOTIONS = {
 }
 
 
+def _blender_sort_key(exe: str) -> tuple:
+    """Sort installed Windows builds newest first: 'Blender 5.2' beats 'Blender 4.3',
+    and 'Blender 10.0' beats 'Blender 9.0' (a plain string sort would get that wrong)."""
+    folder = Path(exe).parent.name.replace("Blender", "").replace(".", " ").split()
+    nums = [int(c) if c.isdigit() else 0 for c in folder]
+    return tuple(nums + [0] * (4 - len(nums)))
+
+
 def blender_bin() -> str:
     b = os.environ.get("BLENDER") or shutil.which("blender")
     if not b:
-        for c in ("/Applications/Blender.app/Contents/MacOS/Blender", r"C:\Program Files\Blender Foundation\Blender\blender.exe"):
+        # Blender up to 4.x installs to "Blender Foundation\Blender\"; 5.x versions the folder
+        # ("Blender Foundation\Blender 5.2\"), so glob instead of hardcoding one path.
+        winroot = Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Blender Foundation"
+        cands = ["/Applications/Blender.app/Contents/MacOS/Blender"]
+        cands += sorted((str(p) for p in winroot.glob("Blender*/blender.exe")),
+                        key=_blender_sort_key, reverse=True)
+        for c in cands:
             if Path(c).exists():
                 return c
         die("Blender not found: install it (blender.org, or `snap install blender --classic`) or set BLENDER=/path/to/blender")

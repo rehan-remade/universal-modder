@@ -3,6 +3,7 @@
     uv run --with pytest pytest -q
 """
 import json
+import shutil
 import struct
 import subprocess
 import sys
@@ -13,7 +14,7 @@ from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from um import fal, publish, scan, sprite, video  # noqa: E402
+from um import fal, publish, render3d, scan, sprite, video  # noqa: E402
 
 
 # --------------------------------------------------------------------------- scan
@@ -196,7 +197,7 @@ def test_publish_check(tmp_path, capsys):
 
 # --------------------------------------------------------------------------- video
 
-@pytest.mark.skipif(subprocess.run(["which", "ffmpeg"], capture_output=True).returncode, reason="needs ffmpeg")
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg")
 def test_compile_small_edl(tmp_path):
     for i, color in enumerate(["red", "blue"]):
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", f"testsrc2=s=640x360:d=3:r=30", "-f", "lavfi", "-i", "sine=f=440:d=3",
@@ -257,3 +258,48 @@ def test_kb_check_rejects_secrets_and_dumps(tmp_path):
                     f"```c\n{code}\n```\n" + "FAL" + "_KEY=abcdefghijklmnopqrstuvwxyz0123\n")
     fails, _ = kb.check_note(note)
     assert any("code block" in f for f in fails) and any("FAL_KEY" in f for f in fails)
+
+
+# --------------------------------------------------------------------------- render3d
+
+def _fake_blender(root: Path, folder: str) -> str:
+    """Make a blender.exe under <root>/Blender Foundation/<folder>/ and return its path."""
+    exe = root / "Blender Foundation" / folder / "blender.exe"
+    exe.parent.mkdir(parents=True, exist_ok=True)
+    exe.write_text("")
+    return str(exe)
+
+
+def test_blender_bin_prefers_env_var(tmp_path, monkeypatch):
+    want = _fake_blender(tmp_path, "Blender 5.2")
+    monkeypatch.setenv("BLENDER", want)
+    assert render3d.blender_bin() == want
+
+
+def test_blender_bin_finds_versioned_windows_folder(tmp_path, monkeypatch):
+    """Blender 5.x installs to 'Blender Foundation\\Blender 5.2\\', not '\\Blender\\'."""
+    monkeypatch.delenv("BLENDER", raising=False)
+    monkeypatch.setattr("shutil.which", lambda _n: None)
+    monkeypatch.setenv("ProgramFiles", str(tmp_path))
+    want = _fake_blender(tmp_path, "Blender 5.2")
+    assert render3d.blender_bin() == want
+
+
+def test_blender_bin_prefers_newest_install(tmp_path, monkeypatch):
+    monkeypatch.delenv("BLENDER", raising=False)
+    monkeypatch.setattr("shutil.which", lambda _n: None)
+    monkeypatch.setenv("ProgramFiles", str(tmp_path))
+    _fake_blender(tmp_path, "Blender 4.3")
+    want = _fake_blender(tmp_path, "Blender 5.2")
+    assert render3d.blender_bin() == want
+    # numeric, not lexical: a string sort would put "Blender 9.0" above "Blender 10.0"
+    _fake_blender(tmp_path, "Blender 10.0")
+    assert render3d.blender_bin() == str(tmp_path / "Blender Foundation" / "Blender 10.0" / "blender.exe")
+
+
+def test_blender_bin_reports_when_missing(tmp_path, monkeypatch):
+    monkeypatch.delenv("BLENDER", raising=False)
+    monkeypatch.setattr("shutil.which", lambda _n: None)
+    monkeypatch.setenv("ProgramFiles", str(tmp_path / "empty"))
+    with pytest.raises(SystemExit):
+        render3d.blender_bin()
