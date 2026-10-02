@@ -38,6 +38,9 @@ TECH_KEYS = ["kind", "title", "tags", "date", "agents"]
 GAME_SECTIONS = ["setup", "route", "verification", "gotchas"]
 MAX_BLOCK_WARN, MAX_BLOCK_FAIL = 60, 150
 MAX_NOTE_KB, MAX_MEDIA_MB = 120, 1.5
+# Notes and the index are UTF-8 with \n line ends on every OS. Without this, Windows reads and writes them in its
+# ANSI code page with \r\n: the index's "·" separators come out as invalid UTF-8 and `um kb check --index` fails.
+TEXT = {"encoding": "utf-8", "newline": "\n"}
 
 
 # --------------------------------------------------------------------------- where the notes are
@@ -75,7 +78,7 @@ def sync(quiet: bool = False) -> Path:
             dst.write_bytes(r.read())
     shutil.rmtree(root, ignore_errors=True)
     tmp.rename(root)
-    (root / ".synced").write_text(str(time.time()))
+    (root / ".synced").write_text(str(time.time()), **TEXT)
     if not quiet:
         print(f"synced {len(paths)} files from github.com/{REPO} -> {root}")
     return root
@@ -91,7 +94,7 @@ def resolve_root(explicit: str | None = None, remote: bool = False) -> Path:
         return loc
     root = cache_root()
     stamp = root / ".synced"
-    stale = not stamp.exists() or time.time() - float(stamp.read_text() or 0) > 86400
+    stale = not stamp.exists() or time.time() - float(stamp.read_text(encoding="utf-8") or 0) > 86400
     if stale:
         try:
             return sync(quiet=True)
@@ -104,7 +107,7 @@ def resolve_root(explicit: str | None = None, remote: bool = False) -> Path:
 # --------------------------------------------------------------------------- notes
 
 def parse(path: Path) -> tuple[dict, str]:
-    text = path.read_text(errors="replace")
+    text = path.read_text(encoding="utf-8", errors="replace")
     m = re.match(r"^---\s*\n(.*?)\n---\s*\n?(.*)$", text, re.S)
     if not m:
         return {}, text
@@ -167,7 +170,7 @@ def search(root: Path, terms: list[str], game=None, engine=None, route=None, lim
 def check_note(path: Path, root: Path | None = None) -> tuple[list[str], list[str]]:
     from um.publish import DECOMP_PATTERNS, SECRET_PATTERNS
     fails, warns = [], []
-    text = path.read_text(errors="replace")
+    text = path.read_text(encoding="utf-8", errors="replace")
     meta, body = parse(path)
     if not meta:
         return [f"{path}: no YAML front matter (start the file with --- ... --- ; see knowledge/TEMPLATE.md)"], []
@@ -293,8 +296,16 @@ def new_note(root: Path, game: str | None, title: str, kind: str = "game", from_
     if path.exists():
         die(f"{path} exists")
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(f"---\n{front}---\n{body}")
+    path.write_text(f"---\n{front}---\n{body}", **TEXT)
     return path
+
+
+def pr_head(branch: str, fork_url: str | None) -> str:
+    """The --head for `gh pr create`. gh looks a bare branch name up in the base repo, so a PR from a fork needs
+    "<fork owner>:<branch>" (else: "Head ref must be a branch"). fork_url: the fork remote's URL, None when pushing
+    to the repo itself."""
+    m = re.search(r"github\.com[:/]+([^/]+)/", fork_url or "")
+    return f"{m.group(1)}:{branch}" if m else branch
 
 
 def open_pr(path: Path, yes: bool):
@@ -334,13 +345,16 @@ def open_pr(path: Path, yes: bool):
     if not shutil.which("gh"):
         die("needs the GitHub CLI (gh) logged in; or push a branch and open the PR on github.com")
     idx, rows = build_index(root)
-    (root / "INDEX.md").write_text(idx)
-    (root / "index.json").write_text(json.dumps(rows, indent=1, default=str))
+    (root / "INDEX.md").write_text(idx, **TEXT)
+    (root / "index.json").write_text(json.dumps(rows, indent=1, default=str) + "\n", **TEXT)
     for c in cmds:
         if c[:3] == ["um", "kb", "index"]:
             continue
         if c[:3] == ["gh", "repo", "fork"] and subprocess.run(["git", "remote", "get-url", "fork"], cwd=repo, capture_output=True).returncode == 0:
             continue
+        if c[:3] == ["gh", "pr", "create"] and remote == "fork":
+            url = subprocess.run(["git", "remote", "get-url", "fork"], cwd=repo, capture_output=True, text=True).stdout.strip()
+            c[c.index("--head") + 1] = pr_head(branch, url)
         r = subprocess.run(c, cwd=repo, capture_output=True, text=True)
         if r.returncode:
             die(f"{' '.join(c[:4])} failed: {(r.stderr or r.stdout).strip()[-800:]}")
@@ -377,7 +391,7 @@ def main(a):
             if not cands:
                 die(f"no note {a.note!r} in {root}")
             p = cands[0]
-        print(p.read_text())
+        print(p.read_text(encoding="utf-8"))
         return
     if c == "new":
         root = Path(a.root) if a.root else local_root()
@@ -400,7 +414,7 @@ def main(a):
             bad += bool(fails)
         if root and a.index and not a.paths:
             idx, _ = build_index(root)
-            if not (root / "INDEX.md").exists() or (root / "INDEX.md").read_text() != idx:
+            if not (root / "INDEX.md").exists() or (root / "INDEX.md").read_text(encoding="utf-8") != idx:
                 print("FAIL knowledge/INDEX.md is out of date: run `um kb index`")
                 bad += 1
         print(f"{'FAIL' if bad else 'PASS'}: {len(paths)} notes checked")
@@ -410,8 +424,8 @@ def main(a):
         if not root:
             die("no local knowledge/ folder")
         idx, rows = build_index(root)
-        (root / "INDEX.md").write_text(idx)
-        (root / "index.json").write_text(json.dumps(rows, indent=1, default=str) + "\n")
+        (root / "INDEX.md").write_text(idx, **TEXT)
+        (root / "index.json").write_text(json.dumps(rows, indent=1, default=str) + "\n", **TEXT)
         print(f"{root / 'INDEX.md'}: {len(rows)} notes")
         return
     if c == "pr":
