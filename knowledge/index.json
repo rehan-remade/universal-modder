@@ -90,6 +90,50 @@
   ]
  },
  {
+  "path": "games/mewgenics/combat-roster-panel.md",
+  "kind": "game",
+  "title": "Combat Roster Panel: a native ImGui party panel for Mewgenics, drawn with the game's own art, fonts and text",
+  "game": "Mewgenics",
+  "games_also": [],
+  "game_version": "1.1.21239, Steam build 25143593, Mewgenics.exe SHA256 4127cd6a...77ea (SizeOfImage 0x1574000)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "native-hook",
+  "tools": [
+   "Mewjector 3 (built from source)",
+   "MSVC 14.51 + CMake/Ninja",
+   "Dear ImGui 1.92.3",
+   "Ghidra 12.1.4 headless",
+   "capstone",
+   "ReadProcessMemory (read-only live inspection)"
+  ],
+  "anti_cheat": "none (single player)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "@TotSamiyMorzh"
+  ],
+  "date": "2026-10-02",
+  "links": [
+   "https://github.com/TotSamiyMorzh/mewgenics-combat-roster"
+  ],
+  "tags": [
+   "native-dll",
+   "imgui",
+   "overlay",
+   "sdl3",
+   "opengl",
+   "swf",
+   "flash-rasteriser",
+   "fonts",
+   "localisation",
+   "portraits",
+   "ui"
+  ]
+ },
+ {
   "path": "games/terraria/eye-of-cthulhu-rl-agent.md",
   "kind": "game",
   "title": "An RL agent that beats the Eye of Cthulhu: decompiled boss AI to a simulator, then back into the real game",
