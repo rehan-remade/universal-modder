@@ -72,10 +72,10 @@ def check(mod: str, game: str | None = None) -> int:
             h = _sha1(f)
             for gp in by_size[sz]:
                 if _sha1(gp) == h:
-                    fails.append(f"game file copied verbatim: {f.relative_to(root)}  (== {gp.relative_to(g)})")
+                    fails.append(f"game file copied verbatim: {f.relative_to(root).as_posix()}  (== {gp.relative_to(g).as_posix()})")
                     break
     for f in files:
-        rel = f.relative_to(root)
+        rel = f.relative_to(root).as_posix()        # same report on every OS (Windows would print src\Mod.cs)
         if f.name == ".env" or f.name.endswith(".env"):
             fails.append(f"env file (secrets?): {rel}")
         if f.suffix.lower() in ARCHIVE_EXT and f.stat().st_size > 5 << 20:
