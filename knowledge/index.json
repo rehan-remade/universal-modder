@@ -43,6 +43,50 @@
   ]
  },
  {
+  "path": "games/elden-ring/cs2-conversion-of-elden-ring-offline-native-rust-dll-via-me3.md",
+  "kind": "game",
+  "title": "CS2 conversion of Elden Ring offline: native Rust DLL via me3 (fall death, spirit springs, 3D inspect, params)",
+  "game": "Elden Ring",
+  "games_also": [
+   "Counter-Strike 2"
+  ],
+  "game_version": "Elden Ring 1.17.1 (exe 2.7.1.0, Steam build 25080141, regulation 1.17.1), Steam on Linux (Proton), CS2 install of 2026-10 as the asset source",
+  "platform": "proton",
+  "engine": "fromsoft",
+  "route": "native-hook",
+  "tools": [
+   "me3 0.13.0",
+   "fromsoftware-rs 0.14.0 (eldenring crate, vendored)",
+   "hudhook 0.9.3 (vendored, patched)",
+   "Rust 1.98 + cargo-xwin (x86_64-pc-windows-msvc)",
+   "WitchyBND 3.0.1.0 linux-x64",
+   "Source2Viewer-CLI (VRF) 20.0",
+   "Wine/vkd3d for offline D3D12 + ImGui oracles"
+  ],
+  "anti_cheat": "EasyAntiCheat: never touched. me3 launches the game offline with its own profile and a separate save file (ER0000.cs2er.sl2); Steam launch stays the untouched game",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-03",
+  "links": [],
+  "tags": [
+   "total-conversion",
+   "mashup",
+   "d3d12-overlay",
+   "imgui",
+   "regulation-params",
+   "msb",
+   "fall-death",
+   "spirit-springs",
+   "movement-controller",
+   "skins",
+   "case-opening",
+   "3d-inspect"
+  ]
+ },
+ {
   "path": "games/gta-v/minecraft-passthrough.md",
   "kind": "game",
   "title": "Minecraft inside GTA V (passthrough mod)",
