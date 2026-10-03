@@ -131,7 +131,7 @@ Paths come from environment variables, with these defaults:
    loads the system `dxgi.dll` ahead of a proxy in its folder, so the usual `dxgi.dll` install never runs. It
    also writes `ReShade.ini` (if there is none), `ReShadePreset.ini`, and the effect in
    `reshade-shaders\Shaders\`.
-   - It stops rather than replace a `dinput8.dll`, `ReShade64.asi` or `args.txt` that isn't its own
+   - It stops rather than replaces a `dinput8.dll`, `ReShade64.asi` or `args.txt` that isn't its own
      (`FORCE=1` overrides).
    - `install.sh --remove` deletes exactly the files it adds.
    - `build.bat` also works from a Windows prompt, in a copy of `gta/` with `third_party/` fetched.
