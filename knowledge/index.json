@@ -90,6 +90,51 @@
   ]
  },
  {
+  "path": "games/halo-3-mcc/halo-3-weapons-covenant-vehicles-and-maps-ported-into-minecr.md",
+  "kind": "game",
+  "title": "Halo 3 weapons, Covenant, vehicles and maps ported into Minecraft from your own MCC install",
+  "game": "Halo 3 (MCC)",
+  "games_also": [
+   "Minecraft Java Edition"
+  ],
+  "game_version": "Halo: The Master Chief Collection, Steam app 976730, build 19905945 (Halo 3 cache type MccHalo3U13); Minecraft Java 1.21.4 + Fabric loader 0.19.3/0.19.5, Fabric API 0.119.4+1.21.4",
+  "platform": "windows",
+  "engine": "native",
+  "route": "loader-api",
+  "tools": [
+   "Fabric Loom 1.18 (Mojang mappings)",
+   "Reclaimer 2.1.1644 via pythonnet",
+   "Reclaimer RMF importer 1.0.5 (its pure-Python reader)",
+   "Assembly Halo3MCC plugin layouts",
+   "vgmstream r2117",
+   "ffmpeg"
+  ],
+  "anti_cheat": "EasyAntiCheat on MCC; never launched or touched. The route only reads Halo's files on disk.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "daanishmufti"
+  ],
+  "date": "2026-10-03",
+  "links": [],
+  "tags": [
+   "content-port",
+   "mashup",
+   "blam",
+   "reclaimer",
+   "pythonnet",
+   "fmod",
+   "fsb5",
+   "voxelize",
+   "maps",
+   "fabric",
+   "shields",
+   "vehicles"
+  ]
+ },
+ {
   "path": "games/terraria/eye-of-cthulhu-rl-agent.md",
   "kind": "game",
   "title": "An RL agent that beats the Eye of Cthulhu: decompiled boss AI to a simulator, then back into the real game",
