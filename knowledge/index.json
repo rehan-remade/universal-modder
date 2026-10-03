@@ -43,6 +43,43 @@
   ]
  },
  {
+  "path": "games/darkest-dungeon/data-mod-randomizer.md",
+  "kind": "game",
+  "title": "A seeded randomizer (trinkets, heroes, monsters, curios, quirks, quests) as a Darkest Dungeon data mod",
+  "game": "Darkest Dungeon",
+  "games_also": [],
+  "game_version": "Steam app 262060, buildid 25463639, with DLCs Crimson Court, Shieldbreaker, Color of Madness, Musketeer",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Python 3.14 (stdlib only)",
+   "localization.exe (ships with the game)",
+   "git diff --no-index"
+  ],
+  "anti_cheat": "none (single player); the multiplayer arena DLC folder was deliberately left untouched",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "Jagou"
+  ],
+  "date": "2026-10-03",
+  "links": [],
+  "tags": [
+   "randomizer",
+   "data-mod",
+   "trinkets",
+   "buffs",
+   "localization",
+   "curios",
+   "quirks",
+   "quest-rewards",
+   "balancing"
+  ]
+ },
+ {
   "path": "games/gta-v/minecraft-passthrough.md",
   "kind": "game",
   "title": "Minecraft inside GTA V (passthrough mod)",
