@@ -19,7 +19,7 @@ Whenever the agent sends input to a real game window.
 
 ## How
 - **Input only reaches the game:**
-  - send only while the game window is the foreground (`um win drive` / WinDrive refuses otherwise);
+  - send only while the game window is in the foreground (`um win drive` / WinDrive refuses otherwise);
   - windowed games may drop the foreground on click, so "nothing in the foreground and the cursor over the
     game" also counts as safe.
 - **Check the human first:** `um win drive --proc <Game> idle` gives seconds since the last real input. If
