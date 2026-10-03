@@ -43,6 +43,50 @@
   ]
  },
  {
+  "path": "games/borderlands-2/bl3-weapons-and-movement-in-borderlands-2-willow2-sdk-mods.md",
+  "kind": "game",
+  "title": "BL3 weapons and movement in Borderlands 2 (Willow2 SDK mods)",
+  "game": "Borderlands 2",
+  "games_also": [
+   "Borderlands 3"
+  ],
+  "game_version": "Borderlands 2, Steam 49520, changelist 2863302 (exe v8639); Willow2 Mod Manager v3.8 (unrealsdk 3.2.0, pyunrealsdk 1.10.0, Python 3.14)",
+  "platform": "windows",
+  "engine": "unreal",
+  "route": "loader-api",
+  "tools": [
+   "Willow2 Mod Manager v3.8 (pyunrealsdk)",
+   "OpenBLCMM-Data BL2 dump (2023-04-20)",
+   "pure-Python LZO1X package reader",
+   "BPD graph decoder",
+   "um scan"
+  ],
+  "anti_cheat": "none; single player only (co-op untested)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "@Pherdee-boi"
+  ],
+  "date": "2026-10-03",
+  "links": [],
+  "tags": [
+   "borderlands",
+   "gearbox",
+   "ue3",
+   "pyunrealsdk",
+   "weapons",
+   "anointments",
+   "movement",
+   "slide",
+   "mantle",
+   "ground-slam",
+   "projectiles",
+   "hooks"
+  ]
+ },
+ {
   "path": "games/gta-v/minecraft-passthrough.md",
   "kind": "game",
   "title": "Minecraft inside GTA V (passthrough mod)",
@@ -213,6 +257,31 @@
    "@rehan_shei"
   ],
   "links": []
+ },
+ {
+  "path": "techniques/reading-ue3-gearbox-games-offline.md",
+  "kind": "technique",
+  "title": "Reading UE3 Gearbox games offline: LZO packages, function signatures and behavior graphs",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "@Pherdee-boi"
+  ],
+  "date": "2026-10-03",
+  "links": [],
+  "tags": [
+   "ue3",
+   "unreal3",
+   "gearbox",
+   "borderlands",
+   "upk",
+   "lzo",
+   "behavior-provider-definition",
+   "reverse-engineering",
+   "signatures"
+  ]
  },
  {
   "path": "techniques/recording-game-footage.md",
