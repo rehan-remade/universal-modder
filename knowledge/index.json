@@ -603,6 +603,383 @@
   ]
  },
  {
+  "path": "games/world-of-warcraft/addon-development-335a.md",
+  "kind": "game",
+  "title": "Writing and fixing 3.3.5a addons: Lua 5.1 gaps, protected calls, the guild bank, macros and a test harness",
+  "game": "World of Warcraft",
+  "games_also": [],
+  "game_version": "Wrath of the Lich King client 3.3.5a (build 12340, interface 30300); AdiBags, DialogUI, WeakAuras 5.22 backport, GearScoreLite",
+  "platform": "windows",
+  "engine": "native",
+  "route": "loader-api",
+  "tools": [
+   "Lua 5.1 / luac5.1 (in WSL)",
+   "a stubbed WoW API harness",
+   "BugSack"
+  ],
+  "anti_cheat": "none: the client's own addon API",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-02",
+  "links": [
+   "https://wowpedia.fandom.com/wiki/World_of_Warcraft_API",
+   "https://www.lua.org/manual/5.1/"
+  ],
+  "tags": [
+   "addons",
+   "lua",
+   "ui",
+   "guild-bank",
+   "adibags",
+   "macros",
+   "testing",
+   "interface-30300"
+  ]
+ },
+ {
+  "path": "games/world-of-warcraft/azerothcore-custom-modules.md",
+  "kind": "game",
+  "title": "Custom AzerothCore modules for a solo-with-bots WotLK server: offline gathering, auction payout and restock, mail and progression fixes",
+  "game": "World of Warcraft",
+  "games_also": [],
+  "game_version": "AzerothCore WotLK (3.3.5a) Playerbot fork, 2026-09 source; mod-individual-progression; client 3.3.5a build 12340",
+  "platform": "linux",
+  "engine": "native",
+  "route": "loader-api",
+  "tools": [
+   "AzerothCore module API (C++)",
+   "MySQL 8.4",
+   "TradeSkillMaster price data"
+  ],
+  "anti_cheat": "not applicable: the user's own server",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [
+   "https://github.com/azerothcore/azerothcore-wotlk",
+   "https://github.com/ZhengPeiRu21/mod-individual-progression"
+  ],
+  "tags": [
+   "azerothcore",
+   "modules",
+   "loot",
+   "mail",
+   "auction-house",
+   "progression",
+   "aq-war",
+   "pets",
+   "dbc-overrides",
+   "private-server"
+  ]
+ },
+ {
+  "path": "games/world-of-warcraft/azerothcore-playerbots-server-ops.md",
+  "kind": "game",
+  "title": "Running a self-hosted AzerothCore WotLK server with 1,500 playerbots: setup, performance and the traps",
+  "game": "World of Warcraft",
+  "games_also": [],
+  "game_version": "AzerothCore WotLK (3.3.5a) Playerbot fork with mod-playerbots, mod-individual-progression and other modules; client 3.3.5a build 12340",
+  "platform": "linux",
+  "engine": "native",
+  "route": "other",
+  "tools": [
+   "AzerothCore",
+   "mod-playerbots",
+   "MySQL 8.4",
+   "Debian 13",
+   "WSL2",
+   "tmux",
+   "gdb",
+   "systemd"
+  ],
+  "anti_cheat": "not applicable: the user's own server",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [
+   "https://github.com/azerothcore/azerothcore-wotlk",
+   "https://github.com/mod-playerbots/mod-playerbots",
+   "https://github.com/ZhengPeiRu21/mod-individual-progression"
+  ],
+  "tags": [
+   "private-server",
+   "azerothcore",
+   "playerbots",
+   "performance",
+   "mysql",
+   "wsl2",
+   "vps",
+   "build",
+   "operations"
+  ]
+ },
+ {
+  "path": "games/world-of-warcraft/bwl-pulled-through-the-floor-hit-sphere-los.md",
+  "kind": "game",
+  "title": "Blackwing Lair trash pulled through the floor: a Searing Totem and the hit-sphere line-of-sight leak in AzerothCore",
+  "game": "World of Warcraft",
+  "games_also": [],
+  "game_version": "AzerothCore WotLK (3.3.5a) Playerbot fork, 2026-10 source; vmaps and mmaps extracted from the 3.3.5a client (build 12340); a 40-player mod-playerbots raid",
+  "platform": "linux",
+  "engine": "native",
+  "route": "other",
+  "tools": [
+   "AzerothCore source",
+   "a small C++ tool linked against the core's collision library (StaticMapTree)",
+   "Python 3",
+   "MySQL 8.4"
+  ],
+  "anti_cheat": "not applicable: the user's own server",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [
+   "https://github.com/azerothcore/azerothcore-wotlk",
+   "https://github.com/mod-playerbots/mod-playerbots"
+  ],
+  "tags": [
+   "azerothcore",
+   "line-of-sight",
+   "vmaps",
+   "hit-sphere",
+   "totems",
+   "aggro",
+   "formations",
+   "playerbots",
+   "blackwing-lair",
+   "debugging",
+   "private-server"
+  ]
+ },
+ {
+  "path": "games/world-of-warcraft/client-texture-crashes-and-mpq.md",
+  "kind": "game",
+  "title": "Hunting 3.3.5a client crashes in texture packs: BLP size and format limits, MPQ priority and safe patch building",
+  "game": "World of Warcraft",
+  "games_also": [],
+  "game_version": "Wrath of the Lich King client 3.3.5a (build 12340, Direct3D 9 / d3d9ex, also under DXVK 3.1) with several third-party HD packs",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "StormLib / smpq (in WSL)",
+   "Python 3.12 (BLP scanner",
+   "repair and encoder)",
+   "a minidump parser",
+   "capstone"
+  ],
+  "anti_cheat": "none touched: client data files on a private server",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-02",
+  "links": [
+   "https://wowdev.wiki/BLP",
+   "https://wowdev.wiki/MPQ"
+  ],
+  "tags": [
+   "blp",
+   "textures",
+   "crash",
+   "minidump",
+   "mpq",
+   "load-order",
+   "hd-pack",
+   "dxt",
+   "palettised"
+  ]
+ },
+ {
+  "path": "games/world-of-warcraft/hd-character-customization.md",
+  "kind": "game",
+  "title": "Retail faces, hairstyles and hair colours on the 3.3.5a HD human: CharSections, skin-section and compositor rules",
+  "game": "World of Warcraft",
+  "games_also": [],
+  "game_version": "Wrath of the Lich King client 3.3.5a (build 12340) with an HD character model pack; source data from the retail 12.x client; AzerothCore server",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "Python 3.12 (CASC/DB2 readers",
+   "BLP writer",
+   "M2/skin editor)",
+   "numpy",
+   "scipy",
+   "Pillow",
+   "wow.export (reference for the makeup blend)"
+  ],
+  "anti_cheat": "none touched: client data files on a private server",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-02",
+  "links": [
+   "https://wowdev.wiki/DB/CharSections",
+   "https://wowdev.wiki/M2/.skin",
+   "https://github.com/Kruithne/wow.export"
+  ],
+  "tags": [
+   "character-customization",
+   "charsections",
+   "barbershop",
+   "hair",
+   "faces",
+   "skin",
+   "compositor",
+   "blp",
+   "retail-port"
+  ]
+ },
+ {
+  "path": "games/world-of-warcraft/item-physics-and-capes.md",
+  "kind": "game",
+  "title": "Retail item physics and cape motion on the 3.3.5a client: a Box2D-style solver driven by retail PHYS data",
+  "game": "World of Warcraft",
+  "games_also": [],
+  "game_version": "Wrath of the Lich King client 3.3.5a (build 12340); physics data from the retail 12.x client",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "MinGW-w64 i686 gcc (in WSL)",
+   "Python 3.12 (PHYS exporter)",
+   "wowdev.wiki PHYS documentation"
+  ],
+  "anti_cheat": "none touched: a private server the user runs; purely cosmetic motion of worn items",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-02",
+  "links": [
+   "https://wowdev.wiki/PHYS",
+   "https://box2d.org/"
+  ],
+  "tags": [
+   "physics",
+   "box2d",
+   "soft-constraints",
+   "capes",
+   "cloth",
+   "tassels",
+   "plumes",
+   "retail-port",
+   "solver"
+  ]
+ },
+ {
+  "path": "games/world-of-warcraft/per-item-skinned-addons-dll.md",
+  "kind": "game",
+  "title": "Per-item skinned armour on the 3.3.5a client: a proxy-DLL engine extension (add-on models, body texture layers, tabards)",
+  "game": "World of Warcraft",
+  "games_also": [],
+  "game_version": "Wrath of the Lich King client 3.3.5a (build 12340, enUS, 32-bit, Direct3D 9) on a self-hosted AzerothCore server",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "MinGW-w64 i686 gcc (in WSL)",
+   "capstone",
+   "Ghidra 12.1",
+   "Python 3.12",
+   "Blender"
+  ],
+  "anti_cheat": "none touched: a private server the user runs; Warden is configured server-side; the DLL only changes how worn items are drawn",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [
+   "https://wowdev.wiki/M2",
+   "https://github.com/Deamon87/WebWowViewerCpp"
+  ],
+  "tags": [
+   "m2",
+   "skinned-attachments",
+   "proxy-dll",
+   "inline-hooks",
+   "bone-matrices",
+   "character-component",
+   "body-texture",
+   "tabard",
+   "geosets"
+  ]
+ },
+ {
+  "path": "games/world-of-warcraft/playerbots-raid-tactics.md",
+  "kind": "game",
+  "title": "Teaching AzerothCore playerbots to raid: kill order from raid marks, boss positioning, lockouts and the strategy-reset traps",
+  "game": "World of Warcraft",
+  "games_also": [],
+  "game_version": "AzerothCore WotLK (3.3.5a) Playerbot fork + mod-playerbots (2026-09 source); client 3.3.5a build 12340",
+  "platform": "linux",
+  "engine": "native",
+  "route": "other",
+  "tools": [
+   "mod-playerbots (C++)",
+   "a small group-control addon (Lua 5.1)",
+   "lua5.1 test harness"
+  ],
+  "anti_cheat": "not applicable: the user's own server; bots are server-side",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [
+   "https://github.com/mod-playerbots/mod-playerbots"
+  ],
+  "tags": [
+   "playerbots",
+   "raid",
+   "ai",
+   "kill-order",
+   "raid-marks",
+   "positioning",
+   "instances",
+   "addon",
+   "private-server"
+  ]
+ },
+ {
   "path": "games/world-of-warcraft/retail-armour-on-the-335a-client.md",
   "kind": "game",
   "title": "Retail armour models on the 3.3.5a client: M2 multi-texture effects, BLP limits and the material-index trap",
