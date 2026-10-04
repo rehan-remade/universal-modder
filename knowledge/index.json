@@ -455,6 +455,37 @@
   ]
  },
  {
+  "path": "games/naruto-shippuden-ultimate-ninja-storm-4/porting-asbr-characters-into-storm-4-both-games-cpk-payloads.md",
+  "kind": "game",
+  "title": "Porting ASBR characters into Storm 4: both games' CPK payloads are encrypted",
+  "game": "Naruto Shippuden: Ultimate Ninja Storm 4",
+  "games_also": [
+   "JoJo's Bizarre Adventure: All-Star Battle R"
+  ],
+  "game_version": "Steam build 5376895 (steam 349040); ASBR Steam build 13123765 (steam 1372110)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "other",
+  "tools": [
+   "own read-only CRI CPK reader (Python, about 170 lines)"
+  ],
+  "anti_cheat": "none in Storm 4; EasyAntiCheat in ASBR (ASBR was never launched, only its files read)",
+  "status": "abandoned",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-04",
+  "links": [],
+  "tags": [
+   "cyberconnect2",
+   "cri-cpk",
+   "xfbin",
+   "crossover",
+   "encrypted-archives"
+  ]
+ },
+ {
   "path": "games/stick-it-to-the-stickman/instant-fail-choice-prompts-patching-a-unity-level-s-death-p.md",
   "kind": "game",
   "title": "Instant-fail choice prompts: patching a Unity level's death path with Harmony",
