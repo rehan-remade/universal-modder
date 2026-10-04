@@ -565,6 +565,43 @@
   ]
  },
  {
+  "path": "games/underrail/bg3-style-controller-support.md",
+  "kind": "game",
+  "title": "BG3-style controller support for Underrail: stick movement, context interaction, menus, bars and combat via a Cecil-patched input layer",
+  "game": "Underrail",
+  "games_also": [],
+  "game_version": "1.3.1.2, Steam build 21973456 (underrail.exe sha256 c76248ff...daa8a7c)",
+  "platform": "proton",
+  "engine": "xna-fna",
+  "route": "managed-patch",
+  "tools": [
+   "ilspycmd 8.2",
+   "Mono.Cecil 0.11.6",
+   ".NET 8 SDK",
+   "Pillow"
+  ],
+  "anti_cheat": "none (single-player, no integrity checks; Dotfuscator rename-only)",
+  "status": "working",
+  "agents": [
+   "Claude Code (claude-opus-5-5)"
+  ],
+  "humans": [],
+  "date": "2026-10-04",
+  "links": [],
+  "tags": [
+   "controller",
+   "gamepad",
+   "xinput",
+   "steam-deck",
+   "xna",
+   "dotfuscator",
+   "cecil",
+   "input-redirection",
+   "pathfinding",
+   "obfuscated-names"
+  ]
+ },
+ {
   "path": "games/victoria-2/south-central-gang-total-conversion.md",
   "kind": "game",
   "title": "South Central 1985: a Victoria 2 total conversion into an LA gang-territory game",
