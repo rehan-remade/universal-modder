@@ -216,7 +216,8 @@ class Recorder:
     """
     STARTUP = 0.3   # ffmpeg spawn + capture + encoder init before the first frame (measured ~0.24-0.3 s)
 
-    def __init__(self, exe=None, out="take", hwnd=None, title=None, fps=30, audio=True, crop=None, max_width=None, cq=19):
+    def __init__(self, exe=None, out="take", hwnd=None, title=None, fps=30, audio=True, crop=None, max_width=None, cq=19, pid=None):
+        self.pid = pid
         self.exe, self.hwnd, self.title, self.fps, self.audio_on, self.crop, self.max_width, self.cq = exe, hwnd, title, fps, audio, crop, max_width, cq
         self.base = to_win(Path(out).resolve()) if is_wsl() and not (len(out) > 1 and out[1] == ":") else out
         self.video = self.audio = None
@@ -234,9 +235,9 @@ class Recorder:
                  "h264_qsv": ["-c:v", "h264_qsv", "-global_quality", str(self.cq)]}.get(enc, ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18"])
         t_audio = time.time()
         if self.audio_on:
-            pid = pid_of(self.exe) if self.exe else None
+            pid = self.pid or (pid_of(self.exe) if self.exe else None)
             if not pid:
-                print("no pid for audio capture; recording video only", file=sys.stderr)
+                print("no pid for audio capture (give --exe or --pid); recording video only", file=sys.stderr)
             else:
                 self.audio = subprocess.Popen([ps_exe(), "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", tool_path("ProcLoopback.ps1"),
                                                "-TargetPid", str(pid), "-Out", self.base + ".audio.raw"],
@@ -386,7 +387,7 @@ def main(a):
             d.close()
     elif c == "record":
         crop = [int(v) for v in a.crop.split(":")] if a.crop else None
-        rec = Recorder(exe=a.exe, out=a.out, hwnd=a.hwnd, title=a.title, fps=a.fps, audio=not a.no_audio, crop=crop).start()
+        rec = Recorder(exe=a.exe, out=a.out, hwnd=a.hwnd, title=a.title, fps=a.fps, audio=not a.no_audio, crop=crop, pid=a.pid).start()
         try:
             if a.seconds:
                 time.sleep(a.seconds)
@@ -428,6 +429,7 @@ def register(sub):
             q.add_argument("--fps", type=int, default=30)
             q.add_argument("--no-audio", action="store_true")
             q.add_argument("--crop", help="left:top:right:bottom px to cut (e.g. ultrawide -> centre 16:9)")
+            q.add_argument("--pid", type=int, help="process to capture audio from, when --exe is ambiguous (e.g. two java.exe)")
         q.add_argument("--exe", help="window's executable name, e.g. AoE2DE_s.exe (regex)")
         q.add_argument("--hwnd", type=int)
         q.add_argument("--title", help="window title regex")

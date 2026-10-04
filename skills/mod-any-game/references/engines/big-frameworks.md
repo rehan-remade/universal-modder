@@ -32,7 +32,7 @@ reinvent it. Check each one's GitHub/Nexus page for the version matching the gam
 - **Scripts:** ScriptHookV (and ScriptHookVDotNet for C#) + Ultimate ASI Loader (`dinput8.dll`, `*.asi`
   plugins). Natives DB (NativeDB) lists callable game functions. RDR2 uses ScriptHookRDR2 + Lenny's Mod
   Loader.
-- **Assets:** OpenIV (with an `mods/` folder copy of RPFs; never edit originals), and CodeWalker for maps.
+- **Assets:** OpenIV (with a `mods/` folder copy of RPFs; never edit originals), and CodeWalker for maps.
 - LSPDFR-style frameworks exist for specific genres.
 - **From the Minecraft × GTA V project** (`knowledge/games/gta-v/minecraft-passthrough.md`):
   - **Launch:** launch story mode with BattlEye off (`-nobattleye` in `args.txt`, or the launcher's toggle).

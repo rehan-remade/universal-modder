@@ -3,6 +3,7 @@
     uv run --with pytest pytest -q
 """
 import json
+import shutil
 import struct
 import subprocess
 import sys
@@ -13,7 +14,7 @@ from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from um import fal, publish, scan, sprite, video  # noqa: E402
+from um import backup, fal, publish, scan, sprite, video  # noqa: E402
 
 
 # --------------------------------------------------------------------------- scan
@@ -191,12 +192,13 @@ def test_publish_check(tmp_path, capsys):
     assert publish.check(str(tmp_path / "mod"), str(tmp_path / "game")) == 1
     out = capsys.readouterr().out
     assert "game file copied verbatim" in out and "FAL_KEY assignment" in out and "Ghidra auto-name" in out
-    assert "decompiler header x1 in src/Mod.cs" in out and "README.md" not in out.split("decompiler header")[-1].split("\n")[0]
+    normalized = out.replace("\\", "/")
+    assert "decompiler header x1 in src/Mod.cs" in normalized and "README.md" not in normalized.split("decompiler header")[-1].split("\n")[0]
 
 
 # --------------------------------------------------------------------------- video
 
-@pytest.mark.skipif(subprocess.run(["which", "ffmpeg"], capture_output=True).returncode, reason="needs ffmpeg")
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg")
 def test_compile_small_edl(tmp_path):
     for i, color in enumerate(["red", "blue"]):
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", f"testsrc2=s=640x360:d=3:r=30", "-f", "lavfi", "-i", "sine=f=440:d=3",
@@ -224,7 +226,7 @@ def test_repo_knowledge_is_valid():
         fails, _ = kb.check_note(p, root)
         assert not fails, (p, fails)
     idx, rows = kb.build_index(root)
-    assert (root / "INDEX.md").read_text() == idx, "run `um kb index`"
+    assert (root / "INDEX.md").read_text(encoding="utf-8") == idx, "run `um kb index`"
     assert len(rows) >= 7
 
 
@@ -236,13 +238,13 @@ def test_kb_new_check_search(tmp_path):
     p = kb.new_note(root, "Hades II", "A new boon god", agent="Codex (gpt-6)", route="loader-api")
     fails, _ = kb.check_note(p, root)
     assert any("unfilled template text" in f for f in fails)          # a fresh scaffold must not pass
-    good = p.read_text()
+    good = p.read_text(encoding="utf-8")
     good = good.replace("FILL IN: exact build", "1.0.1 (Steam)").replace("anti_cheat: FILL IN", "anti_cheat: none")
     good = good.replace("> Two to four sentences: what you built", "> Added a boon god via a Lua mod loader")
     good = good.replace("The most valuable section. Numbered; each one symptom → cause → fix.", "")
     good = good.replace("1. **Symptom.** What you saw. **Cause:** what it really was. **Fix:** what worked.",
                         "1. **Boons never offered.** **Cause:** pool cached at load. **Fix:** register before the run starts.")
-    p.write_text(good)
+    p.write_text(good, encoding="utf-8")
     fails, _ = kb.check_note(p, root)
     assert not fails, fails
     res = kb.search(root, ["boon"])
@@ -257,3 +259,27 @@ def test_kb_check_rejects_secrets_and_dumps(tmp_path):
                     f"```c\n{code}\n```\n" + "FAL" + "_KEY=abcdefghijklmnopqrstuvwxyz0123\n")
     fails, _ = kb.check_note(note)
     assert any("code block" in f for f in fails) and any("FAL_KEY" in f for f in fails)
+
+
+@pytest.mark.parametrize("url", ["https://github.com/alice/universal-modder.git", "https://github.com/alice/universal-modder",
+                                 "git@github.com:alice/universal-modder.git", "ssh://git@github.com/alice/universal-modder.git"])
+def test_pr_head_from_fork(url):
+    # gh looks a bare --head branch up in the base repo; a PR from a fork needs "<owner>:<branch>"
+    assert kb.pr_head("kb/a-b", url) == "alice:kb/a-b"
+
+
+def test_pr_head_same_repo():
+    assert kb.pr_head("kb/a-b", None) == "kb/a-b"
+
+
+# --------------------------------------------------------------------------- backup
+
+def test_backup_handles_pre_1980_timestamps(tmp_path, monkeypatch):
+    import os
+    monkeypatch.setattr(backup, "_root", lambda name: (tmp_path / "snaps" / name).mkdir(parents=True, exist_ok=True)
+                        or tmp_path / "snaps" / name)
+    src = tmp_path / "src"
+    make(src, {"old.txt": "from 1970", "new.txt": "fresh"})
+    os.utime(src / "old.txt", (0, 0))
+    zp = backup.create(str(src), name="t")
+    assert set(backup._manifest(zp)["files"]) == {"old.txt", "new.txt"}
