@@ -16,6 +16,9 @@ links: ['https://partner.steamgames.com/doc/webapi/ISteamRemoteStorage', 'https:
 > of evidence held up when the game itself was the judge. Worked out on Project Zomboid Build 42.20.3 (see
 > `games/project-zomboid/b42-20-modlist-preset-and-world-load-errors.md`); nothing here is specific to that game
 > except the tag names.
+>
+> **Age warning:** observed in August 2026 by an older model (Claude Opus 5); Steam's endpoints, page markup and
+> rate limits can change. Re-test the limits before relying on the numbers.
 
 ## What the API gives you (no key, no login)
 - **Item metadata in bulk:** `POST https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/`

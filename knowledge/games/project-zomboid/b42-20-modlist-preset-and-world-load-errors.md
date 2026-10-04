@@ -26,6 +26,10 @@ tags: [modlist, load-order, presets, mod-info, version-folders, workshop, crash-
 > `console.txt`. The game now starts a new world with 132 mods. Most of the time went into traps the mod menu
 > doesn't show: a preset format that silently fails, one-folder-per-version loading, a dependency library that
 > pruned templates other mods still used, and a recipe calling for a fluid that doesn't exist.
+>
+> **Age warning:** the work was done in August 2026 on 42.20.3 by an older model (Claude Opus 5) and written up
+> in October 2026, after 42.21 went stable. The engine behaviour is likely to still hold; the per-mod findings
+> (which uploads break, which forks work) date fast. Re-check them against the build you run.
 
 ## Setup
 - Project Zomboid **42.20.3** from Steam (`version.txt` in the user's `Zomboid` folder shows the build), work done

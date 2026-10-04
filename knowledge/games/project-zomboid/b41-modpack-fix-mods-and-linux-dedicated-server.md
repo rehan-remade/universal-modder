@@ -27,6 +27,10 @@ tags: [b41, mod-info, textures, loot, distributions, onpredistributionmerge, rad
 > distribution tables, and an item-script patch so Project Russia's Soviet radios can tune True Music Radio.
 > All three work in game and on the server. The server notes cover `Map=`, spawn regions, checksums and why
 > joining reloads Lua.
+>
+> **Age warning:** this is old data. The work was done in May–June 2026 on Build 41.78.16 by older models
+> (Claude Opus 4.7, then 4.8), and only written up in October 2026. That session got several diagnoses wrong
+> before finding the real cause; only the confirmed results are kept here, but re-verify anything you build on.
 
 ## Setup
 - Client: Project Zomboid **41.78.16** from Steam on Windows 10. Mod lists managed with Star's Mod Manager (its
