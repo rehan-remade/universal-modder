@@ -120,6 +120,16 @@ def test_steam_games_utf8(tmp_path, monkeypatch, library_name, install_name, gam
         "path": str(game_path), "workshop": None,
     }]
 
+def test_known_game_longest_key_wins(tmp_path):
+    # "grand theft auto v" is a substring of "grand theft auto v enhanced";
+    # the more specific entry must win, not whichever lands first in the dict
+    d = tmp_path / "Grand Theft Auto V Enhanced"
+    d.mkdir()
+    for i in range(6):
+        (d / f"f{i}.txt").write_text("x")
+    r = scan.scan(str(d))
+    assert r["routes"][0]["route"] == scan.KNOWN["grand theft auto v enhanced"][0]
+
 
 # --------------------------------------------------------------------------- sprite
 
