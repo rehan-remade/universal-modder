@@ -152,6 +152,20 @@ def test_sheet_slice_roundtrip():
     assert len(sprite.slice_sheet(sh, 8, 8)) == 5
 
 
+@pytest.mark.parametrize("alpha", [1, 64, 128, 192, 254, 255])
+@pytest.mark.parametrize("operation", ["fit", "sheet", "squash"])
+def test_sprite_placement_preserves_rgba(alpha, operation):
+    # Placing a frame on a transparent canvas must not apply its alpha twice.
+    im = Image.new("RGBA", (8, 8), (200, 100, 50, alpha))
+    if operation == "fit":
+        out = sprite.fit(im, 8, 8)
+    elif operation == "sheet":
+        out = sprite.slice_sheet(sprite.sheet([im]), 8, 8)[0]
+    else:
+        out = sprite.simple_frames(im, n=1, kind="squash")[0]
+    assert out.tobytes() == im.tobytes()
+
+
 def test_team_mask():
     im = Image.new("RGBA", (4, 1), (0, 0, 0, 255))
     im.putpixel((0, 0), (20, 60, 240, 255))            # saturated blue -> player colour
