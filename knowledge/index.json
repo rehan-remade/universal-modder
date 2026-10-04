@@ -43,6 +43,273 @@
   ]
  },
  {
+  "path": "games/baldur-s-gate-3/act-2-load-hang-one-bad-level-layer.md",
+  "kind": "game",
+  "title": "Act 2 never loads (hang at 50% or crash): one modded NPC on a bad level layer, found by bisecting a pak",
+  "game": "Baldur's Gate 3",
+  "games_also": [],
+  "game_version": "Patch 8 hotfix, Steam, bg3_dx11.exe file version 4.73.98.727 (DX11); ~520 mods",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "LSLib Divine 1.20.4",
+   "Script Extender v32 (logs only)",
+   "Python minidump parser",
+   "capstone",
+   "EasyCheat (teleport for tests)"
+  ],
+  "anti_cheat": "none; single-player save, offline",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5)",
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [],
+  "tags": [
+   "load-hang",
+   "crash-dump",
+   "minidump",
+   "bisect",
+   "level-layers",
+   "many-more-monsters",
+   "act-2",
+   "null-deref",
+   "debugging-method"
+  ]
+ },
+ {
+  "path": "games/baldur-s-gate-3/clothing-sorter-generated-wardrobe-by-body-type.md",
+  "kind": "game",
+  "title": "A generated wardrobe mod: 260 clothing mods sorted by race and body type into containers summoned by reusable scrolls",
+  "game": "Baldur's Gate 3",
+  "games_also": [],
+  "game_version": "Patch 8 / Patch 8 hotfix (Jun-Sep 2026), Steam, Windows; Script Extender v32",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "LSLib Divine 1.20.4",
+   "PowerShell + bash generator pipeline",
+   "AV Item Shipment Framework (ISF)",
+   "Script Extender (Lua handler)",
+   "Nexus Mods GraphQL API (mod descriptions)"
+  ],
+  "anti_cheat": "none; single-player",
+  "status": "working",
+  "agents": [
+   "Claude Code (Fable 5)",
+   "Claude Code (Opus 4.8)",
+   "Claude Code (Opus 5)",
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [],
+  "tags": [
+   "containers",
+   "treasure-tables",
+   "body-types",
+   "equipment-race",
+   "soft-dependency",
+   "item-shipment-framework",
+   "script-extender",
+   "generator",
+   "deterministic-uuids",
+   "self-check-gates",
+   "classifier"
+  ]
+ },
+ {
+  "path": "games/baldur-s-gate-3/custom-outfits-visuals-materials-cloth-icons.md",
+  "kind": "game",
+  "title": "Custom outfits from cloned mod and vanilla meshes: visuals, materials, body masks, cloth, LODs, icons and the Blender GR2 round trip",
+  "game": "Baldur's Gate 3",
+  "games_also": [],
+  "game_version": "Patch 7 era (Apr 2026) to Patch 8 hotfix (Sep 2026), Steam, Windows",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "asset-only",
+  "tools": [
+   "LSLib Divine 1.18.7 / 1.20.4",
+   "Blender 4.0.2",
+   "Norbyte dos2de_collada_exporter (io_scene_dos2de, later v3.0.0)",
+   "texconv (DirectXTex)",
+   "BG3 Modders Multitool (vanilla unpack)",
+   "Python (lsx edits, gates)"
+  ],
+  "anti_cheat": "none; single-player",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 4.7)",
+   "Claude Code (Opus 5)",
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [],
+  "tags": [
+   "clothing",
+   "armour",
+   "root-templates",
+   "visual-bank",
+   "material-bank",
+   "vertex-color-masks",
+   "underwear",
+   "cloth-physics",
+   "lod",
+   "icons",
+   "gr2",
+   "blender",
+   "dos2de",
+   "soft-dependency",
+   "equip-sound"
+  ]
+ },
+ {
+  "path": "games/baldur-s-gate-3/gameplay-and-compatibility-patches-stats-osiris.md",
+  "kind": "game",
+  "title": "Gameplay and compatibility patches in stats and Osiris: level-gated armour tiers, Extra Attack on a modded cantrip, crit immunity, stacking damage reduction, feats from items, removing equipment glow, a class vs starting-equipment fix",
+  "game": "Baldur's Gate 3",
+  "games_also": [],
+  "game_version": "Patch 7 era (Apr 2026) to Patch 8 hotfix (Aug 2026), Steam, Windows",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "LSLib Divine 1.20.4",
+   "vanilla stats dump (BG3 Modders Multitool)",
+   "Python (stats parsing, override generators, level simulators)"
+  ],
+  "anti_cheat": "none; single-player",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 4.7)",
+   "Claude Code (Opus 5)",
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [],
+  "tags": [
+   "stats",
+   "passives",
+   "statuses",
+   "boosts",
+   "armour-class",
+   "damage-reduction",
+   "critical-hits",
+   "extra-attack",
+   "osiris",
+   "override",
+   "patch-mod",
+   "starting-equipment",
+   "vfx",
+   "amp-ultra",
+   "dialogue"
+  ]
+ },
+ {
+  "path": "games/baldur-s-gate-3/managing-a-500-mod-load-order-by-hand.md",
+  "kind": "game",
+  "title": "Running a 500+ mod load order by hand: modsettings.lsx rules, recovering a wiped order from a save, mod.io re-subscribes, game-folder files and conflict diagnosis",
+  "game": "Baldur's Gate 3",
+  "games_also": [],
+  "game_version": "Patch 8 / Patch 8 hotfix (Jun-Sep 2026), Steam, Windows; Script Extender v32; ~530 paks",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "other",
+  "tools": [
+   "LSLib Divine 1.20.4",
+   "Python (XML edits, save meta reader, backup/restore)",
+   "Script Extender",
+   "Native Mod Loader (bink2w64 proxy)"
+  ],
+  "anti_cheat": "none; single-player",
+  "status": "working",
+  "agents": [
+   "Claude Code (Fable 5)",
+   "Claude Code (Opus 4.8)",
+   "Claude Code (Opus 5)",
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [],
+  "tags": [
+   "load-order",
+   "modsettings",
+   "meta-lsx",
+   "mod-io",
+   "saves",
+   "native-mod-loader",
+   "steam-verify",
+   "loose-files",
+   "kavt",
+   "photo-mode",
+   "animation-sets",
+   "ui-mods",
+   "troubleshooting"
+  ]
+ },
+ {
+  "path": "games/baldur-s-gate-3/weapons-skyrim-dagger-port-sheath-bone-visible-shields.md",
+  "kind": "game",
+  "title": "Weapons: porting a Skyrim dagger and scabbard, fixing a modded sword's sheath height with a Dummy_Sheath bone, and visible stowed shields for modded shields",
+  "game": "Baldur's Gate 3",
+  "games_also": [],
+  "game_version": "Patch 7 era (Apr 2026) and Patch 8 hotfix (Aug 2026), Steam, Windows",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "asset-only",
+  "tools": [
+   "Blender 3.6 LTS + niftools addon 0.1.1 (NIF import)",
+   "Blender 4.0.2 + Norbyte dos2de_collada_exporter",
+   "LSLib Divine 1.20.4 (convert-model, glTF and DAE)",
+   "Blender Weapon Templates (Nexus 11600)",
+   "texconv",
+   "Python (glTF and lsx edits)"
+  ],
+  "anti_cheat": "none; single-player",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 4.7)",
+   "Claude Code (Opus 5)",
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [],
+  "tags": [
+   "weapons",
+   "gr2",
+   "sheath",
+   "dummy-sheath",
+   "equipment-types",
+   "skyrim-port",
+   "nif",
+   "gltf",
+   "conform",
+   "shields",
+   "patch-8",
+   "scabbard"
+  ]
+ },
+ {
   "path": "games/black-myth-wukong/reshade-depth-dead-end.md",
   "kind": "game",
   "title": "Black Myth: Wukong, Unreal 5.0: injection works, ReShade render depth does not",
