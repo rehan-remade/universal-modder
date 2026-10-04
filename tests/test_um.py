@@ -283,3 +283,24 @@ def test_backup_handles_pre_1980_timestamps(tmp_path, monkeypatch):
     os.utime(src / "old.txt", (0, 0))
     zp = backup.create(str(src), name="t")
     assert set(backup._manifest(zp)["files"]) == {"old.txt", "new.txt"}
+
+
+def test_backup_diff_and_restore_round_trip(tmp_path, monkeypatch):
+    monkeypatch.setattr(backup, "_root", lambda name: (tmp_path / "snaps" / name).mkdir(parents=True, exist_ok=True)
+                        or tmp_path / "snaps" / name)
+    src = tmp_path / "src"
+    make(src, {"save.dat": "v1", "sub/cfg.ini": "a=1"})
+    backup.create(str(src), name="t")
+    (src / "save.dat").write_text("v2")
+    (src / "sub" / "cfg.ini").unlink()
+    make(src, {"extra.log": "new"})
+    d = backup.diff("t", str(src))
+    assert (d["changed"], d["removed"], d["added"]) == (["save.dat"], ["sub/cfg.ini"], ["extra.log"])
+    with pytest.raises(SystemExit):  # no --yes: report only, touch nothing
+        backup.restore("t", str(src))
+    assert (src / "save.dat").read_text() == "v2"
+    backup.restore("t", str(src), clean=True, yes=True)
+    assert (src / "save.dat").read_text() == "v1"
+    assert (src / "sub" / "cfg.ini").read_text() == "a=1"
+    assert not (src / "extra.log").exists()
+    assert backup.snapshots("t-pre-restore")  # the state before the restore was kept
