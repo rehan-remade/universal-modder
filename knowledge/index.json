@@ -455,6 +455,96 @@
   ]
  },
  {
+  "path": "games/project-zomboid/b41-modpack-fix-mods-and-linux-dedicated-server.md",
+  "kind": "game",
+  "title": "A Build 41 Project Russia modpack: three small fix mods and a modded Linux dedicated server",
+  "game": "Project Zomboid",
+  "games_also": [],
+  "game_version": "Build 41.78.16 (Steam, Windows 10 client), May-June 2026; dedicated server app 380870 via SteamCMD on Ubuntu 24.04; about 140 Workshop mods with the Project Russia map. The legacy branch is now 41.78.21 (not re-tested)",
+  "platform": "windows",
+  "engine": "java",
+  "route": "loader-api",
+  "tools": [
+   "Python 3.12 (catalog and Lua generator scripts)",
+   "SteamCMD",
+   "systemd",
+   "mcrcon",
+   "the in-game Workshop uploader"
+  ],
+  "anti_cheat": "none; a private server the player hosts for friends, every player runs the same mod list",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 4.7)",
+   "Claude Code (Opus 4.8)",
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [
+   "https://pzwiki.net/wiki/Mod.info",
+   "https://pzwiki.net/wiki/Procedural_distributions",
+   "https://github.com/FWolfe/Zomboid-Modding-Guide"
+  ],
+  "tags": [
+   "b41",
+   "mod-info",
+   "textures",
+   "loot",
+   "distributions",
+   "onpredistributionmerge",
+   "radio",
+   "item-scripts",
+   "dedicated-server",
+   "workshop-upload",
+   "spawn-regions"
+  ]
+ },
+ {
+  "path": "games/project-zomboid/b42-20-modlist-preset-and-world-load-errors.md",
+  "kind": "game",
+  "title": "A 130-mod Build 42.20 modlist: the preset file, version folders and \"World loading could not proceed\"",
+  "game": "Project Zomboid",
+  "games_also": [],
+  "game_version": "Build 42.20.3 (stable, Steam, Windows 10), single player, tested 2026-08-25/26; about 235 Workshop items installed, 132 mods active in the final preset. Not re-tested on 42.20.4 or 42.21",
+  "platform": "windows",
+  "engine": "java",
+  "route": "loader-api",
+  "tools": [
+   "Python 3.12 (own scripts for mod.info scanning",
+   "preset writing and log triage)",
+   "Steam Web API",
+   "grep"
+  ],
+  "anti_cheat": "none (single player)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5)",
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [
+   "https://pzwiki.net/wiki/Mod.info",
+   "https://pzwiki.net/wiki/Mod_structure"
+  ],
+  "tags": [
+   "modlist",
+   "load-order",
+   "presets",
+   "mod-info",
+   "version-folders",
+   "workshop",
+   "crash-triage",
+   "world-dictionary",
+   "vehicles",
+   "b42"
+  ]
+ },
+ {
   "path": "games/stick-it-to-the-stickman/instant-fail-choice-prompts-patching-a-unity-level-s-death-p.md",
   "kind": "game",
   "title": "Instant-fail choice prompts: patching a Unity level's death path with Harmony",
@@ -648,6 +738,32 @@
    "crash",
    "reverse-engineering",
    "private-server"
+  ]
+ },
+ {
+  "path": "techniques/checking-steam-workshop-mods-against-a-game-version.md",
+  "kind": "technique",
+  "title": "Checking Steam Workshop mods against a game version: the public API, page scraping limits, and what evidence to trust",
+  "tags": [
+   "steam-workshop",
+   "modlist",
+   "compatibility",
+   "steam-web-api",
+   "scraping",
+   "rate-limits",
+   "triage"
+  ],
+  "agents": [
+   "Claude Code (Opus 5)",
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [
+   "https://partner.steamgames.com/doc/webapi/ISteamRemoteStorage",
+   "https://partner.steamgames.com/doc/webapi/ISteamNews"
   ]
  },
  {
