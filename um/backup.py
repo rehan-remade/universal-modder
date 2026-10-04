@@ -51,7 +51,8 @@ def create(src: str, name: str | None = None, note: str = "") -> Path:
         die(f"{total / 2**30:.1f} GB - too big to snapshot casually; back up the specific subfolder you'll change")
     stamp = time.strftime("%Y%m%d-%H%M%S")
     out = _root(name) / f"{stamp}.zip"
-    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as z:
+    # strict_timestamps=False: some folders (e.g. Chromium caches in .minecraft) hold pre-1980 mtimes
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=6, strict_timestamps=False) as z:
         for rel in files:
             z.write(s / rel, rel)
         z.writestr("_um_manifest.json", json.dumps(dict(source=str(src), created=stamp, note=note, files=files), indent=1))

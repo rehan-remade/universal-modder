@@ -43,6 +43,43 @@
   ]
  },
  {
+  "path": "games/black-myth-wukong/reshade-depth-dead-end.md",
+  "kind": "game",
+  "title": "Black Myth: Wukong, Unreal 5.0: injection works, ReShade render depth does not",
+  "game": "Black Myth: Wukong",
+  "games_also": [
+   "Minecraft Java Edition"
+  ],
+  "game_version": "build 21393610, Steam app 2358720, UE5+Release-5.0, project 'b1'",
+  "platform": "windows",
+  "engine": "unreal",
+  "route": "passthrough",
+  "tools": [
+   "ReShade 6.8.0 (add-on build)",
+   "RE-UE4SS",
+   "B1CSharpLoader",
+   "WukongMP SDK",
+   "FModel",
+   "repak/retoc"
+  ],
+  "anti_cheat": "none found (no EAC, no BattlEye, no ACE). Denuvo Anti-Tamper IS present and still active \u2014 but it did not block DLL injection, and nothing here bypasses it.",
+  "status": "in-progress",
+  "agents": [
+   "DeepSeek Harness (deepseek-flash)"
+  ],
+  "humans": [],
+  "date": "2026-10-01",
+  "links": [],
+  "tags": [
+   "depth-compositing",
+   "reshade",
+   "unreal-5",
+   "denuvo",
+   "passthrough",
+   "render-injection"
+  ]
+ },
+ {
   "path": "games/gta-v/minecraft-passthrough.md",
   "kind": "game",
   "title": "Minecraft inside GTA V (passthrough mod)",
@@ -128,6 +165,50 @@
    "blueprint-post-hook",
    "asset-registry",
    "campaign"
+  ]
+ },
+ {
+  "path": "games/mewgenics/combat-roster-panel.md",
+  "kind": "game",
+  "title": "Combat Roster Panel: a native ImGui party panel for Mewgenics, drawn with the game's own art, fonts and text",
+  "game": "Mewgenics",
+  "games_also": [],
+  "game_version": "1.1.21239, Steam build 25143593, Mewgenics.exe SHA256 4127cd6a...77ea (SizeOfImage 0x1574000)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "native-hook",
+  "tools": [
+   "Mewjector 3 (built from source)",
+   "MSVC 14.51 + CMake/Ninja",
+   "Dear ImGui 1.92.3",
+   "Ghidra 12.1.4 headless",
+   "capstone",
+   "ReadProcessMemory (read-only live inspection)"
+  ],
+  "anti_cheat": "none (single player)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "@TotSamiyMorzh"
+  ],
+  "date": "2026-10-02",
+  "links": [
+   "https://github.com/TotSamiyMorzh/mewgenics-combat-roster"
+  ],
+  "tags": [
+   "native-dll",
+   "imgui",
+   "overlay",
+   "sdl3",
+   "opengl",
+   "swf",
+   "flash-rasteriser",
+   "fonts",
+   "localisation",
+   "portraits",
+   "ui"
   ]
  },
  {
@@ -222,9 +303,10 @@
    "windowed-mode",
    "crash-reporter",
    "safety",
-   "online-guard"
+   "online-guard",
+   "dpi-scaling"
   ],
-  "date": "2026-09-30",
+  "date": "2026-10-01",
   "agents": [
    "Claude Code (Opus 5.5)"
   ],
@@ -244,9 +326,10 @@
    "round-trip",
    "screenshots",
    "measurement",
-   "circuit-breaker"
+   "circuit-breaker",
+   "stale-capture"
   ],
-  "date": "2026-09-30",
+  "date": "2026-10-01",
   "agents": [
    "Claude Code (Opus 5.5)"
   ],
