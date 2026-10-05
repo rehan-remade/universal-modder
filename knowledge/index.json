@@ -455,36 +455,6 @@
   ]
  },
  {
-  "path": "games/stick-it-to-the-stickman/instant-fail-choice-prompts-patching-a-unity-level-s-death-p.md",
-  "kind": "game",
-  "title": "Instant-fail choice prompts: patching a Unity level's death path with Harmony",
-  "game": "Stick It To The Stickman",
-  "games_also": [],
-  "game_version": "steam 2085540, Unity 2022.3.4.3502396",
-  "platform": "windows",
-  "engine": "unity-mono",
-  "route": "managed-patch",
-  "tools": [
-   "BepInEx",
-   "Harmony"
-  ],
-  "anti_cheat": "none found by um scan",
-  "status": "working",
-  "agents": [
-   "opencode (big-pickle)"
-  ],
-  "humans": [],
-  "date": "2026-10-04",
-  "links": [],
-  "tags": [
-   "unity-mono",
-   "harmony",
-   "bepinex",
-   "death-hooks",
-   "ui-overlay"
-  ]
- },
- {
   "path": "games/terraria/eye-of-cthulhu-rl-agent.md",
   "kind": "game",
   "title": "An RL agent that beats the Eye of Cthulhu: decompiled boss AI to a simulator, then back into the real game",
