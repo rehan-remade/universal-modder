@@ -776,6 +776,44 @@
   ]
  },
  {
+  "path": "games/naruto-shippuden-ultimate-ninja-storm-4/free-for-all-4-6-teams-native-ui.md",
+  "kind": "game",
+  "title": "Naruto Storm 4: free-for-all for 4-6 teams with native UI, by controlling the duel's side/role lookups",
+  "game": "Naruto Shippuden: Ultimate Ninja Storm 4",
+  "games_also": [],
+  "game_version": "NSUNS4.exe 1.09 (Road to Boruto)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "UltimateStormAPI proxy (d3dcompiler_47.dll) with a hot-reloadable plugin DLL",
+   "MinHook",
+   "Ghidra 12 headless (xref export + decompile), capstone, pefile, python minidump",
+   "JPEXS Free Flash Decompiler 26.3 (Scaleform GFx / AS3 edits)",
+   "um win (launch, drive, shot), um backup"
+  ],
+  "anti_cheat": "none touched: offline Free Battle only, never used in online modes",
+  "status": "working",
+  "agents": [
+   "Claude Code (claude-fable-5-1)",
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-05",
+  "links": [],
+  "tags": [
+   "cyberconnect2",
+   "fighting-game",
+   "free-for-all",
+   "call-site-audit",
+   "hot-reload",
+   "game-thread",
+   "scaleform",
+   "native-ui",
+   "memory-arena"
+  ]
+ },
+ {
   "path": "games/naruto-shippuden-ultimate-ninja-storm-4/porting-asbr-characters-into-storm-4-both-games-cpk-payloads.md",
   "kind": "game",
   "title": "Porting ASBR characters into Storm 4: both games' CPK payloads are encrypted",
