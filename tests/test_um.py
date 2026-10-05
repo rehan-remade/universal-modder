@@ -303,6 +303,18 @@ def test_kb_check_rejects_secrets_and_dumps(tmp_path):
     assert any("code block" in f for f in fails) and any("FAL_KEY" in f for f in fails)
 
 
+def test_kb_impossible_date_is_reported_not_raised(tmp_path):
+    # YAML turns an unquoted YYYY-MM-DD into a date; a day that doesn't exist raises ValueError, not YAMLError
+    root = tmp_path / "knowledge"
+    (root / "techniques").mkdir(parents=True)
+    note = root / "techniques" / "t.md"
+    note.write_text("---\nkind: technique\ntitle: t\ntags: [x]\ndate: 2026-09-31\nagents: [a]\n---\n# t\n", encoding="utf-8")
+    fails, _ = kb.check_note(note, root)
+    assert any("front matter is not valid YAML" in f for f in fails), fails   # the date error's wording varies by Python
+    kb.search(root, ["t"])                                             # one bad note must not break search or index
+    kb.build_index(root)
+
+
 @pytest.mark.parametrize("url", ["https://github.com/alice/universal-modder.git", "https://github.com/alice/universal-modder",
                                  "git@github.com:alice/universal-modder.git", "ssh://git@github.com/alice/universal-modder.git"])
 def test_pr_head_from_fork(url):

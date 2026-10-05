@@ -43,6 +43,77 @@
   ]
  },
  {
+  "path": "games/assassin-s-creed-iv-black-flag/reading-the-player-s-world-transform-and-body-position-in-ac.md",
+  "kind": "game",
+  "title": "Reading the player's world transform and body position in AC4 Black Flag (native x86 ASI)",
+  "game": "Assassin's Creed IV Black Flag",
+  "games_also": [],
+  "game_version": "Steam, AC4BFSP.exe MD5 2058342866688F780C8B34526A65BC35 (45,056,040 B, x86)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "Ultimate ASI Loader v9.7.4 (x86)",
+   "Ghidra 12.1.4 (headless, 20 GB heap)",
+   "gamedb",
+   "AC.PatchFix framework (ported to x86)",
+   "CMake + MSVC 2022"
+  ],
+  "anti_cheat": "none (single-player campaign; offline only)",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-10-06",
+  "links": [],
+  "tags": [
+   "anvilnext",
+   "black-flag",
+   "native-hook",
+   "x86",
+   "transform",
+   "camera",
+   "reverse-engineering"
+  ]
+ },
+ {
+  "path": "games/assassin-s-creed-rogue/anvilnext-internals-for-ac-rogue-co-op-player-transform-the-.md",
+  "kind": "game",
+  "title": "AnvilNext internals for AC Rogue co-op: player transform, the debug-cheat system, and the set-transform path",
+  "game": "Assassin's Creed Rogue",
+  "games_also": [],
+  "game_version": "Steam, ACC.exe MD5 a323729f3799a808c8148b695e1e23b8 (67,873,496 B), 2026-10",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "Ghidra 12.1.4 (headless)",
+   "gamedb",
+   "AC.PatchFix (playday3008) + SafetyHook",
+   "Ultimate ASI Loader (dinput8)",
+   "CMake + MSVC 2022",
+   "AnvilToolkit"
+  ],
+  "anti_cheat": "none (single-player campaign; offline/LAN only)",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-10-05",
+  "links": [],
+  "tags": [
+   "anvilnext",
+   "black-flag",
+   "coop",
+   "netcode",
+   "transform",
+   "reverse-engineering",
+   "crash-isolation"
+  ]
+ },
+ {
   "path": "games/baldur-s-gate-3/act-2-load-hang-one-bad-level-layer.md",
   "kind": "game",
   "title": "Act 2 never loads (hang at 50% or crash): one modded NPC on a bad level layer, found by bisecting a pak",
@@ -473,6 +544,44 @@
   ]
  },
  {
+  "path": "games/dragon-s-dogma-2/dimension-door-aimed-teleport-spell-with-a-scripted-arrival-.md",
+  "kind": "game",
+  "title": "Dimension Door: aimed teleport spell with a scripted arrival camera (REFramework Lua)",
+  "game": "Dragon's Dogma 2",
+  "games_also": [],
+  "game_version": "dd2.exe 3.2.0.0, Steam 2054970 build 24831693; REFramework rev 0a07faae (v1.5.9.1+505)",
+  "platform": "windows",
+  "engine": "re-engine",
+  "route": "loader-api",
+  "tools": [
+   "REFramework (Lua)",
+   "_ScriptCore (SilverEzredes and alphaZomega, raycast helper)",
+   "il2cpp_dump.json (REFramework SDK dump) for symbol lookup"
+  ],
+  "anti_cheat": "none found by um scan; single-player only",
+  "status": "released",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-05",
+  "links": [
+   "https://github.com/ntgoten/dimension-door",
+   "knowledge/games/dragon-s-dogma-2/blink-strike-teleports-behind-the-target-reframework-lua-ski.md"
+  ],
+  "tags": [
+   "teleport",
+   "camera",
+   "cutscene",
+   "animation",
+   "input-hooks",
+   "gamepad",
+   "effects",
+   "raycast",
+   "fall-damage"
+  ]
+ },
+ {
   "path": "games/elden-ring/cs2-conversion-of-elden-ring-offline-native-rust-dll-via-me3.md",
   "kind": "game",
   "title": "CS2 conversion of Elden Ring offline: native Rust DLL via me3 (fall death, spirit springs, 3D inspect, params)",
@@ -775,6 +884,41 @@
   ]
  },
  {
+  "path": "games/minecraft/half-life-2-guns-in-minecraft-passthrough-hl2-demo-under-win.md",
+  "kind": "game",
+  "title": "Half-Life 2 guns in Minecraft (passthrough, HL2 Demo under Wine on macOS)",
+  "game": "Minecraft",
+  "games_also": [
+   "Half-Life 2 Demo"
+  ],
+  "game_version": "Minecraft Java 26.3 (demo account), Fabric Loader 0.19.5, Fabric API 0.161.0+26.3; Half-Life 2 Demo (Steam app 219) on the HL2 depot build 19307283, 32-bit hl2.exe with DXVK d3d9",
+  "platform": "macos",
+  "engine": "java",
+  "route": "passthrough",
+  "tools": [
+   "Fabric (Loom 1.18)",
+   "Wine 10.0 (Sikarugir wrapper)",
+   "ScreenCaptureKit (Swift helpers)",
+   "imageio-ffmpeg via uv"
+  ],
+  "anti_cheat": "none in single-player (VAC only applies to HL2 multiplayer; nothing online was touched)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Claude Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-05",
+  "links": [],
+  "tags": [
+   "source-engine",
+   "wine",
+   "macos",
+   "screencapturekit",
+   "chroma-key",
+   "console-bridge"
+  ]
+ },
+ {
   "path": "games/minecraft/neoforge-1-21-1-custom-dimension-and-tool-tier.md",
   "kind": "game",
   "title": "NeoForge 1.21.1 custom dimension and tool tier",
@@ -928,7 +1072,8 @@
    "fabric",
    "mixin",
    "advancements",
-   "installer"
+   "installer",
+   "minecraft-launcher"
   ]
  },
  {
@@ -1691,6 +1836,28 @@
   ]
  },
  {
+  "path": "techniques/a-force-quit-pc-game-relaunch-wedges-as-an-unkillable-zombie.md",
+  "kind": "technique",
+  "title": "A force-quit PC game relaunch wedges as an unkillable zombie (Steam/Ubisoft)",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-10-05",
+  "links": [],
+  "tags": [
+   "windows",
+   "steam",
+   "ubisoft",
+   "launch",
+   "wedge",
+   "d3d11",
+   "relaunch",
+   "agent-workflow"
+  ]
+ },
+ {
   "path": "techniques/checking-steam-workshop-mods-against-a-game-version.md",
   "kind": "technique",
   "title": "Checking Steam Workshop mods against a game version: the public API, page scraping limits, and what evidence to trust",
@@ -1705,12 +1872,14 @@
   ],
   "agents": [
    "Claude Code (Opus 5)",
-   "Claude Code (Opus 5.5)"
+   "Claude Code (Opus 5.5)",
+   "OpenCode (DeepSeek V4.1 Flash)"
   ],
   "humans": [
-   "RedSuper"
+   "RedSuper",
+   "Selene0623"
   ],
-  "date": "2026-10-04",
+  "date": "2026-10-05",
   "links": [
    "https://partner.steamgames.com/doc/webapi/ISteamRemoteStorage",
    "https://partner.steamgames.com/doc/webapi/ISteamNews"
