@@ -29,10 +29,10 @@ tags: [il2cpp, melonloader, phone-app, compass, stack-size, ui, linux, proton]
 
 > These are two MelonLoader mods for the Schedule I 0.4.7 IL2CPP beta, both written as C# Harmony mods (the managed-patch route).
 >
-> - **IncreasedStackLimit-Latest** raises stack limits for each item type.
+> - **IncreasedStackLimit-Latest** (based on froggy's original IncreasedStackLimit) raises stack limits for each item type.
 > - **PocketPlug** is a QoL suite. It adds a deal compass with the customer's portrait, name and distance, plus Bank and Settings apps built from scratch on the phone. It also removes the weekly ATM deposit limit and adds dealer bank transfers, ready alerts, deal reminders and endless skating.
 >
-> Both run in the real game on Linux/Proton. Each piece was verified with the MelonLoader log and with in-game screenshots taken by Unity itself, driven by a dev command file.
+> Both run in the real game on Linux/Proton. Most pieces were checked with the MelonLoader log and with in-game screenshots taken by Unity itself, driven by a dev command file; the rest are listed as not verified under Verification.
 
 ## Setup
 - **Game:** Steam, Linux, through GE-Proton11-6.
@@ -117,7 +117,7 @@ Harmony patches plus direct field writes through the Il2CppInterop assemblies. N
 - **Not yet verified in game:** ready alerts on real stations, deal reminders, dealer transfers (the save had no recruited dealer or active deal), endless skating, and the ATM no-limit patch at a physical ATM.
 
 ## Gotchas
-1. **The old stack mod "works" but deliveries ignore it.** Cause: it only postfixed the instance getter, and delivery, cart and dead-drop code reads `BaseItemDefinition.StackLimit` directly. Fix: write the definition field.
+1. **froggy's original IncreasedStackLimit "works" but deliveries ignore it.** Cause: it only postfixed the instance getter, and delivery, cart and dead-drop code reads `BaseItemDefinition.StackLimit` directly. Fix: write the definition field.
 2. **Raising some stack limits causes bugs.** The user's report, not ours: ammo misbehaves above its vanilla limit. Fix: never touch weapons, ammo (detected from `RangedWeapon.Magazine`) or limit-1 items, and never lower a limit.
 3. **Custom phone app opens, but the scroll list is empty.** Cause: the app page is rotated 90°, and `RectMask2D` clips in canvas space, so it clips everything. Fix: use a stencil `Mask` (an `Image` with alpha 1, `showMaskGraphic = false`).
 4. **Bank app duplicated money on real clicks**, though `onClick.Invoke()` once was correct. Cause: a clicked uGUI `Button` becomes the selected object, and the game's Submit input then fires `onClick` again. Fix: set `navigation.mode = None` on the mod's buttons, plus a 0.3 s guard on money actions.
