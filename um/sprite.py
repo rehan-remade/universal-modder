@@ -123,7 +123,7 @@ def fit(im, w: int, h: int, anchor: str = "center", smooth: bool = False, allow_
     frame = Image.new("RGBA", (w, h))
     x = (w - small.width) // 2
     y = {"center": (h - small.height) // 2, "bottom": h - small.height, "top": 0}[anchor]
-    frame.paste(small, (x, y), small)
+    frame.paste(small, (x, y))
     return frame
 
 
@@ -197,7 +197,7 @@ def sheet(frames, cols: int | None = None, pad: int = 0, vertical: bool = False)
     rows = -(-len(frames) // cols)
     out = Image.new("RGBA", (cols * (fw + pad) - pad, rows * (fh + pad) - pad))
     for i, f in enumerate(frames):
-        out.paste(f, ((i % cols) * (fw + pad), (i // cols) * (fh + pad)), f)
+        out.paste(f, ((i % cols) * (fw + pad), (i // cols) * (fh + pad)))
     return out
 
 
@@ -224,7 +224,7 @@ def simple_frames(im, n: int = 3, kind: str = "bob"):
             w, h = round(im.width * s), round(im.height / s)
             sq = im.resize((w, h), Image.NEAREST)
             f = Image.new("RGBA", im.size)
-            f.paste(sq, ((im.width - w) // 2, im.height - h), sq)
+            f.paste(sq, ((im.width - w) // 2, im.height - h))
             out.append(f)
         elif kind == "wobble":
             out.append(im.rotate((0, -5, 0, 5)[k % 4], resample=Image.NEAREST))

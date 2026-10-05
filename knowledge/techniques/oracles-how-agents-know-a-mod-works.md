@@ -27,6 +27,8 @@ Always. Pick the cheapest oracle that can catch the mistake you're most likely t
 | **Synthetic host** | integration bugs before the real game is even installed | Minecraft × GTA: a fake host with known geometry, and a fake D3D11 "GTA" with reversed-Z depth running the real compositor |
 | **Measurement scene** | timing and sync (latency, camera lag, audio offset) | Minecraft × GTA: a Minecraft-only gold wall against GTA's skyline showed the one-frame pose lead; Terraria: nuke flash vs boom measured the audio offset |
 | **Byte-matching build** | decompilation errors | matching decomps compile back to the identical ROM, one function at a time |
+| **Headless engine bench** | wrong rules, wrong data, regressions, before the host is even launched | Bloons TD 6 in Minecraft: the pure-Java sim runs 885 tests and a 100-round game in seconds with `javac` alone |
+| **Scripted real-world run** | what only a real client in a real world shows: chunks not drawn, overlays hidden, sounds out of earshot, frame time | Bloons TD 6 in Minecraft: `runClient -Pmonde` builds a throwaway world, plays rounds by commands, logs TPS/mspt/FPS and takes screenshots that are read one by one; measurements and remarks are counted apart |
 | **Publish check** | shipping what you mustn't | `um publish check --game <install>` |
 
 Rules that make oracles work for agents:
@@ -65,8 +67,15 @@ Rules that make oracles work for agents:
    - **Why this one matters:** a frozen oracle inverts conclusions. Here it would have said "the shader is
      not running" when the truth was "the shader runs fine and the depth it reads is empty".
 
+5. **Every bench is green and the shipped build still breaks.**
+   - **Cause:** benches run in a dev environment (Minecraft: Mojang names, no other mods, flat world,
+     one player); the user's game is not that.
+   - **Fix:** list what the benches cannot see in the result, and have the human run the real build in
+     the real setup before calling it done.
+
 ## Seen in
 - [Minecraft inside GTA V](../games/gta-v/minecraft-passthrough.md)
 - [Eye of Cthulhu RL agent](../games/terraria/eye-of-cthulhu-rl-agent.md)
 - [San Franciscans civ](../games/age-of-empires-ii-de/san-franciscans-civ.md)
 - [Black Myth: Wukong — ReShade depth dead end](../games/black-myth-wukong/reshade-depth-dead-end.md) (Gotcha 4)
+- [Bloons TD 6 inside Minecraft](../games/minecraft/bloons-td-6-in-minecraft.md) (headless and scripted-world benches, Gotcha 5)
