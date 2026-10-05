@@ -14,7 +14,7 @@ agents: ["Claude Code (Opus 5.5)"]
 humans: ["@griffdog21"]
 date: 2026-10-05
 links: ["games/gta-v/minecraft-passthrough.md"]
-tags: [mashup, passthrough, shared-memory, depth-compositing, reprojection, camera-prediction, reshade-addon, vscript, netvars, fabric, mixin, advancements, installer]
+tags: [mashup, passthrough, shared-memory, depth-compositing, reprojection, camera-prediction, reshade-addon, vscript, netvars, fabric, mixin, advancements, installer, minecraft-launcher]
 ---
 
 # Portalcraft: real Minecraft inside Portal 2 (passthrough mod)
@@ -24,8 +24,9 @@ tags: [mashup, passthrough, shared-memory, depth-compositing, reprojection, came
 > you move. The Portal 2 player builds with Minecraft blocks, fights Minecraft mobs (their damage reaches Portal 2's
 > health), pushes them through Portal 2's portals, and earns Portal-themed Minecraft advancements. Verified in the real
 > games with automated test sessions (add-on screenshots, logs, test hooks) and by the human playing the campaign;
-> 294-299 fps at 2560x1440 on the test PC. Shipped as a small installer that downloads everything else from official
-> sources on the player's PC.
+> 294-299 fps at 2560x1440 on the test PC. Shipped as a small installer that adds a "Portalcraft" installation to the
+> player's own official Minecraft Launcher, so they start Minecraft signed in with their own account (only owners can
+> play); Fabric API and ReShade come from their official sources.
 
 ## Setup
 - **Portal 2:** Steam, build 10090, D3D9 renderer (`bin\shaderapidx9.dll`), 32-bit `portal2.exe`. Launched by the
@@ -36,9 +37,10 @@ tags: [mashup, passthrough, shared-memory, depth-compositing, reprojection, came
   plus a two-line `Portal 2\ReShade.ini` that points ReShade's base path at the mod's own folder (config, log, shader
   cache, the `.addon32` all live there).
 - **Minecraft Java 26.3** (unobfuscated: no remapping), **Fabric Loader 0.19.5**, **Fabric API 0.161.0+26.3**, built
-  with **Loom 1.18** on **JDK 25**. In production it starts as `KnotClient` with the Mojang version JSON's libraries,
-  Fabric's profile libraries, the client jar, mods in `<gameDir>\mods`, a fixed offline username, `--proxyHost
-  127.0.0.1 --proxyPort 9` (no web calls) and `-Dmcmash.scene=host`.
+  with **Loom 1.18** on **JDK 25**. Players start it from their own **official Minecraft Launcher**, signed in: the
+  installer adds a launcher installation with Fabric's version JSON (`fabric-loader-0.19.5-26.3`), a game directory of
+  its own (world, options, `mods\`) and the JVM arguments `-Dmcmash.scene=host -Dmcmash.autotest=true`. Development
+  runs use Loom's `runClient` (offline dev account).
 - The add-on is plain C++17 against ReShade's `include/` headers (MSVC, x86, `/MT`), about 400 KB.
 
 ## Route and why
@@ -100,11 +102,13 @@ Minecraft blocks, health, velocity.
    depth-test against Portal 2's depth, then the HUD layer on top.
 2. Minecraft mod: follow the camera, publish frames after the level pass (before the hand clears depth), turn Portal 2
    input into key mappings / SDL events, build the barrier geometry from the `.bsp`, forward damage.
-3. Launcher: place ReShade's two files -> start Minecraft hidden and wait for its "running" status file -> start Portal
-   2 through Steam -> when Portal 2 exits, ask Minecraft to save and quit, take the two files out again.
-4. Installer for other people: a ~0.4 MB zip (scripts + the mod jar + the add-on + the effect) that downloads Temurin,
-   Minecraft (Mojang version JSON, sha1-checked libraries and assets), Fabric (meta profile) and ReShade (sha256-pinned)
-   and makes the mod's logo / loading screens on the player's PC from their own Minecraft jar.
+3. Launcher: place ReShade's two files -> open the official Minecraft Launcher and wait until the player has started
+   the Portalcraft installation (the mod writes a "running" status file in its game folder; Minecraft hides its window
+   once Portal 2 connects) -> start Portal 2 through Steam -> when Portal 2 exits, ask Minecraft to save and quit, take
+   the two files out again.
+4. Installer for other people: a ~0.4 MB zip (scripts + the mod jar + the add-on + the effect + Fabric's version JSON)
+   that downloads Fabric API and ReShade (hash-pinned), adds the launcher installation (Gotcha 18), and makes the mod's
+   logo / loading screens on the player's PC from the Minecraft jar their own launcher downloaded.
 
 ## Verification
 - **Stage oracles first:** a fake Portal 2 camera drove Minecraft; a gold pillar landed within ~1 px of its analytic
@@ -115,13 +119,17 @@ Minecraft blocks, health, velocity.
   it was). Logged: entities carried through portals, landings (height, speed, damage), damage reaching Portal 2
   (`fall took 30.0 health`), heals, achievements, goo kills. Frame rate read from `cl_showfps` crops.
 - **The human played** the campaign between iterations and reported what felt wrong (stutter, keys, cut-off outlines).
-- **The release itself:** the installer's quiet mode installed the shipped zip into a separate folder (every download
-  hash-checked), then a script ran that copy's own launcher: production Minecraft (`KnotClient`) and Portal 2 started,
-  a campaign level showed Minecraft composited (add-on screenshot), and after Portal 2 was closed the launcher quit
-  Minecraft and no ReShade file was left in Portal 2's folder. That run caught Gotcha 17.
+- **The release itself:** 1.1.0's Setup (quiet mode) installed over a 1.0.0 test copy (its offline Java + Minecraft
+  deleted, the world kept) and added the installation to the dev PC's Microsoft Store launcher (2.6.2.0). A test
+  script ran the installed copy's own launcher script: the official launcher opened with Portalcraft preselected, the
+  script clicked Play and then Play in the "modified installation" warning (Gotcha 19), Minecraft started signed in
+  (the launcher passed a Microsoft account token and its own Java runtime), Portal 2 followed, a campaign level showed
+  Minecraft composited (add-on screenshot), and after Portal 2 closed, Minecraft saved and quit and no ReShade file was
+  left in Portal 2's folder. The uninstaller then left `launcher_profiles.json` exactly as before. An earlier run of
+  1.0.0 (its own downloads) caught Gotcha 17.
 - **Not verified:** the latest outline fix (near-to-far ray walk + overscan) only in a 2560x1440 simulation and quick
   strafes, not a long session; Portal 2 physics props colliding with Minecraft blocks (they don't); the installer on a
-  second PC (only on the dev PC, into a separate folder).
+  second PC (only on the dev PC) and with the older standalone launcher.
 
 ## Gotchas
 1. **ReShade never loads.** **Cause:** `d3d9.dll` next to `portal2.exe`. **Fix:** `bin\d3d9.dll`.
@@ -143,8 +151,9 @@ Minecraft blocks, health, velocity.
 7. **"moved wrongly" (Minecraft refused the stand-in's moves).** **Cause:** the server player collides with barrier
    walls the Portal 2 player passes through (portals, gaps). **Fix:** `noPhysics` only while the server handles move
    packets (mixin).
-8. **Achievements and stats reset every launch.** **Cause:** the dev launcher picks a random `PlayerNNN` name, so a new
-   UUID each time (the singleplayer inventory survives anyway via the host data). **Fix:** a fixed `--username`.
+8. **Achievements and stats reset every launch (dev runs).** **Cause:** Loom's dev run picks a random `PlayerNNN` name,
+   so a new UUID each time (the singleplayer inventory survives anyway via the host data). **Fix:** a fixed
+   `--username` in the dev run config. Released copies run under the player's own account (Gotcha 18).
 9. **No fall damage at all.** **Causes:** `Player.causeFallDamage` returns early for flying players (the stand-in always
    flies), and the `fall_damage` rule was off. **Fix:** compute Minecraft's fall formula from Portal 2's landing (height
    and impact speed, so slow funnel rides don't count) and `hurtServer` with the fall source, rule on.
@@ -164,18 +173,39 @@ Minecraft blocks, health, velocity.
 16. **Test runs left traces in the player's world** (a floor block turned to slime, achievements, XP, a supply drop).
     **Fix:** every test hook that changes the world has an undo (`!slime off`, `!achrestore` with XP, game mode and
     difficulty restore), and campaign-level Survival tests trigger real rewards: undo them.
-17. **The installed copy wouldn't start:** `Could not find or load main class
-    net.fabricmc.loader.impl.launch.knot.KnotClient`. **Cause:** Fabric's meta profile
+17. **Fabric's version JSON has no checksum for the loader itself.** Fabric's meta profile
     (`/v2/versions/loader/<mc>/<loader>/profile/json`) gives `sha1` and `size` for every library except
-    `net.fabricmc:fabric-loader` itself (checked 2026-10-05: loader 0.19.5 for 26.3), and the installer read "no hash"
-    as "nothing to fetch". **Fix:** when an entry has no hash, download `<artifact url>.sha1` from maven.fabricmc.net
-    and verify against that. Test launching an installed copy, not just installing it.
+    `net.fabricmc:fabric-loader` (checked 2026-10-05: loader 0.19.5 for 26.3). A home-made launcher that reads "no
+    hash" as "nothing to fetch" never downloads the loader (`Could not find or load main class
+    net.fabricmc.loader.impl.launch.knot.KnotClient`), and the official launcher fetches it unchecked. **Fix:** when
+    packaging the JSON, fill in the loader's `sha1` and `size` from the jar, checked against maven's `<jar url>.sha1`,
+    so the launcher verifies that download too. Test launching an installed copy, not just installing it.
+18. **The first installer let people play without owning Minecraft.** It downloaded Minecraft from Mojang and started
+    it offline with a fixed name: an ownership-check bypass, caught in review. **Fix:** do what Fabric's own installer
+    does. Put Fabric's version JSON in `<.minecraft>\versions\<id>\<id>.json` (plus an empty `<id>.jar`), add an entry
+    to `launcher_profiles.json` (`type` custom, `lastVersionId`, its own `gameDir`, `javaArgs`, the newest `lastUsed`
+    so the launcher preselects it), and let the player press Play, signed in (the launcher then warns that the
+    installation is modified; Play there too, optionally "Don't warn me again"). The launcher has no field for game
+    arguments and splits `javaArgs` at spaces, so everything the mod needs became space-free `-D` options, and the mod
+    finds Portal 2's folder from the running `portal2.exe` instead of a path argument. The Microsoft Store / Xbox app
+    launcher (package `Microsoft.4297127D64EC6_8wekyb3d8bbwe`, process `Minecraft.exe`, window class `MCLWindow`) reads
+    `%APPDATA%\.minecraft\launcher_profiles.json` as well (no redirected copy on the test PC). Edit that file only while
+    the launcher is closed, with a real JSON parser, and check that every existing installation survives. The update
+    from the offline version deletes its private Java + Minecraft copy and keeps the world.
+19. **Clicking the launcher's Play in a test.** Its window (`MCLWindow`) is CEF without an accessibility tree: UI
+    Automation sees only `Chrome_RenderWidgetHostHWND`. A PrintWindow capture plus "largest bright-green area" finds
+    Play (and the warning's smaller green Play above it); `WM_MOUSEMOVE` / `WM_LBUTTONDOWN` / `WM_LBUTTONUP` posted to
+    the render window click it without moving the cursor. Opening the Store launcher first shows a short-lived
+    `gamingservicesui` window titled "Minecraft Launcher " (trailing space): wait for `Minecraft.exe`'s window. The
+    launcher also records the played installation in `launcher_quick_play.json` and `launcher_ui_state*.json`, and
+    unpacks natives into `.minecraft\bin\<hash>`; a test that adds and removes an installation should clean those up.
 
 ## Assets
 No Minecraft or Portal 2 asset is shipped. The logo (Minecraft font, white concrete + stone textures, a drawn portal),
 the icon (an isometric grass block), the main-menu panel and four loading screens (a test-chamber wall of Minecraft
-blocks with a blue and an orange portal) are generated with System.Drawing on the player's PC from their own Minecraft
-client jar during install. No fal.
+blocks with a blue and an orange portal) are generated with System.Drawing on the player's PC from the Minecraft client
+jar their own launcher downloaded (during install, or at the first start if the launcher hasn't fetched 26.3 yet).
+No fal.
 
 ## Cost and time
 About two days of agent sessions with the human play-testing in between (2026-10-03 to 10-05).

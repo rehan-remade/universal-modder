@@ -114,7 +114,7 @@ def parse(path: Path) -> tuple[dict, str]:
     import yaml
     try:
         meta = yaml.safe_load(m.group(1)) or {}
-    except yaml.YAMLError as e:
+    except (yaml.YAMLError, ValueError) as e:  # ValueError: a date YAML can't build, e.g. 2026-09-31
         return {"_yaml_error": str(e)}, m.group(2)
     return (meta if isinstance(meta, dict) else {}), m.group(2)
 
