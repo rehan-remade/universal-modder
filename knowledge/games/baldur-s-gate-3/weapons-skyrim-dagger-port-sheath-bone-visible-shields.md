@@ -12,18 +12,21 @@ anti_cheat: "none; single-player"
 status: working
 agents: ["Claude Code (Opus 4.7)", "Claude Code (Opus 5)", "Claude Code (Opus 5.5)"]
 humans: [RedSuper]
-date: 2026-10-04
-links: []
+date: 2026-10-05
+links: ["https://www.nexusmods.com/skyrimspecialedition/mods/107829", "https://www.nexusmods.com/baldursgate3/mods/23732", "https://www.nexusmods.com/baldursgate3/mods/443"]
 tags: [weapons, gr2, sheath, dummy-sheath, equipment-types, skyrim-port, nif, gltf, conform, shields, patch-8, scabbard]
 ---
 
 # Weapons: porting a Skyrim dagger and scabbard, fixing a modded sword's sheath height with a Dummy_Sheath bone, and visible stowed shields for modded shields
 
-> Three weapon jobs in one personal mod. (1) A dagger and its scabbard from a Skyrim SE mod (for personal use)
-> became a usable BG3 dagger plus a worn scabbard that sits where the sheathed dagger lands on the hip.
-> (2) A modded longsword was scaled up 25% and given a `Dummy_Sheath` bone so it hangs higher when stowed
-> without moving the in-hand grip. (3) A generated patch converts 144 shields from three mods into the
-> "visible when stowed" form that a community mod uses on Patch 8. All verified in game by the human.
+> Three weapon jobs in one personal mod. (1) The dagger and scabbard from the Skyrim SE mod "Hravna - Dagger
+> of the North" by Danp (for personal use) became a usable BG3 dagger plus a worn scabbard that sits where the
+> sheathed dagger lands on the hip, with the Bandit belt from wesslen's BG3 mod "Modular Equipment" as its strap.
+> (2) The Deathwyrm longsword from the BG3 mod "Falazure (Clothing and Light Armor)" by onyx, naerys and mons
+> was scaled up 25% and given a `Dummy_Sheath` bone so it hangs higher when stowed without moving the in-hand
+> grip. (3) A generated patch converts 144 shields from three mods into the "visible when stowed" form that a
+> community mod uses on Patch 8. The dagger, scabbard, sword and the converted shields of two of the three mods
+> were confirmed in game by the human; the third mod's (random-loot) shields were not tried in play.
 
 ## Setup
 - BG3 on Steam, Windows 10; Patch 7 era for the dagger, Patch 8 hotfix for the sword and shields.
@@ -31,6 +34,10 @@ tags: [weapons, gr2, sheath, dummy-sheath, equipment-types, skyrim-port, nif, gl
   portable 3.6 build failed with `STATUS_DLL_NOT_FOUND` (VC++ runtime); the MSI installer works.
 - BG3 export stays in Blender 4.0.2 with the dos2de addon; LSLib `Divine.exe` 1.20.4 for `convert-model`
   between GR2, DAE and glTF (`-o gltf` / `-i gltf`).
+- Source mods (credited above; links in the front matter): "Hravna - Dagger of the North" (Skyrim SE, Nexus
+  107829, by Danp; the SE build with `DanpHravnaDagger.esp`), "Falazure (Clothing and Light Armor)" (BG3, Nexus
+  23732, by onyx, naerys and mons; Deathwyrm is its longsword), "Modular Equipment" (BG3, Nexus 443, by
+  wesslen; the Bandit belt mesh `HUM_F_ARM_Bandit_D_Body_Belt_B_MEQ_ForCorsetE`).
 - "Blender Weapon Templates" (Nexus 11600) for a pre-rigged dagger skeleton; vanilla `WPN_HUM_Dagger_A_*.GR2`,
   `WPN_HUM_Longsword_A_0.GR2` and `HUM_F_Base.GR2` (the full 120-bone character skeleton) as references.
 
@@ -83,7 +90,7 @@ per-item fixes go into the weapon's own GR2. BG3 has no scabbard mesh type; a sc
 6. **Scabbard as a worn item:** parent to the HUM_F skeleton, weight 100% to **`Root_M`** so it moves with the
    stowed dagger, place it against an Empty at the `Dummy_Sheath_Hip_L` position, apply transforms, rename the
    mesh `HUM_F_NKD_Body_A_Mesh` and conform to `HUM_F_NKD_Body_A.GR2`. The human then nudged it over several
-   export-and-look rounds. A belt strap from another mod was added to the same worn item the same way.
+   export-and-look rounds. The strap (the Bandit belt from "Modular Equipment") was added to the same worn item the same way.
 
 **Raising a modded sword's stowed position**
 1. Convert the weapon GR2 to DAE or glTF and look for `Dummy_Sheath`. The modded sword had none.
@@ -129,9 +136,11 @@ per-item fixes go into the weapon's own GR2. BG3 has no scabbard mesh type; a sc
   several export-and-look rounds (weighted to `Root_M`).
 - Longsword: renders at 1.25x, stowed position raised and moved out of the armour by bone offsets, hand grip
   unchanged; human confirmed "perfect".
-- Shields: 144 conversions (43 + 3 + 98) generated, every stats name, root template MapKey and combination name
-  unique; the pak loads (after the `meta.lsx` fix in Gotcha 14). Not reported back from play: an actual tool
-  conversion, especially for the random-loot mod's shields that inherit their art one level further up.
+- Shields: 144 conversions (43 + 3 from two shield mods, 98 from a random-loot mod) generated, every stats
+  name, root template MapKey and combination name unique; the pak loads (after the `meta.lsx` fix in Gotcha 14).
+  The human converted and used the two shield mods' shields in play for a while: they work and show when
+  stowed. Not tried in play: the random-loot mod's 98, whose root templates inherit their art one level
+  further up.
 
 ## Gotchas
 1. **Weapon or scabbard lying flat on the floor, "following the character like a windsock".** **Cause:** the
@@ -176,7 +185,7 @@ per-item fixes go into the weapon's own GR2. BG3 has no scabbard mesh type; a sc
     working mod's `meta.lsx` and leave `Dependencies` empty (it does not affect load order).
 
 ## Assets
-Textures from the Skyrim mod converted with texconv (BC1 basecolor with mips; normal maps deferred). No new
+Textures from the Skyrim mod (Hravna, by Danp) converted with texconv (BC1 basecolor with mips; normal maps deferred). No new
 art generated.
 
 ## Open questions

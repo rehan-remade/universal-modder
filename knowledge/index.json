@@ -292,8 +292,12 @@
   "humans": [
    "RedSuper"
   ],
-  "date": "2026-10-04",
-  "links": [],
+  "date": "2026-10-05",
+  "links": [
+   "https://www.nexusmods.com/skyrimspecialedition/mods/107829",
+   "https://www.nexusmods.com/baldursgate3/mods/23732",
+   "https://www.nexusmods.com/baldursgate3/mods/443"
+  ],
   "tags": [
    "weapons",
    "gr2",
