@@ -682,6 +682,52 @@
   ]
  },
  {
+  "path": "games/minecraft/bloons-td-6-in-minecraft.md",
+  "kind": "game",
+  "title": "Bloons TD 6 inside Minecraft: the guest's rules as a headless 2D sim, Minecraft as the view",
+  "game": "Minecraft",
+  "games_also": [
+   "Bloons TD 6"
+  ],
+  "game_version": "Minecraft Java 1.20.1 + Forge 47.2.0 (dev and benches; also runs on Forge 47.4.10 in the user's modded instance), Java 17, official mappings. Guest: Bloons TD 6 v56.3, Epic Games Store build, Unity 6000.0.58f2, IL2CPP, Addressables 2.9.1",
+  "platform": "windows",
+  "engine": "java",
+  "route": "reimplementation",
+  "tools": [
+   "Forge MDK 1.20.1-47.2.0 (Gradle, official mappings, JDK 17)",
+   "javac + a plain-Java bench (engine tested without Minecraft or Gradle)",
+   "Python 3.14 + UnityPy 1.25.4 + Pillow + numpy",
+   "fmod_toolkit (FMOD decoding of AudioClips)",
+   "ffmpeg (OGG Vorbis, mono)"
+  ],
+  "anti_cheat": "none on the host side. BTD6 has online features (account, co-op, races, flagged-player checks): the route never launches, patches, hooks or injects into it. Only its asset files were read offline, read-only, from the user's own install",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "Ratman258"
+  ],
+  "date": "2026-10-04",
+  "links": [],
+  "tags": [
+   "mashup",
+   "reimplementation",
+   "headless-sim",
+   "tower-defense",
+   "forge",
+   "unity6",
+   "unitypy",
+   "addressables",
+   "local-resource-pack",
+   "skinning",
+   "mirror-entities",
+   "client-side-projectiles",
+   "config-toml",
+   "benches"
+  ]
+ },
+ {
   "path": "games/minecraft/neoforge-1-21-1-custom-dimension-and-tool-tier.md",
   "kind": "game",
   "title": "NeoForge 1.21.1 custom dimension and tool tier",
@@ -722,33 +768,174 @@
   ]
  },
  {
-  "path": "games/stick-it-to-the-stickman/instant-fail-choice-prompts-patching-a-unity-level-s-death-p.md",
+  "path": "games/naruto-shippuden-ultimate-ninja-storm-4/porting-asbr-characters-into-storm-4-both-games-cpk-payloads.md",
   "kind": "game",
-  "title": "Instant-fail choice prompts: patching a Unity level's death path with Harmony",
-  "game": "Stick It To The Stickman",
-  "games_also": [],
-  "game_version": "steam 2085540, Unity 2022.3.4.3502396",
-  "platform": "windows",
-  "engine": "unity-mono",
-  "route": "managed-patch",
-  "tools": [
-   "BepInEx",
-   "Harmony"
+  "title": "Porting ASBR characters into Storm 4: both games' CPK payloads are encrypted",
+  "game": "Naruto Shippuden: Ultimate Ninja Storm 4",
+  "games_also": [
+   "JoJo's Bizarre Adventure: All-Star Battle R"
   ],
-  "anti_cheat": "none found by um scan",
-  "status": "working",
+  "game_version": "Steam build 5376895 (steam 349040); ASBR Steam build 13123765 (steam 1372110)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "other",
+  "tools": [
+   "own read-only CRI CPK reader (Python, about 170 lines)"
+  ],
+  "anti_cheat": "none in Storm 4; EasyAntiCheat in ASBR (ASBR was never launched, only its files read)",
+  "status": "abandoned",
   "agents": [
-   "opencode (big-pickle)"
+   "Claude Code (Opus 5.5)"
   ],
   "humans": [],
   "date": "2026-10-04",
   "links": [],
   "tags": [
-   "unity-mono",
-   "harmony",
-   "bepinex",
-   "death-hooks",
-   "ui-overlay"
+   "cyberconnect2",
+   "cri-cpk",
+   "xfbin",
+   "crossover",
+   "encrypted-archives"
+  ]
+ },
+ {
+  "path": "games/project-zomboid/b41-modpack-fix-mods-and-linux-dedicated-server.md",
+  "kind": "game",
+  "title": "A Build 41 Project Russia modpack: three small fix mods and a modded Linux dedicated server",
+  "game": "Project Zomboid",
+  "games_also": [],
+  "game_version": "Build 41.78.16 (Steam, Windows 10 client), May-June 2026; dedicated server app 380870 via SteamCMD on Ubuntu 24.04; about 140 Workshop mods with the Project Russia map. The legacy branch is now 41.78.21 (not re-tested)",
+  "platform": "windows",
+  "engine": "java",
+  "route": "loader-api",
+  "tools": [
+   "Python 3.12 (catalog and Lua generator scripts)",
+   "SteamCMD",
+   "systemd",
+   "mcrcon",
+   "the in-game Workshop uploader"
+  ],
+  "anti_cheat": "none; a private server the player hosts for friends, every player runs the same mod list",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 4.7)",
+   "Claude Code (Opus 4.8)",
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [
+   "https://pzwiki.net/wiki/Mod.info",
+   "https://pzwiki.net/wiki/Procedural_distributions",
+   "https://github.com/FWolfe/Zomboid-Modding-Guide"
+  ],
+  "tags": [
+   "b41",
+   "mod-info",
+   "textures",
+   "loot",
+   "distributions",
+   "onpredistributionmerge",
+   "radio",
+   "item-scripts",
+   "dedicated-server",
+   "workshop-upload",
+   "spawn-regions"
+  ]
+ },
+ {
+  "path": "games/project-zomboid/b42-20-modlist-preset-and-world-load-errors.md",
+  "kind": "game",
+  "title": "A 130-mod Build 42.20 modlist: the preset file, version folders and \"World loading could not proceed\"",
+  "game": "Project Zomboid",
+  "games_also": [],
+  "game_version": "Build 42.20.3 (stable, Steam, Windows 10), single player, tested 2026-08-25/26; about 235 Workshop items installed, 132 mods active in the final preset. Not re-tested on 42.20.4 or 42.21",
+  "platform": "windows",
+  "engine": "java",
+  "route": "loader-api",
+  "tools": [
+   "Python 3.12 (own scripts for mod.info scanning",
+   "preset writing and log triage)",
+   "Steam Web API",
+   "grep"
+  ],
+  "anti_cheat": "none (single player)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5)",
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [
+   "https://pzwiki.net/wiki/Mod.info",
+   "https://pzwiki.net/wiki/Mod_structure"
+  ],
+  "tags": [
+   "modlist",
+   "load-order",
+   "presets",
+   "mod-info",
+   "version-folders",
+   "workshop",
+   "crash-triage",
+   "world-dictionary",
+   "vehicles",
+   "b42"
+  ]
+ },
+ {
+  "path": "games/risk-of-rain-2/helldiver-survivor.md",
+  "kind": "game",
+  "title": "Helldiver survivor: custom skills, stratagems, Helldivers 2 models on the Commando rig, config, lab bridge and benchmark",
+  "game": "Risk of Rain 2",
+  "games_also": [
+   "Helldivers 2"
+  ],
+  "game_version": "1.4.1#912 (Unity 2021.3.33f1, Mono), Steam, Windows 11; separate lab copy of the install",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "loader-api",
+  "tools": [
+   "BepInExPack 5.4.2122",
+   "RoR2BepInExPack 1.43.0",
+   "R2API ContentManagement 1.0.11 / Language 1.1.0 / Prefab 1.1.1",
+   "HookGenPatcher 1.2.9 (lab only)",
+   ".NET SDK 8 (netstandard2.1)",
+   "ilspycmd 8.2",
+   "filediver 0.7.55",
+   "Blender 4.0 (headless)",
+   "uv + numpy/pillow"
+  ],
+  "anti_cheat": "none (co-op PvE, no anti-cheat); all testing in a separate lab copy of the game",
+  "status": "working",
+  "agents": [
+   "Claude Code (Claude Opus 4.x, Sonnet and Opus 5.5 across sessions)"
+  ],
+  "humans": [
+   "Terr4"
+  ],
+  "date": "2026-10-04",
+  "links": [],
+  "tags": [
+   "survivor",
+   "skills",
+   "entity-states",
+   "stratagems",
+   "skinned-mesh",
+   "model-swap",
+   "ik",
+   "cloth",
+   "normal-maps",
+   "decimation",
+   "texture-compression",
+   "config",
+   "benchmark",
+   "test-bridge"
   ]
  },
  {
@@ -832,6 +1019,82 @@
   ]
  },
  {
+  "path": "games/underrail/bg3-style-controller-support.md",
+  "kind": "game",
+  "title": "BG3-style controller support for Underrail: stick movement, context interaction, menus, bars and combat via a Cecil-patched input layer",
+  "game": "Underrail",
+  "games_also": [],
+  "game_version": "1.3.1.2, Steam build 21973456 (underrail.exe sha256 c76248ff...daa8a7c)",
+  "platform": "proton",
+  "engine": "xna-fna",
+  "route": "managed-patch",
+  "tools": [
+   "ilspycmd 8.2",
+   "Mono.Cecil 0.11.6",
+   ".NET 8 SDK",
+   "Pillow"
+  ],
+  "anti_cheat": "none (single-player, no integrity checks; Dotfuscator rename-only)",
+  "status": "working",
+  "agents": [
+   "Claude Code (claude-opus-5-5)"
+  ],
+  "humans": [],
+  "date": "2026-10-04",
+  "links": [],
+  "tags": [
+   "controller",
+   "gamepad",
+   "xinput",
+   "steam-deck",
+   "xna",
+   "dotfuscator",
+   "cecil",
+   "input-redirection",
+   "pathfinding",
+   "obfuscated-names"
+  ]
+ },
+ {
+  "path": "games/valheim/mjolnir-frostner-rework.md",
+  "kind": "game",
+  "title": "Frostner into Mjolnir: the vanilla Frostner reworked into a returning thunder hammer",
+  "game": "Valheim",
+  "games_also": [],
+  "game_version": "steam 892970, build 25527674, l-1.0.16, Unity 6000.0.75f1 (Unity 6, Mono)",
+  "platform": "linux",
+  "engine": "unity-mono",
+  "route": "managed-patch",
+  "tools": [
+   "BepInEx",
+   "Jotunn",
+   "HarmonyX"
+  ],
+  "anti_cheat": "none found by um scan",
+  "status": "working",
+  "agents": [
+   "opencode (deepseek)"
+  ],
+  "humans": [],
+  "date": "2026-10-05",
+  "links": [
+   "https://github.com/nullagent07/valheim-mjolnir"
+  ],
+  "tags": [
+   "valheim",
+   "frostner",
+   "macesilver",
+   "bepinex",
+   "jotunn",
+   "harmony",
+   "projectile",
+   "throwable",
+   "lightning",
+   "splitner",
+   "returning-weapon"
+  ]
+ },
+ {
   "path": "games/victoria-2/south-central-gang-total-conversion.md",
   "kind": "game",
   "title": "South Central 1985: a Victoria 2 total conversion into an LA gang-territory game",
@@ -867,6 +1130,383 @@
    "dds",
    "procedural-art",
    "crash-debugging"
+  ]
+ },
+ {
+  "path": "games/world-of-warcraft/addon-development-335a.md",
+  "kind": "game",
+  "title": "Writing and fixing 3.3.5a addons: Lua 5.1 gaps, protected calls, the guild bank, macros and a test harness",
+  "game": "World of Warcraft",
+  "games_also": [],
+  "game_version": "Wrath of the Lich King client 3.3.5a (build 12340, interface 30300); AdiBags, DialogUI, WeakAuras 5.22 backport, GearScoreLite",
+  "platform": "windows",
+  "engine": "native",
+  "route": "loader-api",
+  "tools": [
+   "Lua 5.1 / luac5.1 (in WSL)",
+   "a stubbed WoW API harness",
+   "BugSack"
+  ],
+  "anti_cheat": "none: the client's own addon API",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-02",
+  "links": [
+   "https://wowpedia.fandom.com/wiki/World_of_Warcraft_API",
+   "https://www.lua.org/manual/5.1/"
+  ],
+  "tags": [
+   "addons",
+   "lua",
+   "ui",
+   "guild-bank",
+   "adibags",
+   "macros",
+   "testing",
+   "interface-30300"
+  ]
+ },
+ {
+  "path": "games/world-of-warcraft/azerothcore-custom-modules.md",
+  "kind": "game",
+  "title": "Custom AzerothCore modules for a solo-with-bots WotLK server: offline gathering, auction payout and restock, mail and progression fixes",
+  "game": "World of Warcraft",
+  "games_also": [],
+  "game_version": "AzerothCore WotLK (3.3.5a) Playerbot fork, 2026-09 source; mod-individual-progression; client 3.3.5a build 12340",
+  "platform": "linux",
+  "engine": "native",
+  "route": "loader-api",
+  "tools": [
+   "AzerothCore module API (C++)",
+   "MySQL 8.4",
+   "TradeSkillMaster price data"
+  ],
+  "anti_cheat": "not applicable: the user's own server",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [
+   "https://github.com/azerothcore/azerothcore-wotlk",
+   "https://github.com/ZhengPeiRu21/mod-individual-progression"
+  ],
+  "tags": [
+   "azerothcore",
+   "modules",
+   "loot",
+   "mail",
+   "auction-house",
+   "progression",
+   "aq-war",
+   "pets",
+   "dbc-overrides",
+   "private-server"
+  ]
+ },
+ {
+  "path": "games/world-of-warcraft/azerothcore-playerbots-server-ops.md",
+  "kind": "game",
+  "title": "Running a self-hosted AzerothCore WotLK server with 1,500 playerbots: setup, performance and the traps",
+  "game": "World of Warcraft",
+  "games_also": [],
+  "game_version": "AzerothCore WotLK (3.3.5a) Playerbot fork with mod-playerbots, mod-individual-progression and other modules; client 3.3.5a build 12340",
+  "platform": "linux",
+  "engine": "native",
+  "route": "other",
+  "tools": [
+   "AzerothCore",
+   "mod-playerbots",
+   "MySQL 8.4",
+   "Debian 13",
+   "WSL2",
+   "tmux",
+   "gdb",
+   "systemd"
+  ],
+  "anti_cheat": "not applicable: the user's own server",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [
+   "https://github.com/azerothcore/azerothcore-wotlk",
+   "https://github.com/mod-playerbots/mod-playerbots",
+   "https://github.com/ZhengPeiRu21/mod-individual-progression"
+  ],
+  "tags": [
+   "private-server",
+   "azerothcore",
+   "playerbots",
+   "performance",
+   "mysql",
+   "wsl2",
+   "vps",
+   "build",
+   "operations"
+  ]
+ },
+ {
+  "path": "games/world-of-warcraft/bwl-pulled-through-the-floor-hit-sphere-los.md",
+  "kind": "game",
+  "title": "Blackwing Lair trash pulled through the floor: a Searing Totem and the hit-sphere line-of-sight leak in AzerothCore",
+  "game": "World of Warcraft",
+  "games_also": [],
+  "game_version": "AzerothCore WotLK (3.3.5a) Playerbot fork, 2026-10 source; vmaps and mmaps extracted from the 3.3.5a client (build 12340); a 40-player mod-playerbots raid",
+  "platform": "linux",
+  "engine": "native",
+  "route": "other",
+  "tools": [
+   "AzerothCore source",
+   "a small C++ tool linked against the core's collision library (StaticMapTree)",
+   "Python 3",
+   "MySQL 8.4"
+  ],
+  "anti_cheat": "not applicable: the user's own server",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [
+   "https://github.com/azerothcore/azerothcore-wotlk",
+   "https://github.com/mod-playerbots/mod-playerbots"
+  ],
+  "tags": [
+   "azerothcore",
+   "line-of-sight",
+   "vmaps",
+   "hit-sphere",
+   "totems",
+   "aggro",
+   "formations",
+   "playerbots",
+   "blackwing-lair",
+   "debugging",
+   "private-server"
+  ]
+ },
+ {
+  "path": "games/world-of-warcraft/client-texture-crashes-and-mpq.md",
+  "kind": "game",
+  "title": "Hunting 3.3.5a client crashes in texture packs: BLP size and format limits, MPQ priority and safe patch building",
+  "game": "World of Warcraft",
+  "games_also": [],
+  "game_version": "Wrath of the Lich King client 3.3.5a (build 12340, Direct3D 9 / d3d9ex, also under DXVK 3.1) with several third-party HD packs",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "StormLib / smpq (in WSL)",
+   "Python 3.12 (BLP scanner",
+   "repair and encoder)",
+   "a minidump parser",
+   "capstone"
+  ],
+  "anti_cheat": "none touched: client data files on a private server",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-02",
+  "links": [
+   "https://wowdev.wiki/BLP",
+   "https://wowdev.wiki/MPQ"
+  ],
+  "tags": [
+   "blp",
+   "textures",
+   "crash",
+   "minidump",
+   "mpq",
+   "load-order",
+   "hd-pack",
+   "dxt",
+   "palettised"
+  ]
+ },
+ {
+  "path": "games/world-of-warcraft/hd-character-customization.md",
+  "kind": "game",
+  "title": "Retail faces, hairstyles and hair colours on the 3.3.5a HD human: CharSections, skin-section and compositor rules",
+  "game": "World of Warcraft",
+  "games_also": [],
+  "game_version": "Wrath of the Lich King client 3.3.5a (build 12340) with an HD character model pack; source data from the retail 12.x client; AzerothCore server",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "Python 3.12 (CASC/DB2 readers",
+   "BLP writer",
+   "M2/skin editor)",
+   "numpy",
+   "scipy",
+   "Pillow",
+   "wow.export (reference for the makeup blend)"
+  ],
+  "anti_cheat": "none touched: client data files on a private server",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-02",
+  "links": [
+   "https://wowdev.wiki/DB/CharSections",
+   "https://wowdev.wiki/M2/.skin",
+   "https://github.com/Kruithne/wow.export"
+  ],
+  "tags": [
+   "character-customization",
+   "charsections",
+   "barbershop",
+   "hair",
+   "faces",
+   "skin",
+   "compositor",
+   "blp",
+   "retail-port"
+  ]
+ },
+ {
+  "path": "games/world-of-warcraft/item-physics-and-capes.md",
+  "kind": "game",
+  "title": "Retail item physics and cape motion on the 3.3.5a client: a Box2D-style solver driven by retail PHYS data",
+  "game": "World of Warcraft",
+  "games_also": [],
+  "game_version": "Wrath of the Lich King client 3.3.5a (build 12340); physics data from the retail 12.x client",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "MinGW-w64 i686 gcc (in WSL)",
+   "Python 3.12 (PHYS exporter)",
+   "wowdev.wiki PHYS documentation"
+  ],
+  "anti_cheat": "none touched: a private server the user runs; purely cosmetic motion of worn items",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-02",
+  "links": [
+   "https://wowdev.wiki/PHYS",
+   "https://box2d.org/"
+  ],
+  "tags": [
+   "physics",
+   "box2d",
+   "soft-constraints",
+   "capes",
+   "cloth",
+   "tassels",
+   "plumes",
+   "retail-port",
+   "solver"
+  ]
+ },
+ {
+  "path": "games/world-of-warcraft/per-item-skinned-addons-dll.md",
+  "kind": "game",
+  "title": "Per-item skinned armour on the 3.3.5a client: a proxy-DLL engine extension (add-on models, body texture layers, tabards)",
+  "game": "World of Warcraft",
+  "games_also": [],
+  "game_version": "Wrath of the Lich King client 3.3.5a (build 12340, enUS, 32-bit, Direct3D 9) on a self-hosted AzerothCore server",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "MinGW-w64 i686 gcc (in WSL)",
+   "capstone",
+   "Ghidra 12.1",
+   "Python 3.12",
+   "Blender"
+  ],
+  "anti_cheat": "none touched: a private server the user runs; Warden is configured server-side; the DLL only changes how worn items are drawn",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [
+   "https://wowdev.wiki/M2",
+   "https://github.com/Deamon87/WebWowViewerCpp"
+  ],
+  "tags": [
+   "m2",
+   "skinned-attachments",
+   "proxy-dll",
+   "inline-hooks",
+   "bone-matrices",
+   "character-component",
+   "body-texture",
+   "tabard",
+   "geosets"
+  ]
+ },
+ {
+  "path": "games/world-of-warcraft/playerbots-raid-tactics.md",
+  "kind": "game",
+  "title": "Teaching AzerothCore playerbots to raid: kill order from raid marks, boss positioning, lockouts and the strategy-reset traps",
+  "game": "World of Warcraft",
+  "games_also": [],
+  "game_version": "AzerothCore WotLK (3.3.5a) Playerbot fork + mod-playerbots (2026-09 source); client 3.3.5a build 12340",
+  "platform": "linux",
+  "engine": "native",
+  "route": "other",
+  "tools": [
+   "mod-playerbots (C++)",
+   "a small group-control addon (Lua 5.1)",
+   "lua5.1 test harness"
+  ],
+  "anti_cheat": "not applicable: the user's own server; bots are server-side",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [
+   "https://github.com/mod-playerbots/mod-playerbots"
+  ],
+  "tags": [
+   "playerbots",
+   "raid",
+   "ai",
+   "kill-order",
+   "raid-marks",
+   "positioning",
+   "instances",
+   "addon",
+   "private-server"
   ]
  },
  {
@@ -915,6 +1555,32 @@
    "crash",
    "reverse-engineering",
    "private-server"
+  ]
+ },
+ {
+  "path": "techniques/checking-steam-workshop-mods-against-a-game-version.md",
+  "kind": "technique",
+  "title": "Checking Steam Workshop mods against a game version: the public API, page scraping limits, and what evidence to trust",
+  "tags": [
+   "steam-workshop",
+   "modlist",
+   "compatibility",
+   "steam-web-api",
+   "scraping",
+   "rate-limits",
+   "triage"
+  ],
+  "agents": [
+   "Claude Code (Opus 5)",
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "RedSuper"
+  ],
+  "date": "2026-10-04",
+  "links": [
+   "https://partner.steamgames.com/doc/webapi/ISteamRemoteStorage",
+   "https://partner.steamgames.com/doc/webapi/ISteamNews"
   ]
  },
  {
