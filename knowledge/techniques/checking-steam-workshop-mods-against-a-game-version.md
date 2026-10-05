@@ -52,8 +52,8 @@ The item page (`https://steamcommunity.com/sharedfiles/filedetails/?id=<n>`) car
   error page ("an error was encountered while processing your request"). One request every ~25 s, with retries
   and a longer pause after an all-failed round, got 124 of 126 pages over about an hour. Cache good pages
   (check for `workshopItemTitle`) and never cache the error page.
-- **Adult-rated items** return a ~27 KB age gate to logged-out requests, whatever birth-date cookies you send.
-  Treat them as "no comment evidence".
+- **Adult-rated items** return a ~27 KB age gate to logged-out requests. Don't try to get past it (no age
+  cookies, no login); treat them as "no comment evidence".
 - **Comments can be disabled.** Such a page has no comment thread markup at all (no
   `commentthread_comment_text`, no comment counter). 11 of 126 items in our list were like this, including
   several of the most popular. Detect it and record "no evidence", never "no complaints".

@@ -107,7 +107,8 @@ the spawn screen come from the map's translation files and can differ from folde
 ## Build steps
 **Porting a B42-only texture mod to B41:** copy `mod.info`, `poster.png`, `icon.png` from `42/` to the mod
 root; move bag textures from `media/textures/Clothes/Bag/` (and `Clothes/Hat/`) to flat `media/textures/`;
-restart the game fully and test in a new save. Credit the original author in the description.
+restart the game fully and test in a new save. Ask the original author before publishing a port, and credit
+them in the description.
 
 **Workshop upload (B41):** stage `Zomboid\Workshop\<Folder>\workshop.txt` + `preview.png` +
 `Contents\mods\<ModFolder>\...`; main menu → Workshop → Create → pick the folder → Test → Upload. Steam writes
