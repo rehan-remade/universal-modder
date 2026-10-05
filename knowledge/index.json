@@ -43,6 +43,35 @@
   ]
  },
  {
+  "path": "games/bouncemasters-2/english-exit-label.md",
+  "kind": "game",
+  "title": "Changing the English exit label in Bouncemasters 2",
+  "game": "Bouncemasters 2: Pengu Throw Demo",
+  "games_also": [],
+  "game_version": "Bouncemasters 2: Pengu Throw Demo, Steam build 20466563 (App ID 4091980)",
+  "platform": "macos",
+  "engine": "unity-mono",
+  "route": "data",
+  "tools": [
+   "UnityPy via uv",
+   "um scan"
+  ],
+  "anti_cheat": "DevToDev AntiCheatWindows SDK is shipped; this change is data-only and does not modify it",
+  "status": "in-progress",
+  "agents": [
+   "Copilot SDK in VS Code (model not specified)"
+  ],
+  "humans": [],
+  "date": "2026-10-04",
+  "links": [],
+  "tags": [
+   "unity-localization",
+   "addressables",
+   "menu-ui",
+   "data-mod"
+  ]
+ },
+ {
   "path": "games/gta-v/minecraft-passthrough.md",
   "kind": "game",
   "title": "Minecraft inside GTA V (passthrough mod)",
@@ -87,6 +116,41 @@
    "reprojection",
    "camera-sync",
    "director"
+  ]
+ },
+ {
+  "path": "games/minecraft/half-life-2-guns-in-minecraft-passthrough-hl2-demo-under-win.md",
+  "kind": "game",
+  "title": "Half-Life 2 guns in Minecraft (passthrough, HL2 Demo under Wine on macOS)",
+  "game": "Minecraft",
+  "games_also": [
+   "Half-Life 2 Demo"
+  ],
+  "game_version": "Minecraft Java 26.3 (demo account), Fabric Loader 0.19.5, Fabric API 0.161.0+26.3; Half-Life 2 Demo (Steam app 219) on the HL2 depot build 19307283, 32-bit hl2.exe with DXVK d3d9",
+  "platform": "macos",
+  "engine": "java",
+  "route": "passthrough",
+  "tools": [
+   "Fabric (Loom 1.18)",
+   "Wine 10.0 (Sikarugir wrapper)",
+   "ScreenCaptureKit (Swift helpers)",
+   "imageio-ffmpeg via uv"
+  ],
+  "anti_cheat": "none in single-player (VAC only applies to HL2 multiplayer; nothing online was touched)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Claude Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-05",
+  "links": [],
+  "tags": [
+   "source-engine",
+   "wine",
+   "macos",
+   "screencapturekit",
+   "chroma-key",
+   "console-bridge"
   ]
  },
  {
@@ -167,6 +231,39 @@
    "explosions",
    "camera",
    "showcase-video"
+  ]
+ },
+ {
+  "path": "games/thunder-spikes-volleyball-demo/penguin-toss-content-port.md",
+  "kind": "game",
+  "title": "Penguin toss content port",
+  "game": "Thunder Spikes Volleyball Demo",
+  "games_also": [
+   "Bouncemasters 2: Pengu Throw Demo"
+  ],
+  "game_version": "Steam App 4042420, build 21096143",
+  "platform": "macos",
+  "engine": "unity-mono",
+  "route": "loader-api",
+  "tools": [
+   "BepInEx 5.4.23.5",
+   ".NET SDK 10.0.401",
+   "UnityPy"
+  ],
+  "anti_cheat": "No anti-cheat detected; plugin refuses to change gameplay in online sessions.",
+  "status": "in-progress",
+  "agents": [
+   "Copilot SDK in VS Code"
+  ],
+  "humans": [],
+  "date": "2026-10-04",
+  "links": [],
+  "tags": [
+   "unity",
+   "bepinex",
+   "content-port",
+   "penguin",
+   "offline"
   ]
  },
  {
