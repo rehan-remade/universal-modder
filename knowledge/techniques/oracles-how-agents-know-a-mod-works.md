@@ -1,8 +1,8 @@
 ---
 kind: technique
 title: "Oracles: how an agent knows a mod actually works"
-tags: [verification, testing, trace-replay, round-trip, screenshots, measurement, circuit-breaker]
-date: 2026-09-30
+tags: [verification, testing, trace-replay, round-trip, screenshots, measurement, circuit-breaker, stale-capture]
+date: 2026-10-01
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["@rehan_shei"]
 links: []
@@ -27,6 +27,8 @@ Always. Pick the cheapest oracle that can catch the mistake you're most likely t
 | **Synthetic host** | integration bugs before the real game is even installed | Minecraft × GTA: a fake host with known geometry, and a fake D3D11 "GTA" with reversed-Z depth running the real compositor |
 | **Measurement scene** | timing and sync (latency, camera lag, audio offset) | Minecraft × GTA: a Minecraft-only gold wall against GTA's skyline showed the one-frame pose lead; Terraria: nuke flash vs boom measured the audio offset |
 | **Byte-matching build** | decompilation errors | matching decomps compile back to the identical ROM, one function at a time |
+| **Headless engine bench** | wrong rules, wrong data, regressions, before the host is even launched | Bloons TD 6 in Minecraft: the pure-Java sim runs 885 tests and a 100-round game in seconds with `javac` alone |
+| **Scripted real-world run** | what only a real client in a real world shows: chunks not drawn, overlays hidden, sounds out of earshot, frame time | Bloons TD 6 in Minecraft: `runClient -Pmonde` builds a throwaway world, plays rounds by commands, logs TPS/mspt/FPS and takes screenshots that are read one by one; measurements and remarks are counted apart |
 | **Publish check** | shipping what you mustn't | `um publish check --game <install>` |
 
 Rules that make oracles work for agents:
@@ -50,8 +52,30 @@ Rules that make oracles work for agents:
 3. **"Works in the fake host" isn't "works in the game".**
    - **Cause:** the real game adds things the fake can't model (pause menus, idle cameras, window focus).
    - **Fix:** keep the fake for fast iteration, and run the real game before calling it done.
+4. **The screenshot oracle froze and kept answering.** (2026-10-01, `um win shot` = Windows.Graphics.Capture,
+   with ReShade post-processing active in the game.)
+   - **Symptom:** three captures taken minutes apart were **byte-identical** (same SHA-256), yet the process
+     was demonstrably rendering — 7.2 s of CPU time per 5 s of wall clock. The frames *looked* plausible, so
+     the oracle kept returning a confident answer about a frame that had not changed.
+   - **Cause:** once the swapchain goes through ReShade / independent flip, Graphics.Capture stops tracking
+     the window and replays its last composed frame.
+   - **Fix:** prove the oracle is live before trusting it — take two captures a second apart and compare
+     hashes; if they match while the game is animating, the oracle is dead. Then use a screenshot taken from
+     *inside* the thing you are measuring (ReShade's own `Print Screen` writes the post-processed frame next
+     to its DLL). Beware the reverse trap too: a legitimately static scene makes two identical captures, so
+     check the process is actually burning CPU.
+   - **Why this one matters:** a frozen oracle inverts conclusions. Here it would have said "the shader is
+     not running" when the truth was "the shader runs fine and the depth it reads is empty".
+
+5. **Every bench is green and the shipped build still breaks.**
+   - **Cause:** benches run in a dev environment (Minecraft: Mojang names, no other mods, flat world,
+     one player); the user's game is not that.
+   - **Fix:** list what the benches cannot see in the result, and have the human run the real build in
+     the real setup before calling it done.
 
 ## Seen in
 - [Minecraft inside GTA V](../games/gta-v/minecraft-passthrough.md)
 - [Eye of Cthulhu RL agent](../games/terraria/eye-of-cthulhu-rl-agent.md)
 - [San Franciscans civ](../games/age-of-empires-ii-de/san-franciscans-civ.md)
+- [Black Myth: Wukong — ReShade depth dead end](../games/black-myth-wukong/reshade-depth-dead-end.md) (Gotcha 4)
+- [Bloons TD 6 inside Minecraft](../games/minecraft/bloons-td-6-in-minecraft.md) (headless and scripted-world benches, Gotcha 5)

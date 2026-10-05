@@ -3,6 +3,7 @@
     uv run --with pytest pytest -q
 """
 import json
+import shutil
 import struct
 import subprocess
 import sys
@@ -13,7 +14,7 @@ from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from um import fal, publish, scan, sprite, video  # noqa: E402
+from um import backup, fal, publish, scan, sprite, video  # noqa: E402
 
 
 # --------------------------------------------------------------------------- scan
@@ -119,6 +120,16 @@ def test_steam_games_utf8(tmp_path, monkeypatch, library_name, install_name, gam
         "path": str(game_path), "workshop": None,
     }]
 
+def test_known_game_longest_key_wins(tmp_path):
+    # "grand theft auto v" is a substring of "grand theft auto v enhanced";
+    # the more specific entry must win, not whichever lands first in the dict
+    d = tmp_path / "Grand Theft Auto V Enhanced"
+    d.mkdir()
+    for i in range(6):
+        (d / f"f{i}.txt").write_text("x")
+    r = scan.scan(str(d))
+    assert r["routes"][0]["route"] == scan.KNOWN["grand theft auto v enhanced"][0]
+
 
 # --------------------------------------------------------------------------- sprite
 
@@ -149,6 +160,20 @@ def test_sheet_slice_roundtrip():
     sh = sprite.sheet(frames, cols=3)
     assert sh.size == (24, 16)
     assert len(sprite.slice_sheet(sh, 8, 8)) == 5
+
+
+@pytest.mark.parametrize("alpha", [1, 64, 128, 192, 254, 255])
+@pytest.mark.parametrize("operation", ["fit", "sheet", "squash"])
+def test_sprite_placement_preserves_rgba(alpha, operation):
+    # Placing a frame on a transparent canvas must not apply its alpha twice.
+    im = Image.new("RGBA", (8, 8), (200, 100, 50, alpha))
+    if operation == "fit":
+        out = sprite.fit(im, 8, 8)
+    elif operation == "sheet":
+        out = sprite.slice_sheet(sprite.sheet([im]), 8, 8)[0]
+    else:
+        out = sprite.simple_frames(im, n=1, kind="squash")[0]
+    assert out.tobytes() == im.tobytes()
 
 
 def test_team_mask():
@@ -191,12 +216,31 @@ def test_publish_check(tmp_path, capsys):
     assert publish.check(str(tmp_path / "mod"), str(tmp_path / "game")) == 1
     out = capsys.readouterr().out
     assert "game file copied verbatim" in out and "FAL_KEY assignment" in out and "Ghidra auto-name" in out
-    assert "decompiler header x1 in src/Mod.cs" in out and "README.md" not in out.split("decompiler header")[-1].split("\n")[0]
+    normalized = out.replace("\\", "/")
+    assert "decompiler header x1 in src/Mod.cs" in normalized and "README.md" not in normalized.split("decompiler header")[-1].split("\n")[0]
+
+
+@pytest.mark.parametrize("label,key", [
+    # assembled at runtime so this file doesn't trip the toolkit's own publish check
+    ("OpenAI key", "sk-" + "proj-" + "Ab3_dE-f" + "Gh1jK2lM3nO4pQ5rS6tU7vW8xY9z0" * 4),
+    ("OpenAI key", "sk-" + "svcacct-" + "Ab3_dE-f" + "Gh1jK2lM3nO4pQ5rS6tU7vW8xY9z0" * 4),
+    ("OpenAI key", "sk-" + "Gh1jK2lM3nO4pQ5rS6tU7vW8xY9z0" * 2),
+    ("GitHub token", "github" + "_pat_" + "11ABCDEFG0123456789abc" + "_" + "aB3dE5fG7hJ9kL1mN3pQ5rS7tU9vW1xY3zA5bC7dE9fG1hJ3kL5mN7pQ9rS1t"),
+    ("GitHub token", "gh" + "p_" + "aB3dE5fG7hJ9kL1mN3pQ5rS7tU9vW1xY3z"),
+])
+def test_secret_patterns_catch_current_key_formats(label, key):
+    rx = dict(publish.SECRET_PATTERNS)[label]
+    assert rx.search(f"key = {key}\n"), key
+
+
+def test_secret_patterns_ignore_ordinary_text():
+    text = "sk-learn-style-kebab-case-identifiers-are-not-keys and github_pat_ alone"
+    assert not [label for label, rx in publish.SECRET_PATTERNS if rx.search(text)]
 
 
 # --------------------------------------------------------------------------- video
 
-@pytest.mark.skipif(subprocess.run(["which", "ffmpeg"], capture_output=True).returncode, reason="needs ffmpeg")
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg")
 def test_compile_small_edl(tmp_path):
     for i, color in enumerate(["red", "blue"]):
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", f"testsrc2=s=640x360:d=3:r=30", "-f", "lavfi", "-i", "sine=f=440:d=3",
@@ -224,7 +268,7 @@ def test_repo_knowledge_is_valid():
         fails, _ = kb.check_note(p, root)
         assert not fails, (p, fails)
     idx, rows = kb.build_index(root)
-    assert (root / "INDEX.md").read_text() == idx, "run `um kb index`"
+    assert (root / "INDEX.md").read_text(encoding="utf-8") == idx, "run `um kb index`"
     assert len(rows) >= 7
 
 
@@ -236,13 +280,13 @@ def test_kb_new_check_search(tmp_path):
     p = kb.new_note(root, "Hades II", "A new boon god", agent="Codex (gpt-6)", route="loader-api")
     fails, _ = kb.check_note(p, root)
     assert any("unfilled template text" in f for f in fails)          # a fresh scaffold must not pass
-    good = p.read_text()
+    good = p.read_text(encoding="utf-8")
     good = good.replace("FILL IN: exact build", "1.0.1 (Steam)").replace("anti_cheat: FILL IN", "anti_cheat: none")
     good = good.replace("> Two to four sentences: what you built", "> Added a boon god via a Lua mod loader")
     good = good.replace("The most valuable section. Numbered; each one symptom → cause → fix.", "")
     good = good.replace("1. **Symptom.** What you saw. **Cause:** what it really was. **Fix:** what worked.",
                         "1. **Boons never offered.** **Cause:** pool cached at load. **Fix:** register before the run starts.")
-    p.write_text(good)
+    p.write_text(good, encoding="utf-8")
     fails, _ = kb.check_note(p, root)
     assert not fails, fails
     res = kb.search(root, ["boon"])
@@ -257,3 +301,163 @@ def test_kb_check_rejects_secrets_and_dumps(tmp_path):
                     f"```c\n{code}\n```\n" + "FAL" + "_KEY=abcdefghijklmnopqrstuvwxyz0123\n")
     fails, _ = kb.check_note(note)
     assert any("code block" in f for f in fails) and any("FAL_KEY" in f for f in fails)
+
+
+@pytest.mark.parametrize("url", ["https://github.com/alice/universal-modder.git", "https://github.com/alice/universal-modder",
+                                 "git@github.com:alice/universal-modder.git", "ssh://git@github.com/alice/universal-modder.git"])
+def test_pr_head_from_fork(url):
+    # gh looks a bare --head branch up in the base repo; a PR from a fork needs "<owner>:<branch>"
+    assert kb.pr_head("kb/a-b", url) == "alice:kb/a-b"
+
+
+def test_pr_head_same_repo():
+    assert kb.pr_head("kb/a-b", None) == "kb/a-b"
+
+
+# --------------------------------------------------------------------------- backup
+
+def test_backup_handles_pre_1980_timestamps(tmp_path, monkeypatch):
+    import os
+    monkeypatch.setattr(backup, "_root", lambda name: (tmp_path / "snaps" / name).mkdir(parents=True, exist_ok=True)
+                        or tmp_path / "snaps" / name)
+    src = tmp_path / "src"
+    make(src, {"old.txt": "from 1970", "new.txt": "fresh"})
+    os.utime(src / "old.txt", (0, 0))
+    zp = backup.create(str(src), name="t")
+    assert set(backup._manifest(zp)["files"]) == {"old.txt", "new.txt"}
+
+
+def test_backup_diff_and_restore_round_trip(tmp_path, monkeypatch):
+    monkeypatch.setattr(backup, "_root", lambda name: (tmp_path / "snaps" / name).mkdir(parents=True, exist_ok=True)
+                        or tmp_path / "snaps" / name)
+    src = tmp_path / "src"
+    make(src, {"save.dat": "v1", "sub/cfg.ini": "a=1"})
+    backup.create(str(src), name="t")
+    (src / "save.dat").write_text("v2")
+    (src / "sub" / "cfg.ini").unlink()
+    make(src, {"extra.log": "new"})
+    d = backup.diff("t", str(src))
+    assert (d["changed"], d["removed"], d["added"]) == (["save.dat"], ["sub/cfg.ini"], ["extra.log"])
+    with pytest.raises(SystemExit):  # no --yes: report only, touch nothing
+        backup.restore("t", str(src))
+    assert (src / "save.dat").read_text() == "v2"
+    backup.restore("t", str(src), clean=True, yes=True)
+    assert (src / "save.dat").read_text() == "v1"
+    assert (src / "sub" / "cfg.ini").read_text() == "a=1"
+    assert not (src / "extra.log").exists()
+    assert backup.snapshots("t-pre-restore")  # the state before the restore was kept
+
+
+# --------------------------------------------------------------------------- comfy
+
+from um import comfy  # noqa: E402
+
+
+@pytest.fixture
+def fake_comfy():
+    """A stand-in for ComfyUI's HTTP API: /system_stats, /models, /object_info, /prompt, /history, /view."""
+    import io
+    import threading
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    from urllib.parse import parse_qs, urlparse
+
+    state = {"prompts": [], "polls": 0, "models_route": True}
+    png = io.BytesIO()
+    im = Image.new("RGBA", (16, 16), (255, 255, 255, 255))      # a red square on a white background
+    im.paste((200, 30, 30, 255), (4, 4, 12, 12))
+    im.save(png, "PNG")
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def _send(self, body: bytes, code=200, ctype="application/json"):
+            self.send_response(code)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_GET(self):
+            u = urlparse(self.path)
+            if u.path == "/system_stats":
+                self._send(json.dumps({"system": {"comfyui_version": "0.9.0", "pytorch_version": "2.9.0"},
+                                       "devices": [{"name": "fake", "type": "cpu"}]}).encode())
+            elif u.path == "/models/checkpoints" and state["models_route"]:
+                self._send(json.dumps(["sd15.safetensors", "sdxl_base.safetensors"]).encode())
+            elif u.path == "/object_info/CheckpointLoaderSimple":
+                spec = ["COMBO", {"options": ["v3.safetensors"]}]
+                self._send(json.dumps({"CheckpointLoaderSimple": {"input": {"required": {"ckpt_name": spec}}}}).encode())
+            elif u.path == "/history/p1":
+                state["polls"] += 1                                  # the first poll finds it still running
+                done = {"p1": {"status": {"status_str": "success", "completed": True},
+                               "outputs": {"9": {"images": [{"filename": "um_00001_.png", "subfolder": "", "type": "output"}]}}}}
+                self._send(json.dumps(done if state["polls"] > 1 else {}).encode())
+            elif u.path == "/view" and parse_qs(u.query).get("filename") == ["um_00001_.png"]:
+                self._send(png.getvalue(), ctype="image/png")
+            else:
+                self._send(b"404: Not Found", 404, "text/plain")
+
+        def do_POST(self):
+            wf = json.loads(self.rfile.read(int(self.headers["Content-Length"])))["prompt"]
+            state["prompts"].append(wf)
+            if wf.get("4", {}).get("inputs", {}).get("ckpt_name") == "missing.safetensors":
+                err = {"error": {"message": "Prompt outputs failed validation", "details": ""},
+                       "node_errors": {"4": {"class_type": "CheckpointLoaderSimple", "errors": [
+                           {"message": "Value not in list", "details": "ckpt_name: 'missing.safetensors' not in [...]"}]}}}
+                self._send(json.dumps(err).encode(), 400)
+            else:
+                self._send(json.dumps({"prompt_id": "p1", "number": 0, "node_errors": {}}).encode())
+
+    srv = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    state["url"] = f"http://127.0.0.1:{srv.server_address[1]}"
+    yield state
+    srv.shutdown()
+
+
+def test_comfy_image_sprite(fake_comfy, tmp_path, monkeypatch):
+    from um import cli
+    monkeypatch.setattr(comfy.time, "sleep", lambda s: None)
+    out = tmp_path / "gen"
+    cli.main(["comfy", "image", "a red potion", "--url", fake_comfy["url"], "--out", str(out), "--seed", "7", "--sprite"])
+    wf = fake_comfy["prompts"][-1]
+    assert wf["4"]["inputs"]["ckpt_name"] == "sd15.safetensors"               # the first checkpoint listed
+    assert (wf["5"]["inputs"]["width"], wf["3"]["inputs"]["seed"]) == (512, 7)  # SD 1.5 size, the given seed
+    assert "plain flat white background" in wf["6"]["inputs"]["text"]
+    assert Image.open(out / "a_red_potion.png").size == (16, 16)
+    cut = Image.open(out / "a_red_potion_cut.png")                           # cut out and trimmed locally
+    assert cut.size == (8, 8) and cut.getpixel((0, 0)) == (200, 30, 30, 255)
+    rec = json.loads((out / "comfy_manifest.jsonl").read_text().splitlines()[-1])
+    assert rec["prompt_id"] == "p1" and rec["seed"] == 7 and rec["workflow"]["9"]["class_type"] == "SaveImage"
+
+
+def test_comfy_run_set_and_errors(fake_comfy, tmp_path, monkeypatch):
+    monkeypatch.setattr(comfy.time, "sleep", lambda s: None)
+    wf = comfy.txt2img("x", "sd15.safetensors")
+    wf["6"]["_meta"] = {"title": "Positive"}
+    (tmp_path / "wf.json").write_text(json.dumps(wf))
+    wf = comfy.apply_set(comfy.load_workflow(tmp_path / "wf.json"), ["Positive.text=a v1.5 sword=sharp", "3.seed:=42"])
+    assert (wf["6"]["inputs"]["text"], wf["3"]["inputs"]["seed"]) == ("a v1.5 sword=sharp", 42)
+    assert [Path(f).name for f in comfy.generate(fake_comfy["url"], wf, tmp_path / "o", "sword")] == ["sword.png"]
+    (tmp_path / "ui.json").write_text(json.dumps({"nodes": [], "links": []}))
+    with pytest.raises(SystemExit):
+        comfy.load_workflow(tmp_path / "ui.json")                            # UI format: needs Export (API)
+    with pytest.raises(SystemExit):
+        comfy.queue(fake_comfy["url"], comfy.txt2img("x", "missing.safetensors"))   # validation error reported
+    fake_comfy["models_route"] = False
+    assert comfy.checkpoints(fake_comfy["url"]) == ["v3.safetensors"]        # older servers: /object_info
+    assert comfy.status(fake_comfy["url"])["version"] == "0.9.0"
+
+
+def test_skill_copies_match():
+    # .agents/skills and .claude/skills are real copies of skills/ (Windows clones turn symlinks into text files)
+    root = Path(__file__).resolve().parents[1]
+    def tree(d):
+        return {p.relative_to(d).as_posix(): p.read_bytes() for p in sorted(d.rglob("*")) if p.is_file()}
+    src = tree(root / "skills")
+    for copy in (".agents/skills", ".claude/skills"):
+        assert not (root / copy).is_symlink(), f"{copy} must be a folder, not a symlink"
+        assert tree(root / copy) == src, (f"{copy} differs from skills/: rm -rf .agents/skills .claude/skills && "
+                                          "cp -r skills .agents/skills && cp -r skills .claude/skills")
+    assert not any((root / d).exists() for d in (".gemini/skills", ".github/skills")), "agents read .agents/skills"

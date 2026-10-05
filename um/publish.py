@@ -23,8 +23,10 @@ SECRET_PATTERNS = [
     ("fal key", re.compile(r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:[0-9a-f]{32}\b")),
     ("FAL_KEY assignment", re.compile(r"FAL_KEY\s*[=:]\s*['\"]?[A-Za-z0-9:_\-]{20,}")),
     ("Anthropic key", re.compile(r"sk-ant-[A-Za-z0-9_\-]{20,}")),
-    ("OpenAI key", re.compile(r"\bsk-(?:proj-)?[A-Za-z0-9]{32,}")),
-    ("GitHub token", re.compile(r"\bgh[pousr]_[A-Za-z0-9]{30,}")),
+    # project, service-account and admin keys carry - and _ in their body; legacy keys are plain alphanumerics
+    ("OpenAI key", re.compile(r"\bsk-(?:(?:proj|svcacct|admin)-[A-Za-z0-9_\-]{32,}|[A-Za-z0-9]{32,})")),
+    # classic tokens (ghp_, gho_, ...) and fine-grained personal access tokens (github_pat_)
+    ("GitHub token", re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{60,})")),
     ("AWS key id", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
     ("private key", re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----")),
 ]
@@ -72,10 +74,10 @@ def check(mod: str, game: str | None = None) -> int:
             h = _sha1(f)
             for gp in by_size[sz]:
                 if _sha1(gp) == h:
-                    fails.append(f"game file copied verbatim: {f.relative_to(root)}  (== {gp.relative_to(g)})")
+                    fails.append(f"game file copied verbatim: {f.relative_to(root).as_posix()}  (== {gp.relative_to(g).as_posix()})")
                     break
     for f in files:
-        rel = f.relative_to(root)
+        rel = f.relative_to(root).as_posix()        # same report on every OS (Windows would print src\Mod.cs)
         if f.name == ".env" or f.name.endswith(".env"):
             fails.append(f"env file (secrets?): {rel}")
         if f.suffix.lower() in ARCHIVE_EXT and f.stat().st_size > 5 << 20:

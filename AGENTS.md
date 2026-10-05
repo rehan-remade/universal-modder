@@ -19,6 +19,7 @@ repo, they almost always want to **mod a game**, or to learn how a game was modd
   - Every group has `--help`:
     - `scan`: installed games, engine, anti-cheat, loaders, saves, routes
     - `fal`: sprites, textures, PBR, 3D, rigs, SFX, music, voice, video via fal's REST API
+    - `comfy`: images from a local ComfyUI server, with no API key
     - `sprite` / `render3d`: art → engine-ready frames
     - `win`: launch, screenshot, input, record on Windows (also from WSL)
     - `video`: contact sheets and EDL showcase edits
@@ -28,18 +29,19 @@ repo, they almost always want to **mod a game**, or to learn how a game was modd
 - **fal MCP server:** `https://mcp.fal.ai/mcp` with header `Authorization: Bearer $FAL_KEY`.
   - It's pre-configured per agent: `.mcp.json` (Claude Code), `.codex/config.toml` (Codex),
     `.cursor/mcp.json` (Cursor), `.vscode/mcp.json` (VS Code / Copilot), `gemini-extension.json`
-    (Gemini CLI).
+    (Gemini CLI), `opencode.json` (OpenCode).
   - No MCP? `um fal` does the same over REST.
-- **Skills** (`skills/*/SKILL.md`, Agent Skills format) are also linked where each agent looks for them:
-  `.agents/skills` (Codex and others), `.claude/skills`, `.gemini/skills`, `.github/skills`.
+- **Skills** (`skills/*/SKILL.md`, Agent Skills format) are copied where agents look for them in a clone:
+  `.agents/skills` (Codex, Gemini CLI, Copilot, Cursor, OpenCode) and `.claude/skills` (Claude Code). Edit
+  `skills/`, then copy it over; a test fails while the copies differ.
 - **Engine playbooks:** `skills/mod-any-game/references/engines/`.
 - **Worked examples:** `examples/terraria-tmodloader`, `examples/aoe2-de-civ`,
   `examples/minecraft-gta5-passthrough`.
 
 ## Rules (full reasoning in `skills/mod-any-game/references/safety.md`)
-- **What you can mod:** only games the user owns, single-player/offline.
+- **What you can mod:** any game the user owns: single-player, multiplayer, or servers the user hosts.
   - Never touch online clients protected by anti-cheat.
-  - Never write multiplayer cheats.
+  - Never write cheats against other players (aimbots, ESP, speed hacks).
   - Never bypass anti-cheat, DRM or ownership checks.
 - **Saves:** `um backup` saves before modded launches.
 - **What you ship:** never commit or publish game files, extracted assets or decompiled code. Keep
