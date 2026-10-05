@@ -1,0 +1,30 @@
+name: star chart
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: star-chart
+  cancel-in-progress: true
+jobs:
+  draw:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Draw the chart
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/star-chart/star_chart.py "$GITHUB_REPOSITORY" "$RUNNER_TEMP/star-chart/stars.svg"
+      # One commit on its own branch, replaced every run: the README shows it, main gets no bot commits.
+      - name: Publish it on the star-chart branch
+        working-directory: ${{ runner.temp }}/star-chart
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git init -q -b star-chart
+          git add stars.svg
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "star chart"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" star-chart

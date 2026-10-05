@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/media/teaser.gif" alt="Six mods made by AI coding agents: Steve gliding an elytra through Los Santos, the Nether spreading over Los Santos, Minecraft mobs fighting the LSPD, the Halo Warthog in Minecraft, a World at War flamethrower in Minecraft, and World at War zombies in Minecraft" width="560">
+  <img src="docs/media/mods-teaser.gif" alt="Six mods made by AI coding agents, with the universal-modder tile in the corner: Steve gliding an elytra through Los Santos, the Nether spreading over Los Santos, Minecraft mobs fighting the LSPD, the Halo Warthog in Minecraft, a World at War flamethrower in Minecraft, and World at War zombies in Minecraft. It ends on the universal-modder logo and &quot;mod any game.&quot;" width="560">
 </p>
 
 <p align="center"><b>Coming next: the mod hub.</b> Publish your mods, remix other people's, and make new ones.</p>
@@ -202,3 +202,9 @@ Use `made-with-light.svg` on a light page.
   explained them in public.
 
 MIT licensed. Brand type: Geist Pixel, Sometype Mono and Instrument Sans. Video titles: Space Grotesk and JetBrains Mono. All under the SIL OFL.
+
+## Star history
+
+<p align="center">
+  <a href="https://github.com/rehan-remade/universal-modder/stargazers"><img src="https://raw.githubusercontent.com/rehan-remade/universal-modder/star-chart/stars.svg" width="800" alt="universal-modder's GitHub stars over time"></a>
+</p>
