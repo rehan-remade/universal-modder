@@ -73,7 +73,7 @@ in-game screenshots/logs were produced.
 ## Gotchas
 1. **Symptom.** `.minecraft` has no usable `.mdl` files — only JSON models + skins in jars.
    **Cause:** GoldSrc needs compiled `.mdl` (GoldSrc model format), modern Minecraft is `.json`+`.png`.
-   **Fix:** source a GoldSrc-ready Steve MDL (e.g. GameBanana) or convert via Blender/Wall Worm;
+   **Fix:** convert the Steve model from the player's own Minecraft jar via Blender/Wall Worm (never ship it);
    the code references `models/steve.mdl` regardless.
 2. **Symptom.** First `uv tool install git+...` failed with "Git executable not found".
    **Cause:** Git for Windows was just installed and not on this shell's PATH.
@@ -94,7 +94,7 @@ None committed. Required (not yet supplied): `models/steve.mdl`, and `models/{v,
 One session; builds of the full DLL take a few minutes after `cmake` configure.
 
 ## Open questions
-- Which Steve MDL asset to use (GameBanana vs convert from the `.minecraft` JSON model)?
+- Converting the Steve model from the player's own `.minecraft` JSON model into an MDL (not done yet).
 - Ender Pearl teleport: should it preserve velocity, spawn a portal effect, or clamp to safe ground?
 - HUD: replace placeholder `FillRGBA` hunger/meat icons with real sprites, and decide the hotbar slot
   mapping to item slots.
