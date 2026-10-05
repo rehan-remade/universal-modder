@@ -120,6 +120,16 @@ def test_steam_games_utf8(tmp_path, monkeypatch, library_name, install_name, gam
         "path": str(game_path), "workshop": None,
     }]
 
+def test_known_game_longest_key_wins(tmp_path):
+    # "grand theft auto v" is a substring of "grand theft auto v enhanced";
+    # the more specific entry must win, not whichever lands first in the dict
+    d = tmp_path / "Grand Theft Auto V Enhanced"
+    d.mkdir()
+    for i in range(6):
+        (d / f"f{i}.txt").write_text("x")
+    r = scan.scan(str(d))
+    assert r["routes"][0]["route"] == scan.KNOWN["grand theft auto v enhanced"][0]
+
 
 # --------------------------------------------------------------------------- sprite
 
@@ -150,6 +160,20 @@ def test_sheet_slice_roundtrip():
     sh = sprite.sheet(frames, cols=3)
     assert sh.size == (24, 16)
     assert len(sprite.slice_sheet(sh, 8, 8)) == 5
+
+
+@pytest.mark.parametrize("alpha", [1, 64, 128, 192, 254, 255])
+@pytest.mark.parametrize("operation", ["fit", "sheet", "squash"])
+def test_sprite_placement_preserves_rgba(alpha, operation):
+    # Placing a frame on a transparent canvas must not apply its alpha twice.
+    im = Image.new("RGBA", (8, 8), (200, 100, 50, alpha))
+    if operation == "fit":
+        out = sprite.fit(im, 8, 8)
+    elif operation == "sheet":
+        out = sprite.slice_sheet(sprite.sheet([im]), 8, 8)[0]
+    else:
+        out = sprite.simple_frames(im, n=1, kind="squash")[0]
+    assert out.tobytes() == im.tobytes()
 
 
 def test_team_mask():
@@ -283,3 +307,24 @@ def test_backup_handles_pre_1980_timestamps(tmp_path, monkeypatch):
     os.utime(src / "old.txt", (0, 0))
     zp = backup.create(str(src), name="t")
     assert set(backup._manifest(zp)["files"]) == {"old.txt", "new.txt"}
+
+
+def test_backup_diff_and_restore_round_trip(tmp_path, monkeypatch):
+    monkeypatch.setattr(backup, "_root", lambda name: (tmp_path / "snaps" / name).mkdir(parents=True, exist_ok=True)
+                        or tmp_path / "snaps" / name)
+    src = tmp_path / "src"
+    make(src, {"save.dat": "v1", "sub/cfg.ini": "a=1"})
+    backup.create(str(src), name="t")
+    (src / "save.dat").write_text("v2")
+    (src / "sub" / "cfg.ini").unlink()
+    make(src, {"extra.log": "new"})
+    d = backup.diff("t", str(src))
+    assert (d["changed"], d["removed"], d["added"]) == (["save.dat"], ["sub/cfg.ini"], ["extra.log"])
+    with pytest.raises(SystemExit):  # no --yes: report only, touch nothing
+        backup.restore("t", str(src))
+    assert (src / "save.dat").read_text() == "v2"
+    backup.restore("t", str(src), clean=True, yes=True)
+    assert (src / "save.dat").read_text() == "v1"
+    assert (src / "sub" / "cfg.ini").read_text() == "a=1"
+    assert not (src / "extra.log").exists()
+    assert backup.snapshots("t-pre-restore")  # the state before the restore was kept
