@@ -668,16 +668,17 @@
    "ReadProcessMemory (read-only live inspection)"
   ],
   "anti_cheat": "none (single player)",
-  "status": "working",
+  "status": "released",
   "agents": [
    "Claude Code (Opus 5.5)"
   ],
   "humans": [
    "@TotSamiyMorzh"
   ],
-  "date": "2026-10-02",
+  "date": "2026-10-05",
   "links": [
-   "https://github.com/TotSamiyMorzh/mewgenics-combat-roster"
+   "https://github.com/TotSamiyMorzh/mewgenics-combat-roster",
+   "https://www.nexusmods.com/mewgenics/mods/539"
   ],
   "tags": [
    "native-dll",
@@ -688,6 +689,7 @@
    "swf",
    "flash-rasteriser",
    "fonts",
+   "cjk",
    "localisation",
    "portraits",
    "ui"

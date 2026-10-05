@@ -23,8 +23,10 @@ SECRET_PATTERNS = [
     ("fal key", re.compile(r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:[0-9a-f]{32}\b")),
     ("FAL_KEY assignment", re.compile(r"FAL_KEY\s*[=:]\s*['\"]?[A-Za-z0-9:_\-]{20,}")),
     ("Anthropic key", re.compile(r"sk-ant-[A-Za-z0-9_\-]{20,}")),
-    ("OpenAI key", re.compile(r"\bsk-(?:proj-)?[A-Za-z0-9]{32,}")),
-    ("GitHub token", re.compile(r"\bgh[pousr]_[A-Za-z0-9]{30,}")),
+    # project, service-account and admin keys carry - and _ in their body; legacy keys are plain alphanumerics
+    ("OpenAI key", re.compile(r"\bsk-(?:(?:proj|svcacct|admin)-[A-Za-z0-9_\-]{32,}|[A-Za-z0-9]{32,})")),
+    # classic tokens (ghp_, gho_, ...) and fine-grained personal access tokens (github_pat_)
+    ("GitHub token", re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{60,})")),
     ("AWS key id", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
     ("private key", re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----")),
 ]

@@ -220,6 +220,24 @@ def test_publish_check(tmp_path, capsys):
     assert "decompiler header x1 in src/Mod.cs" in normalized and "README.md" not in normalized.split("decompiler header")[-1].split("\n")[0]
 
 
+@pytest.mark.parametrize("label,key", [
+    # assembled at runtime so this file doesn't trip the toolkit's own publish check
+    ("OpenAI key", "sk-" + "proj-" + "Ab3_dE-f" + "Gh1jK2lM3nO4pQ5rS6tU7vW8xY9z0" * 4),
+    ("OpenAI key", "sk-" + "svcacct-" + "Ab3_dE-f" + "Gh1jK2lM3nO4pQ5rS6tU7vW8xY9z0" * 4),
+    ("OpenAI key", "sk-" + "Gh1jK2lM3nO4pQ5rS6tU7vW8xY9z0" * 2),
+    ("GitHub token", "github" + "_pat_" + "11ABCDEFG0123456789abc" + "_" + "aB3dE5fG7hJ9kL1mN3pQ5rS7tU9vW1xY3zA5bC7dE9fG1hJ3kL5mN7pQ9rS1t"),
+    ("GitHub token", "gh" + "p_" + "aB3dE5fG7hJ9kL1mN3pQ5rS7tU9vW1xY3z"),
+])
+def test_secret_patterns_catch_current_key_formats(label, key):
+    rx = dict(publish.SECRET_PATTERNS)[label]
+    assert rx.search(f"key = {key}\n"), key
+
+
+def test_secret_patterns_ignore_ordinary_text():
+    text = "sk-learn-style-kebab-case-identifiers-are-not-keys and github_pat_ alone"
+    assert not [label for label, rx in publish.SECRET_PATTERNS if rx.search(text)]
+
+
 # --------------------------------------------------------------------------- video
 
 @pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg")

@@ -9,12 +9,12 @@ engine: unknown
 route: native-hook
 tools: ["Mewjector 3 (built from source)", "MSVC 14.51 + CMake/Ninja", "Dear ImGui 1.92.3", "Ghidra 12.1.4 headless", "capstone", "ReadProcessMemory (read-only live inspection)"]
 anti_cheat: "none (single player)"
-status: working
+status: released
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["@TotSamiyMorzh"]
-date: 2026-10-02
-links: ["https://github.com/TotSamiyMorzh/mewgenics-combat-roster"]
-tags: [native-dll, imgui, overlay, sdl3, opengl, swf, flash-rasteriser, fonts, localisation, portraits, ui]
+date: 2026-10-05
+links: ["https://github.com/TotSamiyMorzh/mewgenics-combat-roster", "https://www.nexusmods.com/mewgenics/mods/539"]
+tags: [native-dll, imgui, overlay, sdl3, opengl, swf, flash-rasteriser, fonts, cjk, localisation, portraits, ui]
 ---
 
 # Combat Roster Panel: a native ImGui party panel for Mewgenics, drawn with the game's own art, fonts and text
@@ -88,7 +88,8 @@ its book-keeping; never `glDelete*` in the new context.
   whole index) holds FWS SWFs: ui.swf (StatusIcon x1015, HealthIcon, ManaIcon, FontIcon_<stat>, tooltip paper
   bitmap #1), portraits.swf (`<Movieclip>Portrait`), ability_icons.swf (`AbilityIcon`/`PassiveIcon`, frames
   labelled by id), catparts.swf (`<Slot>ItemIcon` by item `frame`-1, cat parts), international_fonts.swf
-  (DefineFont3 Latin+Cyrillic, e.g. `TikaFontIntl`, `Mewgenics Organ Grinder Cyr`). Named instances the code
+  (DefineFont3 Latin+Cyrillic, e.g. `TikaFontIntl`, `Mewgenics Organ Grinder Cyr`), unicodefont.swf
+  (`Noto Sans CJK TC Regular`, 41200 glyphs: the fallback for Chinese/Japanese/Korean). Named instances the code
   toggles (`sloticon`, `rarity`, `label`) must be skipped.
 - **Cat faces** (`glaiel::CatParts::init` `sub_14073CC70`, placement `sub_1407393E0`). Use `CatHeadPlacements`
   frame head-1. Ears go on `lear`/`rear` with the full marker matrix; eyes on `leye`/`reye` and the mouth on
@@ -115,7 +116,10 @@ its book-keeping; never `glDelete*` in the new context.
   stack counts (Trample 3 / BoostHeals 2 / Metal 1 = GON), party CatData part indices.
 - Offline PNG renders compared by eye with in-game screenshots (icons, frames, fonts, cat faces in class
   colours). The human played several battles and sent screenshots after each build.
-- Not verified: other game builds, other languages beyond ru/en text paths, Proton.
+- CJK (added in 0.5.1): an offline ImGui atlas test baked Chinese, kana and hangul code points through the
+  loader and the atlas was inspected by eye; the game then loaded the 41200-glyph font cleanly.
+- Not verified: other game builds, Proton, and an actual battle played in a zh/ja/ko game language (the
+  player who reported the `?` bug has not confirmed the fix yet).
 
 ## Gotchas
 1. **"It's a Unity game."** It is not: native C++. Check the install folder before planning a stack.
@@ -146,13 +150,22 @@ its book-keeping; never `glDelete*` in the new context.
 15. **The range highlight is not a draw.** `sub_140138A10`-family "highlight" applies statuses. For a
     harmless board marker use `ImmediateModeGameUI::tile_piece` with `TargetCursor` (16-byte aligned colour
     and scale; strings of 15 chars or fewer).
+16. **Chinese / Japanese / Korean text shows as `?`** (2026-10-05, reported by a player after release). The
+    game's main fonts (`TikaFontIntl` etc.) only cover Latin + Cyrillic, and the merged fallback was Segoe UI,
+    which has no CJK. **Fix:** merge the game's own fallback font behind the main one: `swfs/unicodefont.swf`
+    holds `Noto Sans CJK TC Regular` as a DefineFont3 with 41200 glyphs (kana and hangul included), then system
+    fonts (`msyh.ttc`, `malgun.ttf`, `YuGothM.ttc`) behind that. Parse glyph outlines lazily (keep the tag
+    bytes and per-glyph offsets, parse on first raster) so 41k glyphs cost nothing up front. That file exports
+    no symbols, so a loader that treats "no SymbolClass" as failure must not gate font extraction on it.
+    Lesson: test a text mod in a non-Latin, non-Cyrillic language before shipping it.
 
 ## Assets
 None generated. All art, fonts and text are read from the player's own `resources.gpak` at runtime and never
 written to disk or shipped.
 
 ## Cost and time
-One long session (about 4-5 hours wall clock), including a 17-minute Ghidra auto-analysis.
+One long session (about 4-5 hours wall clock), including a 17-minute Ghidra auto-analysis. The CJK fix after
+release took about 20 minutes. Released as 0.5.1 on GitHub and Nexus Mods.
 
 ## Open questions
 - Hats/face items on the cat face need an extra offset that wasn't found (drawn at the `ahead`/`aface`
