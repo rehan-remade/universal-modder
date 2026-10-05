@@ -129,6 +129,8 @@ Harmony patches plus direct field writes through the Il2CppInterop assemblies. N
 10. **Steam-launched Proton prefix `compatdata/3164500` doesn't exist** until the first Steam launch of that install. A fresh lab prefix saves under `Saves/TempPlayer/`. Moving a save between them is fine for the host, because `PlayerManager.TryGetPlayerData` loads `Player_0` for the host first.
 11. **The lab was Mono, but an old mod in it was an IL2CPP build** (it referenced `Il2CppInterop` and `Il2CppScheduleOne.*`). Backend-mismatched mods fail at load, so check the references before trusting an installed mod.
 
+12. **Regular ~200 ms freezes every 2 s.** Cause: polling with `Object.FindObjectsOfType<T>()` for seven station/pot types. In this IL2CPP scene each pass cost about 190 ms. Fix: walk `Property.OwnedProperties[i].BuildableItems` instead, cache each item's `TryCast` type once, and check 12 items per frame. Found with a dev perf probe that logs frames over 150 ms and features over 2 ms. After the fix: 0 hitches after load.
+
 ## Assets
 - **Icons:** [Lucide](https://lucide.dev) SVGs (ISC), rendered with `rsvg-convert` and composited on gradient squares with Pillow (`scripts/make-icons.py` in the PocketPlug repo).
 - **Compass ring and circle mask:** drawn procedurally. No generated art.
