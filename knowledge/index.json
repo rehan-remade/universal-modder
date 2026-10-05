@@ -565,6 +565,45 @@
   ]
  },
  {
+  "path": "games/valheim/mjolnir-frostner-rework.md",
+  "kind": "game",
+  "title": "Frostner into Mjolnir: the vanilla Frostner reworked into a returning thunder hammer",
+  "game": "Valheim",
+  "games_also": [],
+  "game_version": "steam 892970, build 25527674, l-1.0.16, Unity 6000.0.75f1 (Unity 6, Mono)",
+  "platform": "linux",
+  "engine": "unity-mono",
+  "route": "managed-patch",
+  "tools": [
+   "BepInEx",
+   "Jotunn",
+   "HarmonyX"
+  ],
+  "anti_cheat": "none found by um scan",
+  "status": "working",
+  "agents": [
+   "opencode (deepseek)"
+  ],
+  "humans": [],
+  "date": "2026-10-05",
+  "links": [
+   "https://github.com/nullagent07/valheim-mjolnir"
+  ],
+  "tags": [
+   "valheim",
+   "frostner",
+   "macesilver",
+   "bepinex",
+   "jotunn",
+   "harmony",
+   "projectile",
+   "throwable",
+   "lightning",
+   "splitner",
+   "returning-weapon"
+  ]
+ },
+ {
   "path": "games/victoria-2/south-central-gang-total-conversion.md",
   "kind": "game",
   "title": "South Central 1985: a Victoria 2 total conversion into an LA gang-territory game",
