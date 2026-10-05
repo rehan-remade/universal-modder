@@ -564,6 +564,39 @@
   ]
  },
  {
+  "path": "games/half-life/minecraft-steve-player-weapons-and-hotbar-hud-in-goldsrc-hal.md",
+  "kind": "game",
+  "title": "Minecraft Steve player, weapons and hotbar HUD in GoldSrc (Halflife Updated)",
+  "game": "half life",
+  "games_also": [],
+  "game_version": "Halflife Updated master @ c400297, Half-Life V1.1.0",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "other",
+  "tools": [
+   "uv",
+   "cmake",
+   "MSVC 2022"
+  ],
+  "anti_cheat": "none",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode"
+  ],
+  "humans": [],
+  "date": "2026-10-05",
+  "links": [],
+  "tags": [
+   "goldsrc",
+   "hl1",
+   "steve",
+   "minecraft",
+   "hud",
+   "hotbar",
+   "weapons"
+  ]
+ },
+ {
   "path": "games/half-sword/super-hammer-ue4ss.md",
   "kind": "game",
   "title": "Super Hammer: a 1-coin merchant item that hits 9.9x harder, via UE4SS Lua",
