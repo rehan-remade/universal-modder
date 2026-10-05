@@ -83,3 +83,28 @@ Presets:
 Put one converted asset into the game and screenshot it next to stock art (`um win shot`). Check the scale,
 facing, pivot, outline and palette. Fix the recipe, then batch-convert the rest with the same commands (a
 small script or Makefile, so the pipeline is reproducible from `assets/gen/`).
+
+## 6. Converting a guest game's Unity assets (mashups)
+Read the user's own install with UnityPy and write a **local, private** resource pack. Never put the
+output in the mod, its repo or a release; each user runs the converter on their own copy.
+- **Memory:** `UnityPy.load()` decompresses a whole bundle (a 865 MB bundle became 8.7 GB of RAM).
+  Decompress only the serialized files and read `.resS` / `.resource` lazily, block by block; run each
+  converter module in its own process.
+- **Environment:** `UnityPy.Environment(path="")`, and load cross-referenced bundles together; otherwise
+  UnityPy searches the working directory for missing dependencies.
+- **Finding assets:** Addressables bundle names are hashed per update (find them by prefix); Addressables
+  2.x has a binary `catalog.bin`. Map game objects to prefabs through their GUID keys, not by guessing
+  names. Prefer the low-quality variant if one exists (same meshes, smaller textures).
+- **Skinned meshes are stored in bind pose (often a T-pose).** For the in-game look, evaluate the idle
+  clip at t = 0 yourself (UnityPy reads AnimationClip objects but does not sample them; Generic clips
+  bind Transforms by CRC32 of the path), rebuild world matrices, then skin.
+- **Walk the hierarchy from the container root**, skip inactive GameObjects and their children, and drop
+  helper meshes (eyelids, ground shadows, stencil/outline materials).
+- **Axes:** Unity is left-handed, Minecraft right-handed: flip one axis for positions and normals and
+  reverse the winding; flip V; clamp UVs. Verify with a named bone (the right hand ends on the right).
+- **Shared atlases:** crop each part's texture to its UV bounding box and remap UVs.
+- **Audio:** `AudioClip.samples` needs FMOD (`fmod_toolkit`); encode with ffmpeg to mono OGG.
+- **Minecraft side:** a pack needs `pack.mcmeta` (`pack_format` 15 for 1.20.1); `ResourceLocation`s
+  accept only `[a-z0-9_./-]`. For posed meshes, a custom mesh file drawn with
+  `RenderType.entityCutoutNoCull` is more robust than `forge:obj` (block-atlas textures, `usemtl`).
+- **Oracle:** render preview sheets by re-reading the files you wrote, and look at them.

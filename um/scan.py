@@ -627,7 +627,7 @@ def scan(query: str) -> dict:
     moddirs = [d for d in MOD_DIRS if d in ix.dirs]
     name = (game.get("name") or root.name)
     lname = name.lower()
-    known = next((v for k, v in KNOWN.items() if k == lname or (k in lname and len(k) > 5)), None)
+    known = next((v for k, v in sorted(KNOWN.items(), key=lambda kv: -len(kv[0])) if k == lname or (k in lname and len(k) > 5)), None)
     online = next((g for g in ONLINE_ONLY if g in lname), None)
     routes = []
     if known:
