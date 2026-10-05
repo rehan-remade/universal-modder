@@ -34,6 +34,7 @@ tags: [m2, skinned-attachments, proxy-dll, inline-hooks, bone-matrices, characte
   textures only; nothing breaks.
 
 ## Route and why
+Use this DLL only with a server you run: on other servers, Warden can scan the client for hooks like these.
 **Native hook, because every data route failed in the client:**
 - the skin section `Level` field (meant to address more than 65,535 indices) is not supported: using it scrambled
   the whole human female model for everyone, in both readings;
@@ -138,8 +139,8 @@ DLL refuses to patch unless all of its byte signatures match.
     the client's bounds read (`0x825750`) uses it unchecked. **Fix:** `variationNext = -1`, frequency 32767.
 11. **Windows Defender quarantined old copies of the DLL.** **Cause:** a heuristic false positive on our unsigned
     proxy `version.dll` builds; any copy outside an excluded folder gets scanned when something reads it (a
-    recursive search over the work folder was enough). **Fix:** keep every build and backup of the DLL in one folder
-    the human excluded, next to the game folder's exclusion.
+    recursive search over the work folder was enough). **Fix:** don't add Defender exclusions or turn protection
+    off yourself. Tell the human; they decide whether to restore the file or report the false positive.
 
 ## Assets
 Add-on geometry comes from a hand refit (one set) and from retail's own collection models (Tier 2 and later sets,

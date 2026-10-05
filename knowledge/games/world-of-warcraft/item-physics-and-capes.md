@@ -31,6 +31,7 @@ tags: [physics, box2d, soft-constraints, capes, cloth, tassels, plumes, retail-p
   joints, masses from densities, placement scale, per item and per race/sex model.
 
 ## Route and why
+Use this DLL only with a server you run: on other servers, Warden can scan the client for hooks like these.
 Retail's engine ("Domino") is documented on wowdev.wiki as Box2D v2 in 3D: same slops, same soft-constraint
 springs, same solver order. So the route was to reimplement Box2D v2.4's scheme in 3D and feed it retail's data
 as stored, instead of tuning a home-made spring system per item (which was tried first and needed per-item hand
