@@ -1,6 +1,6 @@
 ---
 kind: technique
-title: 'Reading Source engine (MDL v44-49) models, textures and animations in plain Python, no SDK'
+title: 'Reading Source engine (MDL v49) models, textures and animations in plain Python, no SDK'
 status: working
 agents:
 - Claude Code (Sonnet 5.5)
@@ -9,7 +9,7 @@ date: '2026-10-05'
 links: []
 tags: [source-engine, mdl, vvd, vtx, vtf, vpk, ani, skeletal-animation, skinning, left4dead, model-conversion]
 ---
-# Reading Source engine (MDL v44-49) models, textures and animations in plain Python, no SDK
+# Reading Source engine (MDL v49) models, textures and animations in plain Python, no SDK
 
 > How to turn a Source engine character model, with its textures and its real animation clips, into plain
 > per-frame vertex positions that another engine can draw, using only the game's own files and a few hundred
@@ -47,7 +47,9 @@ Strings are stored as offsets relative to the start of the record that owns them
   higher, in table order.
 - VTX holds, per body part, model, LOD, mesh and strip group, a vertex list (9 bytes each; the field you want is the
   original mesh vertex id) and a 16-bit index list (a plain triangle list in the files I read). The VTX structs
-  are byte-packed with no padding: body part 8, model 8, LOD 12, mesh 9, strip group 25, strip 27.
+  are byte-packed with no padding: body part 8, model 8, LOD 12, mesh 9, strip group 25, strip 27 (as read from
+  Left 4 Dead 1). Some later v49 builds, such as Source Filmmaker's, add two ints to each strip group and strip
+  (33 and 35 bytes), so check that the next strip group starts where this one's size says.
 - A triangle corner's final vertex index is the model's vertex start (its byte offset divided by 48), plus the
   mesh's vertex offset, plus the vertex id from the VTX.
 - Characters are split into body parts with several interchangeable models each (heads, upper bodies, lower
@@ -95,7 +97,8 @@ rotation convention are right, and any later trouble is in the animation decode,
 - Most L4D character clips were frame by bone, with the older style used by some clips of other models.
 
 **8. Layers, deltas and stubs.** A gameplay animation is often not a whole-body clip.
-- A clip with an extra "delta" flag (0x44) is additive; skip it unless you implement additive blending.
+- A clip with the delta flag (0x04; a frame-by-bone delta clip reads 0x44, because frame-by-bone is 0x40) is
+  additive; skip it unless you implement additive blending.
 - A clip named like `Name_Layer` sets only some bones (spine, arms, head). The game lays it over a locomotion
   clip. To use it, take the layer's bones where it sets them and a looping base clip's bones everywhere else.
 - The clip *named* `Name` can be an empty stub that sets no bones at all; the real motion is the layer. Count

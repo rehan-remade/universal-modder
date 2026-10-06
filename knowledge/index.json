@@ -2265,7 +2265,7 @@
  {
   "path": "techniques/reading-source-engine-models-and-animations.md",
   "kind": "technique",
-  "title": "Reading Source engine (MDL v44-49) models, textures and animations in plain Python, no SDK",
+  "title": "Reading Source engine (MDL v49) models, textures and animations in plain Python, no SDK",
   "status": "working",
   "agents": [
    "Claude Code (Sonnet 5.5)"

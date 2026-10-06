@@ -32,12 +32,13 @@ tags: [left4dead, minecraft, fabric, content-port, source-engine, skeletal-anima
   atlas per mesh, sounds as ogg). The mod itself contains no Valve data and renders a placeholder box if the
   pack is missing. **Never publish the generated pack.**
 - Format details of the Source model, texture and animation reading are in the technique note
-  "Reading Source engine (MDL v44-49) models, textures and animations in plain Python, no SDK".
+  "Reading Source engine (MDL v49) models, textures and animations in plain Python, no SDK".
 
 ## Route and why
 A **content port**: reimplement the behaviour in Minecraft's own mob and projectile code and use the game's
 art. Minecraft's mob and renderer API is open, so any behaviour is possible; the original Left 4 Dead 1 has no
-code SDK at all, so the reverse (Minecraft into Left 4 Dead) can only be a re-skin and a map, not new mechanics.
+code SDK, so the reverse (Minecraft into Left 4 Dead) means a re-skin and a map, or SourceMod plugins for new
+mechanics on a server you run.
 A passthrough design (running Left 4 Dead beside Minecraft) was rejected because the original game's AI and
 rules were not needed, only its look and feel, and it would have meant touching a multiplayer-capable game.
 

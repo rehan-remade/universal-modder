@@ -33,8 +33,9 @@ tags: [half-life, goldsrc, minecraft, fabric, weapons, hitscan, projectiles, mob
 
 ## Route and why
 A content port in Minecraft's own entity and item code, not a passthrough: Minecraft stays the authority and the
-original game is only a source of art and numbers. A passthrough version for a different Source game exists in
-the knowledge base; this note is the cheaper route.
+original game is only a source of art and numbers. A passthrough version for Half-Life 2 exists in
+the knowledge base (`games/minecraft/half-life-2-guns-in-minecraft-passthrough-hl2-demo-under-win.md`); this note is the
+cheaper route.
 
 ## How the game works (what we had to learn)
 - **Studio MDL v10 (GoldSrc).** Fixed header with counts and offsets: bones (112 bytes each, with default
