@@ -720,6 +720,43 @@
   ]
  },
  {
+  "path": "games/half-life/half-life-1-weapons-and-monsters-in-minecraft.md",
+  "kind": "game",
+  "title": "Half-Life 1's weapons and monsters as a Minecraft Fabric mod, from a GoldSrc model converter",
+  "game": "Half-Life",
+  "games_also": [
+   "Minecraft Java Edition"
+  ],
+  "game_version": "Half-Life 1 (Steam, GoldSrc, Studio model version 10), Minecraft Java 1.21.1 with Fabric Loader 0.19.5, Fabric API 0.116.17+1.21.1",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "loader-api",
+  "tools": [
+   "Fabric (Loom 1.11-SNAPSHOT, Gradle 8.14.3, JDK 23)",
+   "Python 3.12",
+   "ffmpeg (wav to ogg)"
+  ],
+  "anti_cheat": "none involved: single-player Minecraft; Half-Life is never launched or modified, only its files are read",
+  "status": "working",
+  "agents": [
+   "Claude Code (Sonnet 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-05",
+  "links": [],
+  "tags": [
+   "half-life",
+   "goldsrc",
+   "minecraft",
+   "fabric",
+   "weapons",
+   "hitscan",
+   "projectiles",
+   "mobs",
+   "content-port"
+  ]
+ },
+ {
   "path": "games/half-life/minecraft-steve-player-weapons-and-hotbar-hud-in-goldsrc-hal.md",
   "kind": "game",
   "title": "Minecraft Steve player, weapons and hotbar HUD in GoldSrc (Halflife Updated)",
@@ -836,6 +873,43 @@
    "fabric",
    "shields",
    "vehicles"
+  ]
+ },
+ {
+  "path": "games/left-4-dead/left-4-dead-infected-and-tank-in-minecraft.md",
+  "kind": "game",
+  "title": "Left 4 Dead's common infected (19 looks) and Tank as animated Minecraft mobs",
+  "game": "Left 4 Dead",
+  "games_also": [
+   "Minecraft Java Edition"
+  ],
+  "game_version": "Left 4 Dead 1 (Steam app 500, MDL version 49 models), Minecraft Java 1.21.1 with Fabric Loader 0.19.5, Fabric API 0.116.17+1.21.1",
+  "platform": "windows",
+  "engine": "source",
+  "route": "loader-api",
+  "tools": [
+   "Fabric (Loom 1.11-SNAPSHOT, Gradle 8.14.3, JDK 23)",
+   "Python 3.12",
+   "ffmpeg (wav to ogg)"
+  ],
+  "anti_cheat": "none involved: single-player Minecraft; Left 4 Dead is never launched, hooked or patched, its files are only read from disk",
+  "status": "working",
+  "agents": [
+   "Claude Code (Sonnet 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-05",
+  "links": [],
+  "tags": [
+   "left4dead",
+   "minecraft",
+   "fabric",
+   "content-port",
+   "source-engine",
+   "skeletal-animation",
+   "mobs",
+   "tank",
+   "boss"
   ]
  },
  {
@@ -2187,6 +2261,31 @@
    "@rehan_shei"
   ],
   "links": []
+ },
+ {
+  "path": "techniques/reading-source-engine-models-and-animations.md",
+  "kind": "technique",
+  "title": "Reading Source engine (MDL v44-49) models, textures and animations in plain Python, no SDK",
+  "status": "working",
+  "agents": [
+   "Claude Code (Sonnet 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-05",
+  "links": [],
+  "tags": [
+   "source-engine",
+   "mdl",
+   "vvd",
+   "vtx",
+   "vtf",
+   "vpk",
+   "ani",
+   "skeletal-animation",
+   "skinning",
+   "left4dead",
+   "model-conversion"
+  ]
  },
  {
   "path": "techniques/reading-ue3-gearbox-games-offline.md",
