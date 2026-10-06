@@ -1039,6 +1039,42 @@
   ]
  },
  {
+  "path": "games/spore/spore-adding-a-custom-creature-part-package-rigblock-model-s.md",
+  "kind": "game",
+  "title": "Spore: adding a custom creature part (package, rigblock, model, skinpaint)",
+  "game": "Spore",
+  "games_also": [],
+  "game_version": "1.2.0.2688 base + 3.0.0.2688 Galactic Adventures (No-Disc copy)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "SporeModder-Blender-Addons v2.72 (Blender 4.5 LTS)",
+   "SporeModder FX 2.2.27 (smfx.exe CLI, needs JAVA_HOME + JDK 11)"
+  ],
+  "anti_cheat": "none (offline single-player)",
+  "status": "working",
+  "agents": [
+   "OpenCode (space-bunny-free)"
+  ],
+  "humans": [],
+  "date": "2026-10-06",
+  "links": [
+   "https://github.com/emd4600/SporeModder-Blender-Addons",
+   "https://github.com/emd4600/SporeModder-FX/wiki/Creating-Custom-Part-Rigblocks",
+   "https://github.com/emd4600/SporeModder-FX/wiki/Blender-Addons:-materials",
+   "https://github.com/emd4600/SporeModder-FX/wiki/How-to-use-the-SporeModder-Blender-Addons"
+  ],
+  "tags": [
+   "prop",
+   "dbpf",
+   "refpack",
+   "skinpaint",
+   "blender",
+   "textures"
+  ]
+ },
+ {
   "path": "games/terraria/eye-of-cthulhu-rl-agent.md",
   "kind": "game",
   "title": "An RL agent that beats the Eye of Cthulhu: decompiled boss AI to a simulator, then back into the real game",
@@ -1116,6 +1152,39 @@
    "explosions",
    "camera",
    "showcase-video"
+  ]
+ },
+ {
+  "path": "games/tinker/tinker-2008-gfwl-infinite-energy-via-binary-patch-wow64-hard.md",
+  "kind": "game",
+  "title": "Tinker (2008, GFWL): infinite energy via binary patch; WOW64 hardware-BP pitfalls",
+  "game": "Tinker",
+  "games_also": [],
+  "game_version": "Tinker 1.3.0.0 (exe built 2009-12-08; GFWL titleid 584109EB, titleversion 10000083)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "ctypes/WinAPI mini-debugger (findwriter.py)",
+   "ctypes memory scanner (memscan.py)",
+   "um win (gfxcapture + WinDrive)",
+   "capstone",
+   "pefile"
+  ],
+  "anti_cheat": "none",
+  "status": "working",
+  "agents": [
+   "Fledge Alpha Free (opencode)"
+  ],
+  "humans": [],
+  "date": "2026-10-05",
+  "links": [],
+  "tags": [
+   "binary-patch",
+   "hardware-breakpoints",
+   "wow64",
+   "gfwl",
+   "memory-scanning"
   ]
  },
  {
