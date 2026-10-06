@@ -397,9 +397,25 @@ KNOWN_SAVES = {
     "counter-strike 2": [],
 }
 
-ONLINE_ONLY = ["valorant", "league of legends", "fortnite", "apex legends", "pubg", "rainbow six siege", "call of duty", "destiny 2",
-               "genshin impact", "escape from tarkov", "battlefield", "overwatch", "counter-strike 2", "dota 2", "marvel rivals",
-               "the finals", "rust", "dead by daylight", "naraka", "warframe", "deadlock"]
+# Live-service games, matched against the whole name (see online_only): a substring test flagged Rusty Lake ("rust"),
+# Battlefield 1942 and the 2009 Modern Warfare 2. Older entries in a series with an online-only sibling are left to the
+# anti-cheat scan, which still warns when a protected client is installed.
+ONLINE_ONLY = ["valorant", "league of legends", "fortnite", "apex legends", "pubg", "pubg battlegrounds", "rainbow six siege",
+               "rainbow six siege x", "tom clancy s rainbow six siege", "tom clancy s rainbow six siege x", "call of duty",
+               "call of duty hq", "call of duty warzone", "destiny 2", "genshin impact", "escape from tarkov", "battlefield 2042",
+               "battlefield 6", "overwatch", "overwatch 2", "counter strike 2", "dota 2", "marvel rivals", "the finals", "rust",
+               "dead by daylight", "naraka bladepoint", "warframe", "deadlock"]
+
+
+def _plain(name: str) -> str:
+    """'Tom Clancy's Rainbow Six® Siege' -> 'tom clancy s rainbow six siege'."""
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", name.lower().replace("®", "").replace("™", "")).split())
+
+
+def online_only(name: str) -> str | None:
+    """The ONLINE_ONLY entry this game's name is, if any. Whole names only, never substrings."""
+    n = _plain(name)
+    return n if n in ONLINE_ONLY else None
 
 ENGINES = {
     # key: (label, playbook, route)
@@ -655,7 +671,7 @@ def scan(query: str) -> dict:
     name = (game.get("name") or root.name)
     lname = name.lower()
     known = next((v for k, v in sorted(KNOWN.items(), key=lambda kv: -len(kv[0])) if k == lname or (k in lname and len(k) > 5)), None)
-    online = next((g for g in ONLINE_ONLY if g in lname), None)
+    online = online_only(name)
     routes = []
     if known:
         routes.append(dict(route=known[0], playbook=known[1], why="known game"))
