@@ -50,7 +50,7 @@ uv tool install git+https://github.com/rehan-remade/universal-modder     # or: p
 ```bash
 export FAL_KEY=...
 ```
-You also need Python 3.10+ and ffmpeg. `uv` is recommended. Blender is needed for 3D → sprite renders.
+You also need Git, Python 3.10+ and ffmpeg. `uv` is recommended. Blender is needed for 3D → sprite renders.
 Windows games are driven natively or from WSL.
 
 ## Try it
