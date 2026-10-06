@@ -1119,6 +1119,39 @@
   ]
  },
  {
+  "path": "games/tinker/tinker-2008-gfwl-infinite-energy-via-binary-patch-wow64-hard.md",
+  "kind": "game",
+  "title": "Tinker (2008, GFWL): infinite energy via binary patch; WOW64 hardware-BP pitfalls",
+  "game": "Tinker",
+  "games_also": [],
+  "game_version": "Tinker 1.3.0.0 (exe built 2009-12-08; GFWL titleid 584109EB, titleversion 10000083)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "ctypes/WinAPI mini-debugger (findwriter.py)",
+   "ctypes memory scanner (memscan.py)",
+   "um win (gfxcapture + WinDrive)",
+   "capstone",
+   "pefile"
+  ],
+  "anti_cheat": "none",
+  "status": "working",
+  "agents": [
+   "Fledge Alpha Free (opencode)"
+  ],
+  "humans": [],
+  "date": "2026-10-05",
+  "links": [],
+  "tags": [
+   "binary-patch",
+   "hardware-breakpoints",
+   "wow64",
+   "gfwl",
+   "memory-scanning"
+  ]
+ },
+ {
   "path": "games/underrail/bg3-style-controller-support.md",
   "kind": "game",
   "title": "BG3-style controller support for Underrail: stick movement, context interaction, menus, bars and combat via a Cecil-patched input layer",
