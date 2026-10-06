@@ -538,7 +538,7 @@ Each is symptom, cause, fix. Addresses are for the client build pinned in Setup.
     addresses): `rgl_parallel_for` 0x1801f2de0, blow handler 0x1805ff470, hit-impulse IK 0x1805f5de0, chain-5 IK
     solver 0x180768b60. Fix, data: give those bones IK joints, drop their hit capsules, or set their body part to
     none, when the skeleton is built. Fix, runtime (what we installed because the skeletons were already
-    shipped): a Harmony prefix on `Agent.HandleBlow` that remaps the blow's bone to the nearest safe ancestor
+    installed): a Harmony prefix on `Agent.HandleBlow` that remaps the blow's bone to the nearest safe ancestor
     (jaw to head, toe to foot, cape to spine) before the engine handles it, from a table generated from the
     skeletons; damage and body part are already decided at that point. Regenerate the table after any
     skeleton change. **Guard built and compiled, not yet run in the game.** The same freeze had also appeared in
@@ -594,7 +594,7 @@ Each is symptom, cause, fix. Addresses are for the client build pinned in Setup.
 ## Seen in
 - A Borderlands 2 total conversion for Bannerlord (races, creatures, bosses on their own skeletons): Loader,
   Goliath, Nomad, Marauder, Psycho, Handsome Jack, Claptrap, Skag, Varkid, Stalker, Spiderant, Bullymong and
-  flying bosses. Not published; the project's own field note covers the game-level story.
+  flying bosses. Not published.
 
 ## Open questions
 - Does the shield-block partner fix hold in a long campaign fight with many shield users? What does a 50 percent
