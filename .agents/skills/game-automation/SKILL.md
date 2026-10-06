@@ -47,6 +47,9 @@ the game window's **client area**.
   keep a table of menu click points in MODLOG.md, measured once.
 - **Why gfxcapture:** GPU-rendered games come out black with GDI capture. gfxcapture (Windows.Graphics.Capture)
   grabs one window's real frames, even when covered. It can't capture minimized windows.
+- **HDR displays:** with Windows Auto HDR on for an SDR game, captures come out washed out (2-3x brighter,
+  cyan-shifted), so colours can't be judged. `um win shot`/`record` warn when it's on; turn it off for the game
+  while capturing (Settings > System > Display > Graphics > the game > Auto HDR), and back on after if the user wants.
 
 ## Make the window predictable
 - **Windowed mode at a fixed client size.** Every game hides this setting somewhere:

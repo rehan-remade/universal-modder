@@ -31,7 +31,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-from um.common import die, is_windows, is_wsl, to_posix, to_win
+from um.common import die, is_windows, is_wsl, ps_exe, to_posix, to_win
 
 HERE = Path(__file__).resolve().parent
 TOOLS = HERE / "ps1"          # shipped inside the package so `uv tool install` gets them too
@@ -42,10 +42,6 @@ def _check_platform():
     if not (is_windows() or is_wsl()):
         die("`um win` drives Windows games (native Windows or WSL). On Linux use xdotool/ydotool + ffmpeg x11grab/pipewire; "
             "on macOS use screencapture + ffmpeg avfoundation (see skills/game-automation).")
-
-
-def ps_exe() -> str:
-    return "powershell.exe" if is_wsl() else "powershell"
 
 
 def powershell(script: str, timeout: float = 60) -> str:
@@ -189,9 +185,63 @@ def _source(exe=None, hwnd=None, title=None, cursor=False, crop=None) -> str:
     return f"gfxcapture={sel}:capture_cursor={1 if cursor else 0}:max_framerate=60{c},hwdownload,format=bgra"
 
 
+GPU_PREFS = r"Software\Microsoft\DirectX\UserGpuPreferences"
+
+
+def _gpu_prefs() -> dict:
+    """HKCU UserGpuPreferences: exe path (or DirectXUserGlobalSettings) -> "AppStatus=1;AutoHDREnable=2097;"."""
+    out = {}
+    if is_windows():
+        import winreg
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, GPU_PREFS) as k:
+                i = 0
+                while True:
+                    try:
+                        name, data, _ = winreg.EnumValue(k, i)
+                    except OSError:
+                        break
+                    out[name] = str(data)
+                    i += 1
+        except OSError:
+            pass
+    elif is_wsl():
+        try:
+            text = subprocess.run(["reg.exe", "query", "HKCU\\" + GPU_PREFS], capture_output=True, text=True, timeout=15, cwd="/mnt/c").stdout
+        except (OSError, subprocess.TimeoutExpired):
+            return out
+        for line in text.splitlines():
+            name, sep, data = line.strip().partition("    REG_SZ    ")
+            if sep:
+                out[name] = data
+    return out
+
+
+def auto_hdr_on(exe=None) -> bool:
+    """Windows Auto HDR for this game (its own setting, else the global one). Odd AutoHDREnable = on (2097 on, 2096 off)."""
+    def flag(s):
+        v = dict(kv.split("=", 1) for kv in s.split(";") if "=" in kv).get("AutoHDREnable", "")
+        return int(v) % 2 == 1 if v.isdigit() else None
+    prefs = _gpu_prefs()
+    if exe:
+        name = (exe if exe.lower().endswith(".exe") else exe + ".exe").lower()
+        for path, data in prefs.items():
+            if path.replace("/", "\\").lower().rsplit("\\", 1)[-1] == name and flag(data) is not None:
+                return flag(data)
+    return bool(flag(prefs.get("DirectXUserGlobalSettings", "")))
+
+
+def warn_auto_hdr(exe=None):
+    if auto_hdr_on(exe):
+        print(f"WARNING: Windows Auto HDR is on{' for ' + exe if exe else ''}. On an HDR display the capture of an SDR game "
+              "comes out washed out (brighter, shifted colours). Turn Auto HDR off for the game while capturing: Settings > "
+              "System > Display > Graphics > (the game) > Auto HDR.", file=sys.stderr)
+
+
 def shot(out: str, exe=None, hwnd=None, title=None, scale: float | None = None, timeout=20) -> str:
     """One frame of a game window -> PNG. Returns the (posix) path; with scale also writes <out>_small.png."""
     ff = ffmpeg_win()
+    warn_auto_hdr(exe)
     dst = Path(out).resolve()
     dst.parent.mkdir(parents=True, exist_ok=True)
     target = to_win(dst) if is_wsl() else str(dst)
@@ -224,12 +274,15 @@ class Recorder:
 
     def start(self):
         ff = ffmpeg_win()
+        warn_auto_hdr(self.exe)
         enc = encoder()
         vf = [f"fps={self.fps}"]
         mw = self.max_width or (4096 if enc == "h264_nvenc" else None)
         if mw:
             vf.append(f"scale='min(iw,{mw})':-2")
         vf.append("crop=trunc(iw/2)*2:trunc(ih/2)*2")
+        # RGB -> YUV with the BT.709 matrix, and say so: an untagged file gets BT.601 here but is read as BT.709 by browsers
+        vf.append("scale=out_color_matrix=bt709:out_range=tv,format=yuv420p")
         codec = {"h264_nvenc": ["-c:v", "h264_nvenc", "-preset", "p4", "-cq", str(self.cq)],
                  "h264_amf": ["-c:v", "h264_amf", "-quality", "quality", "-qp_i", str(self.cq), "-qp_p", str(self.cq)],
                  "h264_qsv": ["-c:v", "h264_qsv", "-global_quality", str(self.cq)]}.get(enc, ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18"])
@@ -248,7 +301,7 @@ class Recorder:
         self.t_video = time.time()
         self.log = Path(to_posix(self.base + ".ffmpeg.log"))
         self.video = subprocess.Popen([ff, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", _source(self.exe, self.hwnd, self.title, crop=self.crop),
-                                       "-vf", ",".join(vf), *codec, "-pix_fmt", "yuv420p", "-flush_packets", "1", self.base + ".mkv"],
+                                       "-vf", ",".join(vf), *codec, "-pix_fmt", "yuv420p", "-colorspace", "bt709", "-color_range", "tv", "-flush_packets", "1", self.base + ".mkv"],
                                       stdin=subprocess.PIPE, stderr=open(self.log, "w"))
         self.t_audio = t_audio
         return self

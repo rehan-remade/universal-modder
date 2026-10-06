@@ -120,6 +120,14 @@ def test_steam_games_utf8(tmp_path, monkeypatch, library_name, install_name, gam
         "path": str(game_path), "workshop": None,
     }]
 
+
+def test_steam_root_from_registry(tmp_path, monkeypatch):
+    # Steam installed outside Program Files (e.g. C:\Steam): its libraryfolders.vdf, and every library in it, was never read
+    root = tmp_path / "Steam"
+    (root / "steamapps").mkdir(parents=True)
+    monkeypatch.setattr(scan, "steam_registry_root", lambda: root)
+    assert root.resolve() in scan.steam_roots()
+
 def test_known_game_longest_key_wins(tmp_path):
     # "grand theft auto v" is a substring of "grand theft auto v enhanced";
     # the more specific entry must win, not whichever lands first in the dict
@@ -129,6 +137,47 @@ def test_known_game_longest_key_wins(tmp_path):
         (d / f"f{i}.txt").write_text("x")
     r = scan.scan(str(d))
     assert r["routes"][0]["route"] == scan.KNOWN["grand theft auto v enhanced"][0]
+
+
+def test_record_encodes_and_tags_bt709(tmp_path, monkeypatch):
+    # RGB frames -> yuv420p used the BT.601 matrix untagged; browsers read HD video as BT.709 and shift colours
+    from um import win
+    seen = {}
+    monkeypatch.setattr(win, "is_wsl", lambda: False)   # under WSL, Recorder calls wslpath through the patched Popen
+
+    class FakePopen:
+        def __init__(self, cmd, **kw):
+            seen["cmd"] = cmd
+    monkeypatch.setattr(win, "ffmpeg_win", lambda *a, **k: "ffmpeg")
+    monkeypatch.setattr(win, "encoder", lambda: "libx264")
+    monkeypatch.setattr(win.subprocess, "Popen", FakePopen)
+    win.Recorder(exe="Game.exe", out=str(tmp_path / "take"), audio=False).start()
+    cmd = seen["cmd"]
+    assert "out_color_matrix=bt709" in cmd[cmd.index("-vf") + 1]
+    assert cmd[cmd.index("-colorspace") + 1] == "bt709" and cmd[cmd.index("-color_range") + 1] == "tv"
+
+
+def test_auto_hdr_detection(monkeypatch):
+    # Auto HDR on an HDR display washes out captures of SDR games; um warns from the registry setting
+    from um import win
+    prefs = {"DirectXUserGlobalSettings": "AutoHDREnable=0;SwapEffectUpgradeEnable=1;",
+             r"E:\Games\Foo\Foo.exe": "AppStatus=1;AutoHDREnable=2097;",
+             r"E:\Games\Bar\Bar.exe": "AppStatus=1;AutoHDREnable=2096;"}
+    monkeypatch.setattr(win, "_gpu_prefs", lambda: prefs)
+    assert win.auto_hdr_on("Foo.exe") and win.auto_hdr_on("foo")
+    assert not win.auto_hdr_on("Bar.exe") and not win.auto_hdr_on("Other.exe") and not win.auto_hdr_on()
+    prefs["DirectXUserGlobalSettings"] = "AutoHDREnable=1;"
+    assert win.auto_hdr_on("Other.exe") and not win.auto_hdr_on("Bar.exe")
+
+
+def test_slay_the_spire_2_is_not_sts1(tmp_path):
+    # StS2 is Godot + C#; the StS1 entry (ModTheSpire, Java) must not match it
+    d = tmp_path / "Slay the Spire 2"
+    d.mkdir()
+    for i in range(6):
+        (d / f"f{i}.txt").write_text("x")
+    route = scan.scan(str(d))["routes"][0]["route"]
+    assert route == scan.KNOWN["slay the spire 2"][0] and "ModTheSpire" not in route
 
 
 # --------------------------------------------------------------------------- sprite
@@ -201,6 +250,68 @@ def test_kv_and_urls(tmp_path):
     res = {"images": [{"url": "https://v3.fal.media/a.png", "content_type": "image/png"}, {"url": "https://v3.fal.media/b.png"}],
            "mask_image": {"url": "https://v3.fal.media/m.png"}}
     assert [u for _, u, _ in fal._urls_in(res)] == ["https://v3.fal.media/a.png", "https://v3.fal.media/b.png", "https://v3.fal.media/m.png"]
+
+
+def test_upload_uses_cdn_token_and_explains_big_failures(tmp_path, monkeypatch, capsys):
+    # storage/upload/initiate?storage_type=gcs now answers 400 "Invalid storage type"; files over 8 MiB then failed silently
+    calls = []
+    monkeypatch.setattr(fal, "_req", lambda method, url, body=None, **k: calls.append(url) or {"token": "t", "token_type": "Bearer"})
+
+    class Resp:
+        def __init__(self, req):
+            self.req = req
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return json.dumps({"access_url": "https://v3.fal.media/files/x/a.png"}).encode()
+    sent = []
+    monkeypatch.setattr(fal.urllib.request, "urlopen", lambda req, timeout=None: sent.append(req) or Resp(req))
+    f = tmp_path / "a.png"
+    f.write_bytes(b"\x89PNG")
+    assert fal.upload(f) == "https://v3.fal.media/files/x/a.png"
+    assert "storage_type=fal-cdn-v3" in calls[0] and sent[0].full_url == fal.CDN + "/files/upload"
+    assert sent[0].get_header("Authorization") == "Bearer t" and sent[0].get_header("X-fal-file-name") == "a.png"
+
+    def fail(req, timeout=None):
+        raise fal.urllib.error.URLError("boom")
+    monkeypatch.setattr(fal.urllib.request, "urlopen", fail)
+    assert fal.upload(f).startswith("data:image/png;base64,")              # small: inline fallback
+    big = tmp_path / "big.mp4"
+    big.write_bytes(b"\0" * ((8 << 20) + 1))
+    with pytest.raises(SystemExit):
+        fal.upload(big)
+    assert "only covers files under 8 MiB" in capsys.readouterr().err  # big: says why instead of a bare exit 1
+
+
+def test_failed_download_keeps_the_request_id(tmp_path, monkeypatch, capsys):
+    # a finished (paid) job whose output URL 404s must not vanish: say which request to fetch again
+    class Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return b"ok"
+
+    def urlopen(req, timeout=None):
+        if req.full_url.endswith("big.mov"):
+            raise fal.urllib.error.HTTPError(req.full_url, 404, "Not Found", {}, None)
+        return Resp()
+    monkeypatch.setattr(fal.urllib.request, "urlopen", urlopen)
+    res = {"video": {"url": "https://v3b.fal.media/files/x/big.mov"}, "thumb": {"url": "https://v3b.fal.media/files/x/t.png"},
+           "_request_id": "req-123", "_endpoint": "fal-ai/some-model"}
+    with pytest.raises(SystemExit):
+        fal.download_outputs(res, tmp_path, "clip")
+    err = capsys.readouterr().err
+    assert "big.mov" in err and "um fal result fal-ai/some-model req-123" in err
+    assert (tmp_path / "clip_thumb.png").read_bytes() == b"ok"   # the other outputs still saved
 
 
 # --------------------------------------------------------------------------- publish
@@ -324,6 +435,22 @@ def test_pr_head_from_fork(url):
 
 def test_pr_head_same_repo():
     assert kb.pr_head("kb/a-b", None) == "kb/a-b"
+
+
+# --------------------------------------------------------------------------- powershell
+
+def test_ps_exe_falls_back_to_full_path(tmp_path, monkeypatch):
+    # an agent's PATH often lacks System32\WindowsPowerShell\v1.0; bare "powershell" then raises WinError 2
+    from um import common
+    exe = tmp_path / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe"
+    exe.parent.mkdir(parents=True)
+    exe.write_bytes(b"MZ")
+    monkeypatch.setattr(common, "is_wsl", lambda: False)
+    monkeypatch.setattr(common.shutil, "which", lambda name: None)
+    monkeypatch.setenv("SystemRoot", str(tmp_path))
+    assert common.ps_exe() == str(exe)
+    monkeypatch.setattr(common.shutil, "which", lambda name: "/on/path/" + name)
+    assert common.ps_exe() == "/on/path/powershell"
 
 
 # --------------------------------------------------------------------------- backup
@@ -473,3 +600,21 @@ def test_skill_copies_match():
         assert tree(root / copy) == src, (f"{copy} differs from skills/: rm -rf .agents/skills .claude/skills && "
                                           "cp -r skills .agents/skills && cp -r skills .claude/skills")
     assert not any((root / d).exists() for d in (".gemini/skills", ".github/skills")), "agents read .agents/skills"
+
+
+# --------------------------------------------------------------------------- hooks
+
+@pytest.mark.skipif(not shutil.which("cygpath"), reason="Git Bash / MSYS only")
+def test_path_hook_writes_a_posix_root(tmp_path):
+    # Claude Code passes ${CLAUDE_PLUGIN_ROOT} as C:/...; written as is, bash splits PATH at the drive colon
+    import os
+    root = tmp_path / "um root"
+    (root / "bin").mkdir(parents=True)
+    (root / "bin" / "um").write_text("#!/bin/sh\n")
+    env_file = tmp_path / "env.sh"
+    bash = str(Path(shutil.which("cygpath")).with_name("bash.exe"))
+    hook = Path(__file__).resolve().parents[1] / "hooks" / "add-to-path.sh"
+    subprocess.run([bash, str(hook), root.as_posix()], env={**os.environ, "CLAUDE_ENV_FILE": str(env_file)}, check=True)
+    value = env_file.read_text().split('"')[1]
+    prefix = value[:value.index("/bin:$PATH")]
+    assert prefix.startswith("/") and ":" not in prefix, value

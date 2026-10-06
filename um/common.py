@@ -24,6 +24,19 @@ def is_wsl() -> bool:
     return "microsoft" in platform.release().lower() or os.path.exists("/proc/sys/fs/binfmt_misc/WSLInterop")
 
 
+def ps_exe() -> str:
+    """Windows PowerShell. Falls back to its full path: an agent's PATH often lacks System32\\WindowsPowerShell\\v1.0."""
+    name = "powershell.exe" if is_wsl() else "powershell"
+    found = shutil.which(name)
+    if found:
+        return found
+    if is_wsl():
+        full = "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
+    else:
+        full = os.path.join(os.environ.get("SystemRoot") or r"C:\Windows", "System32", "WindowsPowerShell", "v1.0", "powershell.exe")
+    return full if os.path.exists(full) else name
+
+
 def to_win(path: str | Path) -> str:
     """/mnt/c/Games/x -> C:\\Games\\x (WSL); paths that are already Windows paths pass through."""
     p = str(path)
