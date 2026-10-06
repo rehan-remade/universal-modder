@@ -1483,7 +1483,7 @@
    "um win (launch/shot/drive/record)"
   ],
   "anti_cheat": "none; all testing single-player",
-  "status": "working",
+  "status": "released",
   "agents": [
    "Claude Code (Opus 5.5)"
   ],
@@ -1491,9 +1491,12 @@
    "@blackhellvelz-prog"
   ],
   "date": "2026-10-06",
-  "links": [],
+  "links": [
+   "https://steamcommunity.com/sharedfiles/filedetails/?id=3814750314"
+  ],
   "tags": [
    "civilization",
+   "steam-workshop",
    "leaderhead",
    "granny",
    "gr2",

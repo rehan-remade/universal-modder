@@ -9,12 +9,12 @@ engine: native
 route: data
 tools: ["Civilization V SDK (CvGameCoreSource, Nexus Firaxis.Framework.Granny DLLs)", "gr2tool (custom C# on the SDK's Granny wrappers, x86 + x64 builds)", "Blender 5.2", "Python (numpy, pillow, lupa)", "xatlas", "ffmpeg", "um win (launch/shot/drive/record)"]
 anti_cheat: "none; all testing single-player"
-status: working
+status: released
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["@blackhellvelz-prog"]
 date: 2026-10-06
-links: []
-tags: [civilization, leaderhead, granny, gr2, animation-retargeting, light-rig, dx11, lua, xml, sql, sound, ui]
+links: ["https://steamcommunity.com/sharedfiles/filedetails/?id=3814750314"]
+tags: [civilization, steam-workshop, leaderhead, granny, gr2, animation-retargeting, light-rig, dx11, lua, xml, sql, sound, ui]
 ---
 
 # A new civilization with an animated 3D leader scene on a stock leader rig in Civilization V
@@ -27,7 +27,8 @@ tags: [civilization, leaderhead, granny, gr2, animation-retargeting, light-rig, 
 >   location.
 >
 > It's a pure data/Lua/art mod (no DLL). It's verified in the real game on DX9 and DX11 at max settings:
-> screenshots, video, a game-only audio recording, and Lua.log.
+> screenshots, video, a game-only audio recording, and Lua.log. It's released on the Steam Workshop (file
+> 3814750314), uploaded without ModBuddy.
 
 ## Setup
 - **Game:** Steam build 1.0.3.279 (2014-11-19), all DLC. It's 32-bit, with three exes:
@@ -181,6 +182,20 @@ A **data mod**: XML/SQL for the database, Lua addins for the gameplay, and art l
    - the painting goes on a matte card;
    - the scene XML sets camera, lights, cube maps (tinted copies of a stock pair) and a ColorKey.
 6. **Test** before every in-game run (see Verification).
+7. **Release on the Steam Workshop:**
+   1. Package a `.civ5mod`. It's a 7z (LZMA) archive with the mod's files at its root next to
+      `<Name> (v N).modinfo`, the layout ModBuddy writes. We build it with py7zr and read it back.
+   2. Upload. The SDK's ModBuddy uploader is a thin layer over the SDK's `SteamworksSharp.dll`:
+      - static `Valve.Steamworks.Initialize/RunCallbacks/Shutdown`;
+      - `RemoteStorage.FileWrite` for the package and the preview;
+      - `PublishWorkshopFile(file, preview, consumer app 8930, title, description, visibility, tags, Community)`;
+      - `CreatePublishedFileUpdateRequest` + `UpdatePublishedFile*` + `CommitPublishedFileUpdate` for later
+        versions.
+
+      A small x86 C# tool next to that DLL, `steam_api.dll` and `steam_appid.txt` = 16830 (the SDK's app, as
+      ModBuddy runs) publishes without ModBuddy.
+   3. On launch, the game downloads the subscribed package into `MODS\` and unpacks it into a folder named after
+      the `.modinfo`'s `<Name>`, not the archive's.
 
 ## Verification
 - **Before the game:**
@@ -200,6 +215,8 @@ A **data mod**: XML/SQL for the database, Lua addins for the gameplay, and art l
   voice plays, not the stock one.
 - **Animation edits:** sampled back through Granny itself (`GrannySampleModelAnimations` + `GrannyBuildWorldPose`)
   and compared with the intended curves (≤ 0.4 in).
+- **Workshop release:** published (file 3814750314), subscribed, and installed by the game itself. The unpacked
+  folder is byte-identical to the source (189 files). The human then played that copy and confirmed it works.
 - **Not verified:**
   - multiplayer;
   - the Tablet exe;
@@ -271,6 +288,27 @@ A **data mod**: XML/SQL for the database, Lua addins for the gameplay, and art l
     - **Cause:** its Collada importer is gone.
     - **Fix:** an Assimp export is simple XML (one triangle list, all inputs on one index, Y up, `<unit meter>`), so
       read it in Python and weld positions to recover topology.
+
+18. **ModBuddy won't start: "Cannot find one or more components. Please reinstall the application."**
+    - **Cause:** it needs the Visual Studio 2010 isolated shell.
+    - **Fix:** skip it. Call the SDK's `SteamworksSharp.dll` directly (Build step 7).
+19. **Russian title/description would arrive garbled.**
+    - **Cause:** `SteamworksSharp` marshals strings with `StringToHGlobalAnsi` (the system code page), and Steam reads
+      UTF-8.
+    - **Fix:**
+      - pass each string as its UTF-8 bytes decoded with the ANSI code page, and check that round trip before
+        sending;
+      - keep cloud file names ASCII.
+20. **`SteamAPI_Init` fails while Steam is running.**
+    - **Cause:** the SDK's old `steam_api.dll` checks `HKCU\Software\Valve\Steam\ActiveProcess\pid`, and the
+      value was a dead pid.
+    - **Fix:** point it at the running `steam.exe` (Steam rewrites it on its next start).
+21. **`SubscribePublishedFile` returns Fail.**
+    - **Cause:** subscriptions belong to the game's app; we called it from the SDK's (16830).
+    - **Fix:** run the call with `steam_appid.txt` = 8930.
+22. **The item page seemed to say "removed for violating guidelines" and "incompatible".**
+    - **Cause:** those are hidden templates (`display: none`) in every item page's HTML.
+    - **Fix:** check the HTML, not a page summary.
 
 ## Assets
 - **Supplied by the human:**
