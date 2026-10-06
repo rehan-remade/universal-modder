@@ -1998,6 +1998,61 @@
   "links": []
  },
  {
+  "path": "techniques/editor-free-bannerlord-assets.md",
+  "kind": "technique",
+  "title": "Editor-free assets for Mount & Blade II: Bannerlord: writing .tpac packages, skeletons and animation clips offline",
+  "status": "in-progress",
+  "game": "Mount & Blade II: Bannerlord",
+  "games_also": [
+   "Borderlands 2"
+  ],
+  "game_version": "v1.4.8.119303 (Steam, Windows); client TaleWorlds.Native.dll 14,185,944 bytes, PE timestamp 0x6a732505",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Python 3.10 + numpy (own LZ4 and xxHash64)",
+   "Ghidra 12.1.4 headless + JDK 21",
+   "Blender 4.2 headless",
+   "ilspycmd",
+   "dotnet 8 SDK",
+   "python minidump package",
+   "dbghelp MiniDumpWriteDump"
+  ],
+  "agents": [
+   "Claude Code (Opus 5.5)",
+   "Claude Code subagents (Sonnet 5.5)"
+  ],
+  "humans": [
+   "@theartur2000"
+  ],
+  "date": "2026-10-05",
+  "links": [],
+  "tags": [
+   "bannerlord",
+   "tpac",
+   "rdc",
+   "runtimedatacache",
+   "packing",
+   "load-time",
+   "hang",
+   "ik",
+   "skeleton",
+   "ragdoll",
+   "animation",
+   "clip",
+   "action-set",
+   "project-mbproj",
+   "bone-limit",
+   "hit-capsule",
+   "minidump",
+   "asset-pipeline",
+   "total-conversion",
+   "custom-race",
+   "quadruped"
+  ]
+ },
+ {
   "path": "techniques/loading-pre-sequel-assets-in-borderlands-2.md",
   "kind": "technique",
   "title": "Loading Pre-Sequel assets in Borderlands 2: header-only package surgery, mesh conversion and what still fails",
