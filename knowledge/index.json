@@ -1212,6 +1212,50 @@
   ]
  },
  {
+  "path": "games/halo-trial/max-payne-bullet-time-shootdodge-and-voice-in-halo-trial-via.md",
+  "kind": "game",
+  "title": "Max Payne bullet time, shootdodge and voice in Halo Trial via Chimera Lua on macOS/Wine",
+  "game": "Halo Trial",
+  "games_also": [
+   "Max Payne (Demo)"
+  ],
+  "game_version": "Halo Trial (Halo PC demo) halo.exe FileVersion 01.00.00.0578, 2,785,280 bytes; Chimera 1.0.0.r1307.1f292fc; Max Payne Demo (2001), x_demodatas.ras 97,939,389 bytes",
+  "platform": "macos",
+  "engine": "native",
+  "route": "passthrough",
+  "tools": [
+   "Chimera r1307 (global Lua scripts)",
+   "GameHub Wine build 10000073",
+   "mtld3d (D3D9 -> Metal)",
+   "x87sidecar",
+   "zig cc via `uvx --from ziglang` (Windows SendInput helper)",
+   "afplay"
+  ],
+  "anti_cheat": "None. Halo Trial is offline/LAN only here; Max Payne Demo is single-player.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-07",
+  "links": [
+   "https://github.com/ernestask/libras",
+   "https://github.com/SnowyMouse/chimera"
+  ],
+  "tags": [
+   "mashup",
+   "bullet-time",
+   "chimera",
+   "lua",
+   "wine",
+   "macos",
+   "ras",
+   "sendinput",
+   "sidecar",
+   "blam"
+  ]
+ },
+ {
   "path": "games/left-4-dead/left-4-dead-infected-and-tank-in-minecraft.md",
   "kind": "game",
   "title": "Left 4 Dead's common infected (19 looks) and Tank as animated Minecraft mobs",
