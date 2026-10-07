@@ -17,6 +17,7 @@
 
 	local page = ::TG.Mod.ModSettings.addPage("General");
 	page.addRangeSetting("Days", 5, 1, 30, 1, "Training days", "Days the brother suffers the penalty before the training pays off.");
+	page.addRangeSetting("TownPercent", 25, 0, 100, 5, "Towns with a Training Grounds (%)", "Share of towns that have the building. The same towns always have it. Takes effect after reloading the save.");
 	page.addRangeSetting("CostBase", 500, 0, 5000, 50, "Base cost (gold)", "Fixed part of the price.");
 	page.addRangeSetting("CostPerLevel", 150, 0, 1000, 10, "Cost per level (gold)", "Added for every level of the brother.");
 

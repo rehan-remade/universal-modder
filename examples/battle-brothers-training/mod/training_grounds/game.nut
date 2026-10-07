@@ -67,6 +67,8 @@ if ("AttributesLevelUp" in ::Const)
 // It occupies the first free slot, skipping slot 3 in coastal towns (vanilla puts the port there).
 ::TG.getFreeSlot <- function( _settlement )
 {
+	if (!::TG.Logic.townHasBuilding(_settlement.getName(), ::TG.getSetting("TownPercent", 25)))
+		return null;
 	for (local i = 0; i < _settlement.m.Buildings.len(); i++)
 	{
 		if (i == 3 && _settlement.m.IsCoastal)

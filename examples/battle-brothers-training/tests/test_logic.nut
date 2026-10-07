@@ -51,4 +51,17 @@ check("window lo", s >= 50, true);
 check("cost", L.cost(4, 500, 150), 1100);
 check("cost floor", L.cost(0, 0, 0), 0);
 
+// town lottery: stable, and the percentage roughly holds
+local names = ["Felswall", "Birkenstrand", "Hohenau", "Rotenburg", "Kaltstein", "Eichental", "Nordheim", "Falkenau", "Wolfsgrund", "Eisenhof", "Lindenau", "Schwarzmoor", "Weidenbach", "Steinbruck", "Aschenfeld", "Tannenhain", "Roggenhof", "Grauwald", "Silberbach", "Dornfeld"];
+local hits = 0;
+foreach (n in names)
+{
+	check("stable " + n, L.townHasBuilding(n, 25), L.townHasBuilding(n, 25));
+	if (L.townHasBuilding(n, 25)) hits++;
+}
+check("0 percent", L.townHasBuilding("Felswall", 0), false);
+check("100 percent", L.townHasBuilding("Felswall", 100), true);
+check("share sane", hits >= 1 && hits <= 10, true);
+print("towns with building: " + hits + " of " + names.len() + "\n");
+
 if (fails == 0) print("OK\n"); else print("FAILED " + fails + "\n");

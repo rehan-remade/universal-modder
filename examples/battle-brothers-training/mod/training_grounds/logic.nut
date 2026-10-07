@@ -73,6 +73,16 @@
 		return this.max(0, _bgMax - this.estimateStart(_base, _n, _talent, _idx, _bgMin, _bgMax, _levelUp));
 	}
 
+	// Stable per-town lottery: the same town name always gives the same answer, so a town keeps or
+	// never gets the building across saves and restarts. _percent is the share of towns that have it.
+	function townHasBuilding( _name, _percent )
+	{
+		local h = 7;
+		for (local i = 0; i < _name.len(); i++)
+			h = (h * 31 + _name[i]) % 1000003;
+		return (h % 100) < _percent;
+	}
+
 	function cost( _level, _base, _perLevel )
 	{
 		return this.max(0, _base + _perLevel * _level);
