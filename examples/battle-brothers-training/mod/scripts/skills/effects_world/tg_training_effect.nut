@@ -69,7 +69,7 @@ this.tg_training_effect <- this.inherit("scripts/skills/skill", {
 			}
 			actor.getFlags().set("tg_max_" + e.Stat.Key, true);
 		}
-		this.Tactical.EventLog.log(this.Const.UI.getColorizedEntityName(actor) + " finished hard training: " + (gains.len() > 0 ? ::TG.join(gains) : "no gain"));
+		this.logInfo(this.Const.UI.getColorizedEntityName(actor) + " finished hard training: " + (gains.len() > 0 ? ::TG.join(gains) : "no gain"));
 		this.removeSelf();
 	}
 

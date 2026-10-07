@@ -20,7 +20,7 @@ this.tg_training_grounds_building <- this.inherit("scripts/entity/world/settleme
 		if (!this.World.getTime().IsDaytime)
 			return;
 		this.logInfo("Training Grounds: opened in " + this.getSettlement().getName());
-		this.Tactical.EventLog.log("The training grounds of " + this.getSettlement().getName() + " are open to your men.");
+		this.logInfo("The training grounds of " + this.getSettlement().getName() + " are open to your men.");
 		::TG.openWizard(this.getSettlement());
 	}
 });
