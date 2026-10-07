@@ -154,7 +154,7 @@ this.tg_wizard_event <- this.inherit("scripts/events/event", {
 		effect.m.DaysLeft = ::TG.getDays();
 		effect.m.Stats = clone this.m.Picked;
 		bro.getSkills().add(effect);
-		this.Tactical.EventLog.log(this.Const.UI.getColorizedEntityName(bro) + " begins hard training for " + effect.m.DaysLeft + " days.");
+		this.logInfo(this.Const.UI.getColorizedEntityName(bro) + " begins hard training for " + effect.m.DaysLeft + " days.");
 		return this.makeScreen(bro.getName() + " heads to the yard. You pay " + cost + " crowns.", [this.leaveOpt()]);
 	}
 });
