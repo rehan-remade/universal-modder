@@ -5,7 +5,8 @@ this.tg_wizard_event <- this.inherit("scripts/events/event", {
 		Town = null,
 		Brother = null,
 		Picked = [],
-		Page = 0
+		Page = 0,
+		StatPage = 0
 	},
 	function create()
 	{
@@ -50,7 +51,8 @@ this.tg_wizard_event <- this.inherit("scripts/events/event", {
 	{
 		this.m.Brother = null;
 		this.m.Picked = [];
-		local perPage = 6;
+		this.m.StatPage = 0;
+		local perPage = 3;
 		local list = [];
 		foreach (b in this.World.getPlayerRoster().getAll())
 		{
@@ -102,12 +104,26 @@ this.tg_wizard_event <- this.inherit("scripts/events/event", {
 		local need = this.Math.min(3, open.len());
 		if (need == 0 || this.m.Picked.len() >= need)
 			return this.confirmScreen();
-		local options = [];
+		local left = [];
 		foreach (e in open)
 		{
-			if (this.m.Picked.find(e.Stat.Idx) != null)
-				continue;
-			options.push(this.statOption(e));
+			if (this.m.Picked.find(e.Stat.Idx) == null)
+				left.push(e);
+		}
+		local perPage = 3;
+		local pages = this.Math.max(1, (left.len() + perPage - 1) / perPage);
+		if (this.m.StatPage >= pages)
+			this.m.StatPage = 0;
+		local options = [];
+		local from = this.m.StatPage * perPage;
+		for (local i = from; i < left.len() && i < from + perPage; i++)
+			options.push(this.statOption(left[i]));
+		if (pages > 1)
+		{
+			options.push(this.opt("More attributes (" + (this.m.StatPage + 1) + "/" + pages + ")", function ( _event ) {
+				_event.m.StatPage++;
+				return _event.statScreen();
+			}));
 		}
 		options.push(this.opt("Pick another brother", function ( _event ) { return _event.brotherScreen(); }));
 		local text = "Choose " + (need - this.m.Picked.len()) + " more attribute(s) for " + this.m.Brother.getName() + ". Gains are estimates: the game keeps no record of his original roll.";
@@ -120,6 +136,7 @@ this.tg_wizard_event <- this.inherit("scripts/events/event", {
 		local idx = _e.Stat.Idx;
 		return this.opt(label, function ( _event ) {
 			_event.m.Picked.push(idx);
+			_event.m.StatPage = 0;
 			return _event.statScreen();
 		});
 	}
