@@ -90,6 +90,12 @@ Not verified: the boost applying after the days pass, the -25% showing, save/loa
    `event.processInput`. **Cause:** a button's `getResult` must return a screen ID string (or 0 to close).
    Returning a screen table crashes the check even though `getScreen` accepts tables. **Fix:** store the new
    screen in `m.Screens` under a fresh ID and return the ID.
+7. **Symptom.** Compile error `expected 'IDENTIFIER'` on `local base = ...`. **Cause:** `base` is a Squirrel keyword.
+   **Fix:** use another name (`label`, `nm`).
+8. **Symptom (design).** Portraits and stat rows set outside `start` vanish. **Cause:** `event.setScreen` clears `List`,
+   `Characters` and `Banner` and then calls the screen's `start(_event)`. **Fix:** fill them inside `start` (store data in extra
+   screen fields). For a "done" notice on the world map there is no toast; queue plain data and fire a one-screen event from
+   a hook on `event_manager.update` behind `World.Events.canFireEvent(true)`, as `ambition_manager` does.
 6. **Symptom.** `um scan` reports the wrong engine. **Cause:** no Squirrel detection. **Fix:** ignore it, check
    `data/` for existing mod zips and `log.html` for "Modern Hooks registered".
 

@@ -41,7 +41,14 @@ Price = base + per level * brother level.
   class from this mod for towns.
 - The state (days left, chosen attributes) lives in a skill on the brother, `effects.tg_training`,
   which saves with him and vanishes if he dies or is dismissed.
-- The dialog is a vanilla event screen built on the fly.
+- The dialog is a vanilla event screen built on the fly. Each screen shows brother portraits (`Characters`) and an
+  icon list (`List`, vanilla stat icons, vanilla event green/red text colours): the brother page lists level,
+  background and price; the attribute page lists all 8 attributes with current value, estimated gain and a
+  "chosen" mark; the confirm page shows before/after, cost, days and the -25% warning. The drill master lines
+  are picked at random from `training_grounds/game.nut`.
+- When a brother finishes, a notice is queued and shown as a one-screen event with his portrait and the gains.
+  It is fired from a hook on `event_manager.update` behind `canFireEvent`, so it waits for the next quiet moment
+  on the world map. Queued notices are not saved: quitting before it shows loses the notice, not the gain.
 
 ## Limits
 - The game does not store a brother's starting roll. It is estimated as the base value minus the expected
@@ -52,7 +59,7 @@ Price = base + per level * brother level.
 - Each attribute can be raised once per brother (flag `tg_max_<Stat>`).
 - Removing the mod while a brother is training breaks loading that save (unknown skill).
 - The building has its own picture (day and night, 410x275, `mod/gfx/ui/settlements/`). The tooltip icon is still the vanilla `vet_hall` icon.
-- Tooltips, the event layout and the -25% display are unverified in game.
+- Tooltips, the event layout (portraits, icon lists, how many list rows fit), the completion notice and the -25% display are unverified in game.
 
 ## Tests
 `sq tests/test_logic.nut` (any Squirrel 3.x interpreter) checks the arithmetic.

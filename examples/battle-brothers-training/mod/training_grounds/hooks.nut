@@ -40,3 +40,14 @@
 		return __original(_entityId, _elementId, _elementOwner);
 	}
 });
+
+// Show queued "training finished" notices the way vanilla fires its own events: from the event manager's
+// update, guarded by canFireEvent (no battle, no open screen, no hostile party nearby).
+::TG.HooksMod.hook("scripts/events/event_manager", function( q ) {
+	q.update = @(__original) function()
+	{
+		if (::TG.Notices.len() > 0)
+			::TG.showNotice();
+		return __original();
+	}
+});
