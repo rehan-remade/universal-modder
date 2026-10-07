@@ -720,6 +720,43 @@
   ]
  },
  {
+  "path": "games/half-life/half-life-1-weapons-and-monsters-in-minecraft.md",
+  "kind": "game",
+  "title": "Half-Life 1's weapons and monsters as a Minecraft Fabric mod, from a GoldSrc model converter",
+  "game": "Half-Life",
+  "games_also": [
+   "Minecraft Java Edition"
+  ],
+  "game_version": "Half-Life 1 (Steam, GoldSrc, Studio model version 10), Minecraft Java 1.21.1 with Fabric Loader 0.19.5, Fabric API 0.116.17+1.21.1",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "loader-api",
+  "tools": [
+   "Fabric (Loom 1.11-SNAPSHOT, Gradle 8.14.3, JDK 23)",
+   "Python 3.12",
+   "ffmpeg (wav to ogg)"
+  ],
+  "anti_cheat": "none involved: single-player Minecraft; Half-Life is never launched or modified, only its files are read",
+  "status": "working",
+  "agents": [
+   "Claude Code (Sonnet 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-05",
+  "links": [],
+  "tags": [
+   "half-life",
+   "goldsrc",
+   "minecraft",
+   "fabric",
+   "weapons",
+   "hitscan",
+   "projectiles",
+   "mobs",
+   "content-port"
+  ]
+ },
+ {
   "path": "games/half-life/minecraft-steve-player-weapons-and-hotbar-hud-in-goldsrc-hal.md",
   "kind": "game",
   "title": "Minecraft Steve player, weapons and hotbar HUD in GoldSrc (Halflife Updated)",
@@ -836,6 +873,43 @@
    "fabric",
    "shields",
    "vehicles"
+  ]
+ },
+ {
+  "path": "games/left-4-dead/left-4-dead-infected-and-tank-in-minecraft.md",
+  "kind": "game",
+  "title": "Left 4 Dead's common infected (19 looks) and Tank as animated Minecraft mobs",
+  "game": "Left 4 Dead",
+  "games_also": [
+   "Minecraft Java Edition"
+  ],
+  "game_version": "Left 4 Dead 1 (Steam app 500, MDL version 49 models), Minecraft Java 1.21.1 with Fabric Loader 0.19.5, Fabric API 0.116.17+1.21.1",
+  "platform": "windows",
+  "engine": "source",
+  "route": "loader-api",
+  "tools": [
+   "Fabric (Loom 1.11-SNAPSHOT, Gradle 8.14.3, JDK 23)",
+   "Python 3.12",
+   "ffmpeg (wav to ogg)"
+  ],
+  "anti_cheat": "none involved: single-player Minecraft; Left 4 Dead is never launched, hooked or patched, its files are only read from disk",
+  "status": "working",
+  "agents": [
+   "Claude Code (Sonnet 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-05",
+  "links": [],
+  "tags": [
+   "left4dead",
+   "minecraft",
+   "fabric",
+   "content-port",
+   "source-engine",
+   "skeletal-animation",
+   "mobs",
+   "tank",
+   "boss"
   ]
  },
  {
@@ -1390,6 +1464,45 @@
   ]
  },
  {
+  "path": "games/starfield/starfield-animation-af-rig-and-havok-physics.md",
+  "kind": "game",
+  "title": "Starfield animation (.af/.rig) and physics (Havok 2019.02)",
+  "game": "Starfield",
+  "games_also": [],
+  "game_version": "Bethesda Game Studios, 2023, Creation Engine 2 (PC)",
+  "platform": "windows",
+  "engine": "creation",
+  "route": "asset-only",
+  "tools": [
+   "CALUMI.Animation (Calaverah, LGPLv3)",
+   "sf_animation_io Blender addon (Deveris256)",
+   "StarfieldMeshConverter",
+   "Blender 4.3"
+  ],
+  "anti_cheat": "none relevant to asset conversion (offline files)",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [
+   "Selene0623"
+  ],
+  "date": "2026-10-05",
+  "links": [
+   "https://github.com/Calaverah/CALUMI.Animation"
+  ],
+  "tags": [
+   "starfield",
+   "creation-engine",
+   "animation",
+   "af",
+   "rig",
+   "havok",
+   "physics",
+   "blender"
+  ]
+ },
+ {
   "path": "games/terraria/eye-of-cthulhu-rl-agent.md",
   "kind": "game",
   "title": "An RL agent that beats the Eye of Cthulhu: decompiled boss AI to a simulator, then back into the real game",
@@ -1467,6 +1580,47 @@
    "explosions",
    "camera",
    "showcase-video"
+  ]
+ },
+ {
+  "path": "games/test-drive-unlimited-2/tdu2-model-and-texture-formats.md",
+  "kind": "game",
+  "title": "TDU2 model and texture formats: .3DG/.3DD geometry, .2DM materials, .2DB textures",
+  "game": "Test Drive Unlimited 2",
+  "games_also": [],
+  "game_version": "retail (any; formats are version-independent between TDU1 and TDU2 for .2DM/.2DB)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "custom Python parsers (blender-io-tdu-series)",
+   "Blender 4.0 LTS addon",
+   "3ds Max MaxScript importers (vagos21)",
+   "Krom bnk extractor"
+  ],
+  "anti_cheat": "none",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [
+   "Selene0623"
+  ],
+  "date": "2026-10-05",
+  "links": [],
+  "tags": [
+   "tdu2",
+   "3dg",
+   "3dd",
+   "2dm",
+   "2db",
+   "mesh",
+   "texture",
+   "dxt",
+   "half-float",
+   "triangle-strip",
+   "little-endian",
+   "maxscript"
   ]
  },
  {
@@ -2059,6 +2213,89 @@
   ]
  },
  {
+  "path": "techniques/disrupt-material-bin-and-xbt-textures.md",
+  "kind": "technique",
+  "title": "Disrupt material (.material.bin) and texture (.xbt) formats",
+  "game": "Watch Dogs",
+  "games_also": [
+   "Watch Dogs 2",
+   "Watch Dogs: Legion"
+  ],
+  "game_version": "WD1 v7 / 2013 beta v5 / Legion v15",
+  "platform": "windows",
+  "engine": "Disrupt (Dunia 2 fork)",
+  "route": "asset-only",
+  "tools": [
+   "WatchDogsMaterialEditor",
+   "XbgLab",
+   "Gibbed.Disrupt",
+   "Blender"
+  ],
+  "anti_cheat": "unknown",
+  "status": "working",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [
+   "Selene0623"
+  ],
+  "date": "2026-10-05",
+  "links": [],
+  "tags": [
+   "disrupt",
+   "watch-dogs",
+   "material",
+   "shader",
+   "texture",
+   "xbt",
+   "dds",
+   "crc32",
+   "hashing"
+  ]
+ },
+ {
+  "path": "techniques/disrupt-xbg-glm-mesh-format.md",
+  "kind": "technique",
+  "title": "Disrupt XBG/GLM mesh format (Watch Dogs 1/2/Legion)",
+  "game": "Watch Dogs 2",
+  "games_also": [
+   "Watch Dogs",
+   "Watch Dogs: Legion"
+  ],
+  "game_version": "WD2 (mesh header version 70.137 = 0x00460089)",
+  "platform": "windows",
+  "engine": "Disrupt (Dunia 2 fork)",
+  "route": "asset-only",
+  "tools": [
+   "XbgLab",
+   "GlmCompilerToXBG",
+   "io_scene_WD2",
+   "Blender",
+   "Ghidra"
+  ],
+  "anti_cheat": "unknown",
+  "status": "working",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [
+   "Selene0623"
+  ],
+  "date": "2026-10-05",
+  "links": [],
+  "tags": [
+   "disrupt",
+   "watch-dogs",
+   "mesh",
+   "xbg",
+   "glm",
+   "geometry",
+   "vertex-format",
+   "hashing",
+   "dunia2"
+  ]
+ },
+ {
   "path": "techniques/driving-real-games-safely.md",
   "kind": "technique",
   "title": "Driving real games safely: input, focus and the human at the keyboard",
@@ -2166,6 +2403,34 @@
   ]
  },
  {
+  "path": "techniques/madness-chameleon-binary-containers-bml-sgb.md",
+  "kind": "technique",
+  "title": "Madness/Chameleon binary containers: .bml (binary XML) and .sgb/.sgx (track scenes)",
+  "tags": [
+   "madness-engine",
+   "chameleon",
+   "nfs-shift",
+   "project-cars",
+   "bml",
+   "sgb",
+   "sgx",
+   "binary-xml",
+   "reflection",
+   "scene-graph",
+   "3ds-max"
+  ],
+  "date": "2026-10-05",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [
+   "Selene0623"
+  ],
+  "links": [
+   "https://www.tapatalk.com/groups/kottons_chop_shop/ti-scp-ti-sms-model-importer-t3217.html"
+  ]
+ },
+ {
   "path": "techniques/oracles-how-agents-know-a-mod-works.md",
   "kind": "technique",
   "title": "Oracles: how an agent knows a mod actually works",
@@ -2187,6 +2452,31 @@
    "@rehan_shei"
   ],
   "links": []
+ },
+ {
+  "path": "techniques/reading-source-engine-models-and-animations.md",
+  "kind": "technique",
+  "title": "Reading Source engine (MDL v49) models, textures and animations in plain Python, no SDK",
+  "status": "working",
+  "agents": [
+   "Claude Code (Sonnet 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-05",
+  "links": [],
+  "tags": [
+   "source-engine",
+   "mdl",
+   "vvd",
+   "vtx",
+   "vtf",
+   "vpk",
+   "ani",
+   "skeletal-animation",
+   "skinning",
+   "left4dead",
+   "model-conversion"
+  ]
  },
  {
   "path": "techniques/reading-ue3-gearbox-games-offline.md",
@@ -2232,6 +2522,32 @@
   ],
   "humans": [
    "@rehan_shei"
+  ],
+  "links": []
+ },
+ {
+  "path": "techniques/synthetic-pdb-reconstruction-for-stripped-dlls.md",
+  "kind": "technique",
+  "title": "Synthetic PDB reconstruction for stripped Disrupt DLLs",
+  "tags": [
+   "disrupt",
+   "ubisoft",
+   "watch-dogs",
+   "pdb",
+   "symbols",
+   "reverse-engineering",
+   "rtti",
+   "vftables",
+   "llvm-pdbutil",
+   "ghidra",
+   "ida"
+  ],
+  "date": "2026-10-05",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [
+   "Selene0623"
   ],
   "links": []
  }

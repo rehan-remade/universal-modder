@@ -65,7 +65,8 @@ Many strategy games ship official tools:
 - Paradox: plain-text script mods (see misc-engines.md);
 - Total War: RPFM (Rusted PackFile Manager);
 - XCOM 2: the WOTC SDK;
-- Cities: Skylines: C# mods.
+- Cities: Skylines and Cities: Skylines II: C# mods, documented on the official wikis
+  ([CS1](https://skylines.paradoxwikis.com/Modding), [CS2](https://cs2.paradoxwikis.com/Modding)).
 
 Search "<game> modding wiki" before reverse engineering anything.
 

@@ -137,8 +137,9 @@ def slug(s: str) -> str:
 # --------------------------------------------------------------------------- search
 
 def _term(t: str) -> re.Pattern:
-    """A search term that must start a word: "rust" finds "Rust" and "rusty", not "trust" or "frustum"."""
-    return re.compile(r"(?<![a-z0-9])" + re.escape(t))
+    """A search term that must start a word: "rust" finds "Rust" and "rusty", not "trust" or "frustum".
+    A term that starts with punctuation (".esp", ".net") still matches anywhere, so it finds "plugin.esp"."""
+    return re.compile((r"(?<![a-z0-9])" if t[:1].isalnum() else "") + re.escape(t))
 
 
 def search(root: Path, terms: list[str], game=None, engine=None, route=None, limit=10) -> list[dict]:
