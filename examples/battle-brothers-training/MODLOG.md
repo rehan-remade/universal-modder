@@ -1,30 +1,47 @@
-# MODLOG: Battle Brothers (steam 365360)
+# MODLOG: Battle Brothers Training Grounds (Steam 365360)
 
-## Recon (2026-10-07, read-only)
-- Path: T:\All\Steam\steamapps\common\Battle Brothers (data\ holds data_*.dat, gfx, mod zips)
-- Saves: C:\Users\alexs\OneDrive\Documents\Battle Brothers (OneDrive-synced; back up before modded launches)
-- um scan said "unknown native engine, no loaders": wrong. Game is C++ with embedded Squirrel scripts (.cnut in data_*.dat), Coherent UI front end.
-- Already installed in data\ (zips, never unzipped): Modern Hooks 0.6.0 (nexus 685), MSU 1.9.0 (nexus 479, GitHub MSUTeam/MSU, latest tag 1.9.0), Legends 19.4.22 + assets, Faster mod, More Weapon Skins, Dynamic Battle Stats, Settlement Situation Tooltip, Smart Recruiter, ~mod_msu_launcher.zip.
-- Anti-cheat: none (single-player).
-- KB: no notes for Battle Brothers or Squirrel.
+## Recon (2026-10-07)
+- Game is C++ with embedded Squirrel 3 scripts (.cnut inside data_*.dat zips) and a Coherent UI front end. No anti-cheat.
+- Installed in data/: Modern Hooks 0.6.0, MSU 1.9.0, Legends 19.4.22 (not a dependency of this mod), other mods.
+- Saves: Documents/Battle Brothers (OneDrive-synced).
+- Backup before any modded launch: `um backup create` -> name battle-brothers-saves, zip at
+  `%USERPROFILE%\.universal-modder\backups\battle-brothers-saves\20261007-132219.zip` (8 files, 17.9 MB).
+  Restore with `um backup restore`.
 
 ## Route
-Drop-in mod zip in data\ using Modern Hooks (Hooks.register / ::Hooks.QueueBefore/After, preserves vanilla scripts, no overwriting) plus MSU for settings/keybinds/skill framework. Mod zip layout: scripts/..., gfx/..., plus a mod_*.nut registering the mod. Docs: https://github.com/MSUTeam/MSU/wiki . Vanilla scripts need decompiling (cnut -> nut) with nutcracker (DamianXVI) / bbkit (https://github.com/Enduriel/bbkit, last push 2021) / TaroEld massdecompile. Examples: https://github.com/jcsato (sato mods).
+Modern Hooks (`::Hooks.register`, `mod.hook(path, function(q){...})`) + MSU settings. Zip with `scripts/` and a
+private `training_grounds/` include folder at the root, like MSU does.
 
-## Sources
-- https://www.nexusmods.com/battlebrothers/mods/479 (MSU)
-- https://www.nexusmods.com/battlebrothers/mods/685 (Modern Hooks; fetch blocked 403, version from local zip name)
-- https://github.com/MSUTeam/MSU/releases/tag/1.9.0
-- https://github.com/Enduriel/bbkit
-- https://github.com/jcsato/sato_men_at_arms_mod
+## Tools (outside the repo, in a user folder)
+- bbkit v0.1.3 release zip (Enduriel/bbkit): `adams_kit/nutcracker.exe`, `bbsq.exe` (decrypt .cnut), `sq.exe` (Squirrel 3.0.7 compiler/interpreter).
+- Extract data_001.dat (zip), `bbsq -d` the .cnut files (batch with xargs, argument list is limited), then `nutcracker x.cnut > x.nut`.
+- sq.exe doubles as the interpreter for the pure-logic test.
 
-## Journal
-- Nothing installed, no files or saves touched.
-- TODO: verify Modern Hooks current version and install steps on Nexus; check log.html in Documents\Battle Brothers for loaded mods.
+## Vanilla facts found (names)
+- Buildings: `scripts/entity/world/settlements/buildings/building` (m.ID/Name/UIImage/Tooltip, onClicked(_townScreen)).
+  Vanilla training hall = `training_hall_building` -> `_townScreen.showTrainingDialog()`.
+- `settlement.m.Buildings` has 6 slots, saved by class-name hash (so a mod building stored there would tie saves to the mod).
+  `settlement.getUIInformation()` builds `Slots`; `settlement.onSlotClicked(_i, _townScreen)` dispatches clicks.
+  Coastal towns force the port into slot 3 (settlement.nut ~1198).
+- Tooltips: `tooltip_events.general_queryUIElementTooltipData(_entityId, _elementId, _elementOwner)`.
+- Brother base stats: `player.getBaseProperties()` keys Hitpoints, Bravery, Stamina, Initiative, MeleeSkill, RangedSkill, MeleeDefense, RangedDefense.
+- Start roll = `character_background.buildAttributes()`: defaults (HP 50-60, Res 30-40, Fat 90-100, Init 100-110, MSk 47-57, RSk 32-42, MDef 0-5, RDef 0-5) + `background.onChangeAttributes()`.
+- Level-up gains are NOT recorded. `player.m.Attributes[i]` holds only pending pre-rolled gains (10 of them, then +1 each).
+  `Const.AttributesLevelUp` = per-stat min/max, talent stars shift the roll. `player.m.LevelUps` = unspent level-ups.
+  => start roll must be estimated (see logic.nut).
+- Status effects: `scripts/skills/skill`, hooks `onUpdate(_properties)` (use *Mult fields), `onNewDay()` (called from asset_manager per brother),
+  own `onSerialize/onDeserialize`. `getFlags().set/has` on a brother is saved.
+- Dialog: `World.State.showEventScreenFromTown(event)`; event buttons come from `ActiveScreen.Options`; `getResult` may return a screen table;
+  `setScreen` resets `Characters`, so portraits are pushed in the screen's `start`. `World.Events.m.ActiveEvent` must be set for button input.
+- Squirrel gotcha: `base` is a keyword.
 
-## 2026-10-07 Design (user request, assumptions pending confirmation)
-Idea: "Ordeal/Hard training" action at a settlement (or Legends camp). Brother gets -25% stats for N days,
-then 3 stats get their base (starting) value raised to the background's max roll; level-up gains stay on top
-(example: base 47, +13 from levels = 60 -> base 56, +13 = 69).
-Route: Squirrel zip on Modern Hooks 0.6.0 + MSU 1.9.0 (both already in data\). Decompile of vanilla .cnut not yet done (needs download permission).
-Open: location (town building vs Legends camp), duration, cost, which 3 stats, what "56" is (bg max?).
+## Design decisions
+- Building not stored in `m.Buildings` (no save-hash dependency), shown in the first free slot via hooks.
+- Training state is a skill on the brother (saved with him; dies with him).
+- Dialog via event screen wizard (no custom JS).
+
+## Verified
+- All scripts compile under Squirrel 3.0.7 (`sq -c`); arithmetic tests pass (`tests/test_logic.nut`); zip builds.
+## Not verified (needs the game)
+- Everything that runs inside the game: hook loading, slot image, tooltip, event wizard flow, menu-stack pop, penalty display, save/load of the effect, the log lines.
+- Next step: user launches the game with a backup in place, enters a village with a free slot, uses the building, checks `log.html` in Documents/Battle Brothers.
