@@ -23,7 +23,7 @@ def main():
             files.append(os.path.join(root, n))
     sq = os.environ.get("SQ")
     if sq:
-        for f in files:
+        for f in [x for x in files if x.endswith('.nut')]:
             r = subprocess.run([sq, "-c", f], capture_output=True, text=True, cwd=HERE)
             if r.returncode != 0 or "rror" in r.stdout + r.stderr:
                 sys.exit("syntax error in %s\n%s%s" % (f, r.stdout, r.stderr))

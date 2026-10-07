@@ -45,3 +45,8 @@ private `training_grounds/` include folder at the root, like MSU does.
 ## Not verified (needs the game)
 - Everything that runs inside the game: hook loading, slot image, tooltip, event wizard flow, menu-stack pop, penalty display, save/load of the effect, the log lines.
 - Next step: user launches the game with a backup in place, enters a village with a free slot, uses the building, checks `log.html` in Documents/Battle Brothers.
+
+## Building art
+- Vanilla building pictures are 410x275 transparent PNGs, `gfx/ui/settlements/building_NN.png` plus `_night` (hand-painted, dark). `getUIImage()` picks day or night image.
+- Mods ship `gfx/ui/<path>.png` inside the zip and reference it as `ui/<path>`; no registration needed (other mods in data/ do the same).
+- Day art: `fal-ai/flux/schnell`, best of 3. Night art: `fal-ai/nano-banana-2/edit` of the day image. Cut out, fit to 410x275 with `um sprite`. About $0.06 total.
