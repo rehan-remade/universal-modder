@@ -1,11 +1,13 @@
 // Dialog wizard built on the vanilla event screen: pick a brother, pick stats, confirm.
-// Screens are built on the fly; getResult returns the next screen table (event.getScreen accepts tables).
+// Screens are built on the fly. Vanilla processInput only accepts a screen ID (string) or 0 from a button,
+// so makeScreen stores the new screen in m.Screens under a fresh ID and returns that ID.
 this.tg_wizard_event <- this.inherit("scripts/events/event", {
 	m = {
 		Town = null,
 		Brother = null,
 		Picked = [],
 		Page = 0,
+		Counter = 0,
 		StatPage = 0
 	},
 	function create()
@@ -27,8 +29,10 @@ this.tg_wizard_event <- this.inherit("scripts/events/event", {
 
 	function makeScreen( _text, _options )
 	{
-		return {
-			ID = "TG",
+		this.m.Counter++;
+		local id = "TG" + this.m.Counter;
+		this.m.Screens = [{
+			ID = id,
 			Text = _text,
 			Image = "",
 			List = [],
@@ -39,7 +43,8 @@ this.tg_wizard_event <- this.inherit("scripts/events/event", {
 				if (_event.m.Brother != null)
 					this.Characters.push(_event.m.Brother.getImagePath());
 			}
-		};
+		}];
+		return id;
 	}
 
 	function leaveOpt()
