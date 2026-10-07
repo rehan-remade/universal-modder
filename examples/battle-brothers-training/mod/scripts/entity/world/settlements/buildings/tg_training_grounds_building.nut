@@ -6,9 +6,9 @@ this.tg_training_grounds_building <- this.inherit("scripts/entity/world/settleme
 		this.m.ID = "building.tg_training_grounds";
 		this.m.Name = "Training Grounds";
 		this.m.Description = "Drill a brother hard to push his raw talent to its limit";
-		// Placeholder art: reuses the vanilla Training Hall picture.
-		this.m.UIImage = "ui/settlements/building_07";
-		this.m.UIImageNight = "ui/settlements/building_07_night";
+		// Own art (fal-generated, 410x275 like vanilla building pictures); shipped as gfx/ui/settlements/*.png in the zip.
+		this.m.UIImage = "ui/settlements/tg_training_grounds";
+		this.m.UIImageNight = "ui/settlements/tg_training_grounds_night";
 		this.m.Tooltip = "world-town-screen.main-dialog-module.TrainingGrounds";
 		this.m.TooltipIcon = "ui/icons/buildings/vet_hall.png";
 		this.m.Sounds = [];

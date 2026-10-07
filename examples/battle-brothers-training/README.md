@@ -50,7 +50,7 @@ Price = base + per level * brother level.
   (Legends does) can make the maximum differ.
 - Each attribute can be raised once per brother (flag `tg_max_<Stat>`).
 - Removing the mod while a brother is training breaks loading that save (unknown skill).
-- Placeholder art: the building reuses the vanilla Training Hall picture.
+- The building has its own picture (day and night, 410x275, `mod/gfx/ui/settlements/`). The tooltip icon is still the vanilla `vet_hall` icon.
 - Tooltips, the event layout and the -25% display are unverified in game.
 
 ## Tests
@@ -58,6 +58,7 @@ Price = base + per level * brother level.
 `SQ=<sq> python build.py` syntax-checks every script before zipping.
 
 ## Credits
+- Building art (`tg_training_grounds.png`, `tg_training_grounds_night.png`) is AI-generated with fal: the day image with FLUX schnell (`fal-ai/flux/schnell`), the night variant with Nano Banana 2 edit, then cut out and scaled to 410x275 with `um sprite`. No vanilla art is included.
 - Built with AI assistance (Claude, Anthropic) as part of the universal-modder toolkit. Code review in a
   real game is still pending, so treat it as untested.
 - Relies on Modern Hooks and MSU by the MSU team, and on Battle Brothers by Overhype Studios.
