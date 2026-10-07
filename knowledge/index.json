@@ -471,6 +471,41 @@
   ]
  },
  {
+  "path": "games/battle-brothers/squirrel-mod-via-modern-hooks-and-msu-a-training-grounds-tow.md",
+  "kind": "game",
+  "title": "Squirrel mod via Modern Hooks and MSU: a Training Grounds town building",
+  "game": "Battle Brothers",
+  "games_also": [],
+  "game_version": "1.5.2.3 (Steam 365360)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "loader-api",
+  "tools": [
+   "Modern Hooks 0.6.0",
+   "MSU 1.9.0",
+   "bbkit v0.1.3 (nutcracker, bbsq, sq.exe 3.0.7)",
+   "fal (FLUX schnell, Nano Banana 2 edit)"
+  ],
+  "anti_cheat": "none (single-player)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Sonnet 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-07",
+  "links": [
+   "https://github.com/MSUTeam/MSU/wiki",
+   "https://github.com/Enduriel/bbkit"
+  ],
+  "tags": [
+   "squirrel",
+   "modern-hooks",
+   "msu",
+   "town-building",
+   "event-screen"
+  ]
+ },
+ {
   "path": "games/black-myth-wukong/reshade-depth-dead-end.md",
   "kind": "game",
   "title": "Black Myth: Wukong, Unreal 5.0: injection works, ReShade render depth does not",
