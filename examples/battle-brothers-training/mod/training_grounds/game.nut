@@ -104,3 +104,66 @@ if ("AttributesLevelUp" in ::Const)
 		s += (i > 0 ? ", " : "") + v;
 	return s;
 }
+
+// Drill master lines. Plain words on purpose; picked at random.
+::TG.Lines <- {
+	Intro = [
+		"The drill master spits in the dust and looks over your men. \"Give me one and I'll break him down and build him back up.\"",
+		"A scarred sergeant waves you into the yard. \"One man at a time. Pick him and I'll see what he's really got.\"",
+		"The yard smells of sweat and old straw. The drill master leans on a post. \"Who needs the work?\"",
+		"\"Bring me a man who thinks he's finished,\" the drill master says. \"I'll show him he isn't.\""
+	],
+	Stats = [
+		"\"Tell me where he's soft,\" the drill master says, rolling a wooden sword in his hand.",
+		"The drill master circles the man twice. \"He can do more than he knows. What do we work on?\"",
+		"\"Three things,\" the drill master says. \"Any more and he learns none of them.\""
+	],
+	Confirm = [
+		"The drill master wipes his hands. \"He'll hate me for a week. Then he'll thank me.\"",
+		"\"It will hurt,\" the drill master says. \"That is how it works.\"",
+		"The drill master nods. \"Leave him with me. I'll send him back when I'm done.\""
+	],
+	Begin = [
+		"The drill master is already shouting orders.",
+		"A bucket of cold water and a long day wait for him.",
+		"The gate closes behind them, and the first drill begins."
+	],
+	Done = [
+		"The drill master brings him back, thinner and straighter. \"He's yours again.\"",
+		"The man walks out of the yard on his own feet and looks you in the eye. The drill master only shrugs.",
+		"\"He cried twice,\" the drill master says. \"It did him good.\""
+	]
+};
+
+::TG.pick <- function( _array )
+{
+	return _array[::Math.rand(0, _array.len() - 1)];
+};
+
+// Queue of finished-training notices. Plain data (no object references), shown from the event manager hook.
+::TG.Notices <- [];
+
+::TG.queueNotice <- function( _name, _image, _lines )
+{
+	::TG.Notices.push({ Name = _name, Image = _image, Lines = _lines });
+};
+
+::TG.showNotice <- function()
+{
+	if (::TG.Notices.len() == 0 || !::World.Events.canFireEvent(true))
+		return;
+	local n = ::TG.Notices[0];
+	local ev = ::new("scripts/mods/tg/tg_notice_event");
+	ev.m.Name = n.Name;
+	ev.m.Image = n.Image;
+	ev.m.Lines = n.Lines;
+	ev.m.Body = n.Name + " has finished his training. " + ::TG.pick(::TG.Lines.Done);
+	::TG.Notices.remove(0);
+	ev.fire();
+	::World.Events.m.ActiveEvent = ev;
+	if (!::World.State.showEventScreen(ev))
+	{
+		ev.clear();
+		::World.Events.m.ActiveEvent = null;
+	}
+};

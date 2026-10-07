@@ -27,7 +27,9 @@ this.tg_wizard_event <- this.inherit("scripts/events/event", {
 		return { Text = _text, getResult = _fn };
 	}
 
-	function makeScreen( _text, _options )
+	// _chars: portrait image paths, _rows: List entries ({ id, icon, text }). Both are filled in start(),
+	// because setScreen() clears Characters and List and then calls start (vanilla training_accident_event does the same).
+	function makeScreen( _text, _options, _chars = null, _rows = null )
 	{
 		this.m.Counter++;
 		local id = "TG" + this.m.Counter;
@@ -37,15 +39,27 @@ this.tg_wizard_event <- this.inherit("scripts/events/event", {
 			Image = "",
 			List = [],
 			Characters = [],
+			Chars = _chars == null ? [] : _chars,
+			Rows = _rows == null ? [] : _rows,
 			Options = _options,
 			function start( _event )
 			{
-				if (_event.m.Brother != null)
-					this.Characters.push(_event.m.Brother.getImagePath());
+				foreach (p in this.Chars)
+					this.Characters.push(p);
+				foreach (r in this.Rows)
+					this.List.push(r);
 			}
 		}];
 		return id;
 	}
+
+	function row( _icon, _text, _color = null )
+	{
+		this.m.Counter++;
+		local t = _color == null ? _text : "[color=" + _color + "]" + _text + "[/color]";
+		return { id = 10 + this.m.Counter, icon = _icon, text = t };
+	}
+
 
 	function leaveOpt()
 	{
@@ -68,9 +82,22 @@ this.tg_wizard_event <- this.inherit("scripts/events/event", {
 		if (this.m.Page >= pages)
 			this.m.Page = 0;
 		local options = [];
+		local chars = [];
+		local rows = [];
+		local money = this.World.Assets.getMoney();
 		local from = this.m.Page * perPage;
 		for (local i = from; i < list.len() && i < from + perPage; i++)
-			options.push(this.brotherOption(list[i]));
+		{
+			local b = list[i];
+			local cost = ::TG.getCost(b);
+			options.push(this.brotherOption(b));
+			chars.push(b.getImagePath());
+			local line = b.getName() + ", level " + b.getLevel() + " " + b.getBackground().getNameOnly() + ": " + cost + " crowns";
+			if (money >= cost)
+				rows.push(this.row("ui/icons/asset_money.png", line));
+			else
+				rows.push(this.row("ui/icons/asset_money.png", line + " (too expensive)", this.Const.UI.Color.NegativeEventValue));
+		}
 		if (pages > 1)
 		{
 			options.push(this.opt("More brothers (" + (this.m.Page + 1) + "/" + pages + ")", function ( _event ) {
@@ -79,15 +106,15 @@ this.tg_wizard_event <- this.inherit("scripts/events/event", {
 			}));
 		}
 		options.push(this.leaveOpt());
-		local text = "The drill master offers to push one of your men to his limit. For " + ::TG.getDays() + " days the man will be worn down (25 per cent penalty to every attribute), then three attributes of your choice are lifted to the best start his background allows. Level-up gains are kept.\n\nWho will it be?";
-		return this.makeScreen(text, options);
+		local text = ::TG.pick(::TG.Lines.Intro) + "\n\nFor " + ::TG.getDays() + " days the man will be worn down (25 per cent penalty to every attribute). Then three attributes of your choice are lifted to the best start his background allows. Level-up gains are kept.\n\nWho will it be?";
+		return this.makeScreen(text, options, chars, rows);
 	}
 
 	function brotherOption( _bro )
 	{
 		local cost = ::TG.getCost(_bro);
 		local afford = this.World.Assets.getMoney() >= cost;
-		local label = _bro.getName() + ", level " + _bro.getLevel() + " - " + cost + " crowns" + (afford ? "" : " (too expensive)");
+		local label = _bro.getName() + (afford ? "" : " (too expensive)");
 		return this.opt(label, function ( _event ) {
 			if (!afford || ::World.Assets.getMoney() < cost)
 				return _event.brotherScreen();
@@ -131,8 +158,19 @@ this.tg_wizard_event <- this.inherit("scripts/events/event", {
 			}));
 		}
 		options.push(this.opt("Pick another brother", function ( _event ) { return _event.brotherScreen(); }));
-		local text = "Choose " + (need - this.m.Picked.len()) + " more attribute(s) for " + this.m.Brother.getName() + ". Gains are estimates: the game keeps no record of his original roll.";
-		return this.makeScreen(text, options);
+		local rows = [];
+		foreach (e in info)
+		{
+			local nm = e.Stat.Name + " " + e.Base;
+			if (this.m.Picked.find(e.Stat.Idx) != null)
+				rows.push(this.row(e.Stat.Icon, nm + " to about " + (e.Base + e.Delta) + " (chosen)", this.Const.UI.Color.PositiveEventValue));
+			else if (e.Delta > 0)
+				rows.push(this.row(e.Stat.Icon, nm + ", about +" + e.Delta));
+			else
+				rows.push(this.row(e.Stat.Icon, nm + ", nothing left to gain"));
+		}
+		local text = ::TG.pick(::TG.Lines.Stats) + "\n\nChoose " + (need - this.m.Picked.len()) + " more attribute(s) for " + this.m.Brother.getName() + ". Gains are estimates: the game keeps no record of his original roll.";
+		return this.makeScreen(text, options, [this.m.Brother.getImagePath()], rows);
 	}
 
 	function statOption( _e )
@@ -150,19 +188,29 @@ this.tg_wizard_event <- this.inherit("scripts/events/event", {
 	{
 		local cost = ::TG.getCost(this.m.Brother);
 		local info = ::TG.getStatInfo(this.m.Brother);
-		local names = [];
+		local rows = [];
 		foreach (i in this.m.Picked)
-			names.push(info[i].Stat.Name + " (about +" + info[i].Delta + ")");
-		local text = this.m.Brother.getName() + " will train for " + ::TG.getDays() + " days at a cost of " + cost + " crowns.\n\nImproves: " + (names.len() > 0 ? ::TG.join(names) : "nothing, he is already at the limit") + ".";
+		{
+			local e = info[i];
+			rows.push(this.row(e.Stat.Icon, e.Stat.Name + " " + e.Base + " to about " + (e.Base + e.Delta), this.Const.UI.Color.PositiveEventValue));
+		}
+		rows.push(this.row("ui/icons/asset_money.png", "Cost: " + cost + " crowns", this.Const.UI.Color.NegativeEventValue));
+		rows.push(this.row("ui/icons/days_wounded.png", "Training takes " + ::TG.getDays() + " days"));
+		rows.push(this.row("ui/icons/warning.png", "-25% to all attributes until then", this.Const.UI.Color.NegativeEventValue));
+		local text = this.m.Brother.getName() + " will train for " + ::TG.getDays() + " days at a cost of " + cost + " crowns.";
+		if (this.m.Picked.len() == 0)
+			text += "\n\nHe is already at the limit of what his background allows, so there is nothing to gain.";
+		else
+			text += "\n\n" + ::TG.pick(::TG.Lines.Confirm);
 		local options = [];
-		if (names.len() > 0)
+		if (this.m.Picked.len() > 0)
 			options.push(this.opt("Begin training", function ( _event ) { return _event.begin(); }));
 		options.push(this.opt("Choose again", function ( _event ) {
 			_event.m.Picked = [];
 			return _event.statScreen();
 		}));
 		options.push(this.leaveOpt());
-		return this.makeScreen(text, options);
+		return this.makeScreen(text, options, [this.m.Brother.getImagePath()], rows);
 	}
 
 	function begin()
@@ -177,6 +225,10 @@ this.tg_wizard_event <- this.inherit("scripts/events/event", {
 		effect.m.Stats = clone this.m.Picked;
 		bro.getSkills().add(effect);
 		this.logInfo(this.Const.UI.getColorizedEntityName(bro) + " begins hard training for " + effect.m.DaysLeft + " days.");
-		return this.makeScreen(bro.getName() + " heads to the yard. You pay " + cost + " crowns.", [this.leaveOpt()]);
+		local rows = [
+			this.row("ui/icons/asset_money.png", "You pay " + cost + " crowns", this.Const.UI.Color.NegativeEventValue),
+			this.row("ui/icons/days_wounded.png", bro.getName() + " is back in " + effect.m.DaysLeft + " days")
+		];
+		return this.makeScreen(bro.getName() + " heads to the yard. " + ::TG.pick(::TG.Lines.Begin), [this.leaveOpt()], [bro.getImagePath()], rows);
 	}
 });

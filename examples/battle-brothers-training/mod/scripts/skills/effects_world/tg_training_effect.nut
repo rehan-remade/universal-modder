@@ -57,6 +57,7 @@ this.tg_training_effect <- this.inherit("scripts/skills/skill", {
 		local info = ::TG.getStatInfo(actor);
 		local props = actor.getBaseProperties();
 		local gains = [];
+		local lines = [];
 		foreach (i in this.m.Stats)
 		{
 			local e = info[i];
@@ -66,10 +67,14 @@ this.tg_training_effect <- this.inherit("scripts/skills/skill", {
 				if (e.Stat.Key == "Hitpoints")
 					actor.setHitpoints(actor.getHitpoints() + e.Delta);
 				gains.push(e.Stat.Name + " +" + e.Delta);
+				lines.push({ Icon = e.Stat.Icon, Text = "[color=" + this.Const.UI.Color.PositiveEventValue + "]" + e.Stat.Name + " +" + e.Delta + "[/color]" });
 			}
 			actor.getFlags().set("tg_max_" + e.Stat.Key, true);
 		}
+		if (lines.len() == 0)
+			lines.push({ Icon = "ui/icons/special.png", Text = "No further gain" });
 		this.logInfo(this.Const.UI.getColorizedEntityName(actor) + " finished hard training: " + (gains.len() > 0 ? ::TG.join(gains) : "no gain"));
+		::TG.queueNotice(actor.getName(), actor.getImagePath(), lines);
 		this.removeSelf();
 	}
 

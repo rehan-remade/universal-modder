@@ -50,3 +50,13 @@ private `training_grounds/` include folder at the root, like MSU does.
 - Vanilla building pictures are 410x275 transparent PNGs, `gfx/ui/settlements/building_NN.png` plus `_night` (hand-painted, dark). `getUIImage()` picks day or night image.
 - Mods ship `gfx/ui/<path>.png` inside the zip and reference it as `ui/<path>`; no registration needed (other mods in data/ do the same).
 - Day art: `fal-ai/flux/schnell`, best of 3. Night art: `fal-ai/nano-banana-2/edit` of the day image. Cut out, fit to 410x275 with `um sprite`. About $0.06 total.
+
+## Event screen polish (2026-10-07)
+- Vanilla proof used: `training_accident_event` (Characters.push in start, List entries { id, icon, text }), `config/ui.nut`
+  (Const.UI.Color.PositiveEventValue / NegativeEventValue), `ambitions/*_ambition` (asset_money icon with coloured text),
+  `event.setScreen` (clears List and Characters, then calls start), `event_manager.fire` / `canFireEvent`.
+  Only 3 event scripts survived the decompile, so the exact vanilla List/portrait count limits are not confirmed.
+- Completion notice: no vanilla world-map toast exists, only event screens. Notice is queued in `::TG.Notices` and fired from a
+  hook on `event_manager.update`, mirroring how `ambition_manager` fires events. Not firing from `onNewDay` directly (mid-loop).
+- Squirrel again: a local named `base` is a syntax error.
+- Unverified until the next launch: portraits per page, 8-row list height, notice firing.
