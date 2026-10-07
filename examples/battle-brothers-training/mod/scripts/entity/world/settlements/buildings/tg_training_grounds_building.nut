@@ -17,8 +17,6 @@ this.tg_training_grounds_building <- this.inherit("scripts/entity/world/settleme
 
 	function onClicked( _townScreen )
 	{
-		if (!this.World.getTime().IsDaytime)
-			return;
 		this.logInfo("Training Grounds: opened in " + this.getSettlement().getName());
 		this.logInfo("The training grounds of " + this.getSettlement().getName() + " are open to your men.");
 		::TG.openWizard(this.getSettlement());
