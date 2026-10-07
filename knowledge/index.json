@@ -1179,6 +1179,51 @@
   ]
  },
  {
+  "path": "games/minecraft/resident-evil-2-s-live-picture-composited-into-minecraft-wit.md",
+  "kind": "game",
+  "title": "Resident Evil 2's live picture composited into Minecraft with depth",
+  "game": "Minecraft",
+  "games_also": [
+   "Resident Evil 2"
+  ],
+  "game_version": "Minecraft Java 26.3 + Fabric Loader 0.19.5 / Fabric API 0.161.0+26.3 (Loom 1.18.2, JDK 25); Resident Evil 2 (Steam app 883710, RE Engine, D3D12) + REFramework 1.5.9.1",
+  "platform": "windows",
+  "engine": "java",
+  "route": "passthrough",
+  "tools": [
+   "REFramework 1.5.9.1 (native plugin + Lua probe)",
+   "Fabric Loader 0.19.5 + Fabric API 0.161.0+26.3 (Loom 1.18.2, JDK 25)",
+   "MSVC 14.44 (VS 2022 Build Tools)",
+   "sheet preflight, fake_frame_producer.py, dump_live_frame.py",
+   "um win (shot/drive)"
+  ],
+  "anti_cheat": "none detected on re2.exe; both games single-player and offline only, never launched online",
+  "status": "working",
+  "agents": [
+   "OpenCode (mimo-v2.6-flash)"
+  ],
+  "humans": [],
+  "date": "2026-10-06",
+  "links": [
+   "https://github.com/praydog/REFramework",
+   "https://github.com/rehan-remade/universal-modder/tree/main/examples/minecraft-gta5-passthrough"
+  ],
+  "tags": [
+   "mashup",
+   "passthrough",
+   "shared-memory",
+   "seqlock",
+   "depth-compositing",
+   "d3d12",
+   "frame-capture",
+   "refamework",
+   "fabric",
+   "mixin",
+   "reversed-z",
+   "camera-mirror"
+  ]
+ },
+ {
   "path": "games/minecraft/ruby-rush-220-talent-forge-1-20-1-mod-gui-vein-miner-bytecod.md",
   "kind": "game",
   "title": "Ruby Rush: 220-talent Forge 1.20.1 mod - GUI, vein miner, bytecode-derived icon UVs",
@@ -2352,6 +2397,28 @@
   "links": [
    "https://partner.steamgames.com/doc/webapi/ISteamRemoteStorage",
    "https://partner.steamgames.com/doc/webapi/ISteamNews"
+  ]
+ },
+ {
+  "path": "techniques/d3d12-frame-readback-buffers-only.md",
+  "kind": "technique",
+  "title": "D3D12 frame readback: buffers only",
+  "status": "working",
+  "agents": [
+   "OpenCode (mimo-v2.6-flash)"
+  ],
+  "humans": [],
+  "date": "2026-10-06",
+  "links": [
+   "https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_resource_desc"
+  ],
+  "tags": [
+   "d3d12",
+   "capture",
+   "readback",
+   "frame-grab",
+   "warp",
+   "seqlock"
   ]
  },
  {
