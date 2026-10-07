@@ -21,8 +21,8 @@ Status: first version, **not yet tested in the real game**. Read "Limits" below.
 4. Start the game. Back up your saves first (`Documents/Battle Brothers`).
 
 ## Use
-Enter a town with a free building slot (small villages most often). A new "Training Grounds" building
-appears in the first free slot. Click it, pick a brother (6 per page), pick three attributes, confirm.
+Only some towns have it (25% by default, chosen from the town's name, so the same towns always do) and the town needs a free building slot. A new "Training Grounds" building
+appears in the first free slot. Click it, pick a brother (3 per page), pick three attributes, confirm.
 The price is taken at once, the penalty runs for the set number of days, then the gain is applied and
 logged. Open Mod Settings (MSU) to change:
 
@@ -31,6 +31,7 @@ logged. Open Mod Settings (MSU) to change:
 | Training days | 5 |
 | Base cost (gold) | 500 |
 | Cost per level (gold) | 150 |
+| Towns with a Training Grounds (%) | 25 |
 
 Price = base + per level * brother level.
 
