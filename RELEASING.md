@@ -7,11 +7,11 @@ authorize a tag, GitHub Release, marketplace update, package publication, or dep
 
 1. Record the commit and tree hashes; require a clean worktree.
 2. Run `uv lock --check` and `uv sync --frozen --dev`.
-3. Run `uv run --frozen ruff check um tests scripts .github/star-chart/star_chart.py`.
-4. Run `uv run --frozen pytest --cov=um --cov-branch -q`; account for every skip.
+3. Run `uv run --frozen ruff check um tests scripts examples/minecraft-gta5-passthrough/gta/install_passthrough.py`.
+4. Run `uv run --frozen pytest --cov=um --cov-branch --cov-fail-under=53 -q`; account for every skip.
 5. Run `uv run --frozen um kb check --index`, `python scripts/sync_skills.py --check`, and
-   `uv run --frozen um publish check .`.
-6. Build twice with the same pinned uv/Python and `SOURCE_DATE_EPOCH`; run
+   run `um publish check` against a clean, exact candidate export (not a developer checkout containing `.venv`).
+6. Build from two clean immutable materializations with the lock-provided Hatchling and `SOURCE_DATE_EPOCH`; run
    `python scripts/verify_release_candidate.py <build-a> <build-b>`.
 7. Install only the wheel in a clean environment and run every CLI help contract plus
    `scripts/verify_installed_package.py`.

@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.10", "3.11", "3.12", "3.13"]
+        python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -34,9 +34,9 @@ jobs:
       - name: Require the media-test prerequisite
         run: command -v ffmpeg
       - name: Static checks
-        run: uv run --frozen ruff check um tests
-      - name: Tests and branch coverage
-        run: uv run --frozen pytest --cov=um --cov-branch --cov-report=term-missing --cov-report=xml -q
+        run: uv run --frozen ruff check um tests scripts examples/minecraft-gta5-passthrough/gta/install_passthrough.py
+      - name: Tests and enforced branch-coverage floor
+        run: uv run --frozen pytest --cov=um --cov-branch --cov-report=term-missing --cov-fail-under=53 -q
       - name: Installed CLI contracts
         run: |
           uv run --frozen um --version
@@ -100,19 +100,22 @@ jobs:
         env:
           SOURCE_DATE_EPOCH: "1704067200"
         run: |
-          uv build --out-dir dist-a
-          uv build --out-dir dist-b
+          uv sync --frozen --dev
+          mkdir source-a source-b dist-a dist-b
+          git archive HEAD | tar -x -C source-a
+          git archive HEAD | tar -x -C source-b
+          (cd source-a && ../.venv/bin/hatchling build -t wheel -t sdist -d ../dist-a)
+          (cd source-b && ../.venv/bin/hatchling build -t wheel -t sdist -d ../dist-b)
           python scripts/verify_release_candidate.py dist-a dist-b
       - name: Install only the wheel and verify packaged resources
         run: |
           uv venv --python 3.11 .package-venv
           uv pip install --python .package-venv/bin/python dist-a/*.whl
-          .package-venv/bin/um --version
-          .package-venv/bin/um --help > /dev/null
           .package-venv/bin/python scripts/verify_installed_package.py
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: python-distributions
-          path: dist-a/*
-          if-no-files-found: error
-          retention-days: 14
+      - name: Install the sdist with the frozen build toolchain
+        run: |
+          uv venv --python 3.11 .sdist-venv
+          uv export --frozen --no-emit-project --only-group dev --output-file "$RUNNER_TEMP/dev-requirements.txt"
+          uv pip install --python .sdist-venv/bin/python --requirement "$RUNNER_TEMP/dev-requirements.txt"
+          uv pip install --python .sdist-venv/bin/python --no-build-isolation dist-a/*.tar.gz
+          .sdist-venv/bin/python scripts/verify_installed_package.py

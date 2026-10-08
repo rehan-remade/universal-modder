@@ -23,8 +23,9 @@ import shutil
 import subprocess
 import tempfile
 import time
+import urllib.parse
 import urllib.request
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from um.common import data_dir, die
 
@@ -312,8 +313,8 @@ def pr_head(branch: str, fork_url: str | None) -> str:
     """The --head for `gh pr create`. gh looks a bare branch name up in the base repo, so a PR from a fork needs
     "<fork owner>:<branch>" (else: "Head ref must be a branch"). fork_url: the fork remote's URL, None when pushing
     to the repo itself."""
-    m = re.search(r"github\.com[:/]+([^/]+)/", fork_url or "")
-    return f"{m.group(1)}:{branch}" if m else branch
+    remote = _github_remote(fork_url or "")
+    return f"{remote[0]}:{branch}" if remote else branch
 
 
 def _git_paths(repo: Path, *args: str) -> set[str]:
@@ -334,8 +335,22 @@ def _validate_pr_worktree(repo: Path, allowed: set[str]) -> None:
 
 
 def _github_remote(url: str) -> tuple[str, str] | None:
-    match = re.search(r"github\.com[:/]+([^/]+)/([^/]+?)(?:\.git)?$", url)
-    return (match.group(1), match.group(2)) if match else None
+    value = url.strip()
+    scp = re.fullmatch(r"(?:git@)?github\.com:([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?)(?:\.git)?", value)
+    if scp:
+        return scp.group(1), scp.group(2)
+    try:
+        parsed = urllib.parse.urlsplit(value)
+        if parsed.scheme not in {"https", "ssh"} or parsed.hostname != "github.com" or parsed.port is not None:
+            return None
+        if parsed.query or parsed.fragment or (parsed.scheme == "https" and (parsed.username or parsed.password)):
+            return None
+        if parsed.scheme == "ssh" and parsed.username not in {None, "git"}:
+            return None
+        match = re.fullmatch(r"/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?)(?:\.git)?/?", parsed.path)
+        return (match.group(1), match.group(2)) if match else None
+    except (TypeError, ValueError):
+        return None
 
 
 def _validate_fork_url(url: str, expected_owner: str | None = None) -> None:
@@ -351,6 +366,95 @@ def _validate_upstream_url(url: str) -> None:
     expected = tuple(REPO.split("/", 1))
     if remote != expected:
         die(f"origin remote {remote!r} does not match configured knowledge repository {expected!r}")
+
+
+def _publish_pr_isolated(repo: Path, root: Path, contribution: list[Path], branch: str, title: str,
+                         body: str, can_push: bool, note_rel: str) -> str:
+    """Build and publish the contribution from a disposable worktree; never mutate the caller's checkout."""
+    remote = "origin" if can_push else "fork"
+    fork_url = None
+    if not can_push:
+        remote_url = subprocess.run(["git", "remote", "get-url", "fork"], cwd=repo, capture_output=True, text=True)
+        if remote_url.returncode:
+            result = subprocess.run(["gh", "repo", "fork", "--remote", "--remote-name", "fork"], cwd=repo,
+                                    capture_output=True, text=True)
+            if result.returncode:
+                die(f"gh repo fork failed: {(result.stderr or result.stdout).strip()[-800:]}")
+            remote_url = subprocess.run(["git", "remote", "get-url", "fork"], cwd=repo, capture_output=True, text=True)
+        fork_url = remote_url.stdout.strip()
+        who = subprocess.run(["gh", "api", "user", "--jq", ".login"], cwd=repo, capture_output=True, text=True)
+        if who.returncode or not who.stdout.strip():
+            die(f"could not verify authenticated GitHub identity: {(who.stderr or who.stdout).strip()[-800:]}")
+        _validate_fork_url(fork_url, who.stdout.strip())
+    else:
+        origin_url = subprocess.run(["git", "remote", "get-url", "origin"], cwd=repo, capture_output=True, text=True)
+        if origin_url.returncode:
+            die("could not read origin remote before push")
+        _validate_upstream_url(origin_url.stdout.strip())
+
+    temp_root = Path(tempfile.mkdtemp(prefix="um-kb-worktree-"))
+    worktree = temp_root / "repo"
+    added = subprocess.run(["git", "worktree", "add", "--detach", str(worktree), "HEAD"], cwd=repo,
+                           capture_output=True, text=True)
+    if added.returncode:
+        shutil.rmtree(temp_root, ignore_errors=True)
+        die(f"could not create isolated worktree: {(added.stderr or added.stdout).strip()[-800:]}")
+    success = False
+    try:
+        work_root = worktree / root.relative_to(repo)
+        staged_paths = []
+        for source in contribution:
+            relative = source.relative_to(repo)
+            destination = worktree / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination, follow_symlinks=False)
+            staged_paths.append(destination)
+        result = subprocess.run(["git", "checkout", "-b", branch], cwd=worktree, capture_output=True, text=True)
+        if result.returncode:
+            die(f"git checkout -b failed: {(result.stderr or result.stdout).strip()[-800:]}")
+        idx, rows = build_index(work_root)
+        index_md, index_json = work_root / "INDEX.md", work_root / "index.json"
+        index_md.write_text(idx, **TEXT)
+        index_json.write_text(json.dumps(rows, indent=1, default=str) + "\n", **TEXT)
+        staged_paths += [index_md, index_json]
+        allowed = {str(p.relative_to(worktree)) for p in staged_paths}
+        result = subprocess.run(["git", "add", "--", *map(str, staged_paths)], cwd=worktree, capture_output=True, text=True)
+        if result.returncode:
+            die(f"git add failed: {(result.stderr or result.stdout).strip()[-800:]}")
+        staged = _git_paths(worktree, "diff", "--cached", "--name-only")
+        unexpected = staged - allowed
+        if unexpected or note_rel not in staged:
+            die("staged diff escaped the approved contribution set: " + ", ".join(sorted(unexpected)))
+        result = subprocess.run(["git", "commit", "-m", title], cwd=worktree, capture_output=True, text=True)
+        if result.returncode:
+            die(f"git commit failed: {(result.stderr or result.stdout).strip()[-800:]}")
+        result = subprocess.run(["git", "push", "-u", remote, branch], cwd=worktree, capture_output=True, text=True)
+        if result.returncode:
+            die(f"git push failed: {(result.stderr or result.stdout).strip()[-800:]}")
+        local_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=worktree, capture_output=True, text=True,
+                                   check=True).stdout.strip()
+        remote_result = subprocess.run(["git", "ls-remote", remote, f"refs/heads/{branch}"], cwd=worktree,
+                                       capture_output=True, text=True, check=True)
+        remote_sha = remote_result.stdout.split("\t", 1)[0]
+        if local_sha != remote_sha:
+            die("pushed branch SHA did not match the local commit")
+        head = pr_head(branch, fork_url)
+        result = subprocess.run(["gh", "pr", "create", "--repo", REPO, "--head", head, "--title", title, "--body", body],
+                                cwd=worktree, capture_output=True, text=True)
+        if result.returncode:
+            die(f"gh pr create failed: {(result.stderr or result.stdout).strip()[-800:]}")
+        pr_url = result.stdout.strip().splitlines()[-1]
+        readback = subprocess.run(["gh", "pr", "view", pr_url, "--repo", REPO, "--json", "headRefOid", "--jq", ".headRefOid"],
+                                  cwd=worktree, capture_output=True, text=True)
+        if readback.returncode or readback.stdout.strip() != local_sha:
+            die("created PR head did not read back at the pushed commit")
+        success = True
+        return pr_url
+    finally:
+        subprocess.run(["git", "worktree", "remove", "--force", str(worktree)], cwd=repo, capture_output=True, text=True)
+        shutil.rmtree(temp_root, ignore_errors=True)
+        if not success:
+            subprocess.run(["git", "branch", "-D", branch], cwd=repo, capture_output=True, text=True)
 
 
 def open_pr(path: Path, yes: bool):
@@ -378,11 +482,20 @@ def open_pr(path: Path, yes: bool):
             f"{meta.get('route', '-')}\n- status: {meta.get('status')}\n- agents: {', '.join(meta.get('agents') or [])}\n\n"
             "Checked with `um kb check`; index regenerated with `um kb index`.\n\n"
             "- [x] no game files, decompiled code dumps or secrets\n- [x] versions and verification written down\n")
+    note_text = path.read_text(encoding="utf-8")
     media_root = path.parent / "media"
-    media = [p for p in media_root.rglob("*") if p.is_file()] if media_root.exists() else []
-    if any(p.is_symlink() for p in media):
-        die("PR media cannot contain symbolic links")
-    contribution = [path, root / "INDEX.md", root / "index.json", *media]
+    media_refs = sorted(set(re.findall(r"(?<![A-Za-z0-9_.-])(media/[A-Za-z0-9_./-]+)", note_text)))
+    media = []
+    for ref in media_refs:
+        candidate = (path.parent / PurePosixPath(ref)).resolve()
+        try:
+            candidate.relative_to(media_root.resolve())
+        except ValueError:
+            die(f"media reference escapes the note media directory: {ref}")
+        if candidate.is_symlink() or not candidate.is_file():
+            die(f"referenced PR media must be a regular file: {ref}")
+        media.append(candidate)
+    contribution = [path, *media]
     allowed = {str(p.relative_to(repo)) for p in contribution}
     note_rel = str(path.relative_to(repo))
     _validate_pr_worktree(repo, allowed)
@@ -422,63 +535,7 @@ def open_pr(path: Path, yes: bool):
         die("needs the GitHub CLI (gh) logged in; or push a branch and open the PR on github.com")
 
     _validate_pr_worktree(repo, allowed)
-    r = subprocess.run(["git", "checkout", "-b", branch], cwd=repo, capture_output=True, text=True)
-    if r.returncode:
-        die(f"git checkout -b failed: {(r.stderr or r.stdout).strip()[-800:]}")
-    idx, rows = build_index(root)
-    (root / "INDEX.md").write_text(idx, **TEXT)
-    (root / "index.json").write_text(json.dumps(rows, indent=1, default=str) + "\n", **TEXT)
-    r = subprocess.run(["git", "add", "--", *map(str, contribution)], cwd=repo, capture_output=True, text=True)
-    if r.returncode:
-        die(f"git add failed: {(r.stderr or r.stdout).strip()[-800:]}")
-    staged = _git_paths(repo, "diff", "--cached", "--name-only")
-    unexpected = staged - allowed
-    if unexpected or note_rel not in staged:
-        die("staged diff escaped the approved contribution set: " + ", ".join(sorted(unexpected)))
-    r = subprocess.run(["git", "commit", "-m", title], cwd=repo, capture_output=True, text=True)
-    if r.returncode:
-        die(f"git commit failed: {(r.stderr or r.stdout).strip()[-800:]}")
-
-    fork_url = None
-    if not can_push:
-        remote_url = subprocess.run(["git", "remote", "get-url", "fork"], cwd=repo, capture_output=True, text=True)
-        if remote_url.returncode:
-            r = subprocess.run(["gh", "repo", "fork", "--remote", "--remote-name", "fork"], cwd=repo,
-                               capture_output=True, text=True)
-            if r.returncode:
-                die(f"gh repo fork failed: {(r.stderr or r.stdout).strip()[-800:]}")
-            remote_url = subprocess.run(["git", "remote", "get-url", "fork"], cwd=repo, capture_output=True, text=True)
-        fork_url = remote_url.stdout.strip()
-        who = subprocess.run(["gh", "api", "user", "--jq", ".login"], cwd=repo, capture_output=True, text=True)
-        if who.returncode or not who.stdout.strip():
-            die(f"could not verify authenticated GitHub identity: {(who.stderr or who.stdout).strip()[-800:]}")
-        _validate_fork_url(fork_url, who.stdout.strip())
-    else:
-        origin_url = subprocess.run(["git", "remote", "get-url", "origin"], cwd=repo, capture_output=True, text=True)
-        if origin_url.returncode:
-            die("could not read origin remote before push")
-        _validate_upstream_url(origin_url.stdout.strip())
-
-    r = subprocess.run(["git", "push", "-u", remote, branch], cwd=repo, capture_output=True, text=True)
-    if r.returncode:
-        die(f"git push failed: {(r.stderr or r.stdout).strip()[-800:]}")
-    local_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True, check=True).stdout.strip()
-    remote_result = subprocess.run(["git", "ls-remote", remote, f"refs/heads/{branch}"], cwd=repo,
-                                   capture_output=True, text=True, check=True)
-    remote_sha = remote_result.stdout.split("\t", 1)[0]
-    if local_sha != remote_sha:
-        die("pushed branch SHA did not match the local commit")
-    head = pr_head(branch, fork_url)
-    r = subprocess.run(["gh", "pr", "create", "--repo", REPO, "--head", head, "--title", title, "--body", body],
-                       cwd=repo, capture_output=True, text=True)
-    if r.returncode:
-        die(f"gh pr create failed: {(r.stderr or r.stdout).strip()[-800:]}")
-    pr_url = r.stdout.strip().splitlines()[-1]
-    readback = subprocess.run(["gh", "pr", "view", pr_url, "--repo", REPO, "--json", "headRefOid", "--jq", ".headRefOid"],
-                              cwd=repo, capture_output=True, text=True)
-    if readback.returncode or readback.stdout.strip() != local_sha:
-        die("created PR head did not read back at the pushed commit")
-    print(pr_url)
+    print(_publish_pr_isolated(repo, root, contribution, branch, title, body, can_push, note_rel))
 
 
 # --------------------------------------------------------------------------- CLI

@@ -2,7 +2,6 @@ name: star chart
 on:
   schedule:
     - cron: "17 */6 * * *"
-  # GitHub drops scheduled runs under load (none ran in the chart's first 10 hours), so every merge redraws it too.
   push:
     branches: [main]
   workflow_dispatch:
@@ -15,24 +14,46 @@ jobs:
   draw:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - name: Draw the chart
+      - name: Draw the chart without write authority
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 .github/star-chart/star_chart.py "$GITHUB_REPOSITORY" "$RUNNER_TEMP/star-chart/stars.svg"
-      # One commit on its own branch, replaced every run: the README shows it, main gets no bot commits.
-      - name: Publish it on the star-chart branch
-        working-directory: ${{ runner.temp }}/star-chart
+        run: python3 .github/star-chart/star_chart.py "$GITHUB_REPOSITORY" "$RUNNER_TEMP/chart/stars.svg"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: star-chart-${{ github.run_id }}
+          path: ${{ runner.temp }}/chart/stars.svg
+          if-no-files-found: error
+          retention-days: 1
+  publish:
+    needs: draw
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: star-chart-${{ github.run_id }}
+          path: ${{ runner.temp }}/chart
+      - name: Validate generated artifact
+        working-directory: ${{ runner.temp }}/chart
+        run: |
+          test -f stars.svg
+          test "$(find . -type f | wc -l)" -eq 1
+          test "$(wc -c < stars.svg)" -le 5242880
+          grep -q '<svg' stars.svg
+      - name: Publish only the validated chart branch
+        working-directory: ${{ runner.temp }}/chart
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           git init -q -b star-chart
-          git add stars.svg
+          git add -- stars.svg
+          test "$(git diff --cached --name-only)" = stars.svg
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -q -m "star chart"
           git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" star-chart

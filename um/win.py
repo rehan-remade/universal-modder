@@ -23,11 +23,13 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import queue
 import shutil
 import stat
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import urllib.request
 import zipfile
@@ -45,6 +47,48 @@ def _check_platform():
     if not (is_windows() or is_wsl()):
         die("`um win` drives Windows games (native Windows or WSL). On Linux use xdotool/ydotool + ffmpeg x11grab/pipewire; "
             "on macOS use screencapture + ffmpeg avfoundation (see skills/game-automation).")
+
+
+def _stop_child(process: subprocess.Popen, timeout: float = 5) -> None:
+    if process.poll() is not None:
+        process.wait()
+        return
+    process.terminate()
+    try:
+        process.wait(timeout)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout)
+
+
+def _readline_bounded(process: subprocess.Popen, timeout: float, label: str) -> str:
+    """Read one helper-protocol line without allowing a child to hang the CLI forever."""
+    if process.stdout is None:
+        _stop_child(process)
+        raise RuntimeError(f"{label} has no output pipe")
+    stdout = process.stdout
+    results: queue.Queue[tuple[bool, object]] = queue.Queue(maxsize=1)
+
+    def reader() -> None:
+        try:
+            results.put((True, stdout.readline()))
+        except BaseException as exc:
+            results.put((False, exc))
+
+    threading.Thread(target=reader, daemon=True).start()
+    try:
+        ok, value = results.get(timeout=timeout)
+    except queue.Empty:
+        _stop_child(process)
+        raise TimeoutError(f"{label} did not respond within {timeout:.0f}s")
+    if not ok:
+        _stop_child(process)
+        raise RuntimeError(f"{label} output failed: {value}")
+    line = str(value).strip()
+    if not line:
+        _stop_child(process)
+        raise RuntimeError(f"{label} exited without a protocol response")
+    return line
 
 
 def powershell(script: str, timeout: float = 60, env: dict[str, str] | None = None) -> str:
@@ -373,7 +417,12 @@ class Recorder:
                                                "-TargetPid", str(pid), "-Out", self.base + ".audio.raw"],
                                               stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                                               cwd="/mnt/c" if is_wsl() else None)
-                self.header = json.loads(self.audio.stdout.readline() or "{}")
+                try:
+                    self.header = json.loads(_readline_bounded(self.audio, 15, "process audio capture"))
+                except (TimeoutError, RuntimeError, json.JSONDecodeError):
+                    _stop_child(self.audio)
+                    self.audio = None
+                    raise
                 t_audio = time.time()
         self.t_video = time.time()
         self.log = Path(to_posix(self.base + ".ffmpeg.log"))
@@ -396,6 +445,7 @@ class Recorder:
             except subprocess.TimeoutExpired:
                 print("ffmpeg ignored q; killing it", file=sys.stderr)
                 self.video.kill()
+                self.video.wait(5)
         meta = dict(video=self.base + ".mkv")
         if self.audio:
             try:
@@ -404,6 +454,7 @@ class Recorder:
                 self.audio.wait(10)
             except (OSError, subprocess.TimeoutExpired):
                 self.audio.kill()
+                self.audio.wait(5)
             meta.update(self.header, audio=self.base + ".audio.raw", audio_offset_s=round(self.t_video - self.t_audio + self.STARTUP, 3))
         path = Path(to_posix(self.base + ".json"))
         path.write_text(json.dumps(meta, indent=1))
@@ -424,12 +475,15 @@ class Drive:
         _check_platform()
         self.p = subprocess.Popen([ps_exe(), "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", tool_path("WinDrive.ps1"), "-Proc", proc],
                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=1, cwd="/mnt/c" if is_wsl() else None)
-        self.ready = self.p.stdout.readline().strip()
+        self.ready = _readline_bounded(self.p, 15, "Windows input helper startup")
+        if self.ready != "ready":
+            _stop_child(self.p)
+            raise RuntimeError(f"Windows input helper returned unexpected startup response: {self.ready}")
 
     def cmd(self, line: str, retry: bool = False) -> str:
         self.p.stdin.write(line + "\n")
         self.p.stdin.flush()
-        out = self.p.stdout.readline().strip()
+        out = _readline_bounded(self.p, 30, "Windows input helper command")
         if out.startswith("error") and "foreground" in out and retry:
             self.cmd("focus", retry=False)     # nobody at the PC: the foreground drifts; take it back once
             time.sleep(0.3)

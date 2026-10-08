@@ -24,6 +24,7 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "hatchling==1.27.0",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "ruff>=0.16.10",
@@ -31,6 +32,17 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["um"]
+
+[tool.hatch.build]
+exclude = [
+  "/.coverage",
+  "/coverage.xml",
+  "/htmlcov",
+  "/.pytest_cache",
+  "/.venv",
+  "/**/__pycache__",
+  "/**/*.pyc",
+]
 
 [tool.ruff]
 target-version = "py310"

@@ -194,9 +194,12 @@ Full reasoning: [`skills/mod-any-game/references/safety.md`](skills/mod-any-game
 `um fal` uploads local inputs, prompts and selected parameters to fal. Do not send confidential, licensed,
 personal, biometric, voice or likeness material without the necessary rights and consent; review fal and the
 selected model's retention/licensing terms first. Paid POST submissions are not retried after an ambiguous
-network failure, and accepted request IDs are written privately under `UM_HOME` for recovery. Generation
-receipts are mode `0600` and redact likely credentials and signed URL queries, but prompts remain provenance:
-review them before publishing.
+network failure, and lifecycle records are written privately under `UM_HOME` before submission and after state
+changes so ambiguous operations can be reconciled without automatic resubmission. Generation receipts are mode
+`0600` on POSIX (and inherit the user's profile ACL on Windows) and redact likely credentials and signed URL queries,
+but prompts remain provenance: review them before publishing. Output downloads accept HTTPS hosts under `fal.media`
+by default. Review any other storage host and opt in to exact comma-separated names with
+`UM_ALLOW_FAL_OUTPUT_HOSTS`; wildcards are intentionally unsupported.
 
 ComfyUI defaults to loopback. A remote server must use HTTPS and requires the explicit
 `UM_ALLOW_REMOTE_COMFYUI=1` opt-in; treat its operator as able to read the complete workflow and prompts.

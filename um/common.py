@@ -166,7 +166,11 @@ def append_private_jsonl(path: Path, record: dict) -> None:
     except OSError as exc:
         die(f"cannot open receipt {path}: {exc}")
     try:
-        os.fchmod(fd, 0o600)
+        if hasattr(os, "fchmod"):
+            os.fchmod(fd, 0o600)
+        # Windows files inherit the user's profile ACL from UM_HOME. Python's
+        # chmod cannot express a DACL; importantly, do not fail after a remote
+        # request merely because the POSIX-only descriptor operation is absent.
         pending = memoryview(data)
         while pending:
             written = os.write(fd, pending)

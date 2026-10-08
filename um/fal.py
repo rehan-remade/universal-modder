@@ -28,6 +28,7 @@ import json
 import mimetypes
 import os
 import re
+import secrets
 import socket
 import sys
 import time
@@ -137,6 +138,10 @@ class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
 _UPLOAD_OPENER = urllib.request.build_opener(_NoRedirectHandler())
 
 
+class AmbiguousSubmissionError(RuntimeError):
+    """A paid POST may have reached fal, but no definitive response arrived."""
+
+
 def _upload_open(req, timeout):
     return _UPLOAD_OPENER.open(req, timeout=timeout)
 
@@ -171,6 +176,8 @@ def _req(method: str, url: str, body=None, headers=None, auth=True, raw=False, t
             if attempt + 1 < attempts:
                 time.sleep(2 * (attempt + 1))
                 continue
+            if method not in {"GET", "HEAD"}:
+                raise AmbiguousSubmissionError(str(e.reason)) from e
             die(f"fal {method} {url}: {e.reason}")
 
 
@@ -205,7 +212,7 @@ def upload(path: str | Path) -> str:
         return _upload_cdn(p.name, ctype, data)
     except SystemExit:  # _req already printed why
         err = "see above"
-    except (urllib.error.URLError, OSError, KeyError, ValueError) as e:
+    except (urllib.error.URLError, OSError, KeyError, ValueError, AmbiguousSubmissionError) as e:
         err = str(e)
     if len(data) < 8 << 20:
         print(f"fal upload failed ({err}); sending {p.name} inline as a data URI", file=sys.stderr)
@@ -244,6 +251,9 @@ def _validate_public_download_url(url: str) -> None:
     scheme, host, _ = _origin(url)
     if scheme != "https":
         die(f"fal output URL must use HTTPS: {url.split('?')[0]}")
+    configured = {item.strip().lower() for item in os.environ.get("UM_ALLOW_FAL_OUTPUT_HOSTS", "").split(",") if item.strip()}
+    if not (host == "fal.media" or host.endswith(".fal.media") or host in configured):
+        die(f"refusing fal output from untrusted host {host}; explicitly allow an exact host with UM_ALLOW_FAL_OUTPUT_HOSTS")
     try:
         addresses = {row[4][0] for row in socket.getaddrinfo(host, None)}
     except socket.gaierror as exc:
@@ -313,16 +323,28 @@ def submit(endpoint: str, inp: dict) -> dict:
 
 def run(endpoint: str, inp: dict, timeout: float = 1800, quiet: bool = False) -> dict:
     """Submit to the queue, poll (printing logs to stderr), return the result JSON."""
-    job = submit(endpoint, inp)
+    receipt = data_dir() / "fal-requests.jsonl"
+    operation_id = secrets.token_hex(16)
+    append_private_jsonl(receipt, {"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "state": "submission_attempt",
+                                   "endpoint": endpoint, "operation_id": operation_id})
+    try:
+        job = submit(endpoint, inp)
+    except AmbiguousSubmissionError as exc:
+        append_private_jsonl(receipt, {"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "state": "submission_ambiguous",
+                                       "endpoint": endpoint, "operation_id": operation_id})
+        die(f"fal submission outcome is ambiguous ({exc}); do not resubmit automatically. "
+            f"Inspect {receipt} and the fal dashboard using operation {operation_id}")
     rid = job.get("request_id")
     if not isinstance(rid, str) or not re.fullmatch(r"[A-Za-z0-9._-]{1,200}", rid):
+        append_private_jsonl(receipt, {"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "state": "accepted_without_request_id",
+                                       "endpoint": endpoint, "operation_id": operation_id})
         die("fal returned an invalid request id")
     status_url = job.get("status_url") or f"{QUEUE}/{endpoint}/requests/{rid}/status"
     response_url = job.get("response_url") or f"{QUEUE}/{endpoint}/requests/{rid}"
     _validate_auth_url(status_url)
     _validate_auth_url(response_url)
-    append_private_jsonl(data_dir() / "fal-requests.jsonl",
-                         {"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "state": "submitted", "endpoint": endpoint, "request_id": rid})
+    append_private_jsonl(receipt, {"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "state": "submitted", "endpoint": endpoint,
+                                   "request_id": rid, "operation_id": operation_id})
     t0, seen, last = time.time(), 0, ""
     while True:
         st = _req("GET", status_url + ("&" if "?" in status_url else "?") + "logs=1")
@@ -342,9 +364,9 @@ def run(endpoint: str, inp: dict, timeout: float = 1800, quiet: bool = False) ->
                 die(f"{endpoint} failed: {st['error']}")
             res = _req("GET", response_url)
             res["_request_id"], res["_endpoint"] = rid, endpoint
-            append_private_jsonl(data_dir() / "fal-requests.jsonl",
+            append_private_jsonl(receipt,
                                  {"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "state": "completed", "endpoint": endpoint,
-                                  "request_id": rid})
+                                  "request_id": rid, "operation_id": operation_id})
             return res
         if time.time() - t0 > timeout:
             die(f"{endpoint}: still {s} after {timeout:.0f}s (request {rid}); check later with `um fal result {endpoint} {rid}`")

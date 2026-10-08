@@ -37,7 +37,8 @@ DECOMP_PATTERNS = [
 ]
 CODE_EXT = {".cs", ".c", ".cpp", ".h", ".hpp", ".py", ".lua", ".js", ".ts", ".rs", ".java", ".kt", ".gd", ".rpy", ".psc", ".gml",
             ".hlsl", ".glsl", ".as", ".vb", ".il"}
-SKIP_DIRS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", ".vs", ".idea"}
+METADATA_DIRS = {".git"}
+GENERATED_DIRS = {".venv", "venv", "node_modules", "__pycache__", ".pytest_cache", ".vs", ".idea"}
 TEXT_EXT = {".cs", ".c", ".cpp", ".h", ".hpp", ".py", ".lua", ".js", ".ts", ".json", ".toml", ".ini", ".cfg", ".txt", ".md", ".xml",
             ".yaml", ".yml", ".rs", ".java", ".kt", ".gd", ".rpy", ".psc", ".sh", ".ps1", ".bat", ".gml", ".hlsl", ".glsl", ".env"}
 ARCHIVE_EXT = {".pak", ".utoc", ".ucas", ".bsa", ".ba2", ".vpk", ".rpf", ".pck", ".assets", ".bundle", ".sga", ".big", ".wad", ".bdt", ".archive"}
@@ -56,7 +57,12 @@ def check(mod: str, game: str | None = None) -> int:
     if not root.is_dir():
         die(f"not a folder: {root}")
     fails, warns = [], []
-    entries = [p for p in root.rglob("*") if not SKIP_DIRS.intersection(p.relative_to(root).parts)]
+    generated = sorted({part for p in root.rglob("*") for part in p.relative_to(root).parts if part in GENERATED_DIRS})
+    for dirname in generated:
+        fails.append(f"generated environment/cache directory must not be in a publish candidate: {dirname}")
+    entries = [p for p in root.rglob("*")
+               if not METADATA_DIRS.intersection(p.relative_to(root).parts)
+               and not GENERATED_DIRS.intersection(p.relative_to(root).parts)]
     files = []
     for p in entries:
         rel = p.relative_to(root).as_posix()

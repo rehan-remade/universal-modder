@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import os
 import re
 import shutil
 import subprocess
+import sys
 import types
 import urllib.error
 import zipfile
@@ -15,6 +17,15 @@ from pathlib import Path
 import pytest
 
 from um import backup, comfy, fal, kb, publish, win
+
+
+def _release_verifier_module():
+    path = Path(__file__).resolve().parents[1] / "scripts" / "verify_release_candidate.py"
+    spec = importlib.util.spec_from_file_location("verify_release_candidate", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _archive(path: Path, source: Path, files: dict[str, bytes], *, metadata: dict | None = None) -> Path:
@@ -32,6 +43,11 @@ def _archive(path: Path, source: Path, files: dict[str, bytes], *, metadata: dic
             zf.writestr(name, data)
         zf.writestr("_um_manifest.json", json.dumps(manifest))
     return path
+
+
+@pytest.mark.parametrize("name", ["C:/escape.py", "pkg/./alias.py", "pkg//alias.py", "pkg/bad\x01.py"])
+def test_release_verifier_rejects_noncanonical_member_names(name):
+    assert not _release_verifier_module().safe_name(name)
 
 
 @pytest.mark.parametrize("member", ["../outside.txt", "C:/windows.txt", r"..\\outside.txt"])
@@ -67,6 +83,38 @@ def test_backup_restore_verifies_hash_before_mutation(tmp_path, monkeypatch):
         backup.restore("safe", to=str(target), snapshot=str(archive), yes=True)
 
     assert (target / "save.dat").read_text(encoding="utf-8") == "original"
+
+
+def test_backup_restore_uses_the_validated_open_archive_after_path_swap(tmp_path, monkeypatch):
+    monkeypatch.setenv("UM_HOME", str(tmp_path / "home"))
+    target = tmp_path / "target"
+    target.mkdir()
+    (target / "save.dat").write_bytes(b"current")
+    approved = _archive(tmp_path / "snapshot.zip", target, {"save.dat": b"approved"})
+    hostile = _archive(tmp_path / "hostile.zip", target, {"save.dat": b"ATTACKED"})
+
+    def swap_during_pre_restore(*_args, **_kwargs):
+        os.replace(hostile, approved)
+        return tmp_path / "unused.zip"
+
+    monkeypatch.setattr(backup, "create", swap_during_pre_restore)
+    backup.restore("safe", to=str(target), snapshot=str(approved), yes=True)
+    assert (target / "save.dat").read_bytes() == b"approved"
+
+
+def test_backup_swap_recovery_restores_orphaned_rollback(tmp_path):
+    target = tmp_path / "save"
+    rollback = tmp_path / ".save.um-rollback-test"
+    stage = tmp_path / ".save.um-restore-test"
+    rollback.mkdir()
+    stage.mkdir()
+    (rollback / "old.dat").write_bytes(b"old")
+    backup._write_swap_receipt(target, stage, rollback, "prepared")
+    backup._recover_swap(target)
+    assert (target / "old.dat").read_bytes() == b"old"
+    assert not rollback.exists()
+    assert not stage.exists()
+    assert not backup._swap_receipt(target).exists()
 
 
 def test_backup_name_cannot_escape_backup_root(tmp_path, monkeypatch):
@@ -113,10 +161,34 @@ def test_fal_paid_post_is_not_retried_after_ambiguous_network_failure(monkeypatc
     monkeypatch.setattr(fal, "_urlopen", fail)
     monkeypatch.setattr(fal.time, "sleep", lambda _seconds: None)
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(fal.AmbiguousSubmissionError):
         fal._req("POST", fal.QUEUE + "/fal-ai/test", {"prompt": "x"})
 
     assert len(calls) == 1
+
+
+def test_fal_ambiguous_submission_writes_redacted_recovery_receipt(tmp_path, monkeypatch):
+    monkeypatch.setenv("UM_HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(fal, "submit", lambda *_args, **_kwargs: (_ for _ in ()).throw(fal.AmbiguousSubmissionError("lost")))
+    with pytest.raises(SystemExit):
+        fal.run("fal-ai/test", {"prompt": "private input"})
+    records = [json.loads(line) for line in (tmp_path / "home" / "fal-requests.jsonl").read_text().splitlines()]
+    assert [record["state"] for record in records] == ["submission_attempt", "submission_ambiguous"]
+    assert all("private input" not in json.dumps(record) for record in records)
+
+
+def test_fal_download_rejects_untrusted_output_host_before_dns(monkeypatch):
+    monkeypatch.delenv("UM_ALLOW_FAL_OUTPUT_HOSTS", raising=False)
+    monkeypatch.setattr(fal.socket, "getaddrinfo", lambda *_args: pytest.fail("DNS should not run"))
+    with pytest.raises(SystemExit):
+        fal._validate_public_download_url("https://rebind.attacker.invalid/output.png")
+
+
+def test_fal_authenticated_redirect_handler_rejects_cross_origin():
+    request = fal.urllib.request.Request(fal.QUEUE + "/job", headers={"Authorization": "Key placeholder"})
+    with pytest.raises(SystemExit):
+        fal._FalRedirectHandler().redirect_request(
+            request, None, 302, "Found", {}, fal.REST + "/job")  # type: ignore[arg-type]
 
 
 def test_fal_output_name_cannot_escape_output_root(tmp_path, monkeypatch):
@@ -187,6 +259,14 @@ def test_publish_rejects_decompiled_code(tmp_path):
     assert publish.check(str(tmp_path)) == 1
 
 
+def test_publish_fails_closed_on_generated_environment_directories(tmp_path):
+    (tmp_path / "README.md").write_text("candidate", encoding="utf-8")
+    hidden = tmp_path / "venv"
+    hidden.mkdir()
+    (hidden / ".env").write_text("FAL_KEY=should-not-be-skipped", encoding="utf-8")
+    assert publish.check(str(tmp_path)) == 1
+
+
 def test_comfy_remote_requires_explicit_https_opt_in(monkeypatch):
     monkeypatch.delenv("UM_ALLOW_REMOTE_COMFYUI", raising=False)
     with pytest.raises(SystemExit):
@@ -213,14 +293,23 @@ def test_kb_remote_identity_is_exact(url):
         kb._validate_fork_url(url, "mallory")
 
 
+@pytest.mark.parametrize("url", [
+    "https://evil.example/github.com/alice/universal-modder.git",
+    "https://github.com.evil.example/alice/universal-modder.git",
+    "https://user@github.com/alice/universal-modder.git",
+])
+def test_kb_remote_parser_rejects_lookalike_github_urls(url):
+    assert kb._github_remote(url) is None
+
+
 def test_all_host_manifests_match_package_version():
     root = Path(__file__).resolve().parents[1]
     match = re.search(r'^version = "([^"]+)"$', (root / "pyproject.toml").read_text(), re.M)
     assert match
     version = match.group(1)
     assert version == __import__("um").__version__
-    manifests = [root / "plugin.json", root / ".claude-plugin/plugin.json", root / ".cursor-plugin/plugin.json",
-                 root / "gemini-extension.json"]
+    manifests = [root / "plugin.json", root / ".claude-plugin/plugin.json", root / ".codex-plugin/plugin.json",
+                 root / ".cursor-plugin/plugin.json", root / "gemini-extension.json"]
     for manifest in manifests:
         data = json.loads(manifest.read_text(encoding="utf-8"))
         assert data["name"] == "universal-modder"
@@ -234,6 +323,7 @@ def test_example_installer_removes_only_owned_unchanged_files(tmp_path):
     (fixture / "shaders").mkdir(parents=True)
     (fixture / "third_party").mkdir()
     shutil.copy2(source / "install.sh", fixture / "install.sh")
+    shutil.copy2(source / "install_passthrough.py", fixture / "install_passthrough.py")
     shutil.copy2(source / "shaders" / "MCPassthrough.fx", fixture / "shaders" / "MCPassthrough.fx")
     (fixture / "third_party" / "ReShade.fxh").write_bytes(b"header-a")
     (fixture / "third_party" / "ReShadeUI.fxh").write_bytes(b"header-b")
@@ -259,3 +349,44 @@ def test_example_installer_removes_only_owned_unchanged_files(tmp_path):
     assert (game / "ReShade.ini").read_text() == "user changed this"
     assert not (game / "MCPassthrough.asi").exists()
     assert manifest.is_file()
+
+
+def test_example_installer_rejects_symlinked_destination_ancestor(tmp_path):
+    helper = (Path(__file__).resolve().parents[1] / "examples" / "minecraft-gta5-passthrough" / "gta"
+              / "install_passthrough.py")
+    game = tmp_path / "game"
+    outside = tmp_path / "outside"
+    game.mkdir()
+    outside.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    source = tmp_path / "shader.fx"
+    source.write_bytes(b"shader")
+    try:
+        (game / "reshade-shaders").symlink_to(outside, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"symlinks unavailable: {exc}")
+    result = subprocess.run(
+        [sys.executable, str(helper), "install", str(game), str(source), "reshade-shaders/Shaders/MCPassthrough.fx"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+    assert not any(outside.rglob("*"))
+
+
+def test_example_uninstall_validates_entire_receipt_before_deleting(tmp_path):
+    helper = (Path(__file__).resolve().parents[1] / "examples" / "minecraft-gta5-passthrough" / "gta"
+              / "install_passthrough.py")
+    game = tmp_path / "game"
+    game.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    owned = game / "args.txt"
+    owned.write_bytes(b"owned")
+    receipt = game / ".universal-modder-mcpassthrough-owned"
+    receipt.write_text(json.dumps({"entries": [
+        {"path": "args.txt", "sha256": hashlib.sha256(b"owned").hexdigest()},
+        {"path": "../unsafe", "sha256": "0" * 64},
+    ]}), encoding="utf-8")
+    result = subprocess.run([sys.executable, str(helper), "remove", str(game)], capture_output=True, text=True)
+    assert result.returncode != 0
+    assert owned.read_bytes() == b"owned"
