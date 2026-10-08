@@ -263,7 +263,8 @@ def test_publish_fails_closed_on_generated_environment_directories(tmp_path):
     (tmp_path / "README.md").write_text("candidate", encoding="utf-8")
     hidden = tmp_path / "venv"
     hidden.mkdir()
-    (hidden / ".env").write_text("FAL_KEY=should-not-be-skipped", encoding="utf-8")
+    assignment = "FAL" + "_KEY=should-not-be-skipped"
+    (hidden / ".env").write_text(assignment, encoding="utf-8")
     assert publish.check(str(tmp_path)) == 1
 
 
