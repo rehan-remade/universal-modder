@@ -1,5 +1,75 @@
 [
  {
+  "path": "games/7-days-to-die/7-days-to-die.md",
+  "kind": "game",
+  "title": "7 Days to Die recon: Unity Mono 2022.3, EAC warning",
+  "game": "7 Days to Die",
+  "games_also": [],
+  "game_version": "Unity engine 2022.3.62f2 (game build unverified this pass)",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "loader-api",
+  "tools": [
+   "BepInEx 5 (not installed)",
+   "official modding (Mods folder + XML)"
+  ],
+  "anti_cheat": "EasyAntiCheat detected \u2014 offline/single-player only, never inject into protected play; use official offline/EAC-off launch where provided. No bypasses.",
+  "status": "working",
+  "agents": [
+   "OpenCode (Muse Spark)"
+  ],
+  "humans": [
+   "PatrickJnr"
+  ],
+  "date": "2026-10-08",
+  "links": [],
+  "tags": [
+   "7-days-to-die",
+   "unity",
+   "mono",
+   "bepinex",
+   "eac",
+   "recon",
+   "scan"
+  ]
+ },
+ {
+  "path": "games/abiotic-factor/abiotic-factor.md",
+  "kind": "game",
+  "title": "Abiotic Factor recon: Unreal Engine, IoStore paks, saves found",
+  "game": "Abiotic Factor",
+  "games_also": [],
+  "game_version": "Steam 427410 (exact build unverified this pass)",
+  "platform": "windows",
+  "engine": "unreal",
+  "route": "loader-api",
+  "tools": [
+   "UE4SS (docs-verified, not installed)",
+   "FModel/retoc/repak (docs-described, not used here)"
+  ],
+  "anti_cheat": "none detected",
+  "status": "working",
+  "agents": [
+   "OpenCode (Muse Spark)"
+  ],
+  "humans": [
+   "PatrickJnr"
+  ],
+  "date": "2026-10-08",
+  "links": [
+   "https://ue4ss.com"
+  ],
+  "tags": [
+   "abiotic-factor",
+   "unreal",
+   "ue4ss",
+   "pak",
+   "iostore",
+   "recon",
+   "scan"
+  ]
+ },
+ {
   "path": "games/age-of-empires-ii-de/san-franciscans-civ.md",
   "kind": "game",
   "title": "San Franciscans: a new civilization for Age of Empires II DE with units rendered from 3D",
@@ -653,6 +723,41 @@
   ]
  },
  {
+  "path": "games/cult-of-the-lamb/cult-of-the-lamb.md",
+  "kind": "game",
+  "title": "Cult of the Lamb recon: Doorstop remnant, no BepInEx payload, Unity Mono",
+  "game": "Cult of the Lamb",
+  "games_also": [],
+  "game_version": "Unity engine 2022.3.62f2 (game build unverified this pass)",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "loader-api",
+  "tools": [
+   "UnityDoorstop bootstrapper (payload missing)",
+   "BepInEx 5 (recommended, not installed)"
+  ],
+  "anti_cheat": "none detected",
+  "status": "working",
+  "agents": [
+   "OpenCode (Muse Spark)"
+  ],
+  "humans": [
+   "PatrickJnr"
+  ],
+  "date": "2026-10-08",
+  "links": [
+   "https://docs.bepinex.dev"
+  ],
+  "tags": [
+   "cult-of-the-lamb",
+   "unity",
+   "mono",
+   "bepinex",
+   "recon",
+   "scan"
+  ]
+ },
+ {
   "path": "games/darkest-dungeon/data-mod-randomizer.md",
   "kind": "game",
   "title": "A seeded randomizer (trinkets, heroes, monsters, curios, quirks, quests) as a Darkest Dungeon data mod",
@@ -801,6 +906,44 @@
   ]
  },
  {
+  "path": "games/dwarf-fortress/dwarf-fortress.md",
+  "kind": "game",
+  "title": "Dwarf Fortress recon: native game, raw-file modding route",
+  "game": "Dwarf Fortress",
+  "games_also": [],
+  "game_version": "Steam 975370 (exact build unverified this pass)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "raw-file modding (verified layout, not exercised)",
+   "Steam Workshop (no subscriptions here)",
+   "DFHack (docs-verified, not installed)"
+  ],
+  "anti_cheat": "none detected",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (Muse Spark)"
+  ],
+  "humans": [
+   "PatrickJnr"
+  ],
+  "date": "2026-10-08",
+  "links": [
+   "https://docs.dfhack.org",
+   "https://github.com/DFHack/dfhack/releases",
+   "https://www.bay12games.com/dwarves/"
+  ],
+  "tags": [
+   "dwarf-fortress",
+   "native",
+   "raw-files",
+   "workshop",
+   "recon",
+   "scan"
+  ]
+ },
+ {
   "path": "games/elden-ring/cs2-conversion-of-elden-ring-offline-native-rust-dll-via-me3.md",
   "kind": "game",
   "title": "CS2 conversion of Elden Ring offline: native Rust DLL via me3 (fall death, spirit springs, 3D inspect, params)",
@@ -842,6 +985,121 @@
    "skins",
    "case-opening",
    "3d-inspect"
+  ]
+ },
+ {
+  "path": "games/factorio/factorio.md",
+  "kind": "game",
+  "title": "Factorio 2.0.72 recon: official Lua API, Space Age, no mods installed",
+  "game": "Factorio",
+  "games_also": [],
+  "game_version": "2.0.72 win64 Steam + Space Age (from factorio-current.log dated 2026-01-05)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "loader-api",
+  "tools": [
+   "official Lua modding API",
+   "in-game mod portal"
+  ],
+  "anti_cheat": "none detected",
+  "status": "working",
+  "agents": [
+   "OpenCode (Muse Spark)"
+  ],
+  "humans": [
+   "PatrickJnr"
+  ],
+  "date": "2026-10-08",
+  "links": [
+   "https://lua-api.factorio.com",
+   "https://mods.factorio.com",
+   "https://wiki.factorio.com",
+   "https://forums.factorio.com",
+   "https://factorio.com"
+  ],
+  "tags": [
+   "factorio",
+   "lua",
+   "mod-api",
+   "space-age",
+   "recon",
+   "scan"
+  ]
+ },
+ {
+  "path": "games/fallout-4/fallout-4.md",
+  "kind": "game",
+  "title": "Fallout 4 recon: F4SE + Creation Kit installed, Vortex-managed mod set",
+  "game": "Fallout 4",
+  "games_also": [],
+  "game_version": "F4SE binary targets runtime 1_11_221 (per filename; game build otherwise unverified)",
+  "platform": "windows",
+  "engine": "creation",
+  "route": "data",
+  "tools": [
+   "F4SE (installed, runtime 1_11_221)",
+   "Creation Kit (installed)",
+   "Vortex (folder marker)",
+   "xEdit/FO4Edit (docs-described)"
+  ],
+  "anti_cheat": "none detected",
+  "status": "working",
+  "agents": [
+   "OpenCode (Muse Spark)"
+  ],
+  "humans": [
+   "PatrickJnr"
+  ],
+  "date": "2026-10-08",
+  "links": [],
+  "tags": [
+   "fallout-4",
+   "creation",
+   "f4se",
+   "esp",
+   "esl",
+   "vortex",
+   "recon",
+   "scan"
+  ]
+ },
+ {
+  "path": "games/fallout-new-vegas/fallout-new-vegas.md",
+  "kind": "game",
+  "title": "Fallout New Vegas recon: Gamebryo, full DLC set, no script extender",
+  "game": "Fallout: New Vegas",
+  "games_also": [],
+  "game_version": "Steam 22380 (exact build unverified this pass; full DLC .esm set present)",
+  "platform": "windows",
+  "engine": "creation",
+  "route": "data",
+  "tools": [
+   "xEdit/FNVEdit (to install)",
+   "xNVSE (to install; Steam+GOG supported per xNVSE docs)",
+   "Mod Organizer 2 (to install)",
+   "FNV 4GB Patcher (docs-mentioned, not installed)"
+  ],
+  "anti_cheat": "none detected",
+  "status": "working",
+  "agents": [
+   "OpenCode (Muse Spark)"
+  ],
+  "humans": [
+   "PatrickJnr"
+  ],
+  "date": "2026-10-08",
+  "links": [
+   "https://github.com/xNVSE/NVSE",
+   "https://www.nexusmods.com/newvegas/mods/67883"
+  ],
+  "tags": [
+   "fallout-new-vegas",
+   "gamebryo",
+   "creation",
+   "esp",
+   "nvse",
+   "recon",
+   "scan"
   ]
  },
  {
@@ -1006,6 +1264,43 @@
    "performance-mods",
    "distant-horizons",
    "chunky"
+  ]
+ },
+ {
+  "path": "games/garry-s-mod/garrys-mod.md",
+  "kind": "game",
+  "title": "Garry's Mod recon: Source engine, Workshop present",
+  "game": "Garry's Mod",
+  "games_also": [],
+  "game_version": "Steam 4000 (exact build unverified this pass)",
+  "platform": "windows",
+  "engine": "source",
+  "route": "loader-api",
+  "tools": [
+   "Garry's Mod Lua API",
+   "Steam Workshop"
+  ],
+  "anti_cheat": "none detected (VAC applies on protected servers \u2014 single-player/local servers only for mod work)",
+  "status": "working",
+  "agents": [
+   "OpenCode (Muse Spark)"
+  ],
+  "humans": [
+   "PatrickJnr"
+  ],
+  "date": "2026-10-08",
+  "links": [
+   "https://wiki.facepunch.com/gmod/",
+   "https://wiki.facepunch.com/gmod/Addon_Creation",
+   "https://wiki.facepunch.com/gmod/Workshop_Addon_Creation"
+  ],
+  "tags": [
+   "garrys-mod",
+   "source",
+   "lua",
+   "workshop",
+   "recon",
+   "scan"
   ]
  },
  {
@@ -2025,6 +2320,44 @@
   ]
  },
  {
+  "path": "games/stardew-valley/stardew-valley.md",
+  "kind": "game",
+  "title": "Stardew Valley recon: SMAPI installed, MonoGame, mods present",
+  "game": "Stardew Valley",
+  "games_also": [],
+  "game_version": "Game 1.6.15.24356, SMAPI 4.4.0 (both from version resources, Steam 413150)",
+  "platform": "windows",
+  "engine": "xna-fna",
+  "route": "loader-api",
+  "tools": [
+   "SMAPI 4.4.0 (installed; upstream 4.5.2 per smapi.io)",
+   "Content Patcher (docs-based)",
+   "Harmony via SMAPI (0Harmony.dll on disk)"
+  ],
+  "anti_cheat": "none detected",
+  "status": "working",
+  "agents": [
+   "OpenCode (Muse Spark)"
+  ],
+  "humans": [
+   "PatrickJnr"
+  ],
+  "date": "2026-10-08",
+  "links": [
+   "https://smapi.io",
+   "https://stardewvalleywiki.com/Modding:Index",
+   "https://github.com/Pathoschild/SMAPI"
+  ],
+  "tags": [
+   "stardew-valley",
+   "smapi",
+   "monogame",
+   "dotnet",
+   "recon",
+   "scan"
+  ]
+ },
+ {
   "path": "games/starfield/starfield-animation-af-rig-and-havok-physics.md",
   "kind": "game",
   "title": "Starfield animation (.af/.rig) and physics (Havok 2019.02)",
@@ -2671,6 +3004,41 @@
    "lightning",
    "splitner",
    "returning-weapon"
+  ]
+ },
+ {
+  "path": "games/vampire-survivors/vampire-survivors.md",
+  "kind": "game",
+  "title": "Vampire Survivors recon: Unity 6 IL2CPP",
+  "game": "Vampire Survivors",
+  "games_also": [],
+  "game_version": "Unity engine 6000.0.62f1 (game build unverified this pass)",
+  "platform": "windows",
+  "engine": "unity-il2cpp",
+  "route": "managed-patch",
+  "tools": [
+   "BepInEx 6 / MelonLoader (neither installed)",
+   "Cpp2IL / Il2CppDumper (not run here)"
+  ],
+  "anti_cheat": "none detected",
+  "status": "working",
+  "agents": [
+   "OpenCode (Muse Spark)"
+  ],
+  "humans": [
+   "PatrickJnr"
+  ],
+  "date": "2026-10-08",
+  "links": [],
+  "tags": [
+   "vampire-survivors",
+   "unity",
+   "il2cpp",
+   "unity-6",
+   "bepinex",
+   "melonloader",
+   "recon",
+   "scan"
   ]
  },
  {
