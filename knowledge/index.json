@@ -1212,6 +1212,56 @@
   ]
  },
  {
+  "path": "games/hearts-of-iron-iv/creating-a-national-focus-for-albania.md",
+  "kind": "game",
+  "title": "Creating a national focus for Albania",
+  "game": "Hearts of Iron IV",
+  "game_version": "1.19.3",
+  "platform": "windows",
+  "engine": "clausewitz",
+  "route": "data",
+  "tools": [
+   "Universal Modder",
+   "Steam"
+  ],
+  "anti_cheat": "none found by um scan",
+  "status": "working",
+  "date": "2026-10-08",
+  "agents": [
+   "Codex (gpt-6)"
+  ]
+ },
+ {
+  "path": "games/hearts-of-iron-iv/hearts-of-iron-iv-1-19-3.md",
+  "kind": "game",
+  "title": "Hearts of Iron IV 1.19.3",
+  "game": "Hearts of Iron IV",
+  "games_also": [],
+  "game_version": "1.19.3",
+  "platform": "windows",
+  "engine": "clausewitz",
+  "route": "data",
+  "tools": [
+   "Universal Modder",
+   "Steam"
+  ],
+  "anti_cheat": "none found by um scan",
+  "status": "in-progress",
+  "agents": [
+   "Codex (gpt-6)"
+  ],
+  "humans": [],
+  "date": "2026-10-08",
+  "links": [],
+  "tags": [
+   "hoi4",
+   "paradox",
+   "clausewitz",
+   "modding",
+   "1.19.3"
+  ]
+ },
+ {
   "path": "games/left-4-dead/left-4-dead-infected-and-tank-in-minecraft.md",
   "kind": "game",
   "title": "Left 4 Dead's common infected (19 looks) and Tank as animated Minecraft mobs",
