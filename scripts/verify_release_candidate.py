@@ -80,13 +80,57 @@ def _file_identity(value: os.stat_result) -> tuple[int, int, int, int, int, int]
     return (value.st_dev, value.st_ino, value.st_mode, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
 
 
+def source_binding(source: Path) -> dict[str, object]:
+    try:
+        before = os.stat(source, follow_symlinks=False)
+    except OSError as exc:
+        raise SystemExit(f"cannot bind distribution input {source}: {exc}") from exc
+    if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1 or before.st_size > MAX_ARCHIVE_BYTES:
+        raise SystemExit(f"distribution input is not a unique acceptable regular file: {source}")
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        fd = os.open(source, flags)
+    except OSError as exc:
+        raise SystemExit(f"cannot open distribution input {source}: {exc}") from exc
+    try:
+        opened = os.fstat(fd)
+        if opened.st_nlink != 1 or _file_identity(opened) != _file_identity(before):
+            raise SystemExit(f"distribution input changed before binding: {source}")
+        value = hashlib.sha256()
+        for chunk in iter(lambda: os.read(fd, 1 << 20), b""):
+            value.update(chunk)
+        after = os.fstat(fd)
+        try:
+            path_after = os.stat(source, follow_symlinks=False)
+        except OSError as exc:
+            raise SystemExit(f"distribution input changed while binding {source}: {exc}") from exc
+        if (_file_identity(after) != _file_identity(opened)
+                or _file_identity(path_after) != _file_identity(opened)):
+            raise SystemExit(f"distribution input changed while binding: {source}")
+        return {"identity": _file_identity(opened), "sha256": value.hexdigest()}
+    finally:
+        os.close(fd)
+
+
+def verify_source_binding(source: Path, binding: dict[str, object]) -> None:
+    current = source_binding(source)
+    if current != binding:
+        raise SystemExit(f"distribution input changed after snapshot: {source}")
+
+
+def _git_output(command: list[str], root: Path, *, text: bool = False):
+    env = dict(os.environ)
+    env["GIT_NO_REPLACE_OBJECTS"] = "1"
+    return subprocess.check_output(command, cwd=root, text=text, env=env)
+
+
 def snapshot_regular_file(source: Path, destination: Path) -> Path:
     """Snapshot one stable regular file through a validated descriptor."""
     try:
         before = os.stat(source, follow_symlinks=False)
     except OSError as exc:
         raise SystemExit(f"cannot inspect distribution input {source}: {exc}") from exc
-    if not stat.S_ISREG(before.st_mode) or before.st_size > MAX_ARCHIVE_BYTES:
+    if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1 or before.st_size > MAX_ARCHIVE_BYTES:
         raise SystemExit(f"distribution input is not an acceptable regular file: {source}")
     flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
     try:
@@ -98,7 +142,7 @@ def snapshot_regular_file(source: Path, destination: Path) -> Path:
     destination_created = False
     try:
         opened = os.fstat(source_fd)
-        if not stat.S_ISREG(opened.st_mode) or _file_identity(opened) != _file_identity(before):
+        if not stat.S_ISREG(opened.st_mode) or opened.st_nlink != 1 or _file_identity(opened) != _file_identity(before):
             raise SystemExit(f"distribution input changed before descriptor binding: {source}")
         output_fd = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0), 0o600)
         destination_created = True
@@ -132,11 +176,11 @@ def snapshot_regular_file(source: Path, destination: Path) -> Path:
 
 
 def source_identity(root: Path) -> dict[str, str]:
-    status = subprocess.check_output(["git", "status", "--porcelain=v1", "--untracked-files=all"], cwd=root, text=True)
+    status = _git_output(["git", "status", "--porcelain=v1", "--untracked-files=all"], root, text=True)
     if status:
         raise SystemExit("source checkout is dirty; release artifacts must bind to clean committed bytes")
-    commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
-    tree = subprocess.check_output(["git", "rev-parse", f"{commit}^{{tree}}"], cwd=root, text=True).strip()
+    commit = _git_output(["git", "rev-parse", "HEAD"], root, text=True).strip()
+    tree = _git_output(["git", "rev-parse", f"{commit}^{{tree}}"], root, text=True).strip()
     return {"commit": commit, "tree": tree}
 
 
@@ -144,12 +188,12 @@ def git_paths(root: Path, commit: str, prefix: str | None = None) -> set[str]:
     command = ["git", "ls-tree", "-r", "--name-only", "-z", commit]
     if prefix is not None:
         command += ["--", prefix]
-    payload = subprocess.check_output(command, cwd=root).decode()
+    payload = _git_output(command, root).decode()
     return {name for name in payload.rstrip("\0").split("\0") if name}
 
 
 def git_blob(root: Path, commit: str, rel: str) -> bytes:
-    return subprocess.check_output(["git", "show", f"{commit}:{rel}"], cwd=root)
+    return _git_output(["git", "show", f"{commit}:{rel}"], root)
 
 
 def metadata_identity(payload: bytes, label: str) -> None:
@@ -256,6 +300,7 @@ def main() -> int:
     expected_names = {f"{DIST}-{VERSION}-py3-none-any.whl", f"{DIST}-{VERSION}.tar.gz"}
     with tempfile.TemporaryDirectory(prefix="um-release-verification-") as temporary:
         snapshot_root = Path(temporary)
+        bindings: list[tuple[Path, dict[str, object]]] = []
 
         def distributions(directory: Path, label: str) -> dict[str, Path]:
             try:
@@ -264,8 +309,15 @@ def main() -> int:
                 raise SystemExit(f"cannot enumerate distribution directory {directory}: {exc}") from exc
             if {entry.name for entry in entries} != expected_names or len(entries) != len(expected_names):
                 raise SystemExit(f"distribution names must be exactly {sorted(expected_names)}")
-            return {entry.name: snapshot_regular_file(entry, snapshot_root / label / entry.name)
-                    for entry in entries}
+            snapshots = {}
+            for entry in entries:
+                snapshot = snapshot_regular_file(entry, snapshot_root / label / entry.name)
+                binding = source_binding(entry)
+                if binding["sha256"] != digest(snapshot):
+                    raise SystemExit(f"distribution input changed while binding snapshot: {entry}")
+                bindings.append((entry, binding))
+                snapshots[entry.name] = snapshot
+            return snapshots
 
         a, b = distributions(left, "a"), distributions(right, "b")
         receipt: dict[str, object] = {"source": identity}
@@ -274,8 +326,10 @@ def main() -> int:
                 raise SystemExit(f"non-reproducible distribution bytes: {name}")
             members = inspect_wheel(a[name], root, commit) if name.endswith(".whl") else inspect_sdist(a[name], root, commit)
             receipt[name] = {"sha256": digest(a[name]), "bytes": a[name].stat().st_size, "members": len(members)}
-        if source_identity(root) != identity:
-            raise SystemExit("source checkout identity changed during release verification")
+    if source_identity(root) != identity:
+        raise SystemExit("source checkout identity changed during release verification")
+    for source, binding in bindings:
+        verify_source_binding(source, binding)
     print(json.dumps(receipt, indent=2, sort_keys=True))
     return 0
 

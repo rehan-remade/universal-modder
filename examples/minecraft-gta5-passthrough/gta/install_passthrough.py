@@ -14,8 +14,9 @@ import secrets
 import shutil
 import stat
 import sys
+from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
-from typing import NoReturn
+from typing import Callable, Iterator, NoReturn
 
 TARGETS = {
     "ScriptHookV.dll", "dinput8.dll", "MCPassthrough.asi", "ReShade64.asi",
@@ -24,6 +25,7 @@ TARGETS = {
 }
 MANIFEST_NAME = ".universal-modder-mcpassthrough-owned"
 JOURNAL_NAME = ".universal-modder-mcpassthrough-installing"
+LOCK_NAME = ".universal-modder-mcpassthrough-lock"
 
 
 def fail(message: str) -> NoReturn:
@@ -77,7 +79,167 @@ def _fsync_dir(path: Path) -> None:
             os.close(fd)
 
 
-def write_json_atomic(path: Path, payload: dict, *, replace: bool = False) -> None:
+@contextmanager
+def operation_lock(root: Path) -> Iterator[None]:
+    lock = root / LOCK_NAME
+    try:
+        lock.mkdir()
+    except FileExistsError:
+        fail(f"another passthrough install/remove/recovery is active: {lock}")
+    _fsync_dir(root)
+    try:
+        yield
+    finally:
+        try:
+            lock.rmdir()
+            _fsync_dir(root)
+        except FileNotFoundError:
+            fail(f"operation lock disappeared unexpectedly: {lock}")
+
+
+def _open_parent_fd(root: Path, rel: str, *, create: bool = False) -> tuple[int | Path, str]:
+    if os.name == "nt":
+        target = destination(root, rel, create_parents=create)
+        return target.parent, target.name
+    parts = PurePosixPath(safe_rel(rel)).parts
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(root, flags)
+    try:
+        for part in parts[:-1]:
+            if create:
+                try:
+                    os.mkdir(part, dir_fd=fd)
+                    os.fsync(fd)
+                except FileExistsError:
+                    pass
+            next_fd = os.open(part, flags, dir_fd=fd)
+            os.close(fd)
+            fd = next_fd
+        return fd, parts[-1]
+    except BaseException:
+        os.close(fd)
+        raise
+
+
+def _parent_open(parent: int | Path, name: str, flags: int, mode: int = 0o777) -> int:
+    if isinstance(parent, Path):
+        return os.open(parent / name, flags, mode)
+    return os.open(name, flags, mode, dir_fd=parent)
+
+
+def _parent_stat(parent: int | Path, name: str) -> os.stat_result:
+    if isinstance(parent, Path):
+        return os.stat(parent / name, follow_symlinks=False)
+    return os.stat(name, dir_fd=parent, follow_symlinks=False)
+
+
+def _parent_unlink(parent: int | Path, name: str) -> None:
+    if isinstance(parent, Path):
+        (parent / name).unlink()
+    else:
+        os.unlink(name, dir_fd=parent)
+
+
+def _parent_link(parent: int | Path, source: str, target: str) -> None:
+    if isinstance(parent, Path):
+        os.link(parent / source, parent / target, follow_symlinks=False)
+    else:
+        os.link(source, target, src_dir_fd=parent, dst_dir_fd=parent, follow_symlinks=False)
+
+
+def _parent_fsync(parent: int | Path) -> None:
+    if isinstance(parent, Path):
+        _fsync_dir(parent)
+    else:
+        os.fsync(parent)
+
+
+def _parent_close(parent: int | Path) -> None:
+    if not isinstance(parent, Path):
+        os.close(parent)
+
+
+def _hash_fd(fd: int) -> str:
+    os.lseek(fd, 0, os.SEEK_SET)
+    h = hashlib.sha256()
+    while True:
+        chunk = os.read(fd, 1 << 20)
+        if not chunk:
+            return h.hexdigest()
+        h.update(chunk)
+
+
+def _publish_target(root: Path, source_path: str, rel: str, expected_hash: str, nonce: str) -> None:
+    parent_fd, leaf = _open_parent_fd(root, rel, create=True)
+    stage = f".{leaf}.um-part-{nonce}"
+    flags = os.O_RDWR | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    stage_fd: int | None = None
+    linked = False
+    try:
+        stage_fd = _parent_open(parent_fd, stage, flags, 0o600)
+        with open(source_path, "rb") as source:
+            with os.fdopen(stage_fd, "wb", closefd=False) as output:
+                shutil.copyfileobj(source, output, 1 << 20)
+                output.flush()
+                os.fsync(output.fileno())
+        if _hash_fd(stage_fd) != expected_hash:
+            fail(f"copied bytes failed verification: {rel}")
+        try:
+            _parent_link(parent_fd, stage, leaf)
+        except FileExistsError:
+            fail(f"refusing to replace file created during install: {rel}")
+        linked = True
+        _parent_fsync(parent_fd)
+    finally:
+        if stage_fd is not None:
+            os.close(stage_fd)
+        if not linked:
+            try:
+                _parent_unlink(parent_fd, stage)
+                _parent_fsync(parent_fd)
+            except FileNotFoundError:
+                pass
+        _parent_close(parent_fd)
+
+
+def _unlink_stage(root: Path, entry: dict) -> None:
+    nonce = entry.get("nonce")
+    if nonce is None:
+        return
+    parent_fd, leaf = _open_parent_fd(root, entry["path"])
+    try:
+        try:
+            _parent_unlink(parent_fd, f".{leaf}.um-part-{nonce}")
+            _parent_fsync(parent_fd)
+        except FileNotFoundError:
+            pass
+    finally:
+        _parent_close(parent_fd)
+
+
+def _targets_match(root: Path, entries: list[dict]) -> bool:
+    for entry in entries:
+        try:
+            parent_fd, leaf = _open_parent_fd(root, entry["path"])
+        except OSError:
+            return False
+        target_fd: int | None = None
+        try:
+            target_fd = _parent_open(parent_fd, leaf, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+            info = os.fstat(target_fd)
+            if not stat.S_ISREG(info.st_mode) or _hash_fd(target_fd) != entry["sha256"]:
+                return False
+        except OSError:
+            return False
+        finally:
+            if target_fd is not None:
+                os.close(target_fd)
+            _parent_close(parent_fd)
+    return True
+
+
+def write_json_atomic(path: Path, payload: dict, *, replace: bool = False,
+                      on_publish: Callable[[], None] | None = None) -> None:
     tmp = path.with_name(f".{path.name}.tmp-{os.getpid()}-{secrets.token_hex(8)}")
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     if hasattr(os, "O_NOFOLLOW"):
@@ -91,12 +253,16 @@ def write_json_atomic(path: Path, payload: dict, *, replace: bool = False) -> No
         os.close(fd)
     if replace:
         os.replace(tmp, path)
+        if on_publish is not None:
+            on_publish()
     else:
         try:
             os.link(tmp, path, follow_symlinks=False)
         except FileExistsError:
             tmp.unlink(missing_ok=True)
             fail(f"refusing to replace concurrently created receipt: {path}")
+        if on_publish is not None:
+            on_publish()
         tmp.unlink()
     _fsync_dir(path.parent)
 
@@ -147,34 +313,69 @@ def stage_path(root: Path, entry: dict) -> Path | None:
     return stage
 
 
+def _file_state(parent_fd: int | Path, name: str) -> tuple[os.stat_result, str] | None:
+    try:
+        info = _parent_stat(parent_fd, name)
+    except FileNotFoundError:
+        return None
+    if not stat.S_ISREG(info.st_mode):
+        return info, ""
+    try:
+        fd = _parent_open(parent_fd, name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    except OSError:
+        return info, ""
+    try:
+        opened = os.fstat(fd)
+        if (opened.st_dev, opened.st_ino) != (info.st_dev, info.st_ino):
+            return info, ""
+        return opened, _hash_fd(fd)
+    finally:
+        os.close(fd)
+
+
 def rollback(root: Path, entries: list[dict]) -> bool:
-    """Validate the complete rollback topology before removing any owned file."""
-    decisions: list[tuple[dict, Path, Path | None, bool]] = []
+    """Validate pinned parent directories before removing any owned file."""
+    decisions: list[tuple[dict, int | Path, str, str | None, bool, bool]] = []
     complete = True
-    for entry in reversed(entries):
-        target = destination(root, entry["path"])
-        stage = stage_path(root, entry)
-        owned = target.is_file() and sha256(target) == entry["sha256"]
-        if stage is not None:
-            owned = owned and stage.is_file() and os.path.samefile(target, stage)
-        if target.exists() and not owned:
-            print(f"preserving changed file: {entry['path']}", file=sys.stderr)
-            complete = False
-        if stage is not None and stage.exists() and (not stage.is_file() or sha256(stage) != entry["sha256"]):
-            print(f"preserving changed install stage: {stage.name}", file=sys.stderr)
-            complete = False
-        decisions.append((entry, target, stage, owned))
-    for _entry, target, stage, owned in decisions:
-        if owned:
-            target.unlink()
-            _fsync_dir(target.parent)
-        if stage is not None and stage.is_file() and sha256(stage) == _entry["sha256"]:
-            stage.unlink()
-            _fsync_dir(stage.parent)
-    return complete
+    try:
+        for entry in reversed(entries):
+            try:
+                parent_fd, leaf = _open_parent_fd(root, entry["path"])
+            except OSError as exc:
+                fail(f"refusing unsafe destination ancestry for {entry['path']}: {exc}")
+            stage_name = f".{leaf}.um-part-{entry['nonce']}" if entry.get("nonce") is not None else None
+            target_state = _file_state(parent_fd, leaf)
+            stage_state = _file_state(parent_fd, stage_name) if stage_name is not None else None
+            owned = target_state is not None and target_state[1] == entry["sha256"]
+            if stage_name is not None:
+                if target_state is None or stage_state is None:
+                    owned = False
+                else:
+                    owned = (owned and stage_state[1] == entry["sha256"]
+                             and (target_state[0].st_dev, target_state[0].st_ino)
+                             == (stage_state[0].st_dev, stage_state[0].st_ino))
+            if target_state is not None and not owned:
+                print(f"preserving changed file: {entry['path']}", file=sys.stderr)
+                complete = False
+            stage_valid = stage_state is not None and stage_state[1] == entry["sha256"]
+            if stage_state is not None and not stage_valid:
+                print(f"preserving changed install stage for: {entry['path']}", file=sys.stderr)
+                complete = False
+            decisions.append((entry, parent_fd, leaf, stage_name, owned, stage_valid))
+        for _entry, parent_fd, leaf, stage_name, owned, stage_valid in decisions:
+            if owned:
+                _parent_unlink(parent_fd, leaf)
+            if stage_name is not None and stage_valid:
+                _parent_unlink(parent_fd, stage_name)
+            if owned or stage_valid:
+                _parent_fsync(parent_fd)
+        return complete
+    finally:
+        for _entry, parent_fd, _leaf, _stage_name, _owned, _stage_valid in decisions:
+            _parent_close(parent_fd)
 
 
-def recover(root: Path, journal: Path) -> None:
+def _recover(root: Path, journal: Path) -> None:
     if not journal.exists() and not journal.is_symlink():
         return
     entries = read_receipt(journal, journal=True)
@@ -185,15 +386,27 @@ def recover(root: Path, journal: Path) -> None:
         if installed != public:
             fail(f"install journal does not match ownership manifest: {journal}")
         cleanup_complete = True
-        for entry in entries:
-            stage = stage_path(root, entry)
-            if stage is not None and stage.exists():
-                if stage.is_file() and sha256(stage) == entry["sha256"]:
-                    stage.unlink()
-                else:
-                    cleanup_complete = False
-        if not cleanup_complete:
-            fail(f"committed install has an invalid stage; journal retained: {journal}")
+        pinned: list[tuple[int | Path, str, bool]] = []
+        try:
+            for entry in entries:
+                nonce = entry.get("nonce")
+                if nonce is None:
+                    continue
+                parent_fd, leaf = _open_parent_fd(root, entry["path"])
+                stage_name = f".{leaf}.um-part-{nonce}"
+                stage_state = _file_state(parent_fd, stage_name)
+                valid = stage_state is None or stage_state[1] == entry["sha256"]
+                cleanup_complete = cleanup_complete and valid
+                pinned.append((parent_fd, stage_name, stage_state is not None and valid))
+            if not cleanup_complete:
+                fail(f"committed install has an invalid stage; journal retained: {journal}")
+            for parent_fd, stage_name, should_unlink in pinned:
+                if should_unlink:
+                    _parent_unlink(parent_fd, stage_name)
+                    _parent_fsync(parent_fd)
+        finally:
+            for parent_fd, _stage_name, _should_unlink in pinned:
+                _parent_close(parent_fd)
         journal.unlink()
         _fsync_dir(root)
         return
@@ -204,10 +417,10 @@ def recover(root: Path, journal: Path) -> None:
     print("recovered an interrupted passthrough install", file=sys.stderr)
 
 
-def install(root: Path, pairs: list[str]) -> None:
+def _install(root: Path, pairs: list[str]) -> None:
     manifest = root / MANIFEST_NAME
     journal = root / JOURNAL_NAME
-    recover(root, journal)
+    _recover(root, journal)
     if manifest.exists() or manifest.is_symlink():
         fail(f"already installed according to {manifest}; remove it first")
     if len(pairs) % 2:
@@ -232,62 +445,41 @@ def install(root: Path, pairs: list[str]) -> None:
     public_entries: list[dict] = []
     installed_entries: list[dict] = []
     write_json_atomic(journal, {"format": 1, "state": "installing", "entries": public_entries})
-    active_tmp: Path | None = None
-    manifest_publication_attempted = False
+    manifest_published = False
+
+    def mark_manifest_published() -> None:
+        nonlocal manifest_published
+        manifest_published = True
+
     try:
         for item in planned:
-            target = destination(root, item["path"], create_parents=True)
             nonce = secrets.token_hex(8)
-            tmp = target.with_name(f".{target.name}.um-part-{nonce}")
-            active_tmp = tmp
             public_entries.append({"path": item["path"], "sha256": item["sha256"], "nonce": nonce})
             write_json_atomic(journal, {"format": 1, "state": "installing", "entries": public_entries}, replace=True)
-            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-            if hasattr(os, "O_NOFOLLOW"):
-                flags |= os.O_NOFOLLOW
-            fd = os.open(tmp, flags, 0o600)
-            try:
-                with open(item["source"], "rb") as source:
-                    with os.fdopen(fd, "wb", closefd=False) as output:
-                        shutil.copyfileobj(source, output, 1 << 20)
-                        output.flush()
-                        os.fsync(output.fileno())
-            finally:
-                os.close(fd)
-            if sha256(tmp) != item["sha256"]:
-                tmp.unlink(missing_ok=True)
-                fail(f"copied bytes failed verification: {item['path']}")
+            _publish_target(root, item["source"], item["path"], item["sha256"], nonce)
             destination(root, item["path"])
-            try:
-                os.link(tmp, target, follow_symlinks=False)
-            except FileExistsError:
-                fail(f"refusing to replace file created during install: {item['path']}")
-            _fsync_dir(target.parent)
-            active_tmp = None
         installed_entries = [{"path": entry["path"], "sha256": entry["sha256"]} for entry in public_entries]
-        manifest_publication_attempted = True
-        write_json_atomic(manifest, {"format": 1, "state": "installed", "entries": installed_entries})
+        write_json_atomic(manifest, {"format": 1, "state": "installed", "entries": installed_entries},
+                          on_publish=mark_manifest_published)
         for entry in public_entries:
-            stage = stage_path(root, entry)
-            if stage is not None:
-                stage.unlink(missing_ok=True)
+            _unlink_stage(root, entry)
         journal.unlink()
         _fsync_dir(root)
     except BaseException:
         committed = False
-        if manifest_publication_attempted and manifest.exists():
+        if manifest_published and manifest.exists():
             try:
-                committed = read_receipt(manifest) == installed_entries
+                owns_manifest = read_receipt(manifest) == installed_entries
+                committed = owns_manifest and _targets_match(root, installed_entries)
+                if owns_manifest and not committed:
+                    manifest.unlink()
+                    _fsync_dir(root)
             except SystemExit:
                 committed = False
         if committed:
-            # The matching ownership receipt is the transaction commit point.
-            # Keep targets and recovery evidence rather than rolling back files
-            # that now have a published ownership record.
+            # This transaction published the matching ownership receipt. Preserve
+            # targets and recovery evidence instead of rolling back committed files.
             raise
-        journaled_stages = {stage_path(root, entry) for entry in public_entries}
-        if active_tmp is not None and active_tmp not in journaled_stages:
-            active_tmp.unlink(missing_ok=True)
         if rollback(root, public_entries):
             journal.unlink(missing_ok=True)
             _fsync_dir(root)
@@ -295,9 +487,9 @@ def install(root: Path, pairs: list[str]) -> None:
     print(f"installed into {root}; ownership manifest: {manifest}")
 
 
-def remove(root: Path) -> None:
+def _remove(root: Path) -> None:
     manifest = root / MANIFEST_NAME
-    recover(root, root / JOURNAL_NAME)
+    _recover(root, root / JOURNAL_NAME)
     entries = read_receipt(manifest)
     changed = not rollback(root, entries)
     for rel in ("reshade-shaders/Shaders", "reshade-shaders"):
@@ -312,6 +504,21 @@ def remove(root: Path) -> None:
         return
     manifest.unlink()
     _fsync_dir(root)
+
+
+def recover(root: Path, journal: Path) -> None:
+    with operation_lock(root):
+        _recover(root, journal)
+
+
+def install(root: Path, pairs: list[str]) -> None:
+    with operation_lock(root):
+        _install(root, pairs)
+
+
+def remove(root: Path) -> None:
+    with operation_lock(root):
+        _remove(root)
 
 
 def main() -> int:

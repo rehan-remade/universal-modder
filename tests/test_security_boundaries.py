@@ -229,6 +229,7 @@ def test_fal_result_records_reconciliation_outcome(tmp_path, monkeypatch):
 @pytest.mark.parametrize(("payload", "state", "raises"), [
     ({"status": "IN_QUEUE"}, "reconciled_pending", False),
     ({"status": "COMPLETED", "error": "failed"}, "reconciled_provider_failed", True),
+    ({"status": "CANCELED"}, "reconciled_provider_failed", True),
 ])
 def test_fal_result_classifies_non_success_outcomes(tmp_path, monkeypatch, payload, state, raises):
     monkeypatch.setenv("UM_HOME", str(tmp_path / "home"))
@@ -649,6 +650,56 @@ def test_example_installer_does_not_clobber_manifest_created_during_install(tmp_
     assert not (game / "args.txt").exists()
 
 
+def test_example_installer_matching_concurrent_manifest_is_not_its_commit(tmp_path, monkeypatch):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    source = tmp_path / "args-source.txt"
+    source.write_bytes(b"installer")
+    original_write = helper.write_json_atomic
+
+    def race(path, payload, **kwargs):
+        if path.name == helper.MANIFEST_NAME and not path.exists():
+            path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+        return original_write(path, payload, **kwargs)
+
+    monkeypatch.setattr(helper, "write_json_atomic", race)
+    with pytest.raises(SystemExit):
+        helper.install(game, [str(source), "args.txt"])
+    assert (game / helper.MANIFEST_NAME).exists()
+    assert not (game / "args.txt").exists()
+    assert not (game / helper.JOURNAL_NAME).exists()
+
+
+def test_example_installer_ancestor_swap_cannot_write_outside_root(tmp_path, monkeypatch):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    outside = tmp_path / "outside"
+    source = tmp_path / "shader.fx"
+    game.mkdir()
+    outside.mkdir()
+    (outside / "Shaders").mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    (game / "reshade-shaders" / "Shaders").mkdir(parents=True)
+    source.write_bytes(b"installer-owned-bytes")
+    original_open = helper.os.open
+    swapped = False
+
+    def racing_open(path, flags, *args, **kwargs):
+        nonlocal swapped
+        if not swapped and ".MCPassthrough.fx.um-part-" in str(path):
+            swapped = True
+            (game / "reshade-shaders").rename(game / "reshade-shaders-original")
+            (game / "reshade-shaders").symlink_to(outside, target_is_directory=True)
+        return original_open(path, flags, *args, **kwargs)
+
+    monkeypatch.setattr(helper.os, "open", racing_open)
+    with pytest.raises(BaseException):
+        helper.install(game, [str(source), "reshade-shaders/Shaders/MCPassthrough.fx"])
+    assert not any(path.is_file() for path in outside.rglob("*"))
+
+
 def test_example_installer_recovers_interruption_after_target_publication(tmp_path, monkeypatch):
     helper = _installer_module()
     game = tmp_path / "game"
@@ -656,20 +707,20 @@ def test_example_installer_recovers_interruption_after_target_publication(tmp_pa
     (game / "GTA5.exe").write_bytes(b"game")
     source = tmp_path / "args-source.txt"
     source.write_bytes(b"installer")
-    original_fsync = helper._fsync_dir
+    original_publish = helper._publish_target
     raised = False
 
-    def interrupt(path):
+    def interrupt(*args, **kwargs):
         nonlocal raised
-        if not raised and (game / "args.txt").exists():
+        original_publish(*args, **kwargs)
+        if not raised:
             raised = True
             raise RuntimeError("interrupted after target publication")
-        return original_fsync(path)
 
-    monkeypatch.setattr(helper, "_fsync_dir", interrupt)
+    monkeypatch.setattr(helper, "_publish_target", interrupt)
     with pytest.raises(RuntimeError):
         helper.install(game, [str(source), "args.txt"])
-    monkeypatch.setattr(helper, "_fsync_dir", original_fsync)
+    monkeypatch.setattr(helper, "_publish_target", original_publish)
     helper.recover(game, game / helper.JOURNAL_NAME)
     assert not (game / "args.txt").exists()
     assert not (game / helper.JOURNAL_NAME).exists()
@@ -721,6 +772,78 @@ def test_example_recovery_retains_journal_for_tampered_committed_stage(tmp_path)
     assert journal.exists()
     assert manifest.exists()
     assert (game / f".args.txt.um-part-{nonce}").exists()
+
+
+def test_example_installer_windows_path_helper_branch_round_trips(tmp_path, monkeypatch):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    source = tmp_path / "shader.fx"
+    source.write_bytes(b"shader")
+
+    def path_parent(root, rel, *, create=False):
+        target = helper.destination(root, rel, create_parents=create)
+        return target.parent, target.name
+
+    monkeypatch.setattr(helper, "_open_parent_fd", path_parent)
+    helper.install(game, [str(source), "reshade-shaders/Shaders/MCPassthrough.fx"])
+    target = game / "reshade-shaders" / "Shaders" / "MCPassthrough.fx"
+    assert target.read_bytes() == b"shader"
+    helper.remove(game)
+    assert not target.exists()
+
+
+def test_example_installer_blocks_concurrent_recovery_during_install(tmp_path, monkeypatch):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    source = tmp_path / "args-source.txt"
+    source.write_bytes(b"installer")
+    original_write = helper.write_json_atomic
+    attempted = False
+
+    def race(path, payload, **kwargs):
+        nonlocal attempted
+        if path.name == helper.MANIFEST_NAME and not attempted:
+            attempted = True
+            with pytest.raises(SystemExit):
+                helper.recover(game, game / helper.JOURNAL_NAME)
+        return original_write(path, payload, **kwargs)
+
+    monkeypatch.setattr(helper, "write_json_atomic", race)
+    helper.install(game, [str(source), "args.txt"])
+    assert attempted
+    assert (game / "args.txt").read_bytes() == b"installer"
+    assert (game / helper.MANIFEST_NAME).exists()
+    assert not (game / helper.JOURNAL_NAME).exists()
+
+
+def test_example_installer_drops_own_manifest_if_committed_target_disappears(tmp_path, monkeypatch):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    source = tmp_path / "args-source.txt"
+    source.write_bytes(b"installer")
+    manifest = game / helper.MANIFEST_NAME
+    target = game / "args.txt"
+    original_fsync = helper._fsync_dir
+    injected = False
+
+    def fail_after_removing_target(path):
+        nonlocal injected
+        if not injected and manifest.exists() and target.exists():
+            injected = True
+            target.unlink()
+            raise OSError("injected target loss after manifest publication")
+        return original_fsync(path)
+
+    monkeypatch.setattr(helper, "_fsync_dir", fail_after_removing_target)
+    with pytest.raises(OSError):
+        helper.install(game, [str(source), "args.txt"])
+    assert not manifest.exists()
 
 
 def test_example_installer_preserves_committed_install_when_manifest_fsync_fails(tmp_path, monkeypatch):
@@ -825,6 +948,28 @@ def test_release_identity_derives_tree_from_the_frozen_commit(tmp_path, monkeypa
     assert identity == {"commit": commit_a, "tree": tree_a}
 
 
+def test_release_identity_ignores_git_replacement_objects(tmp_path):
+    verifier = _release_verifier_module()
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=tmp_path, check=True)
+    (tmp_path / "tracked").write_text("A", encoding="utf-8")
+    subprocess.run(["git", "add", "tracked"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-qm", "A"], cwd=tmp_path, check=True)
+    commit_a = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp_path, text=True).strip()
+    tree_a = subprocess.check_output(["git", "--no-replace-objects", "rev-parse", f"{commit_a}^{{tree}}"], cwd=tmp_path, text=True).strip()
+    (tmp_path / "tracked").write_text("B", encoding="utf-8")
+    subprocess.run(["git", "commit", "-qam", "B"], cwd=tmp_path, check=True)
+    commit_b = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp_path, text=True).strip()
+    subprocess.run(["git", "replace", commit_a, commit_b], cwd=tmp_path, check=True)
+    subprocess.run(["git", "checkout", "-q", commit_a], cwd=tmp_path, check=True)
+    subprocess.run(["git", "reset", "--hard", "-q", commit_a], cwd=tmp_path, check=True)
+    with pytest.raises(SystemExit):
+        verifier.source_identity(tmp_path)
+    subprocess.run(["git", "--no-replace-objects", "reset", "--hard", "-q", commit_a], cwd=tmp_path, check=True)
+    assert verifier.source_identity(tmp_path) == {"commit": commit_a, "tree": tree_a}
+
+
 def test_release_verifier_rejects_symlink_distribution_input(tmp_path):
     verifier = _release_verifier_module()
     real = tmp_path / "real.whl"
@@ -833,6 +978,25 @@ def test_release_verifier_rejects_symlink_distribution_input(tmp_path):
     link.symlink_to(real)
     with pytest.raises(SystemExit):
         verifier.snapshot_regular_file(link, tmp_path / "snapshot.whl")
+
+
+def test_release_verifier_rejects_hardlinked_distribution_input(tmp_path):
+    verifier = _release_verifier_module()
+    source = tmp_path / "candidate.whl"
+    source.write_bytes(b"wheel")
+    os.link(source, tmp_path / "other-name.whl")
+    with pytest.raises(SystemExit):
+        verifier.snapshot_regular_file(source, tmp_path / "snapshot.whl")
+
+
+def test_release_verifier_rejects_live_path_mutation_after_snapshot(tmp_path):
+    verifier = _release_verifier_module()
+    source = tmp_path / "candidate.whl"
+    source.write_bytes(b"reviewed")
+    binding = verifier.source_binding(source)
+    source.write_bytes(b"mutated")
+    with pytest.raises(SystemExit):
+        verifier.verify_source_binding(source, binding)
 
 
 def test_release_verifier_preserves_preexisting_snapshot_destination(tmp_path):

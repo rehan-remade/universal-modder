@@ -567,7 +567,7 @@ def cmd(args):
             if not isinstance(res, dict):
                 die("fal reconciliation returned a non-object response")
             status = str(res.get("status") or "").upper()
-            if res.get("error") or status in {"FAILED", "ERROR", "CANCELLED"}:
+            if res.get("error") or status in {"FAILED", "ERROR", "CANCELED", "CANCELLED"}:
                 append_private_jsonl(receipt, {**event, "state": "reconciled_provider_failed"})
                 terminal_recorded = True
                 die(f"fal request {args.request_id} reports provider failure")
