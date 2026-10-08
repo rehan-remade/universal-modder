@@ -23,10 +23,12 @@ Model ids move fast: `um fal search` / the fal MCP's search_models find the curr
 from __future__ import annotations
 
 import base64
+import ipaddress
 import json
 import mimetypes
 import os
 import re
+import socket
 import sys
 import time
 import urllib.error
@@ -34,13 +36,18 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from um.common import die
+from um.common import (append_private_jsonl, atomic_write_stream, bounded_read,
+                       data_dir, die, safe_filename_segment)
 
 QUEUE = "https://queue.fal.run"
 REST = "https://rest.fal.ai"
 CDN = "https://v3.fal.media"
 PLATFORM = "https://api.fal.ai/v1"
 OPENAPI = "https://fal.ai/api/openapi/queue/openapi.json"
+AUTH_HOSTS = {"queue.fal.run", "rest.fal.ai", "api.fal.ai"}
+MAX_JSON_BYTES = 16 << 20
+MAX_OUTPUT_BYTES = 2 << 30
+MAX_UPLOAD_BYTES = 256 << 20
 
 # Defaults per recipe (checked against the fal catalog 2026-09; override any with --model).
 MODELS = {
@@ -89,9 +96,56 @@ def fal_key() -> str:
     return k
 
 
+def _origin(url: str) -> tuple[str, str, int]:
+    p = urllib.parse.urlsplit(url)
+    if p.scheme != "https" or not p.hostname or p.username or p.password:
+        die(f"unsafe fal URL: {url.split('?')[0]}")
+    try:
+        port = p.port or 443
+    except ValueError:
+        die(f"unsafe fal URL port: {url.split('?')[0]}")
+    return p.scheme, p.hostname.lower(), port
+
+
+def _validate_auth_url(url: str) -> None:
+    _, host, _ = _origin(url)
+    if host not in AUTH_HOSTS:
+        die(f"refusing to send fal credentials to {host}")
+
+
+class _FalRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if req.get_header("Authorization"):
+            _validate_auth_url(newurl)
+            if _origin(req.full_url) != _origin(newurl):
+                die(f"refusing cross-origin authenticated redirect to {_origin(newurl)[1]}")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_AUTH_OPENER = urllib.request.build_opener(_FalRedirectHandler())
+
+
+def _urlopen(req, timeout):
+    return _AUTH_OPENER.open(req, timeout=timeout)
+
+
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        die(f"refusing authenticated fal upload redirect to {newurl.split('?')[0]}")
+
+
+_UPLOAD_OPENER = urllib.request.build_opener(_NoRedirectHandler())
+
+
+def _upload_open(req, timeout):
+    return _UPLOAD_OPENER.open(req, timeout=timeout)
+
+
 def _req(method: str, url: str, body=None, headers=None, auth=True, raw=False, timeout=120):
+    method = method.upper()
     h = {"Accept": "application/json", **(headers or {})}
     if auth:
+        _validate_auth_url(url)
         h["Authorization"] = "Key " + fal_key()
     data = None
     if body is not None:
@@ -101,19 +155,20 @@ def _req(method: str, url: str, body=None, headers=None, auth=True, raw=False, t
             data = json.dumps(body).encode()
             h.setdefault("Content-Type", "application/json")
     req = urllib.request.Request(url, data=data, headers=h, method=method)
-    for attempt in range(4):
+    attempts = 4 if method in {"GET", "HEAD"} else 1
+    for attempt in range(attempts):
         try:
-            with urllib.request.urlopen(req, timeout=timeout) as r:
-                payload = r.read()
+            with _urlopen(req, timeout=timeout) as r:
+                payload = bounded_read(r, MAX_JSON_BYTES, "fal response")
                 return payload if raw else (json.loads(payload) if payload else {})
         except urllib.error.HTTPError as e:
-            detail = e.read().decode(errors="replace")[:1500]
-            if e.code in (429, 500, 502, 503, 504) and attempt < 3:
+            detail = bounded_read(e, 64 << 10, "fal error response").decode(errors="replace")[:1500]
+            if e.code in (429, 500, 502, 503, 504) and attempt + 1 < attempts:
                 time.sleep(2 * (attempt + 1))
                 continue
             die(f"fal {method} {url.split('?')[0]} -> HTTP {e.code}: {detail}")
         except urllib.error.URLError as e:
-            if attempt < 3:
+            if attempt + 1 < attempts:
                 time.sleep(2 * (attempt + 1))
                 continue
             die(f"fal {method} {url}: {e.reason}")
@@ -128,8 +183,8 @@ def _upload_cdn(name: str, ctype: str, data: bytes) -> str:
     req = urllib.request.Request(f"{CDN}/files/upload", data=data, method="POST", headers={
         "Authorization": f"{tok['token_type']} {tok['token']}", "Content-Type": ctype, "X-Fal-File-Name": name,
         "Accept": "application/json", "User-Agent": "universal-modder"})
-    with urllib.request.urlopen(req, timeout=600) as r:
-        return json.loads(r.read())["access_url"]
+    with _upload_open(req, timeout=600) as r:
+        return json.loads(bounded_read(r, MAX_JSON_BYTES, "fal upload response"))["access_url"]
 
 
 def upload(path: str | Path) -> str:
@@ -140,7 +195,12 @@ def upload(path: str | Path) -> str:
     ctype = mimetypes.guess_type(p.name)[0] or "application/octet-stream"
     if p.suffix.lower() == ".glb":
         ctype = "model/gltf-binary"
+    size = p.stat().st_size
+    if size > MAX_UPLOAD_BYTES:
+        die(f"{p.name} is {size:,} bytes; direct fal uploads are limited to {MAX_UPLOAD_BYTES:,} bytes")
     data = p.read_bytes()
+    if len(data) > MAX_UPLOAD_BYTES:
+        die(f"{p.name} grew beyond the {MAX_UPLOAD_BYTES:,}-byte upload limit while it was being read")
     try:
         return _upload_cdn(p.name, ctype, data)
     except SystemExit:  # _req already printed why
@@ -180,11 +240,41 @@ EXT = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp", "image/
        "audio/x-wav": ".wav", "video/mp4": ".mp4", "model/gltf-binary": ".glb", "application/octet-stream": ""}
 
 
+def _validate_public_download_url(url: str) -> None:
+    scheme, host, _ = _origin(url)
+    if scheme != "https":
+        die(f"fal output URL must use HTTPS: {url.split('?')[0]}")
+    try:
+        addresses = {row[4][0] for row in socket.getaddrinfo(host, None)}
+    except socket.gaierror as exc:
+        die(f"cannot resolve fal output host {host}: {exc}")
+    for raw in addresses:
+        ip = ipaddress.ip_address(raw)
+        if not ip.is_global:
+            die(f"refusing fal output URL resolving to non-public address {ip}")
+
+
+class _PublicDownloadRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        _validate_public_download_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_DOWNLOAD_OPENER = urllib.request.build_opener(_PublicDownloadRedirectHandler())
+
+
+def _download_open(req, timeout):
+    return _DOWNLOAD_OPENER.open(req, timeout=timeout)
+
+
 def download_outputs(result: dict, out: Path, name: str) -> list[str]:
+    name = safe_filename_segment(name, "output name")
     out.mkdir(parents=True, exist_ok=True)
     files, used, first_key, failed = [], set(), None, []
     for trail, url, ctype in _urls_in(result):
-        ext = Path(urllib.parse.urlparse(url).path).suffix or EXT.get(ctype.split(";")[0], "")
+        _validate_public_download_url(url)
+        candidate_ext = Path(urllib.parse.urlparse(url).path).suffix.lower()
+        ext = candidate_ext if re.fullmatch(r"\.[a-z0-9]{1,10}", candidate_ext) else EXT.get(ctype.split(";")[0], "")
         key = re.sub(r"\[\d+\]", "", trail).split(".")[-1] or "file"
         idx = re.findall(r"\[(\d+)\]", trail)
         first_key = first_key or key
@@ -201,8 +291,8 @@ def download_outputs(result: dict, out: Path, name: str) -> list[str]:
         used.add(path.name)
         req = urllib.request.Request(url, headers={"User-Agent": "universal-modder"})
         try:
-            with urllib.request.urlopen(req, timeout=600) as r:
-                path.write_bytes(r.read())
+            with _download_open(req, timeout=600) as r:
+                atomic_write_stream(path, r, MAX_OUTPUT_BYTES, "fal output")
         except (urllib.error.URLError, OSError) as e:  # keep going: the other outputs are still worth saving
             failed.append(f"{url} ({e})")
             continue
@@ -225,8 +315,14 @@ def run(endpoint: str, inp: dict, timeout: float = 1800, quiet: bool = False) ->
     """Submit to the queue, poll (printing logs to stderr), return the result JSON."""
     job = submit(endpoint, inp)
     rid = job.get("request_id")
+    if not isinstance(rid, str) or not re.fullmatch(r"[A-Za-z0-9._-]{1,200}", rid):
+        die("fal returned an invalid request id")
     status_url = job.get("status_url") or f"{QUEUE}/{endpoint}/requests/{rid}/status"
     response_url = job.get("response_url") or f"{QUEUE}/{endpoint}/requests/{rid}"
+    _validate_auth_url(status_url)
+    _validate_auth_url(response_url)
+    append_private_jsonl(data_dir() / "fal-requests.jsonl",
+                         {"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "state": "submitted", "endpoint": endpoint, "request_id": rid})
     t0, seen, last = time.time(), 0, ""
     while True:
         st = _req("GET", status_url + ("&" if "?" in status_url else "?") + "logs=1")
@@ -246,6 +342,9 @@ def run(endpoint: str, inp: dict, timeout: float = 1800, quiet: bool = False) ->
                 die(f"{endpoint} failed: {st['error']}")
             res = _req("GET", response_url)
             res["_request_id"], res["_endpoint"] = rid, endpoint
+            append_private_jsonl(data_dir() / "fal-requests.jsonl",
+                                 {"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "state": "completed", "endpoint": endpoint,
+                                  "request_id": rid})
             return res
         if time.time() - t0 > timeout:
             die(f"{endpoint}: still {s} after {timeout:.0f}s (request {rid}); check later with `um fal result {endpoint} {rid}`")
@@ -254,6 +353,7 @@ def run(endpoint: str, inp: dict, timeout: float = 1800, quiet: bool = False) ->
 
 def generate(endpoint: str, inp: dict, out: str | Path, name: str, quiet=False) -> dict:
     """run + download every output file + manifest line. Returns {'files': [...], 'result': {...}}."""
+    name = safe_filename_segment(name, "output name")
     inp = {k: ([_as_url(x) for x in v] if isinstance(v, list) and k.endswith("urls") else _as_url(v) if k.endswith("url") else v)
            for k, v in inp.items() if v is not None}
     res = run(endpoint, inp, quiet=quiet)
@@ -262,8 +362,7 @@ def generate(endpoint: str, inp: dict, out: str | Path, name: str, quiet=False) 
     rec = dict(t=time.strftime("%Y-%m-%dT%H:%M:%S"), endpoint=endpoint, name=name, request_id=res.get("_request_id"),
                seed=res.get("seed"), files=files,
                input={k: (v[:120] + "..." if isinstance(v, str) and v.startswith("data:") else v) for k, v in inp.items()})
-    with open(out / "fal_manifest.jsonl", "a") as f:
-        f.write(json.dumps(rec) + "\n")
+    append_private_jsonl(out / "fal_manifest.jsonl", rec)
     for p in files:
         print(p)
     return dict(files=files, result=res)

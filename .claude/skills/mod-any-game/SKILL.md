@@ -161,13 +161,13 @@ documented dead end saves the next agent hours.
 - **Back up first.** Run `um backup` before changing saves, profiles or game folders. Keep the restore path
   written in MODLOG.md.
 - **Process hygiene.**
-  - Kill by exact PID (`um win kill <pid>`). Never use `pkill -f` (it matches your own shell) or wildcard
+  - Kill by exact PID after approval (`um win kill <pid> --yes`). Never use `pkill -f` (it matches your own shell) or wildcard
     kills.
   - Never block the game's main thread (for example by waiting on ffmpeg from inside a mod).
   - Clear crash reporters (BugSplat etc.) by PID when Steam refuses to relaunch.
 - **The user's machine.**
-  - Driving input takes over their mouse and keyboard. Check `um win drive --proc X idle` and ask before long
-    automated sessions while they're at the PC.
+  - Driving input takes over their mouse and keyboard. Ask first, then check `um win drive --proc X --yes idle`;
+    require a new approval for long automated sessions while they're at the PC.
   - Ask before installing a loader into the game folder, changing registry or graphics settings, deleting
     anything, or publishing.
 

@@ -1,15 +1,118 @@
 name: test
-on: [push, pull_request]
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
-      - run: uv run --with pytest pytest -q tests
-      - run: ./bin/um --help && for g in scan fal comfy sprite render3d video win backup publish kb; do ./bin/um $g --help > /dev/null; done
-      - name: knowledge base
-        run: ./bin/um kb check --index
-      - name: nothing that shouldn't ship
-        run: ./bin/um publish check .
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: "0.11.23"
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Install the frozen environment
+        run: uv sync --frozen --dev
+      - name: Require the media-test prerequisite
+        run: command -v ffmpeg
+      - name: Static checks
+        run: uv run --frozen ruff check um tests
+      - name: Tests and branch coverage
+        run: uv run --frozen pytest --cov=um --cov-branch --cov-report=term-missing --cov-report=xml -q
+      - name: Installed CLI contracts
+        run: |
+          uv run --frozen um --version
+          uv run --frozen um --help
+          for g in scan fal comfy sprite render3d video win backup publish kb; do
+            uv run --frozen um "$g" --help > /dev/null
+          done
+      - name: Knowledge and generated-copy checks
+        run: |
+          uv run --frozen um kb check --index
+          python scripts/sync_skills.py --check
+      - name: Nothing prohibited ships
+        run: uv run --frozen um publish check .
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: coverage-py${{ matrix.python }}
+          path: coverage.xml
+          if-no-files-found: error
+          retention-days: 14
+
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: "0.11.23"
+          python-version: "3.11"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --frozen --dev
+      - run: uv run --frozen ruff check um tests scripts
+      - run: uv run --frozen pytest -q
+      - name: Installed CLI contracts
+        shell: pwsh
+        run: |
+          uv run --frozen um --version
+          uv run --frozen um --help | Out-Null
+          foreach ($g in @("scan", "fal", "comfy", "sprite", "render3d", "video", "win", "backup", "publish", "kb")) {
+            uv run --frozen um $g --help | Out-Null
+          }
+
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: "0.11.23"
+          python-version: "3.11"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Build twice and require byte-for-byte reproducibility
+        env:
+          SOURCE_DATE_EPOCH: "1704067200"
+        run: |
+          uv build --out-dir dist-a
+          uv build --out-dir dist-b
+          python scripts/verify_release_candidate.py dist-a dist-b
+      - name: Install only the wheel and verify packaged resources
+        run: |
+          uv venv --python 3.11 .package-venv
+          uv pip install --python .package-venv/bin/python dist-a/*.whl
+          .package-venv/bin/um --version
+          .package-venv/bin/um --help > /dev/null
+          .package-venv/bin/python scripts/verify_installed_package.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: python-distributions
+          path: dist-a/*
+          if-no-files-found: error
+          retention-days: 14

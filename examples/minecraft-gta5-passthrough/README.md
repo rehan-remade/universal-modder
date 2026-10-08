@@ -131,9 +131,10 @@ Paths come from environment variables, with these defaults:
    loads the system `dxgi.dll` ahead of a proxy in its folder, so the usual `dxgi.dll` install never runs. It
    also writes `ReShade.ini` (if there is none), `ReShadePreset.ini`, and the effect in
    `reshade-shaders\Shaders\`.
-   - It stops rather than replaces a `dinput8.dll`, `ReShade64.asi` or `args.txt` that isn't its own
-     (`FORCE=1` overrides).
-   - `install.sh --remove` deletes exactly the files it adds.
+   - It performs a complete preflight and refuses to replace any non-identical existing file.
+   - It writes an ownership manifest containing hashes only for files it actually created.
+     `install.sh --remove` deletes an owned file only while its hash is unchanged; modified and pre-existing
+     files are preserved, and the manifest remains as a recovery receipt when anything changed.
    - `build.bat` also works from a Windows prompt, in a copy of `gta/` with `third_party/` fetched.
 4. **GTA settings.** The demo ran GTA windowed at 1920x1080, with "Pause game on focus loss" off, depth of field
    off, and post FX lowered. Minecraft's window is resized to GTA's picture, up to 1080p worth of pixels. Depth

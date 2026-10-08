@@ -488,7 +488,8 @@ def detect(ix: Index) -> tuple[list[tuple[str, int, list[str], dict]], dict]:
         if shipping:
             det["project"] = shipping[0].split("/")[0]
             det["exe"] = shipping[0]
-            u16 = lambda t: re.escape(t.encode("utf-16-le"))  # FEngineVersion's branch name is a UTF-16 string on Windows
+            def u16(text):
+                return re.escape(text.encode("utf-16-le"))  # FEngineVersion's branch name is a UTF-16 string on Windows
             pats = [rb"\+\+UE[45]\+Release-\d\.\d+", u16("++UE") + rb"[45]\x00" + u16("+Release-") + rb"\d\x00\.\x00\d\x00(?:\d\x00)?"]
             m = grep_file(ix.path(shipping[0]), pats, budget_s=8)
             for v in m.values():
@@ -687,7 +688,7 @@ def scan(query: str) -> dict:
                         "many titles need the anti-cheat disabled via an official offline launch option - do not bypass it")
     if online:
         warnings.append(f"'{online}' is an online competitive game: modding its client breaks the ToS and gets accounts banned - stop, or use official tools only (Workshop/creative modes)")
-    if any(l == "ScriptHookV" for l in loaders) and "rage" in key:
+    if any(loader == "ScriptHookV" for loader in loaders) and "rage" in key:
         warnings.append("ScriptHookV only works in story mode; launch GTA offline")
     report = dict(
         name=name, store=game.get("store"), appid=game.get("appid"), path=str(root),

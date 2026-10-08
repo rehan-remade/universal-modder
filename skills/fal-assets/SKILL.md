@@ -109,5 +109,12 @@ Other useful endpoints:
 - **Iterate cheap:** use low quality or resolution while exploring (`--quality low`, `--res 0.5K`), then
   re-run the winners at full quality with the same prompt (and seed where supported).
 - **Reproducibility:** keep `fal_manifest.jsonl` with the assets; it records prompts, seeds and request ids.
+- **Privacy and consent:** local references are uploaded to fal. Do not upload confidential/licensed inputs,
+  personal data, or a person's face, voice or likeness without the rights and explicit consent needed for the
+  intended use. Check provider/model retention and commercial-use terms. Receipts redact likely credentials
+  and signed URL queries, but prompts and ordinary inputs remain provenance and must be reviewed before sharing.
+- **Ambiguous paid submissions:** the CLI does not automatically retry POST submissions. If the connection
+  fails after submission, inspect the private `UM_HOME/fal-requests.jsonl` receipt and the provider dashboard
+  before submitting again; this avoids duplicate charges.
 - **Credits:** in the mod's README, credit that assets were generated with fal and name the models. Check a
   model's license page for commercial use.

@@ -10,15 +10,17 @@ logs** → decide. Build it once per game, then every change you make can be che
 
 ## Windows (native or from WSL): `um win`
 ```bash
-um win setup                                   # once: PowerShell tools + an ffmpeg with gfxcapture, picks NVENC/AMF/QSV/x264
+um win setup --yes                             # once, after approval: PowerShell tools + gfxcapture ffmpeg
 um win ps                                      # windowed processes: pid, name, title
 um win launch --steam 105600                   # or: um win launch "C:\Games\Foo\Foo.exe" -- -windowed
 um win shot --exe Terraria.exe shot.png --scale 0.33   # full frame + a 1/3 copy that's cheap to look at
-um win drive --proc Terraria "focus" "click 640 360" "key 0x1B" "type hello" "hold 0x44 1500"
-um win drive --proc Terraria idle              # seconds since the user last touched mouse/keyboard
-um win kill <pid>                              # exact PID only
+um win drive --proc Terraria --yes "focus" "click 640 360" "key 0x1B" "type hello" "hold 0x44 1500"
+um win drive --proc Terraria --yes idle        # seconds since the user last touched mouse/keyboard
+um win kill <pid> --yes                        # exact PID only, after approval
 um win reg get "HKCU\Software\..."             # registry (reg set backs the key up first)
 ```
+Before `um win setup --yes`, set `UM_FFMPEG_SHA256` to an independently reviewed digest for the configured
+archive, or point `UM_FFMPEG_WIN` at a trusted installed build. The tool refuses same-origin mutable checksums.
 From Python (for longer scripts), `from um.win import Drive, shot, Recorder`, then `d = Drive("AoE2DE_s")`,
 `d.focus()`, `d.click(x, y)`, `d.key("0x0D")`.
 
@@ -58,7 +60,7 @@ the game window's **client area**.
   - a launch flag (`-windowed -w 1920 -h 1080`, Unity `-screen-fullscreen 0 -screen-width 1920 -screen-height 1080`,
     Source `-sw -w 1920 -h 1080`);
   - or the game's own registry (AoE2: `Mode Display` 0 + `Windowed Width/Height`).
-  - `um win drive --proc X "size 1920 1080"` also resizes most windowed games.
+  - `um win drive --proc X --yes "size 1920 1080"` also resizes most windowed games after approval.
 - **Skip intros:** launch flags (`-skipintro`, `-nosplash`, Unity `-popupwindow`), or delete/rename intro
   videos in a **copy** of the game.
 - **Jump straight in:** loader flags (tModLoader `-skipselect Player:World`), a save made for testing,
@@ -84,7 +86,7 @@ the game window's **client area**.
 
 ## Crashes and cleanup
 - **Crash reporters** (BugSplat `BsSndRpt64.exe`, `CrashReportClient.exe`, `UnityCrashHandler64.exe`) can
-  linger and make Steam say "already running". `um win ps` to spot them, `um win kill <pid>` to clear
+  linger and make Steam say "already running". `um win ps` to spot them, `um win kill <pid> --yes` to clear
   them.
 - Never `pkill -f` or wildcard `taskkill /IM`. The pattern can match your own shell or other apps.
 - After a crash, read the loader or game log first (the mod-any-game skill lists them), then the Windows

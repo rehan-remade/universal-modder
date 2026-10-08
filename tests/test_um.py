@@ -200,19 +200,20 @@ def test_scan_warns_only_for_online_games(tmp_path):
 
 
 def test_ffmpeg_download_is_checksummed(tmp_path, monkeypatch):
-    import hashlib, io
+    import hashlib
+    import io
     from um import win
     payload = b"PK fake ffmpeg zip"
     good = hashlib.sha256(payload).hexdigest()
-    sums = f"{'0' * 64}  ffmpeg-other.zip\n{good}  ffmpeg-master-latest-win64-gpl.zip\n".encode()
     monkeypatch.delenv("UM_FFMPEG_SHA256", raising=False)
-    monkeypatch.setattr(win.urllib.request, "urlopen", lambda url, timeout=None: io.BytesIO(sums))
-    assert win.ffmpeg_sha256() == good
-    monkeypatch.setattr(win.urllib.request, "urlretrieve", lambda url, dst: Path(dst).write_bytes(payload))
+    with pytest.raises(SystemExit):
+        win.ffmpeg_sha256()
+    monkeypatch.setenv("UM_FFMPEG_SHA256", good)
+    monkeypatch.setattr(win, "_ffmpeg_open", lambda url, timeout=None: io.BytesIO(payload))
     z = tmp_path / "ffmpeg.zip"
     win.download_ffmpeg(z)
     assert z.read_bytes() == payload
-    monkeypatch.setenv("UM_FFMPEG_SHA256", "ab" * 32)        # a pin wins over the published sum
+    monkeypatch.setenv("UM_FFMPEG_SHA256", "ab" * 32)
     with pytest.raises(SystemExit):
         win.download_ffmpeg(z)
     assert not z.exists()                                      # a bad download is deleted, never extracted
@@ -308,7 +309,7 @@ def test_upload_uses_cdn_token_and_explains_big_failures(tmp_path, monkeypatch, 
         def read(self):
             return json.dumps({"access_url": "https://v3.fal.media/files/x/a.png"}).encode()
     sent = []
-    monkeypatch.setattr(fal.urllib.request, "urlopen", lambda req, timeout=None: sent.append(req) or Resp(req))
+    monkeypatch.setattr(fal, "_upload_open", lambda req, timeout=None: sent.append(req) or Resp(req))
     f = tmp_path / "a.png"
     f.write_bytes(b"\x89PNG")
     assert fal.upload(f) == "https://v3.fal.media/files/x/a.png"
@@ -317,7 +318,7 @@ def test_upload_uses_cdn_token_and_explains_big_failures(tmp_path, monkeypatch, 
 
     def fail(req, timeout=None):
         raise fal.urllib.error.URLError("boom")
-    monkeypatch.setattr(fal.urllib.request, "urlopen", fail)
+    monkeypatch.setattr(fal, "_upload_open", fail)
     assert fal.upload(f).startswith("data:image/png;base64,")              # small: inline fallback
     big = tmp_path / "big.mp4"
     big.write_bytes(b"\0" * ((8 << 20) + 1))
@@ -342,7 +343,8 @@ def test_failed_download_keeps_the_request_id(tmp_path, monkeypatch, capsys):
         if req.full_url.endswith("big.mov"):
             raise fal.urllib.error.HTTPError(req.full_url, 404, "Not Found", {}, None)
         return Resp()
-    monkeypatch.setattr(fal.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(fal, "_validate_public_download_url", lambda _url: None)
+    monkeypatch.setattr(fal, "_download_open", urlopen)
     res = {"video": {"url": "https://v3b.fal.media/files/x/big.mov"}, "thumb": {"url": "https://v3b.fal.media/files/x/t.png"},
            "_request_id": "req-123", "_endpoint": "fal-ai/some-model"}
     with pytest.raises(SystemExit):
@@ -392,7 +394,7 @@ def test_secret_patterns_ignore_ordinary_text():
 @pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg")
 def test_compile_small_edl(tmp_path):
     for i, color in enumerate(["red", "blue"]):
-        subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", f"testsrc2=s=640x360:d=3:r=30", "-f", "lavfi", "-i", "sine=f=440:d=3",
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=640x360:d=3:r=30", "-f", "lavfi", "-i", "sine=f=440:d=3",
                         "-shortest", str(tmp_path / f"c{i}.mp4")], check=True)
     edl = {"size": [640, 360], "fps": 30, "bpm": 120, "beat_lock": True, "transition": {"type": "cut"},
            "segments": [{"clip": "c0.mp4", "in": 0, "beats": 4, "hook": "Hello"},

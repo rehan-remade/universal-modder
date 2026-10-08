@@ -27,14 +27,24 @@ import urllib.request
 import uuid
 from pathlib import Path
 
-from um.common import die, parse_size
+from um.common import (append_private_jsonl, atomic_write_stream, bounded_read,
+                       die, parse_size, safe_filename_segment)
 
 DEFAULT_URL = "http://127.0.0.1:8188"
 NEGATIVE = "blurry, low quality, jpeg artifacts, watermark, text, signature"
+MAX_JSON_BYTES = 16 << 20
+MAX_OUTPUT_BYTES = 2 << 30
 
 
 def base_url(url: str | None = None) -> str:
-    return (url or os.environ.get("COMFYUI_URL") or DEFAULT_URL).rstrip("/")
+    value = (url or os.environ.get("COMFYUI_URL") or DEFAULT_URL).rstrip("/")
+    parsed = urllib.parse.urlsplit(value)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
+        die(f"unsafe ComfyUI URL: {value}")
+    local = parsed.hostname.lower() in {"127.0.0.1", "localhost", "::1"}
+    if not local and (parsed.scheme != "https" or os.environ.get("UM_ALLOW_REMOTE_COMFYUI") != "1"):
+        die("remote ComfyUI requires HTTPS and UM_ALLOW_REMOTE_COMFYUI=1; prefer the loopback default")
+    return value
 
 
 def _describe(err: dict) -> str:
@@ -57,7 +67,8 @@ def _req(base: str, path: str, body=None, raw: bool = False, timeout: float = 60
     req = urllib.request.Request(base + path, data=data, headers=headers, method="POST" if data is not None else "GET")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
-            payload = r.read()
+            payload = bounded_read(r, MAX_OUTPUT_BYTES if raw else MAX_JSON_BYTES,
+                                   "ComfyUI output" if raw else "ComfyUI response")
             return payload if raw else (json.loads(payload) if payload else {})
     except urllib.error.HTTPError as e:
         if missing_ok and e.code == 404:
@@ -209,20 +220,30 @@ def outputs(history: dict) -> list[dict]:
 
 def generate(base: str, wf: dict, out: str | Path, name: str, timeout: float = 1800, record: dict | None = None) -> list[str]:
     """Queue a workflow, wait, download every output into out/, append a manifest line. Returns the paths."""
+    name = safe_filename_segment(name, "output name")
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     pid = queue(base, wf)
     files = []
     for i, f in enumerate(outputs(wait(base, pid, timeout))):
         q = urllib.parse.urlencode({"filename": f["filename"], "subfolder": f.get("subfolder", ""), "type": f.get("type", "output")})
-        path = out / f"{name if i == 0 else f'{name}_{i + 1}'}{Path(f['filename']).suffix or '.png'}"
-        path.write_bytes(_req(base, f"/view?{q}", raw=True, timeout=600))
+        suffix = Path(f["filename"]).suffix.lower()
+        if not re.fullmatch(r"\.[a-z0-9]{1,10}", suffix):
+            suffix = ".png"
+        path = out / f"{name if i == 0 else f'{name}_{i + 1}'}{suffix}"
+        req = urllib.request.Request(base + f"/view?{q}", method="GET")
+        try:
+            with urllib.request.urlopen(req, timeout=600) as response:
+                atomic_write_stream(path, response, MAX_OUTPUT_BYTES, "ComfyUI output")
+        except urllib.error.HTTPError as exc:
+            die(f"ComfyUI output download failed with HTTP {exc.code}")
+        except urllib.error.URLError as exc:
+            die(f"ComfyUI output download failed: {exc.reason}")
         files.append(str(path))
     if not files:
         die(f"the workflow finished but saved nothing: add a SaveImage node (prompt {pid})")
     rec = dict(t=time.strftime("%Y-%m-%dT%H:%M:%S"), url=base, prompt_id=pid, name=name, files=files, **(record or {}), workflow=wf)
-    with open(out / "comfy_manifest.jsonl", "a", encoding="utf-8") as fh:
-        fh.write(json.dumps(rec) + "\n")
+    append_private_jsonl(out / "comfy_manifest.jsonl", rec)
     for p in files:
         print(p)
     return files

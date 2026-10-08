@@ -6,5 +6,8 @@ root="${1:-${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-}}}"
 [ -n "$root" ] && command -v cygpath >/dev/null 2>&1 && root="$(cygpath -u "$root")"
 [ -n "$root" ] && [ -n "${CLAUDE_ENV_FILE:-}" ] && [ -x "$root/bin/um" ] || exit 0
 grep -qs "universal-modder-path" "$CLAUDE_ENV_FILE" && exit 0
-printf 'export PATH="%s/bin:$PATH"  # universal-modder-path\n' "$root" >> "$CLAUDE_ENV_FILE"
+# Serialize the checkout path as single-quoted shell data. A path must never be
+# inserted into double-quoted source because $() and backticks execute when sourced.
+escaped=$(printf '%s' "$root/bin" | sed "s/'/'\\\\''/g")
+printf 'export PATH='"'"'%s'"'"':"$PATH"  # universal-modder-path\n' "$escaped" >> "$CLAUDE_ENV_FILE"
 exit 0

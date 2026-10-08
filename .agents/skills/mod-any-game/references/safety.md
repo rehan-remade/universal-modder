@@ -50,13 +50,14 @@ legal advice. When a game's EULA or mod policy matters, read it (search "<publis
 
 ## The user's machine
 - **Back up first:** `um backup create` for saves, profiles and config, before any modded launch. Restoring
-  should be one command, written down in MODLOG.md.
+  should be one command, written down in MODLOG.md. Snapshots contain save data and original paths, are not
+  encrypted, and need protected storage, retention and an actual restore drill.
 - **Loaders and proxy DLLs** (`winhttp.dll`, `version.dll`, `dinput8.dll`, `dxgi.dll`) sit in the game
   folder. Tell the user what you added and how to remove it. Better still, use a separate copy of the game
   or a mod manager profile.
-- **Registry and config changes:** `um win reg set` backs up the key first. Note what changed.
+- **Registry and config changes:** `um win reg set ... --yes` requires approval and a successful backup first. Note what changed.
 - **Input automation takes over the user's mouse and keyboard.**
-  - Check `um win drive --proc X idle`. A small number means they're active.
+  - After approval, check `um win drive --proc X --yes idle`. A small number means they're active.
   - Ask before long automated runs.
   - WinDrive only sends input while the game is in the foreground.
 - **Processes:** kill by exact PID. `pkill -f <pattern>` from an agent shell kills the agent's own shell.

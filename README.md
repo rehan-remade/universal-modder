@@ -41,9 +41,11 @@ Copilot, Cursor, OpenCode) and `.claude/skills` (Claude Code) are copies of `ski
 `AGENTS.md`, which `CLAUDE.md` and `GEMINI.md` point to. MCP config is in `.mcp.json`, `.codex/config.toml`,
 `.cursor/mcp.json`, `.vscode/mcp.json` and `opencode.json` (which also points OpenCode at `skills/`).
 
-**The `um` CLI.** Plugin installs and clones put it on PATH. Anywhere else:
+**The `um` CLI.** Claude plugin sessions run the bundled PATH hook. A plain clone and other hosts do not
+implicitly change your PATH; install the CLI explicitly, or add the clone's `bin/` directory yourself:
 ```bash
-uv tool install git+https://github.com/rehan-remade/universal-modder     # or: pipx install git+...
+uv tool install git+https://github.com/rehan-remade/universal-modder@<reviewed-tag-or-commit>
+# development clone only: export PATH="$PWD/bin:$PATH"
 ```
 **For assets,** get a [fal API key](https://fal.ai/dashboard/keys). It powers both the fal MCP server and
 `um fal` (for images without a key, `um comfy` uses a local ComfyUI server):
@@ -52,6 +54,11 @@ export FAL_KEY=...
 ```
 You also need Git, Python 3.10+ and ffmpeg. `uv` is recommended. Blender is needed for 3D → sprite renders.
 Windows games are driven natively or from WSL.
+`um win setup --yes` downloads a Windows FFmpeg build only when `UM_FFMPEG_SHA256` contains an independently
+reviewed digest; otherwise set `UM_FFMPEG_WIN` to a trusted existing executable.
+
+`bin/um` is a development convenience: on first use it can create `.venv` and resolve dependencies. Use the
+explicit `uv tool install` route when bootstrap/network side effects are not acceptable.
 
 ## Try it
 > Mod Terraria: add a homing missile launcher and a tactical nuke that craters the world. Make the sprites with fal.
@@ -171,7 +178,8 @@ audio, both PowerShell with embedded C#.
 Each has a field note with every non-obvious lesson: [knowledge/INDEX.md](knowledge/INDEX.md).
 
 ## Rules it follows
-- **Any game you own: single-player, multiplayer, or servers you host.** It refuses to inject into online
+- **Games you own in single-player/offline mode, or servers you run.** For multiplayer on someone else's
+  server, use only official modding surfaces and server-permitted content. It refuses to inject into online
   games with anti-cheat, write cheats against other players, or bypass anti-cheat, DRM or ownership checks.
 - **It never ships game files or decompiled code.** Mods ship as code, your own assets, patches or
   converters.
@@ -180,6 +188,22 @@ Each has a field note with every non-obvious lesson: [knowledge/INDEX.md](knowle
   PRs included.
 
 Full reasoning: [`skills/mod-any-game/references/safety.md`](skills/mod-any-game/references/safety.md).
+
+## Provider privacy and durable records
+
+`um fal` uploads local inputs, prompts and selected parameters to fal. Do not send confidential, licensed,
+personal, biometric, voice or likeness material without the necessary rights and consent; review fal and the
+selected model's retention/licensing terms first. Paid POST submissions are not retried after an ambiguous
+network failure, and accepted request IDs are written privately under `UM_HOME` for recovery. Generation
+receipts are mode `0600` and redact likely credentials and signed URL queries, but prompts remain provenance:
+review them before publishing.
+
+ComfyUI defaults to loopback. A remote server must use HTTPS and requires the explicit
+`UM_ALLOW_REMOTE_COMFYUI=1` opt-in; treat its operator as able to read the complete workflow and prompts.
+
+Backups contain save data and original source paths and are not encrypted. Protect `UM_HOME`, apply retention
+appropriate to the game/account, and run a restore drill before destructive work. Restore validates every
+member and digest, rejects traversal/symlinks, stages the complete result, and keeps a pre-restore snapshot.
 
 ## Made a mod with it?
 Put the badge on your mod's page:

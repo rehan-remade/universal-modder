@@ -29,7 +29,7 @@ GLYPHS = json.loads(Path(__file__).with_name('glyphs.json').read_text())
 
 
 def gh(*args):
-    return subprocess.run(['gh', 'api', *args], capture_output=True, text=True, check=True).stdout
+    return subprocess.run(['gh', 'api', *args], capture_output=True, text=True, check=True, timeout=120).stdout
 
 
 def stargazers(repo):

@@ -24,19 +24,21 @@ import hashlib
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.request
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
-from um.common import die, is_windows, is_wsl, ps_exe, to_posix, to_win
+from um.common import atomic_write_stream, die, is_windows, is_wsl, ps_exe, to_posix, to_win
 
 HERE = Path(__file__).resolve().parent
 TOOLS = HERE / "ps1"          # shipped inside the package so `uv tool install` gets them too
 FFMPEG_URL = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
-FFMPEG_SUMS = FFMPEG_URL.rsplit("/", 1)[0] + "/checksums.sha256"
+MAX_FFMPEG_ZIP_BYTES = 1 << 30
 
 
 def _check_platform():
@@ -45,10 +47,12 @@ def _check_platform():
             "on macOS use screencapture + ffmpeg avfoundation (see skills/game-automation).")
 
 
-def powershell(script: str, timeout: float = 60) -> str:
+def powershell(script: str, timeout: float = 60, env: dict[str, str] | None = None) -> str:
     _check_platform()
+    child_env = os.environ.copy()
+    child_env.update(env or {})
     r = subprocess.run([ps_exe(), "-NoProfile", "-NonInteractive", "-Command", script], capture_output=True, text=True, timeout=timeout,
-                       cwd="/mnt/c" if is_wsl() else None)
+                       cwd="/mnt/c" if is_wsl() else None, env=child_env)
     if r.returncode:
         die(f"powershell failed: {r.stderr.strip()[-1500:]}")
     return r.stdout.replace("\r", "")
@@ -93,35 +97,30 @@ def ffmpeg_win(required=True) -> str | None:
 
 
 def ffmpeg_sha256() -> str:
-    """The SHA-256 the ffmpeg zip must have: $UM_FFMPEG_SHA256 (a pin you checked yourself), else the build's own
-    checksums.sha256. The "latest" build is replaced daily and old ones are deleted, so a hash kept in this file
-    would break every setup within days. The published sum catches corrupt, truncated or swapped downloads; it
-    can't catch a compromised release, which is what the pin is for."""
+    """Return an independently reviewed SHA-256 pin; same-origin mutable checksums are not a trust boundary."""
     pin = os.environ.get("UM_FFMPEG_SHA256", "").strip().lower()
-    if pin:
-        return pin
-    name = FFMPEG_URL.rsplit("/", 1)[1]
-    with urllib.request.urlopen(FFMPEG_SUMS, timeout=60) as r:
-        for line in r.read().decode("utf-8", "replace").splitlines():
-            parts = line.split()
-            if len(parts) == 2 and parts[1].lstrip("*") == name:
-                return parts[0].lower()
-    die(f"{name} isn't listed in {FFMPEG_SUMS}; set UM_FFMPEG_SHA256, or point UM_FFMPEG_WIN at an ffmpeg you trust")
+    if len(pin) != 64 or any(c not in "0123456789abcdef" for c in pin):
+        die("set UM_FFMPEG_SHA256 to an independently reviewed 64-character digest, or set UM_FFMPEG_WIN to a trusted install")
+    return pin
+
+
+def _ffmpeg_open(url: str, timeout: float):
+    return urllib.request.urlopen(url, timeout=timeout)
 
 
 def download_ffmpeg(z: Path):
     """Download the ffmpeg zip to z and check its SHA-256 before anything is extracted."""
     want = ffmpeg_sha256()
     print("downloading", FFMPEG_URL)
-    urllib.request.urlretrieve(FFMPEG_URL, z)
+    with _ffmpeg_open(FFMPEG_URL, timeout=600) as response:
+        atomic_write_stream(z, response, MAX_FFMPEG_ZIP_BYTES, "ffmpeg archive")
     h = hashlib.sha256()
     with open(z, "rb") as f:
         for chunk in iter(lambda: f.read(1 << 20), b""):
             h.update(chunk)
     if h.hexdigest() != want:
         z.unlink()
-        die(f"ffmpeg download failed its checksum (got {h.hexdigest()}, expected {want}); deleted it. The daily build may "
-            "have been replaced mid-download: run `um win setup` again. If it keeps failing, don't use this build.")
+        die(f"ffmpeg download failed its pinned checksum (got {h.hexdigest()}, expected {want}); deleted it")
     print("sha256 ok", want)
 
 
@@ -133,13 +132,48 @@ def setup(args=None):
     if not ffmpeg_win(required=False) or (args and args.force):
         z = d / "ffmpeg.zip"
         download_ffmpeg(z)
-        with zipfile.ZipFile(z) as zf:
-            root = zf.namelist()[0].split("/")[0]
-            zf.extractall(d)
-        if (d / "ffmpeg").exists():
-            shutil.rmtree(d / "ffmpeg")
-        (d / root).rename(d / "ffmpeg")
-        z.unlink()
+        stage = Path(tempfile.mkdtemp(prefix="ffmpeg-stage-", dir=d))
+        rollback = d / f"ffmpeg-rollback-{os.getpid()}-{time.time_ns()}"
+        try:
+            with zipfile.ZipFile(z) as zf:
+                infos = zf.infolist()
+                names = [info.filename for info in infos]
+                if len(names) != len(set(names)) or not names:
+                    die("ffmpeg archive is empty or has duplicate members")
+                roots = set()
+                total = 0
+                for info in infos:
+                    path = PurePosixPath(info.filename)
+                    if path.is_absolute() or "\\" in info.filename or ".." in path.parts:
+                        die(f"unsafe ffmpeg archive member: {info.filename}")
+                    kind = stat.S_IFMT(info.external_attr >> 16)
+                    if kind not in (0, stat.S_IFREG, stat.S_IFDIR):
+                        die(f"non-regular ffmpeg archive member: {info.filename}")
+                    if path.parts:
+                        roots.add(path.parts[0])
+                    total += info.file_size
+                    if total > 4 << 30:
+                        die("ffmpeg archive expands beyond the 4 GiB safety limit")
+                if len(roots) != 1:
+                    die("ffmpeg archive must contain exactly one root directory")
+                zf.extractall(stage)
+            candidate = stage / roots.pop()
+            if not (candidate / "bin" / "ffmpeg.exe").is_file():
+                die("ffmpeg archive has no bin/ffmpeg.exe")
+            current = d / "ffmpeg"
+            if current.exists():
+                os.replace(current, rollback)
+            try:
+                os.replace(candidate, current)
+            except BaseException:
+                if rollback.exists() and not current.exists():
+                    os.replace(rollback, current)
+                raise
+            if rollback.exists():
+                shutil.rmtree(rollback)
+        finally:
+            shutil.rmtree(stage, ignore_errors=True)
+            z.unlink(missing_ok=True)
     ff = ffmpeg_win()
     out = subprocess.run([ff, "-hide_banner", "-h", "filter=gfxcapture"], capture_output=True, text=True).stdout
     print("ffmpeg", ff, "(gfxcapture ok)" if "gfxcapture" in out else "(WARNING: no gfxcapture in this build)")
@@ -169,9 +203,11 @@ def encoder() -> str:
 
 
 def processes(name: str | None = None) -> list[dict]:
-    flt = f"-Name '{name}*'" if name else ""
-    out = powershell(f"Get-Process {flt} -ErrorAction SilentlyContinue | Where-Object {{ $_.MainWindowHandle -ne 0 }} | "
-                     "Select-Object Id,ProcessName,MainWindowTitle,@{n='Hwnd';e={[int64]$_.MainWindowHandle}} | ConvertTo-Json -Compress")
+    script = ("$n=[Environment]::GetEnvironmentVariable('UM_PROCESS_FILTER'); "
+              "$p=if([string]::IsNullOrEmpty($n)){Get-Process -ErrorAction SilentlyContinue}else{Get-Process -Name ($n+'*') -ErrorAction SilentlyContinue}; "
+              "$p | Where-Object { $_.MainWindowHandle -ne 0 } | "
+              "Select-Object Id,ProcessName,MainWindowTitle,@{n='Hwnd';e={[int64]$_.MainWindowHandle}} | ConvertTo-Json -Compress")
+    out = powershell(script, env={"UM_PROCESS_FILTER": name or ""})
     if not out.strip():
         return []
     d = json.loads(out)
@@ -180,23 +216,31 @@ def processes(name: str | None = None) -> list[dict]:
 
 def pid_of(name: str) -> int | None:
     n = name[:-4] if name.lower().endswith(".exe") else name
-    out = powershell(f"(Get-Process -Name '{n}' -ErrorAction SilentlyContinue | Select-Object -First 1).Id").strip()
+    script = ("$n=[Environment]::GetEnvironmentVariable('UM_PROCESS_FILTER'); "
+              "(Get-Process -Name $n -ErrorAction SilentlyContinue | Select-Object -First 1).Id")
+    out = powershell(script, env={"UM_PROCESS_FILTER": n}).strip()
     return int(out) if out.isdigit() else None
 
 
 def kill(pid: int):
     """By exact PID. (Pattern kills - pkill -f, taskkill /IM with wildcards - can hit the agent's own shell or other apps.)"""
     r = subprocess.run(["taskkill.exe" if is_wsl() else "taskkill", "/PID", str(int(pid)), "/F"], capture_output=True, text=True)
+    if r.returncode:
+        die(f"taskkill failed ({r.returncode}): {(r.stderr or r.stdout).strip()[-800:]}")
     print((r.stdout or r.stderr).strip())
 
 
 def launch(target: str, args: list[str], steam: bool = False):
     if steam:
         url = f"steam://rungameid/{target}" if not args else f"steam://run/{target}//{' '.join(args)}/"
-        subprocess.run(["cmd.exe" if is_wsl() else "cmd", "/c", "start", "", url], cwd="/mnt/c" if is_wsl() else None, timeout=30)
+        payload = json.dumps({"target": url, "args": []})
+        powershell("$p=ConvertFrom-Json ([Environment]::GetEnvironmentVariable('UM_LAUNCH')); Start-Process -FilePath $p.target",
+                   timeout=30, env={"UM_LAUNCH": payload})
         return
     exe = to_win(target)
-    subprocess.run(["cmd.exe" if is_wsl() else "cmd", "/c", "start", "", exe, *args], cwd="/mnt/c" if is_wsl() else None, timeout=30)
+    payload = json.dumps({"target": exe, "args": args})
+    powershell("$p=ConvertFrom-Json ([Environment]::GetEnvironmentVariable('UM_LAUNCH')); "
+               "Start-Process -FilePath $p.target -ArgumentList ([string[]]$p.args)", timeout=30, env={"UM_LAUNCH": payload})
 
 
 # --------------------------------------------------------------------------- capture
@@ -213,8 +257,8 @@ def _source(exe=None, hwnd=None, title=None, cursor=False, crop=None) -> str:
         die("give --exe, --hwnd or --title")
     c = ""
     if crop:  # left:top:right:bottom pixels to cut
-        l, t, r, b = crop
-        c = f":crop_left={l}:crop_top={t}:crop_right={r}:crop_bottom={b}"
+        left, top, right, bottom = crop
+        c = f":crop_left={left}:crop_top={top}:crop_right={right}:crop_bottom={bottom}"
     return f"gfxcapture={sel}:capture_cursor={1 if cursor else 0}:max_framerate=60{c},hwdownload,format=bgra"
 
 
@@ -382,7 +426,7 @@ class Drive:
                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=1, cwd="/mnt/c" if is_wsl() else None)
         self.ready = self.p.stdout.readline().strip()
 
-    def cmd(self, line: str, retry: bool = True) -> str:
+    def cmd(self, line: str, retry: bool = False) -> str:
         self.p.stdin.write(line + "\n")
         self.p.stdin.flush()
         out = self.p.stdout.readline().strip()
@@ -427,6 +471,7 @@ class Drive:
             self.p.wait(5)
         except (OSError, subprocess.TimeoutExpired):
             self.p.kill()
+            self.p.wait(5)
 
 
 # --------------------------------------------------------------------------- registry
@@ -437,13 +482,19 @@ def reg(action: str, key: str, value: str | None = None, data: str | None = None
     if action == "get":
         cmd = [exe, "query", key] + (["/v", value] if value else [])
     else:
+        if value is None or data is None:
+            die("registry set requires VALUE and DATA")
         backup = local_appdata() / "reg-backups"
         backup.mkdir(exist_ok=True)
-        bfile = backup / f"{key.replace(chr(92), '_').replace(':', '')}-{time.strftime('%Y%m%d-%H%M%S')}.reg"
-        subprocess.run([exe, "export", key, to_win(bfile) if is_wsl() else str(bfile), "/y"], capture_output=True)
+        bfile = backup / f"{key.replace(chr(92), '_').replace(':', '')}-{time.strftime('%Y%m%d-%H%M%S')}-{time.time_ns()}.reg"
+        exported = subprocess.run([exe, "export", key, to_win(bfile) if is_wsl() else str(bfile)], capture_output=True, text=True)
+        if exported.returncode or not bfile.exists():
+            die(f"registry backup failed; value was not changed: {(exported.stderr or exported.stdout).strip()[-800:]}")
         print("backup:", bfile)
         cmd = [exe, "add", key, "/v", value, "/t", typ, "/d", data, "/f"]
     r = subprocess.run(cmd, capture_output=True, text=True)
+    if r.returncode:
+        die(f"registry command failed ({r.returncode}): {(r.stderr or r.stdout).strip()[-800:]}")
     print((r.stdout or r.stderr).replace("\r", "").strip())
 
 
@@ -453,22 +504,28 @@ def reg(action: str, key: str, value: str | None = None, data: str | None = None
 def main(a):
     c = a.cmd
     if c == "setup":
+        if not a.yes:
+            die("setup downloads and installs executable tooling; re-run with --yes after approval")
         setup(a)
     elif c == "ps":
         for p in processes(a.name):
             print(f"{p['Id']:>7}  {p['ProcessName']:28} {p['MainWindowTitle']}")
     elif c == "kill":
+        if not a.yes:
+            die("process termination requires --yes")
         kill(a.pid)
     elif c == "launch":
         launch(a.target, a.args, a.steam)
     elif c == "shot":
         print(shot(a.output, a.exe, a.hwnd, a.title, a.scale))
     elif c == "drive":
+        if not a.yes:
+            die("input automation requires --yes after the user approves this run")
         d = Drive(a.proc)
         print(d.ready)
         try:
             for line in a.commands:
-                print(line, "->", d.cmd(line, retry=not a.no_retry))
+                print(line, "->", d.cmd(line, retry=a.refocus))
         finally:
             d.close()
     elif c == "record":
@@ -482,6 +539,8 @@ def main(a):
         finally:
             print(json.dumps(rec.stop(), indent=1))
     elif c == "reg":
+        if a.action == "set" and not a.yes:
+            die("registry mutation requires --yes")
         reg(a.action, a.key, a.value, a.data, a.type)
 
 
@@ -492,12 +551,14 @@ def register(sub):
     cs = p.add_subparsers(dest="cmd", metavar="<cmd>")
     q = cs.add_parser("setup", help="install the PowerShell tools and a gfxcapture-capable ffmpeg")
     q.add_argument("--force", action="store_true", help="re-download ffmpeg")
+    q.add_argument("--yes", action="store_true", help="confirm download/install side effects")
     q.set_defaults(func=main)
     q = cs.add_parser("ps", help="processes that have a window")
     q.add_argument("name", nargs="?")
     q.set_defaults(func=main)
     q = cs.add_parser("kill", help="kill by exact PID")
     q.add_argument("pid", type=int)
+    q.add_argument("--yes", action="store_true", help="confirm process termination")
     q.set_defaults(func=main)
     q = cs.add_parser("launch", help="start a game (exe path or --steam APPID)")
     q.add_argument("target")
@@ -523,7 +584,8 @@ def register(sub):
     q = cs.add_parser("drive", help="send WinDrive commands to a game window")
     q.add_argument("--proc", required=True, help="process name without .exe")
     q.add_argument("commands", nargs="+")
-    q.add_argument("--no-retry", action="store_true")
+    q.add_argument("--refocus", action="store_true", help="explicitly permit one automatic refocus and retry")
+    q.add_argument("--yes", action="store_true", help="confirm input automation for this run")
     q.set_defaults(func=main)
     q = cs.add_parser("reg", help="read / set registry values (set backs the key up first)")
     q.add_argument("action", choices=["get", "set"])
@@ -531,4 +593,5 @@ def register(sub):
     q.add_argument("value", nargs="?")
     q.add_argument("data", nargs="?")
     q.add_argument("--type", default="REG_DWORD")
+    q.add_argument("--yes", action="store_true", help="confirm registry mutation")
     q.set_defaults(func=main)

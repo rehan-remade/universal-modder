@@ -134,7 +134,7 @@ your normal save folder.
   (`um win kill <pid>`). From an agent's shell, `pkill -f <pattern>` also matches the shell running it
   and kills that too. `reference/InModRecorder.cs` is the in-game version, with the details.
 - Explosive takes destroy the world. Keep a pristine copy and restore it before each take:
-  `um backup create "<save folder>/tModLoader/Worlds" --name worlds`, then `um backup restore worlds`
+  `um backup create "<save folder>/tModLoader/Worlds" --name worlds`, then `um backup restore worlds --yes`
   (the save folder is `Documents\My Games\Terraria` on Windows).
 - tModLoader refuses to start unless the free tModLoader app is in your Steam library, including
   builds from GitHub. Add it to your library; don't try to get around the check. The command-line

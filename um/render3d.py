@@ -86,7 +86,7 @@ def render(glb: str, out_dir: str, preset: str = "aoe2", canvas="200", length: f
     n = sum(a["frames"] for a in cfg["anims"].values()) * cam["headings"] * (2 if shadows else 1)
     print(f"rendering {n} images with Blender ({engine}, {samples} samples) -> {out}")
     r = subprocess.run([blender_bin(), "-b", "--python", str(script), "--", f.name], capture_output=True, text=True)
-    done = [l for l in r.stdout.splitlines() if l.startswith("UM_RENDER_DONE")]
+    done = [line for line in r.stdout.splitlines() if line.startswith("UM_RENDER_DONE")]
     if r.returncode or not done:
         die("Blender failed:\n" + (r.stderr or r.stdout)[-3000:])
     print(done[-1].replace("UM_RENDER_DONE", "rendered"))

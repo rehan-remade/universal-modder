@@ -36,9 +36,10 @@ rules below.
 - **No game content:** no game files, extracted assets, ROMs or ISOs, and no links to pirated copies.
 - **No decompiled code dumps.** Describe the logic in your own words and name symbols; keep snippets of
   *your own* code short (`um kb check` fails blocks over 150 lines and warns over 60).
-- **Leaks:** knowledge from beta builds and leaked SDKs or source is fine to write up in your own words, and
-  so is saying where it came from. The leaked material itself stays out: no pasted code, attached files,
-  download links or license keys, and no instructions to fetch them.
+- **Nonpublic or illicit material:** do not acquire, solicit, summarize, or operationalize leaked SDKs,
+  source, builds, credentials or confidential documentation. Public reporting may be cited without repeating
+  sensitive contents. The material itself, retrieval instructions and derived proprietary implementation
+  details stay out.
 - **No cheating other players, and no bypasses:**
   - nothing that gives an edge over other players on servers you don't run (aimbots, ESP, speed hacks,
     bots);
@@ -59,15 +60,17 @@ rules below.
 - **Tools (`um/`):**
   - one module per CLI group, with a docstring that doubles as `--help`;
   - add a test in `tests/`;
-  - `uv run --with pytest pytest -q tests` must pass.
+  - `uv sync --frozen --dev`, `uv run --frozen ruff check um tests scripts`, and
+    `uv run --frozen pytest --cov=um --cov-branch -q` must pass.
 - **Skills (`skills/`):** the Agent Skills format (`SKILL.md` with `name` + `description`). Keep them
   agent-neutral: say "the agent", not a specific product. Put deep material in `references/`.
-  - Edit `skills/` only. `.agents/skills` and `.claude/skills` are copies (no symlinks, so Windows clones
-    work). Refresh them with `rm -rf .agents/skills .claude/skills && cp -r skills .agents/skills && cp -r
-    skills .claude/skills`; a test fails while they differ.
+  - Edit `skills/` only. `.agents/skills` and `.claude/skills` are physical copies for Windows compatibility.
+    Refresh them transactionally with `python scripts/sync_skills.py`; CI runs the same command with `--check`.
 - **Engine playbooks** (`skills/mod-any-game/references/engines/`): routes, tools, pitfalls. Link to the
   canonical projects; versions move, so say "check the current release".
 - **Examples (`examples/`):** your own code and assets only. Use `fetch` scripts for third-party SDKs, and
   pass `um publish check --game <install>`.
 
-CI runs the tests, `um kb check --index` and the CLI help screens on every PR.
+CI runs Python 3.10-3.13 from the frozen lock, static checks, branch coverage, installed CLI contracts,
+knowledge/generated-copy checks, publish safety lint, two-build reproducibility, wheel-only installation, and
+packaged-resource validation. Manual Windows/WSL/game integration evidence remains required for affected code.

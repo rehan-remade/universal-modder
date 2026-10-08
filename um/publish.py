@@ -37,7 +37,7 @@ DECOMP_PATTERNS = [
 ]
 CODE_EXT = {".cs", ".c", ".cpp", ".h", ".hpp", ".py", ".lua", ".js", ".ts", ".rs", ".java", ".kt", ".gd", ".rpy", ".psc", ".gml",
             ".hlsl", ".glsl", ".as", ".vb", ".il"}
-SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache", "obj", ".vs", ".idea"}
+SKIP_DIRS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", ".vs", ".idea"}
 TEXT_EXT = {".cs", ".c", ".cpp", ".h", ".hpp", ".py", ".lua", ".js", ".ts", ".json", ".toml", ".ini", ".cfg", ".txt", ".md", ".xml",
             ".yaml", ".yml", ".rs", ".java", ".kt", ".gd", ".rpy", ".psc", ".sh", ".ps1", ".bat", ".gml", ".hlsl", ".glsl", ".env"}
 ARCHIVE_EXT = {".pak", ".utoc", ".ucas", ".bsa", ".ba2", ".vpk", ".rpf", ".pck", ".assets", ".bundle", ".sga", ".big", ".wad", ".bdt", ".archive"}
@@ -56,7 +56,16 @@ def check(mod: str, game: str | None = None) -> int:
     if not root.is_dir():
         die(f"not a folder: {root}")
     fails, warns = [], []
-    files = [p for p in root.rglob("*") if p.is_file() and not SKIP_DIRS.intersection(p.relative_to(root).parts)]
+    entries = [p for p in root.rglob("*") if not SKIP_DIRS.intersection(p.relative_to(root).parts)]
+    files = []
+    for p in entries:
+        rel = p.relative_to(root).as_posix()
+        if p.is_symlink():
+            fails.append(f"symbolic link is not allowed in a publish candidate: {rel}")
+        elif p.is_file():
+            files.append(p)
+        elif not p.is_dir():
+            fails.append(f"special filesystem entry is not allowed: {rel}")
     # game files, matched by size then hash
     if game:
         g = Path(to_posix(game))
@@ -69,7 +78,7 @@ def check(mod: str, game: str | None = None) -> int:
                     pass
         for f in files:
             sz = f.stat().st_size
-            if sz < 64 or sz not in by_size:
+            if sz not in by_size:
                 continue
             h = _sha1(f)
             for gp in by_size[sz]:
@@ -78,11 +87,15 @@ def check(mod: str, game: str | None = None) -> int:
                     break
     for f in files:
         rel = f.relative_to(root).as_posix()        # same report on every OS (Windows would print src\Mod.cs)
-        if f.name == ".env" or f.name.endswith(".env"):
+        lower_name = f.name.lower()
+        if lower_name == ".env" or lower_name.startswith(".env.") or lower_name.endswith(".env"):
             fails.append(f"env file (secrets?): {rel}")
         if f.suffix.lower() in ARCHIVE_EXT and f.stat().st_size > 5 << 20:
-            warns.append(f"large engine archive ({f.stat().st_size >> 20} MB): {rel} - make sure it holds only your own assets")
-        if f.suffix.lower() in TEXT_EXT or f.name in (".env",):
+            fails.append(f"large engine archive ({f.stat().st_size >> 20} MB): {rel} - publish patches or independently created loose assets instead")
+        sensitive_name = lower_name in {"id_rsa", "id_ed25519", "credentials", "credentials.json", ".npmrc", ".pypirc"}
+        if sensitive_name or f.suffix.lower() in {".pem", ".key", ".p12", ".pfx"}:
+            fails.append(f"sensitive credential filename: {rel}")
+        if f.stat().st_size <= 8 << 20 and (f.suffix.lower() in TEXT_EXT or lower_name.startswith(".env") or sensitive_name or not f.suffix):
             try:
                 txt = f.read_text(errors="replace")
             except OSError:
@@ -93,7 +106,7 @@ def check(mod: str, game: str | None = None) -> int:
             for label, rx in DECOMP_PATTERNS if f.suffix.lower() in CODE_EXT else ():
                 m = rx.findall(txt)
                 if m:
-                    warns.append(f"{label} x{len(m)} in {rel} (e.g. {m[0].strip()!r})")
+                    fails.append(f"{label} x{len(m)} in {rel} (e.g. {m[0].strip()!r})")
             if re.search(r"[A-Z]:\\Users\\[^\\\s\"']+|/home/[a-z_][a-z0-9_-]*/|/Users/[A-Za-z]+/", txt):
                 warns.append(f"absolute user path in {rel}")
     names = {f.name.lower() for f in files}

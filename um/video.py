@@ -30,7 +30,7 @@ Style that works on X: open on the strongest moment (<= 2-3 s before real gamepl
 from __future__ import annotations
 
 import json
-import math
+
 import re
 import shutil
 import subprocess
@@ -360,7 +360,7 @@ def render_segment(i, seg, edl, work: Path, W, H, fps, dur, t_in, t_out, total_n
     overlays = []
     if seg.get("title"):
         png = work / f"title_{i:02d}.png"
-        x0 = title_chip(seg["title"], seg.get("credit"), W, H, theme, png)
+        title_chip(seg["title"], seg.get("credit"), W, H, theme, png)
         overlays.append(("title", png))
     if seg.get("hook"):
         png = work / f"hook_{i:02d}.png"
