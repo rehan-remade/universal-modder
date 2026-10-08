@@ -2522,6 +2522,49 @@
   ]
  },
  {
+  "path": "games/the-dark-legions/reloaded-single-dll-fix.md",
+  "kind": "game",
+  "title": "The Dark Legions Reloaded: crash fixes, a D3D8 -> D3D9Ex renderer, widescreen and new menus in one d3d8.dll",
+  "game": "The Dark Legions",
+  "games_also": [],
+  "game_version": "1.1.0 (Mascot Entertainment, 2004), retail CD install, Windows 11 24H2",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "native-hook",
+  "tools": [
+   "Rust 1.99 (i686-pc-windows-msvc, static CRT)",
+   "Ghidra 12.1 (headless scripts)",
+   "WinDbg / WER LocalDumps",
+   "Process Monitor",
+   "d3dcompiler_47 (runtime HLSL)",
+   "dgVoodoo2 2.87.5 (studied, then replaced)"
+  ],
+  "anti_cheat": "none (2004 single-player RTS; LAN multiplayer only, not touched)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "GR33N"
+  ],
+  "date": "2026-10-09",
+  "links": [],
+  "tags": [
+   "d3d8",
+   "d3d9ex",
+   "proxy-dll",
+   "crash-fix",
+   "heap-corruption",
+   "widescreen",
+   "menus",
+   "fonts",
+   "fog",
+   "dgvoodoo",
+   "rts",
+   2004
+  ]
+ },
+ {
   "path": "games/the-witcher-3/the-witcher-3-remastered-bundle-container-and-cr2w-decoded.md",
   "kind": "game",
   "title": "The Witcher 3 Remastered: .bundle container and CR2W, decoded",
@@ -3547,6 +3590,61 @@
    "frame-grab",
    "warp",
    "seqlock"
+  ]
+ },
+ {
+  "path": "techniques/d3d8-to-d3d9ex-wrapper-in-one-dll.md",
+  "kind": "technique",
+  "title": "Replacing dgVoodoo with your own D3D8 -> D3D9Ex wrapper in one DLL",
+  "tags": [
+   "d3d8",
+   "d3d9ex",
+   "wrapper",
+   "proxy-dll",
+   "supersampling",
+   "lanczos",
+   "msaa",
+   "xyzrhw",
+   "widescreen",
+   "gamma",
+   "fog",
+   "rust"
+  ],
+  "date": "2026-10-09",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "GR33N"
+  ],
+  "links": []
+ },
+ {
+  "path": "techniques/dgvoodoo2-internals-and-spying-on-a-packed-d3d-wrapper.md",
+  "kind": "technique",
+  "title": "What dgVoodoo2 really does to an old D3D8 game, and how to spy on a packed D3D wrapper",
+  "tags": [
+   "dgvoodoo",
+   "d3d8",
+   "d3d11",
+   "wrapper",
+   "dxbc",
+   "vtable-hooks",
+   "id3d10multithread",
+   "scaling",
+   "filtering",
+   "fog",
+   "renderdoc"
+  ],
+  "date": "2026-10-09",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "GR33N"
+  ],
+  "links": [
+   "https://dege.freeweb.hu/dgVoodoo2/"
   ]
  },
  {
