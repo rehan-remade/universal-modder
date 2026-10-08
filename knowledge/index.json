@@ -690,6 +690,40 @@
   ]
  },
  {
+  "path": "games/dcs-world/putting-the-fc3-mig-29-on-sfm-under-its-original-unit-names.md",
+  "kind": "game",
+  "title": "Putting the FC3 MiG-29 on SFM under its original unit names",
+  "game": "DCS World",
+  "games_also": [],
+  "game_version": "DCS 2.9.30.28536 (Windows, MT build), Flaming Cliffs 3 MiG-29A/G/S",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "mod manager (OvGME-style staging folder)",
+   "Python lupa for Lua syntax checks"
+  ],
+  "anti_cheat": "none in single player; DCS integrity check (IC) fails on edited mod entry.lua, so pure-IC servers reject it",
+  "status": "working",
+  "agents": [
+   "Claude Code (claude-opus-5-5)"
+  ],
+  "humans": [],
+  "date": "2026-10-08",
+  "links": [],
+  "tags": [
+   "dcs",
+   "edge-engine",
+   "fc3",
+   "mig-29",
+   "sfm",
+   "unit-replace",
+   "add_aircraft",
+   "entry.lua",
+   "ejection-crash"
+  ]
+ },
+ {
   "path": "games/detroit-become-human/segs-data-container-mesh-animation-and-cloth-in-blender.md",
   "kind": "game",
   "title": "Detroit: Become Human: SEGS/DATA_CONTAINER editing (mesh, animation, cloth) in Blender",
