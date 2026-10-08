@@ -80,6 +80,64 @@ def test_managed_pe(tmp_path):
     assert scan.pe_info(p) == {"arch": "x86", "managed": True}
 
 
+def _pe(managed: bool, arch=0x8664, pad=0):
+    # minimal PE with/without a CLR header directory entry, padded to a size
+    pe = bytearray(1024 + pad)
+    pe[0:2] = b"MZ"
+    struct.pack_into("<I", pe, 0x3C, 0x80)
+    pe[0x80:0x84] = b"PE\0\0"
+    struct.pack_into("<H", pe, 0x84, arch)
+    opt = 0x80 + 24
+    struct.pack_into("<H", pe, opt, 0x20B if arch == 0x8664 else 0x10B)
+    dd = opt + (112 if arch == 0x8664 else 96)
+    struct.pack_into("<I", pe, dd + 14 * 8, 0x2000 if managed else 0)
+    return bytes(pe)
+
+
+def test_tool_exe_does_not_set_dotnet_engine(tmp_path):
+    # Kenshi shape: the only managed binary is a tool (Forgotten Construction
+    # Set); the big game binary is native, so the engine must not be dotnet.
+    # The mod manager bundle is deliberately bigger than the game exe: size
+    # alone must not elect it as the game binary.
+    make(tmp_path, {
+        "kenshi_x64.exe": _pe(False, pad=40000),
+        "forgotten construction set.exe": _pe(True, arch=0x14C),
+        "KenshiModTool.exe": _pe(False, pad=90000),
+        "OgreMain_x64.dll": b"MZ",
+        "Plugins_x64.cfg": "Plugin=RE_Kenshi",
+    })
+    hits, _ = scan.detect(scan.Index(tmp_path))
+    assert hits[0][0] == "native"
+    assert hits[0][2][0] == "kenshi_x64.exe"
+
+
+def test_managed_game_exe_still_dotnet(tmp_path):
+    # guard: a game whose own binary is managed keeps the dotnet engine even
+    # when a tool-like launcher ships next to it
+    assert engine_of(tmp_path, {
+        "Game.exe": _pe(True, arch=0x14C),
+        "GameLauncher.exe": _pe(True, arch=0x14C),
+    })[0] == "dotnet"
+
+
+def test_kenshi_loaders_and_route(tmp_path):
+    d = tmp_path / "Kenshi"
+    make(d, {
+        "kenshi_x64.exe": _pe(False, pad=40000),
+        "forgotten construction set.exe": _pe(True, arch=0x14C),
+        "OgreMain_x64.dll": b"MZ",
+        "RE_Kenshi.dll": b"MZ", "KenshiLib.dll": b"MZ",
+        "KenshiModTool.exe": _pe(False, pad=100),
+        "masterlist.json": "[]",
+        "mods/readme.txt": "x",
+    })
+    r = scan.scan(str(d))
+    assert r["engine"]["key"] == "native"
+    assert "RE_Kenshi (Kenshi OGRE plugin)" in r["mod_loaders_installed"]
+    assert "Kenshi Mod Manager" in r["mod_loaders_installed"]
+    assert r["routes"][0]["why"] == "known game" and r["routes"][0]["playbook"] == "native.md"
+
+
 def test_vdf():
     d = scan._vdf('"AppState" { "appid" "105600" "name" "Terraria" "installdir" "Terraria" }')
     assert d["AppState"]["installdir"] == "Terraria"

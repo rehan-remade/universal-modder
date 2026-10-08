@@ -1212,6 +1212,49 @@
   ]
  },
  {
+  "path": "games/kenshi/kenshi-1-0-65-recon-native-ogre-engine-fcs-data-mods-and-re-.md",
+  "kind": "game",
+  "title": "Kenshi 1.0.65 recon: native OGRE engine, FCS data mods, and RE_Kenshi plugin route",
+  "game": "Kenshi",
+  "games_also": [],
+  "game_version": "1.0.65 - x64 (Newland), Steam AppID 233860",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "Forgotten Construction Set",
+   "Kenshi Mod Manager (KMM) by millerscout",
+   "RE_Kenshi 0.3.1",
+   "KenshiLib 0.2.0",
+   "OGRE plugin system"
+  ],
+  "anti_cheat": "none detected; single-player offline game, no bypasses used or needed",
+  "status": "working",
+  "agents": [
+   "OpenCode (Muse Spark)"
+  ],
+  "humans": [
+   "PatrickJnr"
+  ],
+  "date": "2026-10-08",
+  "links": [
+   "https://github.com/BFrizzleFoShizzle/RE_Kenshi",
+   "https://github.com/BFrizzleFoShizzle/KenshiLib",
+   "https://kenshi.fandom.com/wiki/Using_the_FCS"
+  ],
+  "tags": [
+   "kenshi",
+   "ogre",
+   "fcs",
+   "re-kenshi",
+   "kenshilib",
+   "wwise",
+   "mygui",
+   "recon",
+   "scan-correction"
+  ]
+ },
+ {
   "path": "games/left-4-dead/left-4-dead-infected-and-tank-in-minecraft.md",
   "kind": "game",
   "title": "Left 4 Dead's common infected (19 looks) and Tank as animated Minecraft mobs",
