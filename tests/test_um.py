@@ -3,6 +3,7 @@
     uv run --with pytest pytest -q
 """
 import json
+import os
 import shutil
 import struct
 import subprocess
@@ -65,8 +66,8 @@ def test_gamemaker_and_rpgmaker(tmp_path):
     assert engine_of(tmp_path / "b", {"www/js/rpg_core.js": "//", "Game.exe": b"MZ"})[0] == "rpgmaker-mvmz"
 
 
-def test_managed_pe(tmp_path):
-    # minimal PE32 with a CLR header directory entry
+def _pe(managed=True):
+    # minimal PE32, optionally with a CLR header directory entry
     pe = bytearray(1024)
     pe[0:2] = b"MZ"
     struct.pack_into("<I", pe, 0x3C, 0x80)
@@ -74,10 +75,40 @@ def test_managed_pe(tmp_path):
     struct.pack_into("<H", pe, 0x84, 0x14C)
     opt = 0x80 + 24
     struct.pack_into("<H", pe, opt, 0x10B)
-    struct.pack_into("<I", pe, opt + 96 + 14 * 8, 0x2000)
+    if managed:
+        struct.pack_into("<I", pe, opt + 96 + 14 * 8, 0x2000)
+    return bytes(pe)
+
+
+def test_managed_pe(tmp_path):
     p = tmp_path / "Game.exe"
-    p.write_bytes(bytes(pe))
+    p.write_bytes(_pe())
     assert scan.pe_info(p) == {"arch": "x86", "managed": True}
+
+
+def test_nested_exe_fingerprinted(tmp_path):
+    # Gothic-style layout: the game exe lives one level down in system/
+    make(tmp_path, {"system/Gothic2.exe": _pe(managed=False), "Data/worlds.vdf": b"x"})
+    _, facts = scan.detect(scan.Index(tmp_path))
+    assert facts["executables"]["system/gothic2.exe"] == {"arch": "x86", "managed": False}
+
+
+def test_redist_exes_skipped(tmp_path):
+    make(tmp_path, {"Game.exe": _pe(False), "_CommonRedist/vcredist/vc_redist.exe": _pe(False)})
+    _, facts = scan.detect(scan.Index(tmp_path))
+    assert list(facts["executables"]) == ["game.exe"]
+
+
+def test_unicode_output_on_cp1252_console(tmp_path):
+    # `um kb show` must not UnicodeEncodeError when stdout isn't UTF-8
+    kb = tmp_path / "kb"
+    (kb / "games/x").mkdir(parents=True)
+    (kb / "games/x/n.md").write_text("---\ntitle: LÖVE → test\n---\n# LÖVE →\n", encoding="utf-8")
+    env = dict(os.environ, PYTHONIOENCODING="cp1252", UM_KB=str(kb),
+               PYTHONPATH=str(Path(__file__).resolve().parents[1]))
+    r = subprocess.run([sys.executable, "-m", "um", "kb", "show", "n.md"],
+                       capture_output=True, encoding="utf-8", env=env)
+    assert r.returncode == 0 and "LÖVE →" in r.stdout
 
 
 def test_vdf():

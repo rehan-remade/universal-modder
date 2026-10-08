@@ -540,7 +540,11 @@ def detect(ix: Index) -> tuple[list[tuple[str, int, list[str], dict]], dict]:
 
     # XNA / FNA / MonoGame / .NET
     xna = ix.find("fna.dll", "monogame.framework.dll", "microsoft.xna.framework*.dll", "*/fna.dll")
-    exes = [f for f in ix.files if f.endswith(".exe") and "/" not in f][:12]
+    # shallowest first: the main exe often sits one level down (Gothic's system/, UE's binaries/)
+    skip_dirs = ("redist", "_commonredist", "vcredist", "directx", "installer", "installers", "support")
+    exes = sorted((f for f in ix.files if f.endswith(".exe") and not f.startswith("unins")
+                   and not any(part in skip_dirs for part in f.split("/")[:-1])),
+                  key=lambda f: (f.count("/"), f))[:12]
     managed = []
     for e in exes:
         info = pe_info(ix.path(e))
