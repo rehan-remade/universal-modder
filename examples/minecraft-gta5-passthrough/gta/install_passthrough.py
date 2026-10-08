@@ -9,6 +9,8 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
+import secrets
 import shutil
 import stat
 import sys
@@ -75,8 +77,8 @@ def _fsync_dir(path: Path) -> None:
             os.close(fd)
 
 
-def write_json_atomic(path: Path, payload: dict) -> None:
-    tmp = path.with_name(f".{path.name}.tmp-{os.getpid()}")
+def write_json_atomic(path: Path, payload: dict, *, replace: bool = False) -> None:
+    tmp = path.with_name(f".{path.name}.tmp-{os.getpid()}-{secrets.token_hex(8)}")
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
@@ -87,11 +89,19 @@ def write_json_atomic(path: Path, payload: dict) -> None:
         os.fsync(fd)
     finally:
         os.close(fd)
-    os.replace(tmp, path)
+    if replace:
+        os.replace(tmp, path)
+    else:
+        try:
+            os.link(tmp, path, follow_symlinks=False)
+        except FileExistsError:
+            tmp.unlink(missing_ok=True)
+            fail(f"refusing to replace concurrently created receipt: {path}")
+        tmp.unlink()
     _fsync_dir(path.parent)
 
 
-def read_receipt(path: Path) -> list[dict]:
+def read_receipt(path: Path, *, journal: bool = False) -> list[dict]:
     if path.is_symlink() or not path.is_file():
         fail(f"ownership receipt is not a regular file: {path}")
     data: object = None
@@ -113,32 +123,71 @@ def read_receipt(path: Path) -> list[dict]:
         if len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest) or rel in seen:
             fail(f"invalid ownership entry in {path}: {rel}")
         seen.add(rel)
-        clean.append({"path": rel, "sha256": digest})
+        clean_entry = {"path": rel, "sha256": digest}
+        nonce = entry.get("nonce")
+        if nonce is not None:
+            if not journal or not isinstance(nonce, str) or not re.fullmatch(r"[0-9a-f]{16}", nonce):
+                fail(f"invalid ownership entry in {path}: {rel}")
+            clean_entry["nonce"] = nonce
+        clean.append(clean_entry)
     return clean
+
+
+def stage_path(root: Path, entry: dict) -> Path | None:
+    nonce = entry.get("nonce")
+    if nonce is None:
+        return None
+    target = destination(root, entry["path"])
+    stage = target.with_name(f".{target.name}.um-part-{nonce}")
+    if stage.is_symlink():
+        fail(f"refusing symlinked install stage for: {entry['path']}")
+    return stage
 
 
 def rollback(root: Path, entries: list[dict]) -> bool:
     """Validate the complete rollback topology before removing any owned file."""
-    decisions: list[tuple[dict, Path, bool]] = []
+    decisions: list[tuple[dict, Path, Path | None, bool]] = []
     complete = True
     for entry in reversed(entries):
         target = destination(root, entry["path"])
+        stage = stage_path(root, entry)
         owned = target.is_file() and sha256(target) == entry["sha256"]
+        if stage is not None:
+            owned = owned and stage.is_file() and os.path.samefile(target, stage)
         if target.exists() and not owned:
             print(f"preserving changed file: {entry['path']}", file=sys.stderr)
             complete = False
-        decisions.append((entry, target, owned))
-    for _entry, target, owned in decisions:
+        if stage is not None and stage.exists() and (not stage.is_file() or sha256(stage) != entry["sha256"]):
+            print(f"preserving changed install stage: {stage.name}", file=sys.stderr)
+            complete = False
+        decisions.append((entry, target, stage, owned))
+    for _entry, target, stage, owned in decisions:
         if owned:
             target.unlink()
             _fsync_dir(target.parent)
+        if stage is not None and stage.is_file() and sha256(stage) == _entry["sha256"]:
+            stage.unlink()
+            _fsync_dir(stage.parent)
     return complete
 
 
 def recover(root: Path, journal: Path) -> None:
     if not journal.exists() and not journal.is_symlink():
         return
-    entries = read_receipt(journal)
+    entries = read_receipt(journal, journal=True)
+    manifest = root / MANIFEST_NAME
+    if manifest.exists() or manifest.is_symlink():
+        installed = read_receipt(manifest)
+        public = [{"path": entry["path"], "sha256": entry["sha256"]} for entry in entries]
+        if installed != public:
+            fail(f"install journal does not match ownership manifest: {journal}")
+        for entry in entries:
+            stage = stage_path(root, entry)
+            if stage is not None and stage.is_file() and sha256(stage) == entry["sha256"]:
+                stage.unlink()
+        journal.unlink()
+        _fsync_dir(root)
+        return
     if not rollback(root, entries):
         fail(f"interrupted install has changed files; receipt retained: {journal}")
     journal.unlink()
@@ -177,7 +226,8 @@ def install(root: Path, pairs: list[str]) -> None:
     try:
         for item in planned:
             target = destination(root, item["path"], create_parents=True)
-            tmp = target.with_name(f".{target.name}.um-part-{os.getpid()}")
+            nonce = secrets.token_hex(8)
+            tmp = target.with_name(f".{target.name}.um-part-{nonce}")
             active_tmp = tmp
             flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
             if hasattr(os, "O_NOFOLLOW"):
@@ -195,20 +245,25 @@ def install(root: Path, pairs: list[str]) -> None:
                 tmp.unlink(missing_ok=True)
                 fail(f"copied bytes failed verification: {item['path']}")
             destination(root, item["path"])
+            public_entries.append({"path": item["path"], "sha256": item["sha256"], "nonce": nonce})
+            write_json_atomic(journal, {"format": 1, "state": "installing", "entries": public_entries}, replace=True)
             try:
                 os.link(tmp, target, follow_symlinks=False)
             except FileExistsError:
                 fail(f"refusing to replace file created during install: {item['path']}")
             _fsync_dir(target.parent)
-            public_entries.append({"path": item["path"], "sha256": item["sha256"]})
-            write_json_atomic(journal, {"format": 1, "state": "installing", "entries": public_entries})
-            tmp.unlink()
             active_tmp = None
-        write_json_atomic(manifest, {"format": 1, "state": "installed", "entries": public_entries})
+        installed_entries = [{"path": entry["path"], "sha256": entry["sha256"]} for entry in public_entries]
+        write_json_atomic(manifest, {"format": 1, "state": "installed", "entries": installed_entries})
+        for entry in public_entries:
+            stage = stage_path(root, entry)
+            if stage is not None:
+                stage.unlink(missing_ok=True)
         journal.unlink()
         _fsync_dir(root)
     except BaseException:
-        if active_tmp is not None:
+        journaled_stages = {stage_path(root, entry) for entry in public_entries}
+        if active_tmp is not None and active_tmp not in journaled_stages:
             active_tmp.unlink(missing_ok=True)
         if rollback(root, public_entries):
             journal.unlink(missing_ok=True)

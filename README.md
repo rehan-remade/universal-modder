@@ -195,7 +195,10 @@ Full reasoning: [`skills/mod-any-game/references/safety.md`](skills/mod-any-game
 personal, biometric, voice or likeness material without the necessary rights and consent; review fal and the
 selected model's retention/licensing terms first. Paid POST submissions are not retried after an ambiguous
 network failure, and lifecycle records are written privately under `UM_HOME` before submission and after state
-changes so ambiguous operations can be reconciled without automatic resubmission. Generation receipts are mode
+changes. The generated operation ID identifies only the local receipt and is not sent to fal; reconcile an ambiguous
+submission by endpoint and timestamp in the provider dashboard, and treat it as unreconcilable rather than
+resubmitting when no provider request ID can be found. `um fal result` records its reconciliation outcome. Generation
+receipts are mode
 `0600` on POSIX (and inherit the user's profile ACL on Windows) and redact likely credentials and signed URL queries,
 but prompts remain provenance: review them before publishing. Output downloads accept HTTPS hosts under `fal.media`
 by default. Review any other storage host and opt in to exact comma-separated names with

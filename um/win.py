@@ -58,32 +58,60 @@ def _check_platform():
 
 
 def _stop_child(process: subprocess.Popen, timeout: float = 5) -> None:
-    if process.poll() is not None:
-        process.wait()
-        return
-    if os.name == "nt" and getattr(process, "pid", None):
-        subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"], capture_output=True, timeout=timeout)
-    elif getattr(process, "pid", None):
+    pid = getattr(process, "pid", None)
+    direct_alive = process.poll() is None
+    group_alive = False
+    if os.name != "nt" and pid:
         try:
-            os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+            os.killpg(pid, 0)
+            group_alive = True
         except (OSError, ProcessLookupError):
-            process.terminate()
-    else:
-        process.terminate()
-    try:
-        process.wait(timeout)
-    except subprocess.TimeoutExpired:
-        if os.name != "nt" and getattr(process, "pid", None):
-            try:
-                os.killpg(os.getpgid(process.pid), signal.SIGKILL)
-            except (OSError, ProcessLookupError):
+            pass
+    if os.name == "nt" and pid:
+        try:
+            subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True,
+                           timeout=timeout, check=False)
+        except (OSError, subprocess.TimeoutExpired):
+            if direct_alive:
                 process.kill()
-        else:
-            process.kill()
+    elif group_alive:
+        try:
+            os.killpg(pid, signal.SIGTERM)
+        except (OSError, ProcessLookupError):
+            pass
+    elif direct_alive:
+        process.terminate()
+
+    if direct_alive:
         try:
             process.wait(timeout)
-        except subprocess.TimeoutExpired as exc:
-            raise RuntimeError("child process tree could not be reaped after forced termination") from exc
+        except subprocess.TimeoutExpired:
+            process.kill()
+            try:
+                process.wait(timeout)
+            except subprocess.TimeoutExpired as exc:
+                raise RuntimeError("direct child could not be reaped after forced termination") from exc
+
+    if os.name != "nt" and group_alive:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            try:
+                os.killpg(pid, 0)
+            except (OSError, ProcessLookupError):
+                return
+            time.sleep(0.05)
+        try:
+            os.killpg(pid, signal.SIGKILL)
+        except (OSError, ProcessLookupError):
+            return
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            try:
+                os.killpg(pid, 0)
+            except (OSError, ProcessLookupError):
+                return
+            time.sleep(0.05)
+        raise RuntimeError("child process group remained live after forced termination")
 
 
 def _readline_bounded(process: subprocess.Popen, timeout: float, label: str) -> str:

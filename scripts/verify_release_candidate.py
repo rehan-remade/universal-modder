@@ -74,6 +74,27 @@ def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def source_identity(root: Path) -> dict[str, str]:
+    status = subprocess.check_output(["git", "status", "--porcelain=v1", "--untracked-files=all"], cwd=root, text=True)
+    if status:
+        raise SystemExit("source checkout is dirty; release artifacts must bind to clean committed bytes")
+    commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+    tree = subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"], cwd=root, text=True).strip()
+    return {"commit": commit, "tree": tree}
+
+
+def git_paths(root: Path, prefix: str | None = None) -> set[str]:
+    command = ["git", "ls-tree", "-r", "--name-only", "-z", "HEAD"]
+    if prefix is not None:
+        command += ["--", prefix]
+    payload = subprocess.check_output(command, cwd=root).decode()
+    return {name for name in payload.rstrip("\0").split("\0") if name}
+
+
+def git_blob(root: Path, rel: str) -> bytes:
+    return subprocess.check_output(["git", "show", f"HEAD:{rel}"], cwd=root)
+
+
 def metadata_identity(payload: bytes, label: str) -> None:
     meta = BytesParser().parsebytes(payload)
     if meta.get("Name") != PROJECT or meta.get("Version") != VERSION:
@@ -94,8 +115,7 @@ def inspect_wheel(path: Path, root: Path) -> list[str]:
             kind = stat.S_IFMT(info.external_attr >> 16)
             if kind not in (0, stat.S_IFREG, stat.S_IFDIR):
                 raise SystemExit(f"non-regular wheel member: {info.filename}")
-        source_files = {p.relative_to(root).as_posix() for p in (root / "um").rglob("*")
-                        if p.is_file() and "__pycache__" not in p.parts and p.suffix != ".pyc"}
+        source_files = git_paths(root, "um")
         metadata_files = {
             f"{dist_info}/METADATA", f"{dist_info}/WHEEL", f"{dist_info}/entry_points.txt",
             f"{dist_info}/licenses/LICENSE", f"{dist_info}/RECORD",
@@ -105,7 +125,7 @@ def inspect_wheel(path: Path, root: Path) -> list[str]:
             missing = sorted(source_files | metadata_files - set(names))
             raise SystemExit(f"wheel inventory mismatch; extra={extra[:8]} missing={missing[:8]}")
         for source_name in source_files:
-            if archive.read(source_name) != (root / source_name).read_bytes():
+            if archive.read(source_name) != git_blob(root, source_name):
                 raise SystemExit(f"wheel bytes differ from source: {source_name}")
         metadata_identity(archive.read(f"{dist_info}/METADATA"), path.name)
         record_name = f"{dist_info}/RECORD"
@@ -137,7 +157,7 @@ def inspect_sdist(path: Path, root: Path) -> list[str]:
         if any(not (m.isfile() or m.isdir()) for m in members):
             raise SystemExit(f"non-regular sdist member in {path}")
         files = {m.name: m for m in members if m.isfile()}
-        expected_paths = set(subprocess.check_output(["git", "ls-files", "-z"], cwd=root).decode().rstrip("\0").split("\0"))
+        expected_paths = git_paths(root)
         expected = {f"{prefix}/{name}" for name in expected_paths} | {f"{prefix}/PKG-INFO"}
         if set(files) != expected:
             extra = sorted(set(files) - expected)
@@ -163,7 +183,7 @@ def inspect_sdist(path: Path, root: Path) -> list[str]:
             payload = extracted.read()
             if rel.as_posix() == "PKG-INFO":
                 metadata_identity(payload, path.name)
-            elif payload != (root / rel).read_bytes():
+            elif payload != git_blob(root, rel.as_posix()):
                 raise SystemExit(f"sdist bytes differ from source: {rel}")
         return names
 
@@ -173,6 +193,7 @@ def main() -> int:
         raise SystemExit("usage: verify_release_candidate.py BUILD_A BUILD_B")
     root = Path(__file__).resolve().parents[1]
     left, right = map(Path, sys.argv[1:])
+    identity = source_identity(root)
 
     def distributions(directory: Path) -> dict[str, Path]:
         return {p.name: p for p in directory.iterdir() if p.is_file() and (p.suffix == ".whl" or p.name.endswith(".tar.gz"))}
@@ -181,7 +202,7 @@ def main() -> int:
     a, b = distributions(left), distributions(right)
     if set(a) != expected_names or set(b) != expected_names:
         raise SystemExit(f"distribution names must be exactly {sorted(expected_names)}")
-    receipt = {}
+    receipt: dict[str, object] = {"source": identity}
     for name in sorted(a):
         if digest(a[name]) != digest(b[name]):
             raise SystemExit(f"non-reproducible distribution bytes: {name}")

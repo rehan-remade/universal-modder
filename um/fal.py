@@ -176,13 +176,14 @@ def _req(method: str, url: str, body=None, headers=None, auth=True, raw=False, t
                 time.sleep(2 * (attempt + 1))
                 continue
             die(f"fal {method} {url.split('?')[0]} -> HTTP {e.code}: {detail}")
-        except urllib.error.URLError as e:
+        except (urllib.error.URLError, TimeoutError) as e:
             if attempt + 1 < attempts:
                 time.sleep(2 * (attempt + 1))
                 continue
+            reason = getattr(e, "reason", e)
             if method not in {"GET", "HEAD"}:
-                raise AmbiguousSubmissionError(str(e.reason)) from e
-            die(f"fal {method} {url}: {e.reason}")
+                raise AmbiguousSubmissionError(str(reason)) from e
+            die(f"fal {method} {url}: {reason}")
 
 
 # --------------------------------------------------------------------------- files
@@ -391,7 +392,9 @@ def run(endpoint: str, inp: dict, timeout: float = 1800, quiet: bool = False) ->
     except AmbiguousSubmissionError as exc:
         record("submission_ambiguous")
         die(f"fal submission outcome is ambiguous ({exc}); do not resubmit automatically. "
-            f"Inspect {receipt} and the fal dashboard using operation {operation_id}")
+            f"Local operation {operation_id} identifies only this receipt and was not sent to fal. "
+            f"Reconcile by endpoint and timestamp in {receipt} and the fal dashboard; if no provider request id can be found, "
+            "treat the charge/result as unreconcilable rather than resubmitting")
     rid = job.get("request_id")
     if not isinstance(rid, str) or not re.fullmatch(r"[A-Za-z0-9._-]{1,200}", rid):
         record("accepted_without_request_id")
@@ -551,8 +554,18 @@ def cmd(args):
         print(json.dumps(price(args.endpoint), indent=2))
         return
     if r == "result":
-        res = _req("GET", f"{QUEUE}/{args.endpoint}/requests/{args.request_id}")
-        download_outputs(res, Path(out), args.name or args.request_id)
+        receipt = data_dir() / "fal-requests.jsonl"
+        event = {"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "endpoint": args.endpoint,
+                 "request_id": args.request_id}
+        try:
+            res = _req("GET", f"{QUEUE}/{args.endpoint}/requests/{args.request_id}")
+            if not isinstance(res, dict):
+                die("fal reconciliation returned a non-object response")
+            download_outputs(res, Path(out), args.name or args.request_id)
+        except BaseException:
+            append_private_jsonl(receipt, {**event, "state": "reconciliation_unavailable"})
+            raise
+        append_private_jsonl(receipt, {**event, "state": "reconciled_completed"})
         print(json.dumps(res, indent=2))
         return
     if r == "upload":

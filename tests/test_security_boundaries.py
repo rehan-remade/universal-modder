@@ -187,6 +187,13 @@ def test_fal_paid_post_http_5xx_is_ambiguous(monkeypatch):
         fal._req("POST", fal.QUEUE + "/fal-ai/test", {"prompt": "x"})
 
 
+def test_fal_paid_post_socket_timeout_is_ambiguous(monkeypatch):
+    monkeypatch.setattr(fal, "fal_key", lambda: "test-only-placeholder")
+    monkeypatch.setattr(fal, "_urlopen", lambda *_args, **_kwargs: (_ for _ in ()).throw(TimeoutError("timed out")))
+    with pytest.raises(fal.AmbiguousSubmissionError):
+        fal._req("POST", fal.QUEUE + "/fal-ai/test", {"prompt": "x"})
+
+
 def test_fal_provider_failure_records_terminal_lifecycle_state(tmp_path, monkeypatch):
     monkeypatch.setenv("UM_HOME", str(tmp_path / "home"))
     monkeypatch.setattr(fal, "submit", lambda *_args, **_kwargs: {"request_id": "req-1"})
@@ -195,6 +202,18 @@ def test_fal_provider_failure_records_terminal_lifecycle_state(tmp_path, monkeyp
         fal.run("fal-ai/test", {}, quiet=True)
     records = [json.loads(line) for line in (tmp_path / "home" / "fal-requests.jsonl").read_text().splitlines()]
     assert records[-1]["state"] == "provider_failed"
+
+
+def test_fal_result_records_reconciliation_outcome(tmp_path, monkeypatch):
+    monkeypatch.setenv("UM_HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(fal, "_req", lambda *_args, **_kwargs: {"output": "ok"})
+    monkeypatch.setattr(fal, "download_outputs", lambda *_args, **_kwargs: [])
+    args = types.SimpleNamespace(recipe="result", endpoint="fal-ai/test", request_id="req-1",
+                                 out=str(tmp_path / "out"), name=None)
+    fal.cmd(args)
+    records = [json.loads(line) for line in (tmp_path / "home" / "fal-requests.jsonl").read_text().splitlines()]
+    assert records[-1]["state"] == "reconciled_completed"
+    assert records[-1]["request_id"] == "req-1"
 
 
 def test_fal_pinned_connection_uses_validated_ip_and_original_tls_name(monkeypatch):
@@ -273,6 +292,49 @@ def test_powershell_process_filter_is_passed_as_data(monkeypatch):
     script = command[command.index("-Command") + 1]
     assert hostile not in script
     assert captured["env"]["UM_PROCESS_FILTER"] == hostile
+
+
+def test_windows_tree_kill_timeout_falls_back_to_direct_kill(monkeypatch):
+    class Process:
+        pid = 1234
+
+        def __init__(self):
+            self.killed = False
+            self.waited = 0
+
+        def poll(self):
+            return None
+
+        def kill(self):
+            self.killed = True
+
+        def wait(self, _timeout=None):
+            self.waited += 1
+            return 0
+
+    process = Process()
+    monkeypatch.setattr(win.os, "name", "nt")
+    monkeypatch.setattr(win.subprocess, "run", lambda *_args, **_kwargs: (_ for _ in ()).throw(
+        subprocess.TimeoutExpired("taskkill", 1)))
+    win._stop_child(process, timeout=1)
+    assert process.killed
+    assert process.waited == 1
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX process-group regression")
+def test_helper_timeout_stops_descendants_after_successful_parent_exit():
+    code = ("import subprocess,sys; "
+            "p=subprocess.Popen([sys.executable,'-c','import time; time.sleep(60)']); "
+            "print(p.pid,file=sys.stderr,flush=True)")
+    process = subprocess.Popen([sys.executable, "-c", code], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               text=True, start_new_session=True)
+    assert process.stderr is not None
+    descendant = int(process.stderr.readline().strip())
+    process.wait(timeout=5)
+    with pytest.raises(TimeoutError):
+        win._readline_bounded(process, 0.2, "probe")
+    with pytest.raises(ProcessLookupError):
+        os.kill(descendant, 0)
 
 
 def test_path_hook_shell_quotes_plugin_root(tmp_path):
@@ -366,6 +428,23 @@ def test_kb_existing_branch_is_never_deleted_by_collision_preflight(tmp_path):
         kb._ensure_branch_absent(tmp_path, "kb/collision")
     branches = subprocess.check_output(["git", "branch", "--format=%(refname:short)"], cwd=tmp_path, text=True).splitlines()
     assert "kb/collision" in branches
+
+
+def test_kb_cleanup_never_deletes_a_branch_moved_by_another_actor(tmp_path):
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=tmp_path, check=True)
+    (tmp_path / "tracked").write_text("base", encoding="utf-8")
+    subprocess.run(["git", "add", "tracked"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-qm", "base"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "branch", "kb/race"], cwd=tmp_path, check=True)
+    owned = subprocess.check_output(["git", "rev-parse", "kb/race"], cwd=tmp_path, text=True).strip()
+    (tmp_path / "tracked").write_text("caller", encoding="utf-8")
+    subprocess.run(["git", "commit", "-qam", "caller"], cwd=tmp_path, check=True)
+    caller = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp_path, text=True).strip()
+    subprocess.run(["git", "branch", "-f", "kb/race", caller], cwd=tmp_path, check=True)
+    assert not kb._delete_branch_if_owned(tmp_path, "kb/race", owned)
+    assert subprocess.check_output(["git", "rev-parse", "kb/race"], cwd=tmp_path, text=True).strip() == caller
 
 
 def test_ci_generates_coverage_xml_and_scans_clean_export():
@@ -495,14 +574,66 @@ def test_example_installer_does_not_clobber_file_created_after_preflight(tmp_pat
     source.write_bytes(b"installer")
     original_write = helper.write_json_atomic
 
-    def race(path, payload):
-        original_write(path, payload)
-        (game / "args.txt").write_bytes(b"user")
+    raced = False
+
+    def race(path, payload, **kwargs):
+        nonlocal raced
+        original_write(path, payload, **kwargs)
+        if not raced:
+            raced = True
+            (game / "args.txt").write_bytes(b"user")
 
     monkeypatch.setattr(helper, "write_json_atomic", race)
     with pytest.raises(SystemExit):
         helper.install(game, [str(source), "args.txt"])
     assert (game / "args.txt").read_bytes() == b"user"
+
+
+def test_example_installer_does_not_clobber_manifest_created_during_install(tmp_path, monkeypatch):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    source = tmp_path / "args-source.txt"
+    source.write_bytes(b"installer")
+    original_write = helper.write_json_atomic
+
+    def race(path, payload, **kwargs):
+        if path.name == helper.MANIFEST_NAME and not path.exists():
+            path.write_text('{"caller": true}\n', encoding="utf-8")
+        return original_write(path, payload, **kwargs)
+
+    monkeypatch.setattr(helper, "write_json_atomic", race)
+    with pytest.raises(SystemExit):
+        helper.install(game, [str(source), "args.txt"])
+    assert json.loads((game / helper.MANIFEST_NAME).read_text()) == {"caller": True}
+    assert not (game / "args.txt").exists()
+
+
+def test_example_installer_recovers_interruption_after_target_publication(tmp_path, monkeypatch):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    source = tmp_path / "args-source.txt"
+    source.write_bytes(b"installer")
+    original_fsync = helper._fsync_dir
+    raised = False
+
+    def interrupt(path):
+        nonlocal raised
+        if not raised and (game / "args.txt").exists():
+            raised = True
+            raise RuntimeError("interrupted after target publication")
+        return original_fsync(path)
+
+    monkeypatch.setattr(helper, "_fsync_dir", interrupt)
+    with pytest.raises(RuntimeError):
+        helper.install(game, [str(source), "args.txt"])
+    monkeypatch.setattr(helper, "_fsync_dir", original_fsync)
+    helper.recover(game, game / helper.JOURNAL_NAME)
+    assert not (game / "args.txt").exists()
+    assert not (game / helper.JOURNAL_NAME).exists()
 
 
 def test_release_verifier_rejects_duplicate_record_rows():
@@ -516,3 +647,16 @@ def test_release_verifier_rejects_forbidden_sdist_directories():
     verifier = _release_verifier_module()
     with pytest.raises(SystemExit):
         verifier.validate_sdist_paths(["universal_modder-0.2.0/.venv/"])
+
+
+def test_release_verifier_rejects_dirty_source_checkout(tmp_path):
+    verifier = _release_verifier_module()
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=tmp_path, check=True)
+    (tmp_path / "tracked").write_text("clean", encoding="utf-8")
+    subprocess.run(["git", "add", "tracked"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-qm", "clean"], cwd=tmp_path, check=True)
+    (tmp_path / "tracked").write_text("dirty", encoding="utf-8")
+    with pytest.raises(SystemExit):
+        verifier.source_identity(tmp_path)

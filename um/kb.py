@@ -377,6 +377,15 @@ def _ensure_branch_absent(repo: Path, branch: str) -> None:
         die(f"could not verify local branch absence: {branch}")
 
 
+def _delete_branch_if_owned(repo: Path, branch: str, expected_oid: str) -> bool:
+    current = subprocess.run(["git", "rev-parse", "--verify", f"refs/heads/{branch}"], cwd=repo,
+                             capture_output=True, text=True)
+    if current.returncode or current.stdout.strip() != expected_oid:
+        return False
+    deleted = subprocess.run(["git", "branch", "-D", branch], cwd=repo, capture_output=True, text=True)
+    return deleted.returncode == 0
+
+
 def _publish_pr_isolated(repo: Path, root: Path, contribution: list[Path], branch: str, title: str,
                          body: str, can_push: bool, note_rel: str) -> str:
     """Build and publish the contribution from a disposable worktree; never mutate the caller's checkout."""
@@ -409,6 +418,7 @@ def _publish_pr_isolated(repo: Path, root: Path, contribution: list[Path], branc
         shutil.rmtree(temp_root, ignore_errors=True)
         die(f"could not create isolated worktree: {(added.stderr or added.stdout).strip()[-800:]}")
     success = branch_created = False
+    branch_tip: str | None = None
     try:
         work_root = worktree / root.relative_to(repo)
         staged_paths = []
@@ -422,6 +432,7 @@ def _publish_pr_isolated(repo: Path, root: Path, contribution: list[Path], branc
         if result.returncode:
             die(f"git checkout -b failed: {(result.stderr or result.stdout).strip()[-800:]}")
         branch_created = True
+        branch_tip = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=worktree, text=True).strip()
         idx, rows = build_index(work_root)
         index_md, index_json = work_root / "INDEX.md", work_root / "index.json"
         index_md.write_text(idx, **TEXT)
@@ -438,6 +449,7 @@ def _publish_pr_isolated(repo: Path, root: Path, contribution: list[Path], branc
         result = subprocess.run(["git", "commit", "-m", title], cwd=worktree, capture_output=True, text=True)
         if result.returncode:
             die(f"git commit failed: {(result.stderr or result.stdout).strip()[-800:]}")
+        branch_tip = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=worktree, text=True).strip()
         result = subprocess.run(["git", "push", "-u", remote, branch], cwd=worktree, capture_output=True, text=True)
         if result.returncode:
             die(f"git push failed: {(result.stderr or result.stdout).strip()[-800:]}")
@@ -468,11 +480,9 @@ def _publish_pr_isolated(repo: Path, root: Path, contribution: list[Path], branc
                   file=sys.stderr)
         else:
             shutil.rmtree(temp_root, ignore_errors=True)
-        if not success and branch_created:
-            deleted = subprocess.run(["git", "branch", "-D", branch], cwd=repo, capture_output=True, text=True)
-            if deleted.returncode:
-                print(f"warning: could not remove transaction-created branch {branch}: "
-                      f"{(deleted.stderr or deleted.stdout).strip()[-800:]}", file=sys.stderr)
+        if not success and branch_created and branch_tip is not None:
+            if not _delete_branch_if_owned(repo, branch, branch_tip):
+                print(f"warning: preserved branch {branch}; it no longer matches this transaction's tip", file=sys.stderr)
 
 
 def open_pr(path: Path, yes: bool):
