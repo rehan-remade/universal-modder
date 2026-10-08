@@ -216,6 +216,25 @@ def test_fal_result_records_reconciliation_outcome(tmp_path, monkeypatch):
     assert records[-1]["request_id"] == "req-1"
 
 
+@pytest.mark.parametrize(("payload", "state", "raises"), [
+    ({"status": "IN_QUEUE"}, "reconciled_pending", False),
+    ({"status": "COMPLETED", "error": "failed"}, "reconciled_provider_failed", True),
+])
+def test_fal_result_classifies_non_success_outcomes(tmp_path, monkeypatch, payload, state, raises):
+    monkeypatch.setenv("UM_HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(fal, "_req", lambda *_args, **_kwargs: payload)
+    monkeypatch.setattr(fal, "download_outputs", lambda *_args, **_kwargs: pytest.fail("must not download"))
+    args = types.SimpleNamespace(recipe="result", endpoint="fal-ai/test", request_id="req-1",
+                                 out=str(tmp_path / "out"), name=None)
+    if raises:
+        with pytest.raises(SystemExit):
+            fal.cmd(args)
+    else:
+        fal.cmd(args)
+    records = [json.loads(line) for line in (tmp_path / "home" / "fal-requests.jsonl").read_text().splitlines()]
+    assert [record["state"] for record in records] == [state]
+
+
 def test_fal_pinned_connection_uses_validated_ip_and_original_tls_name(monkeypatch):
     seen = {}
 
@@ -430,7 +449,7 @@ def test_kb_existing_branch_is_never_deleted_by_collision_preflight(tmp_path):
     assert "kb/collision" in branches
 
 
-def test_kb_cleanup_never_deletes_a_branch_moved_by_another_actor(tmp_path):
+def test_kb_cleanup_never_deletes_a_branch_moved_by_another_actor(tmp_path, monkeypatch):
     subprocess.run(["git", "init", "-q", "-b", "main"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=tmp_path, check=True)
@@ -442,8 +461,16 @@ def test_kb_cleanup_never_deletes_a_branch_moved_by_another_actor(tmp_path):
     (tmp_path / "tracked").write_text("caller", encoding="utf-8")
     subprocess.run(["git", "commit", "-qam", "caller"], cwd=tmp_path, check=True)
     caller = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp_path, text=True).strip()
-    subprocess.run(["git", "branch", "-f", "kb/race", caller], cwd=tmp_path, check=True)
+    original_run = kb.subprocess.run
+
+    def race(command, *args, **kwargs):
+        if command[:3] == ["git", "update-ref", "-d"]:
+            original_run(["git", "update-ref", "refs/heads/kb/race", caller], cwd=tmp_path, check=True)
+        return original_run(command, *args, **kwargs)
+
+    monkeypatch.setattr(kb.subprocess, "run", race)
     assert not kb._delete_branch_if_owned(tmp_path, "kb/race", owned)
+    monkeypatch.setattr(kb.subprocess, "run", original_run)
     assert subprocess.check_output(["git", "rev-parse", "kb/race"], cwd=tmp_path, text=True).strip() == caller
 
 
@@ -452,6 +479,8 @@ def test_ci_generates_coverage_xml_and_scans_clean_export():
     assert "--cov-report=xml" in workflow
     assert "um publish check ." not in workflow
     assert "um publish check \"$RUNNER_TEMP/candidate\"" in workflow
+    assert 'package_root="$RUNNER_TEMP/um-package"' in workflow
+    assert "mkdir source-a source-b dist-a dist-b" not in workflow
 
 
 def test_all_host_manifests_match_package_version():
@@ -555,7 +584,7 @@ def test_example_uninstall_validates_all_ancestors_before_any_deletion(tmp_path)
     args.write_bytes(b"owned")
     nested_digest = hashlib.sha256(b"nested").hexdigest()
     receipt = game / helper.MANIFEST_NAME
-    receipt.write_text(json.dumps({"entries": [
+    receipt.write_text(json.dumps({"format": 1, "state": "installed", "entries": [
         {"path": "reshade-shaders/Shaders/MCPassthrough.fx", "sha256": nested_digest},
         {"path": "args.txt", "sha256": hashlib.sha256(b"owned").hexdigest()},
     ]}), encoding="utf-8")
@@ -636,6 +665,54 @@ def test_example_installer_recovers_interruption_after_target_publication(tmp_pa
     assert not (game / helper.JOURNAL_NAME).exists()
 
 
+def test_example_installer_journals_stage_identity_before_stage_creation(tmp_path, monkeypatch):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    source = tmp_path / "args-source.txt"
+    source.write_bytes(b"installer")
+    events = []
+    original_write = helper.write_json_atomic
+    original_open = helper.os.open
+
+    def observe_write(path, payload, **kwargs):
+        if path.name == helper.JOURNAL_NAME and payload.get("entries"):
+            events.append("journal")
+        return original_write(path, payload, **kwargs)
+
+    def observe_open(path, *args, **kwargs):
+        if ".um-part-" in str(path):
+            events.append("stage")
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(helper, "write_json_atomic", observe_write)
+    monkeypatch.setattr(helper.os, "open", observe_open)
+    helper.install(game, [str(source), "args.txt"])
+    assert events[:2] == ["journal", "stage"]
+
+
+def test_example_recovery_retains_journal_for_tampered_committed_stage(tmp_path):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    digest = hashlib.sha256(b"installed").hexdigest()
+    nonce = "a" * 16
+    entry = {"path": "args.txt", "sha256": digest, "nonce": nonce}
+    journal = game / helper.JOURNAL_NAME
+    manifest = game / helper.MANIFEST_NAME
+    journal.write_text(json.dumps({"format": 1, "state": "installing", "entries": [entry]}), encoding="utf-8")
+    manifest.write_text(json.dumps({"format": 1, "state": "installed",
+                                    "entries": [{"path": "args.txt", "sha256": digest}]}), encoding="utf-8")
+    (game / f".args.txt.um-part-{nonce}").write_bytes(b"tampered")
+    with pytest.raises(SystemExit):
+        helper.recover(game, journal)
+    assert journal.exists()
+    assert manifest.exists()
+    assert (game / f".args.txt.um-part-{nonce}").exists()
+
+
 def test_release_verifier_rejects_duplicate_record_rows():
     verifier = _release_verifier_module()
     rows = [["um/__init__.py", "sha256=x", "1"], ["um/__init__.py", "sha256=x", "1"]]
@@ -660,3 +737,18 @@ def test_release_verifier_rejects_dirty_source_checkout(tmp_path):
     (tmp_path / "tracked").write_text("dirty", encoding="utf-8")
     with pytest.raises(SystemExit):
         verifier.source_identity(tmp_path)
+
+
+def test_release_verifier_reads_only_the_frozen_commit(tmp_path):
+    verifier = _release_verifier_module()
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=tmp_path, check=True)
+    (tmp_path / "tracked").write_text("A", encoding="utf-8")
+    subprocess.run(["git", "add", "tracked"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-qm", "A"], cwd=tmp_path, check=True)
+    frozen = verifier.source_identity(tmp_path)["commit"]
+    (tmp_path / "tracked").write_text("B", encoding="utf-8")
+    subprocess.run(["git", "commit", "-qam", "B"], cwd=tmp_path, check=True)
+    assert verifier.git_blob(tmp_path, frozen, "tracked") == b"A"
+    assert verifier.git_paths(tmp_path, frozen) == {"tracked"}

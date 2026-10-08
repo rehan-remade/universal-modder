@@ -109,7 +109,10 @@ def read_receipt(path: Path, *, journal: bool = False) -> list[dict]:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         fail(f"invalid ownership receipt {path}: {exc}")
-    entries = data.get("entries") if isinstance(data, dict) else None
+    expected_state = "installing" if journal else "installed"
+    if not isinstance(data, dict) or data.get("format") != 1 or data.get("state") != expected_state:
+        fail(f"invalid ownership receipt format/state: {path}")
+    entries = data.get("entries")
     if not isinstance(entries, list) or len(entries) > len(TARGETS):
         fail(f"invalid ownership receipt entries: {path}")
     seen: set[str] = set()
@@ -181,10 +184,16 @@ def recover(root: Path, journal: Path) -> None:
         public = [{"path": entry["path"], "sha256": entry["sha256"]} for entry in entries]
         if installed != public:
             fail(f"install journal does not match ownership manifest: {journal}")
+        cleanup_complete = True
         for entry in entries:
             stage = stage_path(root, entry)
-            if stage is not None and stage.is_file() and sha256(stage) == entry["sha256"]:
-                stage.unlink()
+            if stage is not None and stage.exists():
+                if stage.is_file() and sha256(stage) == entry["sha256"]:
+                    stage.unlink()
+                else:
+                    cleanup_complete = False
+        if not cleanup_complete:
+            fail(f"committed install has an invalid stage; journal retained: {journal}")
         journal.unlink()
         _fsync_dir(root)
         return
@@ -229,6 +238,8 @@ def install(root: Path, pairs: list[str]) -> None:
             nonce = secrets.token_hex(8)
             tmp = target.with_name(f".{target.name}.um-part-{nonce}")
             active_tmp = tmp
+            public_entries.append({"path": item["path"], "sha256": item["sha256"], "nonce": nonce})
+            write_json_atomic(journal, {"format": 1, "state": "installing", "entries": public_entries}, replace=True)
             flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
             if hasattr(os, "O_NOFOLLOW"):
                 flags |= os.O_NOFOLLOW
@@ -245,8 +256,6 @@ def install(root: Path, pairs: list[str]) -> None:
                 tmp.unlink(missing_ok=True)
                 fail(f"copied bytes failed verification: {item['path']}")
             destination(root, item["path"])
-            public_entries.append({"path": item["path"], "sha256": item["sha256"], "nonce": nonce})
-            write_json_atomic(journal, {"format": 1, "state": "installing", "entries": public_entries}, replace=True)
             try:
                 os.link(tmp, target, follow_symlinks=False)
             except FileExistsError:

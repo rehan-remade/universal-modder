@@ -557,13 +557,24 @@ def cmd(args):
         receipt = data_dir() / "fal-requests.jsonl"
         event = {"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "endpoint": args.endpoint,
                  "request_id": args.request_id}
+        terminal_recorded = False
         try:
             res = _req("GET", f"{QUEUE}/{args.endpoint}/requests/{args.request_id}")
             if not isinstance(res, dict):
                 die("fal reconciliation returned a non-object response")
+            status = str(res.get("status") or "").upper()
+            if res.get("error") or status in {"FAILED", "ERROR", "CANCELLED"}:
+                append_private_jsonl(receipt, {**event, "state": "reconciled_provider_failed"})
+                terminal_recorded = True
+                die(f"fal request {args.request_id} reports provider failure")
+            if status and status != "COMPLETED":
+                append_private_jsonl(receipt, {**event, "state": "reconciled_pending"})
+                print(json.dumps(res, indent=2))
+                return
             download_outputs(res, Path(out), args.name or args.request_id)
         except BaseException:
-            append_private_jsonl(receipt, {**event, "state": "reconciliation_unavailable"})
+            if not terminal_recorded:
+                append_private_jsonl(receipt, {**event, "state": "reconciliation_unavailable"})
             raise
         append_private_jsonl(receipt, {**event, "state": "reconciled_completed"})
         print(json.dumps(res, indent=2))

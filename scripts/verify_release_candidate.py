@@ -83,16 +83,16 @@ def source_identity(root: Path) -> dict[str, str]:
     return {"commit": commit, "tree": tree}
 
 
-def git_paths(root: Path, prefix: str | None = None) -> set[str]:
-    command = ["git", "ls-tree", "-r", "--name-only", "-z", "HEAD"]
+def git_paths(root: Path, commit: str, prefix: str | None = None) -> set[str]:
+    command = ["git", "ls-tree", "-r", "--name-only", "-z", commit]
     if prefix is not None:
         command += ["--", prefix]
     payload = subprocess.check_output(command, cwd=root).decode()
     return {name for name in payload.rstrip("\0").split("\0") if name}
 
 
-def git_blob(root: Path, rel: str) -> bytes:
-    return subprocess.check_output(["git", "show", f"HEAD:{rel}"], cwd=root)
+def git_blob(root: Path, commit: str, rel: str) -> bytes:
+    return subprocess.check_output(["git", "show", f"{commit}:{rel}"], cwd=root)
 
 
 def metadata_identity(payload: bytes, label: str) -> None:
@@ -101,7 +101,7 @@ def metadata_identity(payload: bytes, label: str) -> None:
         raise SystemExit(f"wrong distribution identity in {label}: {meta.get('Name')} {meta.get('Version')}")
 
 
-def inspect_wheel(path: Path, root: Path) -> list[str]:
+def inspect_wheel(path: Path, root: Path, commit: str) -> list[str]:
     if path.stat().st_size > MAX_ARCHIVE_BYTES:
         raise SystemExit(f"wheel is too large: {path}")
     dist_info = f"{DIST}-{VERSION}.dist-info"
@@ -115,7 +115,7 @@ def inspect_wheel(path: Path, root: Path) -> list[str]:
             kind = stat.S_IFMT(info.external_attr >> 16)
             if kind not in (0, stat.S_IFREG, stat.S_IFDIR):
                 raise SystemExit(f"non-regular wheel member: {info.filename}")
-        source_files = git_paths(root, "um")
+        source_files = git_paths(root, commit, "um")
         metadata_files = {
             f"{dist_info}/METADATA", f"{dist_info}/WHEEL", f"{dist_info}/entry_points.txt",
             f"{dist_info}/licenses/LICENSE", f"{dist_info}/RECORD",
@@ -125,7 +125,7 @@ def inspect_wheel(path: Path, root: Path) -> list[str]:
             missing = sorted(source_files | metadata_files - set(names))
             raise SystemExit(f"wheel inventory mismatch; extra={extra[:8]} missing={missing[:8]}")
         for source_name in source_files:
-            if archive.read(source_name) != git_blob(root, source_name):
+            if archive.read(source_name) != git_blob(root, commit, source_name):
                 raise SystemExit(f"wheel bytes differ from source: {source_name}")
         metadata_identity(archive.read(f"{dist_info}/METADATA"), path.name)
         record_name = f"{dist_info}/RECORD"
@@ -143,7 +143,7 @@ def inspect_wheel(path: Path, root: Path) -> list[str]:
         return names
 
 
-def inspect_sdist(path: Path, root: Path) -> list[str]:
+def inspect_sdist(path: Path, root: Path, commit: str) -> list[str]:
     if path.stat().st_size > MAX_ARCHIVE_BYTES:
         raise SystemExit(f"sdist is too large: {path}")
     prefix = f"{DIST}-{VERSION}"
@@ -157,7 +157,7 @@ def inspect_sdist(path: Path, root: Path) -> list[str]:
         if any(not (m.isfile() or m.isdir()) for m in members):
             raise SystemExit(f"non-regular sdist member in {path}")
         files = {m.name: m for m in members if m.isfile()}
-        expected_paths = git_paths(root)
+        expected_paths = git_paths(root, commit)
         expected = {f"{prefix}/{name}" for name in expected_paths} | {f"{prefix}/PKG-INFO"}
         if set(files) != expected:
             extra = sorted(set(files) - expected)
@@ -183,7 +183,7 @@ def inspect_sdist(path: Path, root: Path) -> list[str]:
             payload = extracted.read()
             if rel.as_posix() == "PKG-INFO":
                 metadata_identity(payload, path.name)
-            elif payload != git_blob(root, rel.as_posix()):
+            elif payload != git_blob(root, commit, rel.as_posix()):
                 raise SystemExit(f"sdist bytes differ from source: {rel}")
         return names
 
@@ -194,6 +194,7 @@ def main() -> int:
     root = Path(__file__).resolve().parents[1]
     left, right = map(Path, sys.argv[1:])
     identity = source_identity(root)
+    commit = identity["commit"]
 
     def distributions(directory: Path) -> dict[str, Path]:
         return {p.name: p for p in directory.iterdir() if p.is_file() and (p.suffix == ".whl" or p.name.endswith(".tar.gz"))}
@@ -206,8 +207,10 @@ def main() -> int:
     for name in sorted(a):
         if digest(a[name]) != digest(b[name]):
             raise SystemExit(f"non-reproducible distribution bytes: {name}")
-        members = inspect_wheel(a[name], root) if name.endswith(".whl") else inspect_sdist(a[name], root)
+        members = inspect_wheel(a[name], root, commit) if name.endswith(".whl") else inspect_sdist(a[name], root, commit)
         receipt[name] = {"sha256": digest(a[name]), "bytes": a[name].stat().st_size, "members": len(members)}
+    if source_identity(root) != identity:
+        raise SystemExit("source checkout identity changed during release verification")
     print(json.dumps(receipt, indent=2, sort_keys=True))
     return 0
 

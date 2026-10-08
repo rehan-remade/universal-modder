@@ -104,21 +104,24 @@ jobs:
           SOURCE_DATE_EPOCH: "1704067200"
         run: |
           uv sync --frozen --dev
-          mkdir source-a source-b dist-a dist-b
-          git archive HEAD | tar -x -C source-a
-          git archive HEAD | tar -x -C source-b
-          (cd source-a && ../.venv/bin/hatchling build -t wheel -t sdist -d ../dist-a)
-          (cd source-b && ../.venv/bin/hatchling build -t wheel -t sdist -d ../dist-b)
-          python scripts/verify_release_candidate.py dist-a dist-b
+          package_root="$RUNNER_TEMP/um-package"
+          mkdir -p "$package_root/source-a" "$package_root/source-b" "$package_root/dist-a" "$package_root/dist-b"
+          git archive HEAD | tar -x -C "$package_root/source-a"
+          git archive HEAD | tar -x -C "$package_root/source-b"
+          hatchling="$PWD/.venv/bin/hatchling"
+          (cd "$package_root/source-a" && "$hatchling" build -t wheel -t sdist -d "$package_root/dist-a")
+          (cd "$package_root/source-b" && "$hatchling" build -t wheel -t sdist -d "$package_root/dist-b")
+          python scripts/verify_release_candidate.py "$package_root/dist-a" "$package_root/dist-b"
+          echo "UM_DIST_A=$package_root/dist-a" >> "$GITHUB_ENV"
       - name: Install only the wheel and verify packaged resources
         run: |
-          uv venv --python 3.11 .package-venv
-          uv pip install --python .package-venv/bin/python dist-a/*.whl
-          .package-venv/bin/python scripts/verify_installed_package.py
+          uv venv --python 3.11 "$RUNNER_TEMP/package-venv"
+          uv pip install --python "$RUNNER_TEMP/package-venv/bin/python" "$UM_DIST_A"/*.whl
+          "$RUNNER_TEMP/package-venv/bin/python" scripts/verify_installed_package.py
       - name: Install the sdist with the frozen build toolchain
         run: |
-          uv venv --python 3.11 .sdist-venv
+          uv venv --python 3.11 "$RUNNER_TEMP/sdist-venv"
           uv export --frozen --no-emit-project --only-group dev --output-file "$RUNNER_TEMP/dev-requirements.txt"
-          uv pip install --python .sdist-venv/bin/python --requirement "$RUNNER_TEMP/dev-requirements.txt"
-          uv pip install --python .sdist-venv/bin/python --no-build-isolation dist-a/*.tar.gz
-          .sdist-venv/bin/python scripts/verify_installed_package.py
+          uv pip install --python "$RUNNER_TEMP/sdist-venv/bin/python" --requirement "$RUNNER_TEMP/dev-requirements.txt"
+          uv pip install --python "$RUNNER_TEMP/sdist-venv/bin/python" --no-build-isolation "$UM_DIST_A"/*.tar.gz
+          "$RUNNER_TEMP/sdist-venv/bin/python" scripts/verify_installed_package.py

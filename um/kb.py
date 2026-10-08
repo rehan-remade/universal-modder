@@ -378,11 +378,8 @@ def _ensure_branch_absent(repo: Path, branch: str) -> None:
 
 
 def _delete_branch_if_owned(repo: Path, branch: str, expected_oid: str) -> bool:
-    current = subprocess.run(["git", "rev-parse", "--verify", f"refs/heads/{branch}"], cwd=repo,
+    deleted = subprocess.run(["git", "update-ref", "-d", f"refs/heads/{branch}", expected_oid], cwd=repo,
                              capture_output=True, text=True)
-    if current.returncode or current.stdout.strip() != expected_oid:
-        return False
-    deleted = subprocess.run(["git", "branch", "-D", branch], cwd=repo, capture_output=True, text=True)
     return deleted.returncode == 0
 
 
