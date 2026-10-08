@@ -611,7 +611,9 @@ def detect(ix: Index) -> tuple[list[tuple[str, int, list[str], dict]], dict]:
     # LÖVE, Java, Defold, Cocos, Haxe
     if ix.has("love.dll", "*.love", "lovec.exe"):
         add("love2d", 95, ix.find("love.dll", "*.love")[:1])
-    jars = ix.find("*.jar")
+    # shallow jars only: a bundled Ghidra/SDK in a dev subfolder isn't the game's engine
+    jars = [j for j in ix.find("*.jar") if j.count("/") <= 1
+            and not any(part in skip_dirs for part in j.split("/")[:-1])]
     if jars and (ix.has_dir("jre", "jre/*", "jdk*", "java*") or len(jars) <= 5):
         add("java", 60, jars[:2])
     if ix.has("game.dmanifest", "game.arcd"):

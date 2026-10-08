@@ -99,6 +99,18 @@ def test_redist_exes_skipped(tmp_path):
     assert list(facts["executables"]) == ["game.exe"]
 
 
+def test_deep_tooling_jars_not_java_engine(tmp_path):
+    # a Ghidra/SDK tree inside the game folder must not mislabel a native game as Java
+    make(tmp_path, {"Game.exe": _pe(False),
+                    "Dev Folder/tools/thirdparty/ghidra/support/launchsupport.jar": b"x",
+                    "Dev Folder/tools/thirdparty/ghidra/gradle/gradle-wrapper.jar": b"x"})
+    hits, _ = scan.detect(scan.Index(tmp_path))
+    assert all(k != "java" for k, *_ in hits)
+    # but a jar where the game ships it (root / one level down) still detects
+    key, _ = engine_of(tmp_path / "b", {"game.jar": b"x", "jre/bin/java.exe": _pe(False)})
+    assert key == "java"
+
+
 def test_unicode_output_on_cp1252_console(tmp_path):
     # `um kb show` must not UnicodeEncodeError when stdout isn't UTF-8
     kb = tmp_path / "kb"
