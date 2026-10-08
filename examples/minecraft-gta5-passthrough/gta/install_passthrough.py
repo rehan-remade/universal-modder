@@ -65,7 +65,7 @@ def destination(root: Path, rel: str, create_parents: bool = False) -> Path:
     if result.is_symlink():
         fail(f"refusing destination symlink: {rel}")
     try:
-        result.parent.resolve(strict=False).relative_to(root)
+        result.parent.resolve(strict=False).relative_to(root.resolve(strict=True))
     except (OSError, ValueError):
         fail(f"destination escapes game directory: {rel}")
     return result
@@ -81,30 +81,52 @@ def _fsync_dir(path: Path) -> None:
 
 
 @contextmanager
-def operation_lock(root: Path) -> Iterator[None]:
+def operation_lock(root: Path) -> Iterator[Path]:
     if os.name == "nt":
         fail("native Windows installer mode is unsupported; run this installer from WSL")
-    lock = root / LOCK_NAME
-    flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    root = root.absolute()
+    parent = root.parent
+    parent_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    parent_fd = os.open(parent, parent_flags)
+    lock_fd: int | None = None
+    root_fd: int | None = None
+    lock_name = f".{root.name}{LOCK_NAME}"
     try:
-        fd = os.open(lock, flags, 0o600)
-    except OSError as exc:
-        fail(f"cannot open passthrough operation lock {lock}: {exc}")
-    info = os.fstat(fd)
-    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
-        os.close(fd)
-        fail(f"passthrough operation lock is not a unique regular file: {lock}")
-    import fcntl
-    try:
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except BlockingIOError:
-        os.close(fd)
-        fail(f"another passthrough install/remove/recovery is active: {lock}")
-    try:
-        yield
+        lock_flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+        try:
+            lock_fd = os.open(lock_name, lock_flags, 0o600, dir_fd=parent_fd)
+        except OSError as exc:
+            fail(f"cannot open passthrough operation lock {parent / lock_name}: {exc}")
+        info = os.fstat(lock_fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+            fail(f"passthrough operation lock is not a unique regular file: {parent / lock_name}")
+        import fcntl
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            fail(f"another passthrough install/remove/recovery is active: {parent / lock_name}")
+        root_fd = os.open(root.name, parent_flags, dir_fd=parent_fd)
+        root_identity = os.fstat(root_fd)
+        pinned = Path(f"/proc/self/fd/{root_fd}")
+        if not pinned.is_dir():
+            fail("/proc/self/fd is required to pin the selected game directory; run from WSL/Linux")
+        yield pinned
+        try:
+            current = os.stat(root.name, dir_fd=parent_fd, follow_symlinks=False)
+        except OSError as exc:
+            fail(f"selected game directory changed during operation: {root}: {exc}")
+        if (current.st_dev, current.st_ino) != (root_identity.st_dev, root_identity.st_ino):
+            fail(f"selected game directory identity changed during operation: {root}")
     finally:
-        fcntl.flock(fd, fcntl.LOCK_UN)
-        os.close(fd)
+        if root_fd is not None:
+            os.close(root_fd)
+        if lock_fd is not None:
+            try:
+                import fcntl
+                fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            finally:
+                os.close(lock_fd)
+        os.close(parent_fd)
 
 
 def _open_parent_fd(root: Path, rel: str, *, create: bool = False) -> tuple[int, str]:
@@ -112,7 +134,10 @@ def _open_parent_fd(root: Path, rel: str, *, create: bool = False) -> tuple[int,
         fail("native Windows installer mode is unsupported; run this installer from WSL")
     parts = PurePosixPath(safe_rel(rel)).parts
     flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
-    fd = os.open(root, flags)
+    if root.parent == Path("/proc/self/fd") and root.name.isdigit():
+        fd = os.dup(int(root.name))
+    else:
+        fd = os.open(root, flags)
     try:
         for part in parts[:-1]:
             if create:
@@ -566,20 +591,20 @@ def _require_supported_platform() -> None:
 
 def recover(root: Path, journal: Path) -> None:
     _require_supported_platform()
-    with operation_lock(root):
-        _recover(root, journal)
+    with operation_lock(root) as pinned:
+        _recover(pinned, pinned / JOURNAL_NAME)
 
 
 def install(root: Path, pairs: list[str]) -> None:
     _require_supported_platform()
-    with operation_lock(root):
-        _install(root, pairs)
+    with operation_lock(root) as pinned:
+        _install(pinned, pairs)
 
 
 def remove(root: Path) -> None:
     _require_supported_platform()
-    with operation_lock(root):
-        _remove(root)
+    with operation_lock(root) as pinned:
+        _remove(pinned)
 
 
 def main() -> int:

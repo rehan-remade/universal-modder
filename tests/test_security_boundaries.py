@@ -778,6 +778,38 @@ def test_example_recovery_retains_journal_for_tampered_committed_stage(tmp_path)
     assert (game / f".args.txt.um-part-{nonce}").exists()
 
 
+def test_example_installer_pins_root_identity_across_path_replacement(tmp_path, monkeypatch):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    moved = tmp_path / "game-original"
+    game.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    source = tmp_path / "args-source.txt"
+    source.write_bytes(b"installer")
+    original_write = helper.write_json_atomic
+    swapped = False
+
+    def replace_root_after_journal(path, payload, **kwargs):
+        nonlocal swapped
+        result = original_write(path, payload, **kwargs)
+        if path.name == helper.JOURNAL_NAME and not swapped:
+            swapped = True
+            game.rename(moved)
+            game.mkdir()
+            (game / "GTA5.exe").write_bytes(b"replacement")
+            with pytest.raises(SystemExit, match="another passthrough"):
+                helper.remove(game)
+        return result
+
+    monkeypatch.setattr(helper, "write_json_atomic", replace_root_after_journal)
+    with pytest.raises(SystemExit, match="identity changed"):
+        helper.install(game, [str(source), "args.txt"])
+    assert (moved / "args.txt").read_bytes() == b"installer"
+    assert (moved / helper.MANIFEST_NAME).exists()
+    assert not (game / "args.txt").exists()
+    assert not (game / helper.MANIFEST_NAME).exists()
+
+
 def test_example_installer_manifest_marker_lifecycle(tmp_path):
     helper = _installer_module()
     game = tmp_path / "game"
