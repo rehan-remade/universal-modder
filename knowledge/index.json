@@ -560,6 +560,42 @@
   ]
  },
  {
+  "path": "games/dark-souls-remastered/portal-gun-prototype-via-dinput8-proxy-dll-player-camera-and.md",
+  "kind": "game",
+  "title": "Portal gun prototype via dinput8 proxy DLL: player, camera and angle offsets",
+  "game": "DARK SOULS: REMASTERED",
+  "games_also": [],
+  "game_version": "Steam build 10943698; DarkSoulsRemastered.exe 50,286,344 bytes, SizeOfImage 0x319B000",
+  "platform": "windows",
+  "engine": "native",
+  "route": "other",
+  "tools": [
+   "Zig 0.17.0 (zig cc, x86_64-windows-gnu)",
+   "Ghidra 12.1.4",
+   "Python 3 ctypes (ReadProcessMemory) and capstone",
+   "DSR-Gadget source (reference only)"
+  ],
+  "anti_cheat": "none found by um scan (play offline only)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Sonnet 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-07",
+  "links": [
+   "https://github.com/JKAnderson/DSR-Gadget",
+   "https://soulsmodding.com/"
+  ],
+  "tags": [
+   "proxy-dll",
+   "dinput8",
+   "memory-map",
+   "teleport",
+   "overlay",
+   "rtti"
+  ]
+ },
+ {
   "path": "games/darkest-dungeon/data-mod-randomizer.md",
   "kind": "game",
   "title": "A seeded randomizer (trinkets, heroes, monsters, curios, quirks, quests) as a Darkest Dungeon data mod",
