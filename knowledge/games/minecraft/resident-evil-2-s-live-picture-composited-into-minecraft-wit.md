@@ -14,7 +14,7 @@ agents: ["OpenCode (mimo-v2.6-flash)"]
 humans: []
 date: 2026-10-06
 links: ["https://github.com/praydog/REFramework", "https://github.com/rehan-remade/universal-modder/tree/main/examples/minecraft-gta5-passthrough"]
-tags: [mashup, passthrough, shared-memory, seqlock, depth-compositing, d3d12, frame-capture, refamework, fabric, mixin, reversed-z, camera-mirror]
+tags: [mashup, passthrough, shared-memory, seqlock, depth-compositing, d3d12, frame-capture, reframework, fabric, mixin, reversed-z, camera-mirror]
 ---
 
 # Resident Evil 2's live picture composited into Minecraft with depth
@@ -55,8 +55,9 @@ memory. Direction decided by the user: Minecraft visible, RE2 the picture source
 authority (so the earlier camera-mirror slice was reused untouched). Alternatives considered:
 - **ReShade compositor inside RE2** (archived design under `design/archive/`): wrong direction once RE2
   had to be the guest picture, and it would have shipped as an RE2-side screen overlay of Minecraft.
-- **Trusting `reframework_renderer_data`'s `ID3D11Device`:** the SDK example assumes D3D11, but RE2 runs
-  D3D12 - that path never fired once (see Gotcha 9). The plugin now queries the swapchain.
+- **Wiring only `REFrameworkRendererData`'s D3D11 device:** our first capture path was D3D11-only, but RE2
+  runs D3D12 - that path never fired once (see Gotcha 9). The SDK isn't D3D11-only (its example plugin
+  branches on `renderer_type` for D3D11 and D3D12); the plugin now queries the swapchain.
 - **A screen-in-world stepping stone** (RE2 on a monitor block first): skipped; the user wanted the full
   depth-aware composite as the first picture milestone.
 - **Reimplementing either game:** never sensible for a picture-in-picture effect.
@@ -66,9 +67,9 @@ authority (so the earlier camera-mirror slice was reused untouched). Alternative
   sRGB); depth comes from a device-side `CreateDepthStencilView` wrap that keeps a DSV table and prefers the
   backbuffer-sized handle. RE2's depth renders at **2880x1620 = exactly 1.5x supersample** of the colour, so
   depth is accepted under an exact-match-or-uniform-supersample rule and nearest-mapped to picture
-  dimensions. Three hardcoded command-list/device vtable slots do the hooking on this RE2 build:
-  **`ResourceBarrier`=26, `OMSetRenderTargets`=46, `CreateDepthStencilView`=21** (version-sensitive - the
-  boot log prints them so a game update can be re-checked).
+  dimensions. Three hardcoded command-list/device vtable slots do the hooking:
+  **`ResourceBarrier`=26, `OMSetRenderTargets`=46, `CreateDepthStencilView`=21** (fixed by the D3D12 COM
+  ABI, so RE2 updates can't move them).
 - **Depth maths.** RE Engine is reversed-Z (1.0 = near, 0.0 = far); stored depth linearises to metres with
   `z = n*f / (n + d*(f - n))` using the clip snapshot the pose writer publishes (probe: near 0.01, far
   3000, fov 74.8). Published frames carry metres, flags `1|4` (bottom-up rows, reversed Z).
@@ -134,8 +135,8 @@ uv run --offline --project <universal-modder> um win drive --proc java "focus" "
 - **Not verified:** third-person avatar hand policy (out of the first-person slice); audio of either game
   in the mix; whether the sky-flag `ModifyArg` actually suppresses Minecraft's sky (the beyond-clip floor
   made it moot - probes show MC's sky colour present *before* our draw); long-session (>1 h) stability;
-  other GPUs/drivers (one NVIDIA 616.56 machine); RE2 game updates (vtable slots re-check needed); no
-  showcase video; no release/one-click path (Melty cannot install Fabric - stays local/draft-only).
+  other GPUs/drivers (one NVIDIA 616.56 machine); no showcase video; no release (no one-click install path
+  for the Fabric side yet - stays local/draft-only).
 
 ## Gotchas
 1. **Composite draws but the screen never changes.** Probes right after the draw show the right colours on
@@ -179,15 +180,17 @@ uv run --offline --project <universal-modder> um win drive --proc java "focus" "
    per-getter status and raw values; give the reader an `explainRejection` that re-reads seqlock misses and
    names the exact rejection (torn, timestamp, clip range, short forward).
 8. **`E_INVALIDARG` creating what looks like a valid D3D12 readback texture.** **Cause:** D3D12 forbids
-   textures on UPLOAD/READBACK heaps and `Layout=ROW_MAJOR` is buffer-only. **Fix:** buffer-based readback
-   (`GetCopyableFootprints` + `CopyTextureRegion` into a READBACK buffer) - full rule matrix in the
-   companion technique note. With no debug layer installed, the HRESULT was the only diagnostic: prove the
-   rule matrix in a tiny harness against **WARP** first (it matched NVIDIA exactly, i.e. spec, not driver).
-9. **The SDK's D3D11 capture path never fires.** **Cause:** `REFrameworkRendererData` advertises/assumes
-   D3D11 in the example, but RE2 runs D3D12; `renderer_type` was not trustworthy. **Fix:** query the
-   swapchain and choose the route from it; on D3D12 hook `ResourceBarrier=26`, `OMSetRenderTargets=46`,
-   `CreateDepthStencilView=21` (re-verify against `re2_framework_log.txt`'s slot echo after game updates),
-   track DSVs in a table, refuse MSAA/unsupported depth with bounded logs.
+   textures on UPLOAD/READBACK heaps, and a `ROW_MAJOR` texture is only legal on a cross-adapter shared
+   heap. **Fix:** buffer-based readback (`GetCopyableFootprints` + `CopyTextureRegion` into a READBACK
+   buffer) - full rule matrix in the companion technique note. With no debug layer installed, the HRESULT
+   was the only diagnostic: prove the rule matrix in a tiny harness against **WARP** first (it matched
+   NVIDIA exactly, i.e. spec, not driver).
+9. **Our D3D11 capture path never fires.** **Cause:** the first plugin only wired D3D11, but RE2 runs D3D12.
+   The SDK isn't D3D11-only: REFramework's example plugin branches on `renderer_type` for D3D11 and D3D12,
+   and `PluginLoader::init_d3d_pointers` sets it from the active hook every frame. **Fix:** branch on
+   `REFrameworkRendererData::renderer_type` (as the example plugin does) or query the swapchain; on D3D12
+   hook `ResourceBarrier=26`, `OMSetRenderTargets=46`, `CreateDepthStencilView=21` (fixed by the D3D12 COM
+   ABI), track DSVs in a table, refuse MSAA/unsupported depth with bounded logs.
 10. **First-person hand renders on top of the composite.** **Cause:** the inject point precedes
     `renderItemInHand`. **Fix:** a single cancellable `@Inject(method="renderItemInHand", at=HEAD)` mixin
     that cancels while the composite is active (screen effects keep running; third-person avatar untested).
@@ -221,8 +224,6 @@ Two calendar days (2026-10-05 to 2026-10-06), six logged combined game runs plus
 - Third-person avatar policy (out of the first-person slice; presumably suppress like the hand).
 - Whether the sky-flag `ModifyArg` is needed at all now that beyond-clip guest depth is floored.
 - Audio mixing between the two games (RE2's audio is the natural choice but nothing is wired).
-- One-click/launch story: blocked until a loader path exists for Fabric on the Minecraft entry (Melty
-  cannot install it); the project stays local/draft-only until then.
+- One-click/launch story: there's no one-click install path for the Fabric side yet; the project stays
+  local/draft-only until then.
 - A showcase video (`um video` contact sheets / EDL) and a `media/` thumbnail for the note.
-- Stability of the three D3D12 vtable slots across future RE2 patches; a slot-echo check at boot is the
-  canary.
