@@ -6,9 +6,11 @@ import importlib.util
 import json
 import os
 import re
+import signal
 import shutil
 import subprocess
 import sys
+import time
 import types
 import urllib.error
 import zipfile
@@ -599,6 +601,7 @@ def test_example_uninstall_validates_all_ancestors_before_any_deletion(tmp_path)
         {"path": "reshade-shaders/Shaders/MCPassthrough.fx", "sha256": nested_digest},
         {"path": "args.txt", "sha256": hashlib.sha256(b"owned").hexdigest()},
     ]}), encoding="utf-8")
+    os.link(receipt, game / helper.MANIFEST_MARKER_NAME)
     (game / "reshade-shaders").symlink_to(outside, target_is_directory=True)
     with pytest.raises(SystemExit):
         helper.remove(game)
@@ -766,6 +769,7 @@ def test_example_recovery_retains_journal_for_tampered_committed_stage(tmp_path)
     journal.write_text(json.dumps({"format": 1, "state": "installing", "entries": [entry]}), encoding="utf-8")
     manifest.write_text(json.dumps({"format": 1, "state": "installed",
                                     "entries": [{"path": "args.txt", "sha256": digest}]}), encoding="utf-8")
+    os.link(manifest, game / helper.MANIFEST_MARKER_NAME)
     (game / f".args.txt.um-part-{nonce}").write_bytes(b"tampered")
     with pytest.raises(SystemExit):
         helper.recover(game, journal)
@@ -774,24 +778,114 @@ def test_example_recovery_retains_journal_for_tampered_committed_stage(tmp_path)
     assert (game / f".args.txt.um-part-{nonce}").exists()
 
 
-def test_example_installer_windows_path_helper_branch_round_trips(tmp_path, monkeypatch):
+def test_example_installer_manifest_marker_lifecycle(tmp_path):
     helper = _installer_module()
     game = tmp_path / "game"
     game.mkdir()
     (game / "GTA5.exe").write_bytes(b"game")
-    source = tmp_path / "shader.fx"
-    source.write_bytes(b"shader")
-
-    def path_parent(root, rel, *, create=False):
-        target = helper.destination(root, rel, create_parents=create)
-        return target.parent, target.name
-
-    monkeypatch.setattr(helper, "_open_parent_fd", path_parent)
-    helper.install(game, [str(source), "reshade-shaders/Shaders/MCPassthrough.fx"])
-    target = game / "reshade-shaders" / "Shaders" / "MCPassthrough.fx"
-    assert target.read_bytes() == b"shader"
+    source = tmp_path / "args-source.txt"
+    source.write_bytes(b"installer")
+    helper.install(game, [str(source), "args.txt"])
+    manifest = game / helper.MANIFEST_NAME
+    marker = game / helper.MANIFEST_MARKER_NAME
+    assert os.path.samefile(manifest, marker)
     helper.remove(game)
-    assert not target.exists()
+    assert not manifest.exists()
+    assert not marker.exists()
+    assert not (game / "args.txt").exists()
+
+
+def test_example_installer_native_windows_fails_closed_with_wsl_guidance(tmp_path, monkeypatch):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    monkeypatch.setattr(helper.os, "name", "nt")
+    with pytest.raises(SystemExit, match="WSL"):
+        helper.install(game, [])
+    with pytest.raises(SystemExit, match="WSL"):
+        helper._open_parent_fd(game, "args.txt")
+
+
+def test_example_installer_process_lock_is_released_after_sigkill(tmp_path):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    ready = tmp_path / "ready"
+    assert helper.__file__ is not None
+    helper_path = Path(helper.__file__)
+    code = (
+        "import importlib.util,time\n"
+        "from pathlib import Path\n"
+        f"s=importlib.util.spec_from_file_location('h',{str(helper_path)!r});"
+        "h=importlib.util.module_from_spec(s);s.loader.exec_module(h)\n"
+        f"def hold(root,pairs): Path({str(ready)!r}).write_text('ready'); time.sleep(60)\n"
+        f"h._install=hold;h.install(Path({str(game)!r}),[])\n"
+    )
+    child = subprocess.Popen([sys.executable, "-c", code])
+    try:
+        deadline = time.monotonic() + 10
+        while not ready.exists() and time.monotonic() < deadline:
+            time.sleep(0.02)
+        assert ready.exists()
+        os.kill(child.pid, signal.SIGKILL)
+        child.wait(timeout=5)
+        helper.recover(game, game / helper.JOURNAL_NAME)
+    finally:
+        if child.poll() is None:
+            child.kill()
+            child.wait(timeout=5)
+
+
+def test_example_installer_rollback_preserves_leaf_replaced_after_validation(tmp_path, monkeypatch):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    target = game / "args.txt"
+    target.write_bytes(b"owned")
+    entry = {"path": "args.txt", "sha256": hashlib.sha256(b"owned").hexdigest()}
+    original = helper._parent_rename
+    swapped = False
+
+    def race(parent, name, quarantine):
+        nonlocal swapped
+        if not swapped and name == "args.txt" and isinstance(parent, int):
+            swapped = True
+            os.rename("args.txt", "owned-before-race.txt", src_dir_fd=parent, dst_dir_fd=parent)
+            fd = os.open("args.txt", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=parent)
+            os.write(fd, b"user-concurrent-data")
+            os.close(fd)
+        original(parent, name, quarantine)
+
+    monkeypatch.setattr(helper, "_parent_rename", race)
+    assert helper.rollback(game, [entry]) is False
+    assert target.read_bytes() == b"user-concurrent-data"
+
+
+def test_example_recovery_rejects_matching_foreign_manifest_inode(tmp_path):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    payload = b"owned"
+    digest = hashlib.sha256(payload).hexdigest()
+    nonce = "a" * 16
+    target = game / "args.txt"
+    target.write_bytes(payload)
+    os.link(target, game / f".args.txt.um-part-{nonce}")
+    public = {"format": 1, "state": "installed", "entries": [{"path": "args.txt", "sha256": digest}]}
+    journal = {"format": 1, "state": "installing", "entries": [
+        {"path": "args.txt", "sha256": digest, "nonce": nonce},
+    ]}
+    journal_path = game / helper.JOURNAL_NAME
+    journal_path.write_text(json.dumps(journal), encoding="utf-8")
+    (game / helper.MANIFEST_NAME).write_text(json.dumps(public), encoding="utf-8")
+    marker = game / helper.MANIFEST_MARKER_NAME
+    marker.write_text(json.dumps(public), encoding="utf-8")
+    with pytest.raises(SystemExit, match="not bound"):
+        helper.recover(game, journal_path)
+    assert journal_path.exists()
+    assert (game / f".args.txt.um-part-{nonce}").exists()
 
 
 def test_example_installer_blocks_concurrent_recovery_during_install(tmp_path, monkeypatch):
@@ -997,6 +1091,31 @@ def test_release_verifier_rejects_live_path_mutation_after_snapshot(tmp_path):
     source.write_bytes(b"mutated")
     with pytest.raises(SystemExit):
         verifier.verify_source_binding(source, binding)
+
+
+def test_release_verifier_main_rechecks_named_inputs_before_success(tmp_path, monkeypatch):
+    verifier = _release_verifier_module()
+    left = tmp_path / "left"
+    right = tmp_path / "right"
+    left.mkdir()
+    right.mkdir()
+    names = [f"{verifier.DIST}-{verifier.VERSION}-py3-none-any.whl",
+             f"{verifier.DIST}-{verifier.VERSION}.tar.gz"]
+    for directory in (left, right):
+        for name in names:
+            (directory / name).write_bytes(b"same")
+    identity = {"commit": "a" * 40, "tree": "b" * 40}
+    monkeypatch.setattr(verifier, "source_identity", lambda _root: identity)
+    monkeypatch.setattr(verifier, "inspect_wheel", lambda *_args: {"member"})
+
+    def inspect_sdist(*_args):
+        (left / names[0]).write_bytes(b"mutated-after-snapshot")
+        return {"member"}
+
+    monkeypatch.setattr(verifier, "inspect_sdist", inspect_sdist)
+    monkeypatch.setattr(sys, "argv", ["verify_release_candidate.py", str(left), str(right)])
+    with pytest.raises(SystemExit, match="changed after snapshot"):
+        verifier.main()
 
 
 def test_release_verifier_preserves_preexisting_snapshot_destination(tmp_path):

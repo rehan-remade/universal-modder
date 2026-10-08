@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Transactional, ownership-scoped installer for the GTA passthrough example.
 
-Directory-entry power-loss durability is enforced on POSIX/WSL. Native Windows retains the ownership and
-recovery protocol but cannot claim the same durability because Python exposes no directory fsync there.
+Directory-entry power-loss durability is enforced on POSIX/WSL. Native Windows fails closed; run this
+installer from WSL so descriptor-relative ancestry checks and directory fsync remain available.
 """
 from __future__ import annotations
 
@@ -24,6 +24,7 @@ TARGETS = {
     "reshade-shaders/Shaders/ReShadeUI.fxh", "args.txt", "ReShade.ini", "ReShadePreset.ini",
 }
 MANIFEST_NAME = ".universal-modder-mcpassthrough-owned"
+MANIFEST_MARKER_NAME = ".universal-modder-mcpassthrough-owned-marker"
 JOURNAL_NAME = ".universal-modder-mcpassthrough-installing"
 LOCK_NAME = ".universal-modder-mcpassthrough-lock"
 
@@ -81,26 +82,34 @@ def _fsync_dir(path: Path) -> None:
 
 @contextmanager
 def operation_lock(root: Path) -> Iterator[None]:
+    if os.name == "nt":
+        fail("native Windows installer mode is unsupported; run this installer from WSL")
     lock = root / LOCK_NAME
+    flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
     try:
-        lock.mkdir()
-    except FileExistsError:
+        fd = os.open(lock, flags, 0o600)
+    except OSError as exc:
+        fail(f"cannot open passthrough operation lock {lock}: {exc}")
+    info = os.fstat(fd)
+    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+        os.close(fd)
+        fail(f"passthrough operation lock is not a unique regular file: {lock}")
+    import fcntl
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        os.close(fd)
         fail(f"another passthrough install/remove/recovery is active: {lock}")
-    _fsync_dir(root)
     try:
         yield
     finally:
-        try:
-            lock.rmdir()
-            _fsync_dir(root)
-        except FileNotFoundError:
-            fail(f"operation lock disappeared unexpectedly: {lock}")
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
 
 
-def _open_parent_fd(root: Path, rel: str, *, create: bool = False) -> tuple[int | Path, str]:
+def _open_parent_fd(root: Path, rel: str, *, create: bool = False) -> tuple[int, str]:
     if os.name == "nt":
-        target = destination(root, rel, create_parents=create)
-        return target.parent, target.name
+        fail("native Windows installer mode is unsupported; run this installer from WSL")
     parts = PurePosixPath(safe_rel(rel)).parts
     flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
     fd = os.open(root, flags)
@@ -121,42 +130,32 @@ def _open_parent_fd(root: Path, rel: str, *, create: bool = False) -> tuple[int 
         raise
 
 
-def _parent_open(parent: int | Path, name: str, flags: int, mode: int = 0o777) -> int:
-    if isinstance(parent, Path):
-        return os.open(parent / name, flags, mode)
+def _parent_open(parent: int, name: str, flags: int, mode: int = 0o777) -> int:
     return os.open(name, flags, mode, dir_fd=parent)
 
 
-def _parent_stat(parent: int | Path, name: str) -> os.stat_result:
-    if isinstance(parent, Path):
-        return os.stat(parent / name, follow_symlinks=False)
+def _parent_stat(parent: int, name: str) -> os.stat_result:
     return os.stat(name, dir_fd=parent, follow_symlinks=False)
 
 
-def _parent_unlink(parent: int | Path, name: str) -> None:
-    if isinstance(parent, Path):
-        (parent / name).unlink()
-    else:
-        os.unlink(name, dir_fd=parent)
+def _parent_unlink(parent: int, name: str) -> None:
+    os.unlink(name, dir_fd=parent)
 
 
-def _parent_link(parent: int | Path, source: str, target: str) -> None:
-    if isinstance(parent, Path):
-        os.link(parent / source, parent / target, follow_symlinks=False)
-    else:
-        os.link(source, target, src_dir_fd=parent, dst_dir_fd=parent, follow_symlinks=False)
+def _parent_link(parent: int, source: str, target: str) -> None:
+    os.link(source, target, src_dir_fd=parent, dst_dir_fd=parent, follow_symlinks=False)
 
 
-def _parent_fsync(parent: int | Path) -> None:
-    if isinstance(parent, Path):
-        _fsync_dir(parent)
-    else:
-        os.fsync(parent)
+def _parent_rename(parent: int, source: str, target: str) -> None:
+    os.rename(source, target, src_dir_fd=parent, dst_dir_fd=parent)
 
 
-def _parent_close(parent: int | Path) -> None:
-    if not isinstance(parent, Path):
-        os.close(parent)
+def _parent_fsync(parent: int) -> None:
+    os.fsync(parent)
+
+
+def _parent_close(parent: int) -> None:
+    os.close(parent)
 
 
 def _hash_fd(fd: int) -> str:
@@ -239,7 +238,8 @@ def _targets_match(root: Path, entries: list[dict]) -> bool:
 
 
 def write_json_atomic(path: Path, payload: dict, *, replace: bool = False,
-                      on_publish: Callable[[], None] | None = None) -> None:
+                      on_publish: Callable[[], None] | None = None,
+                      ownership_marker: Path | None = None) -> None:
     tmp = path.with_name(f".{path.name}.tmp-{os.getpid()}-{secrets.token_hex(8)}")
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     if hasattr(os, "O_NOFOLLOW"):
@@ -256,9 +256,16 @@ def write_json_atomic(path: Path, payload: dict, *, replace: bool = False,
         if on_publish is not None:
             on_publish()
     else:
+        marker_created = False
         try:
+            if ownership_marker is not None:
+                os.link(tmp, ownership_marker, follow_symlinks=False)
+                marker_created = True
+                _fsync_dir(path.parent)
             os.link(tmp, path, follow_symlinks=False)
         except FileExistsError:
+            if marker_created and ownership_marker is not None:
+                ownership_marker.unlink(missing_ok=True)
             tmp.unlink(missing_ok=True)
             fail(f"refusing to replace concurrently created receipt: {path}")
         if on_publish is not None:
@@ -302,6 +309,15 @@ def read_receipt(path: Path, *, journal: bool = False) -> list[dict]:
     return clean
 
 
+def _manifest_has_ownership_marker(manifest: Path, marker: Path) -> bool:
+    if (manifest.is_symlink() or marker.is_symlink() or not manifest.is_file() or not marker.is_file()):
+        return False
+    try:
+        return os.path.samefile(manifest, marker)
+    except OSError:
+        return False
+
+
 def stage_path(root: Path, entry: dict) -> Path | None:
     nonce = entry.get("nonce")
     if nonce is None:
@@ -313,7 +329,7 @@ def stage_path(root: Path, entry: dict) -> Path | None:
     return stage
 
 
-def _file_state(parent_fd: int | Path, name: str) -> tuple[os.stat_result, str] | None:
+def _file_state(parent_fd: int, name: str) -> tuple[os.stat_result, str] | None:
     try:
         info = _parent_stat(parent_fd, name)
     except FileNotFoundError:
@@ -333,9 +349,33 @@ def _file_state(parent_fd: int | Path, name: str) -> tuple[os.stat_result, str] 
         os.close(fd)
 
 
+def _remove_via_quarantine(parent: int, name: str,
+                           expected: tuple[os.stat_result, str]) -> bool:
+    quarantine = f".{name}.um-remove-{secrets.token_hex(8)}"
+    try:
+        _parent_rename(parent, name, quarantine)
+    except FileNotFoundError:
+        return False
+    captured = _file_state(parent, quarantine)
+    same = (captured is not None and captured[1] == expected[1]
+            and (captured[0].st_dev, captured[0].st_ino) == (expected[0].st_dev, expected[0].st_ino))
+    if same:
+        _parent_unlink(parent, quarantine)
+        _parent_fsync(parent)
+        return True
+    try:
+        _parent_link(parent, quarantine, name)
+    except FileExistsError:
+        print(f"preserving concurrently replaced file in quarantine: {quarantine}", file=sys.stderr)
+    else:
+        _parent_unlink(parent, quarantine)
+    _parent_fsync(parent)
+    return False
+
+
 def rollback(root: Path, entries: list[dict]) -> bool:
     """Validate pinned parent directories before removing any owned file."""
-    decisions: list[tuple[dict, int | Path, str, str | None, bool, bool]] = []
+    decisions = []
     complete = True
     try:
         for entry in reversed(entries):
@@ -361,17 +401,18 @@ def rollback(root: Path, entries: list[dict]) -> bool:
             if stage_state is not None and not stage_valid:
                 print(f"preserving changed install stage for: {entry['path']}", file=sys.stderr)
                 complete = False
-            decisions.append((entry, parent_fd, leaf, stage_name, owned, stage_valid))
-        for _entry, parent_fd, leaf, stage_name, owned, stage_valid in decisions:
-            if owned:
-                _parent_unlink(parent_fd, leaf)
-            if stage_name is not None and stage_valid:
-                _parent_unlink(parent_fd, stage_name)
-            if owned or stage_valid:
-                _parent_fsync(parent_fd)
+            decisions.append((entry, parent_fd, leaf, stage_name, owned, stage_valid,
+                              target_state, stage_state))
+        for (_entry, parent_fd, leaf, stage_name, owned, stage_valid,
+             target_state, stage_state) in decisions:
+            if owned and target_state is not None:
+                complete = _remove_via_quarantine(parent_fd, leaf, target_state) and complete
+            if stage_name is not None and stage_valid and stage_state is not None:
+                complete = _remove_via_quarantine(parent_fd, stage_name, stage_state) and complete
         return complete
     finally:
-        for _entry, parent_fd, _leaf, _stage_name, _owned, _stage_valid in decisions:
+        for (_entry, parent_fd, _leaf, _stage_name, _owned, _stage_valid,
+             _target_state, _stage_state) in decisions:
             _parent_close(parent_fd)
 
 
@@ -380,13 +421,16 @@ def _recover(root: Path, journal: Path) -> None:
         return
     entries = read_receipt(journal, journal=True)
     manifest = root / MANIFEST_NAME
+    marker = root / MANIFEST_MARKER_NAME
     if manifest.exists() or manifest.is_symlink():
+        if not _manifest_has_ownership_marker(manifest, marker):
+            fail(f"ownership manifest is not bound to this transaction; journal retained: {journal}")
         installed = read_receipt(manifest)
         public = [{"path": entry["path"], "sha256": entry["sha256"]} for entry in entries]
         if installed != public:
             fail(f"install journal does not match ownership manifest: {journal}")
         cleanup_complete = True
-        pinned: list[tuple[int | Path, str, bool]] = []
+        pinned: list[tuple[int, str, bool]] = []
         try:
             for entry in entries:
                 nonce = entry.get("nonce")
@@ -412,6 +456,7 @@ def _recover(root: Path, journal: Path) -> None:
         return
     if not rollback(root, entries):
         fail(f"interrupted install has changed files; receipt retained: {journal}")
+    marker.unlink(missing_ok=True)
     journal.unlink()
     _fsync_dir(root)
     print("recovered an interrupted passthrough install", file=sys.stderr)
@@ -419,6 +464,7 @@ def _recover(root: Path, journal: Path) -> None:
 
 def _install(root: Path, pairs: list[str]) -> None:
     manifest = root / MANIFEST_NAME
+    marker = root / MANIFEST_MARKER_NAME
     journal = root / JOURNAL_NAME
     _recover(root, journal)
     if manifest.exists() or manifest.is_symlink():
@@ -460,7 +506,7 @@ def _install(root: Path, pairs: list[str]) -> None:
             destination(root, item["path"])
         installed_entries = [{"path": entry["path"], "sha256": entry["sha256"]} for entry in public_entries]
         write_json_atomic(manifest, {"format": 1, "state": "installed", "entries": installed_entries},
-                          on_publish=mark_manifest_published)
+                          on_publish=mark_manifest_published, ownership_marker=marker)
         for entry in public_entries:
             _unlink_stage(root, entry)
         journal.unlink()
@@ -469,10 +515,12 @@ def _install(root: Path, pairs: list[str]) -> None:
         committed = False
         if manifest_published and manifest.exists():
             try:
-                owns_manifest = read_receipt(manifest) == installed_entries
+                owns_manifest = (_manifest_has_ownership_marker(manifest, marker)
+                                 and read_receipt(manifest) == installed_entries)
                 committed = owns_manifest and _targets_match(root, installed_entries)
                 if owns_manifest and not committed:
                     manifest.unlink()
+                    marker.unlink(missing_ok=True)
                     _fsync_dir(root)
             except SystemExit:
                 committed = False
@@ -481,6 +529,7 @@ def _install(root: Path, pairs: list[str]) -> None:
             # targets and recovery evidence instead of rolling back committed files.
             raise
         if rollback(root, public_entries):
+            marker.unlink(missing_ok=True)
             journal.unlink(missing_ok=True)
             _fsync_dir(root)
         raise
@@ -489,7 +538,10 @@ def _install(root: Path, pairs: list[str]) -> None:
 
 def _remove(root: Path) -> None:
     manifest = root / MANIFEST_NAME
+    marker = root / MANIFEST_MARKER_NAME
     _recover(root, root / JOURNAL_NAME)
+    if not _manifest_has_ownership_marker(manifest, marker):
+        fail(f"ownership manifest marker is missing or mismatched: {marker}")
     entries = read_receipt(manifest)
     changed = not rollback(root, entries)
     for rel in ("reshade-shaders/Shaders", "reshade-shaders"):
@@ -503,20 +555,29 @@ def _remove(root: Path) -> None:
         print(f"ownership manifest retained because changed files remain: {manifest}", file=sys.stderr)
         return
     manifest.unlink()
+    marker.unlink()
     _fsync_dir(root)
 
 
+def _require_supported_platform() -> None:
+    if os.name == "nt":
+        fail("native Windows installer mode is unsupported; run this installer from WSL")
+
+
 def recover(root: Path, journal: Path) -> None:
+    _require_supported_platform()
     with operation_lock(root):
         _recover(root, journal)
 
 
 def install(root: Path, pairs: list[str]) -> None:
+    _require_supported_platform()
     with operation_lock(root):
         _install(root, pairs)
 
 
 def remove(root: Path) -> None:
+    _require_supported_platform()
     with operation_lock(root):
         _remove(root)
 
