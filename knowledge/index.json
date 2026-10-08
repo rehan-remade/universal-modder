@@ -690,6 +690,43 @@
   ]
  },
  {
+  "path": "games/dead-cells/libgdx-rebuild-from-res-pak.md",
+  "kind": "game",
+  "title": "Rebuilding Dead Cells' core loop in libGDX, reading the game's own res.pak at runtime",
+  "game": "Dead Cells",
+  "games_also": [],
+  "game_version": "Steam macOS build, version string 35 (build date 2023-10-01)",
+  "platform": "macos",
+  "engine": "haxe",
+  "route": "reimplementation",
+  "tools": [
+   "libGDX 1.14.2 (LWJGL3)",
+   "hlbc",
+   "python3 (pak/BTMX readers)",
+   "JDK 21"
+  ],
+  "anti_cheat": "none (single-player); nothing in the install is modified, the rebuild only reads res.pak",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-09",
+  "links": [],
+  "tags": [
+   "reimplementation",
+   "heaps",
+   "hashlink",
+   "castledb",
+   "atlas",
+   "palette-swap",
+   "normal-maps",
+   "procgen",
+   "room-templates",
+   "platformer"
+  ]
+ },
+ {
   "path": "games/detroit-become-human/segs-data-container-mesh-animation-and-cloth-in-blender.md",
   "kind": "game",
   "title": "Detroit: Become Human: SEGS/DATA_CONTAINER editing (mesh, animation, cloth) in Blender",
