@@ -1537,6 +1537,70 @@
   ]
  },
  {
+  "path": "games/mount-and-blade-ii-bannerlord/bannerlord-borderlands-2-total-conversion.md",
+  "kind": "game",
+  "title": "Borderlands 2 as a Bannerlord total conversion: own skeletons, guns, creatures and BL2 rules in a C# module",
+  "game": "Mount & Blade II: Bannerlord",
+  "games_also": [
+   "Borderlands 2"
+  ],
+  "game_version": "v1.4.8.119303 (Steam, Windows 11); client TaleWorlds.Native.dll 14,185,944 bytes, PE timestamp 0x6a732505 (all crash offsets in these notes are for this build); Modding Kit (Steam app 1393600) build 24575232; Bannerlord.Harmony 2.4.2. Guest: Borderlands 2 on Steam (UE3 packages, version 832)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "loader-api",
+  "tools": [
+   "Bannerlord module system (SubModule.xml, ModuleData XML + XSLT, C# net472 SubModule built with the .NET 8 SDK)",
+   "Bannerlord.Harmony 2.4.2 (optional, never shipped)",
+   "Python 3.10 + numpy (own LZ4, xxHash64, DXT/BC encoders, .tpac/.rdc writers)",
+   "Blender 4.2 headless",
+   "umodel (UE Viewer)",
+   "Ghidra 12.1.4 headless + JDK 21",
+   "ilspycmd 9.1",
+   "python minidump package",
+   "FMOD Studio 2.02.27 CLI",
+   "wwiser + vgmstream",
+   "ffmpeg",
+   "PowerShell 5.1 test harness"
+  ],
+  "anti_cheat": "none. Single player only. Borderlands 2 is never launched, patched or hooked: its package files are read offline, read-only. Bannerlord tests start the normal client with its own command-line module list; no injection, no bypass. One optional feature (comic shading) edits three of the game's own shader/post-effect files with hash-checked backups and a revert script",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)",
+   "Claude Code subagents (Sonnet 5.5)"
+  ],
+  "humans": [
+   "@theartur2000"
+  ],
+  "date": "2026-10-07",
+  "links": [
+   "https://github.com/rehan-remade/universal-modder/tree/main/examples/bannerlord-editor-free-sdk"
+  ],
+  "tags": [
+   "bannerlord",
+   "borderlands-2",
+   "total-conversion",
+   "mashup",
+   "csharp-submodule",
+   "harmony",
+   "moduledata",
+   "xslt",
+   "project-mbproj",
+   "custom-race",
+   "creatures",
+   "guns",
+   "siege",
+   "campaign",
+   "gauntlet",
+   "fmod",
+   "psai",
+   "cel-shading",
+   "umodel",
+   "ghidra",
+   "minidump",
+   "test-harness"
+  ]
+ },
+ {
   "path": "games/naruto-shippuden-ultimate-ninja-storm-4/free-for-all-4-6-teams-native-ui.md",
   "kind": "game",
   "title": "Naruto Storm 4: free-for-all for 4-6 teams with native UI, by controlling the duel's side/role lookups",
@@ -3348,6 +3412,137 @@
   ]
  },
  {
+  "path": "techniques/bannerlord-combat-damage-and-guns.md",
+  "kind": "technique",
+  "title": "Combat in Bannerlord mods: damage models, scripted blows, AI combat properties and guns on the crossbow class",
+  "status": "in-progress",
+  "game": "Mount & Blade II: Bannerlord",
+  "games_also": [
+   "Borderlands 2"
+  ],
+  "game_version": "v1.4.8.119303 (Steam, Windows 11); client TaleWorlds.Native.dll 14,185,944 bytes, PE timestamp 0x6a732505; Bannerlord.Harmony 2.4.2",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "loader-api",
+  "tools": [
+   "Bannerlord module system (ModuleData XML + XSLT, C# net472 SubModule)",
+   "Bannerlord.Harmony 2.4.2",
+   "ilspycmd 9.1",
+   "Ghidra 12.1.4 headless on a copy of TaleWorlds.Native.dll"
+  ],
+  "agents": [
+   "Claude Code (Opus 5.5)",
+   "Claude Code subagents (Sonnet 5.5)"
+  ],
+  "humans": [
+   "@theartur2000"
+  ],
+  "date": "2026-10-07",
+  "links": [],
+  "tags": [
+   "bannerlord",
+   "combat",
+   "damage-model",
+   "blow",
+   "registerblow",
+   "morale",
+   "ai",
+   "guns",
+   "crossbow-class",
+   "missiles",
+   "friendly-fire",
+   "auto-resolve"
+  ]
+ },
+ {
+  "path": "techniques/bannerlord-custom-races-and-creatures.md",
+  "kind": "technique",
+  "title": "Custom races and creatures in Bannerlord at runtime: the humanoid path, quadruped mounts and hidden-rider creatures",
+  "status": "in-progress",
+  "game": "Mount & Blade II: Bannerlord",
+  "games_also": [
+   "Borderlands 2"
+  ],
+  "game_version": "v1.4.8.119303 (Steam, Windows 11); client TaleWorlds.Native.dll 14,185,944 bytes, PE timestamp 0x6a732505 (all crash offsets here are for this build); Bannerlord.Harmony 2.4.2",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "loader-api",
+  "tools": [
+   "Bannerlord module system (ModuleData XML + XSLT, C# net472 SubModule)",
+   "Bannerlord.Harmony 2.4.2",
+   "Python 3.10 + numpy (own .tpac/.rdc writers)",
+   "Blender 4.2 headless",
+   "Ghidra 12.1.4 headless",
+   "ilspycmd 9.1"
+  ],
+  "agents": [
+   "Claude Code (Opus 5.5)",
+   "Claude Code subagents (Sonnet 5.5)"
+  ],
+  "humans": [
+   "@theartur2000"
+  ],
+  "date": "2026-10-07",
+  "links": [],
+  "tags": [
+   "bannerlord",
+   "custom-race",
+   "custom-skeleton",
+   "animation",
+   "action-sets",
+   "monsters",
+   "quadruped",
+   "mounts",
+   "creatures",
+   "jockey-pair",
+   "flying",
+   "humanoid-path"
+  ]
+ },
+ {
+  "path": "techniques/bannerlord-native-crashes-and-hangs.md",
+  "kind": "technique",
+  "title": "Native crashes and hangs in Bannerlord: finding them in dumps and guarding them from managed code",
+  "status": "in-progress",
+  "game": "Mount & Blade II: Bannerlord",
+  "games_also": [
+   "Borderlands 2"
+  ],
+  "game_version": "v1.4.8.119303 (Steam, Windows 11); client TaleWorlds.Native.dll 14,185,944 bytes, PE timestamp 0x6a732505 (all crash offsets here are for this build); Bannerlord.Harmony 2.4.2",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "loader-api",
+  "tools": [
+   "Bannerlord module system (ModuleData XML + XSLT, C# net472 SubModule)",
+   "Bannerlord.Harmony 2.4.2",
+   "Ghidra 12.1.4 headless + JDK 21 (Java GhidraScripts) on a copy of TaleWorlds.Native.dll",
+   "python minidump package + Windows Error Reporting + MiniDumpWriteDump",
+   "ilspycmd 9.1"
+  ],
+  "agents": [
+   "Claude Code (Opus 5.5)",
+   "Claude Code subagents (Sonnet 5.5)"
+  ],
+  "humans": [
+   "@theartur2000"
+  ],
+  "date": "2026-10-07",
+  "links": [],
+  "tags": [
+   "bannerlord",
+   "native",
+   "crash",
+   "hang",
+   "minidump",
+   "ghidra",
+   "harmony",
+   "guards",
+   "validators",
+   "ik",
+   "watchdog"
+  ]
+ },
+ {
   "path": "techniques/bethesda-esl-light-masters-and-plugin-archive-pairing.md",
   "kind": "technique",
   "title": "Bethesda ESL light masters and plugin\u2194archive load pairing (the CC-merge route)",
@@ -3847,7 +4042,9 @@
    "@theartur2000"
   ],
   "date": "2026-10-05",
-  "links": [],
+  "links": [
+   "https://github.com/rehan-remade/universal-modder/tree/main/examples/bannerlord-editor-free-sdk"
+  ],
   "tags": [
    "bannerlord",
    "tpac",

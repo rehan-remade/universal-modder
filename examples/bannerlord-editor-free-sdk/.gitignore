@@ -1,0 +1,10 @@
+# SDK output: staged packages, backups, caches, scratch
+stage/
+backup/
+config_backup/
+out/
+re_out/
+re_proj/
+GAME_LOCK
+__pycache__/
+*.pyc

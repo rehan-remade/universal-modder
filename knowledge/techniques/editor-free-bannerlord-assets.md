@@ -14,7 +14,7 @@ agents:
 - Claude Code subagents (Sonnet 5.5)
 humans: ["@theartur2000"]
 date: '2026-10-05'
-links: []
+links: ["https://github.com/rehan-remade/universal-modder/tree/main/examples/bannerlord-editor-free-sdk"]
 tags: [bannerlord, tpac, rdc, runtimedatacache, packing, load-time, hang, ik, skeleton, ragdoll, animation, clip, action-set, project-mbproj, bone-limit, hit-capsule, minidump, asset-pipeline, total-conversion, custom-race, quadruped]
 ---
 # Editor-free assets for Mount & Blade II: Bannerlord: writing .tpac packages, skeletons and animation clips offline
@@ -573,6 +573,88 @@ Each is symptom, cause, fix. Addresses are for the client build pinned in Setup.
   patch was written, the side-channel design was never built, and the attached part-skeleton plan is untested.
 - **No other game version:** everything is v1.4.8.119303. Offsets are stale on any update. Multiplayer and
   anti-cheat were never involved (single player only); do not assume any of this is safe there.
+
+## More facts from a total conversion
+
+Added from the Borderlands 2 total conversion ([`../games/mount-and-blade-ii-bannerlord/bannerlord-borderlands-2-total-conversion.md`](../games/mount-and-blade-ii-bannerlord/bannerlord-borderlands-2-total-conversion.md)). These complement the formats above.
+
+
+- **Axes and units.** Character space is Z up, +Y forward, the character's left is -X. Native melee weapons run along game
+  +Z from the grip at the origin; axe heads point toward -X; blades lie flat in XZ; shields lie flat in XY with the front on +Z.
+  The editor keeps Blender's axes turned 180 degrees about Z (game = (-x, -y, z)), so a mesh built on Blender +Z becomes
+  game Z 0..L. Export weapons at global scale 0.01 (the editor imports with unit None; a cm-based Blender file gives a
+  58 m axe). umodel glTF is 1 unit = 1 m. Read the imported bounding boxes to learn the real axes, do not guess.
+- **Skinned FBX for the editor route (history):** Z up, +Y forward, primary bone axis Y, secondary X, no leaf bones,
+  armature named like the kit's `human_skeleton_notused`. A Y-up export plus the editor's "Convert to Z-up" tore the
+  arms; rewriting the rest orientation as PreRotation was a dead end. Our own writers made this moot.
+- **Materials:** shader `pbr_shading`; tick the `skinning` vertex layout for skinned meshes (else black and frozen in bind
+  pose); a normal map goes in the Bumpmap slot; a SpecularMap is mandatory (R specular, G gloss, B occlusion; a neutral
+  40/50/255 texture works) or the mesh renders black in shade; static props have skinning off. Stable shader guids:
+  `pbr_shading` 71b6a0ce4f381142a1a648a29a083c8f, `gui_color_and_stroke` 31fd6eb92771ec468648b28d23ece108.
+  Native normal-map convention: R = 128 minus slope along x, G = 128 minus slope along the row (rows down). Native spec
+  layout: R metalness, G gloss, B occlusion.
+- **Inventory thumbnails are not bbox-fitted for crossbow-class items.** `ItemThumbnailCache.GetItemPoseAndCamera` puts the
+  mesh at the item-tableau scene's `crossbow_frame` and renders from the child camera `crossbow_cam` (FOV 15, 256x120).
+  A gun must lie along +Z with its top on +Y or its icon is a blob cut by the icon edge. Horses use `horse_cam` and frame a
+  horse-sized window, so a low creature shows only its back. Shields and thrown items use the "goods" fit. Holster
+  meshes double as the icons of ammo stacks.
+- **Empty packages:** a geometry package of about 325 bytes holds no mesh; a 36-byte texture package is an interrupted import.
+- **Colour-grade LUT:** a 256x16 strip (x = red + 16*blue, y = green), import flags Do Not Compress, no mips, Dont Degrade,
+  "For Colorgrade". On the campaign map every region of `worldmap_color_grades.xml` (registered in `project.mbproj`)
+  maps to it; in missions `Scene.SetColorGradeBlend`, and the grade must be applied again after the atmosphere loads.
+  A heavy grade turns greens ochre, so pre-compensate any colour you author (a green beam went in as teal).
+- **Scene folders** hold `scene.xscene` (XML: entities, terrain layers, atmosphere), `terrain.bin` (chunks MIDX, HGHT, NRML,
+  WGHT, PHYM; HGHT is PNG-like blocks with a non-standard header, not decoded), `navmesh.bin`, `flora.bin`, `prt_data.bin`
+  (baked lighting, settlement scenes only, up to 128 MB) and `atmosphere.xml`. `navmesh.bin` vertices are plain float
+  triples about 0.2 m above the terrain, readable by range + neighbour test (15k to 45k clean vertices per scene), so
+  you can read ground height offline. A module scene folder with the SAME name replaces the Native one (last module wins).
+  A renamed COPY of a Native battle scene under a new id works with text edits only (the scene id is not checked against
+  file contents), reusing Native terrain, navmesh and flora; no writer for terrain or navmesh exists.
+- **Scene choice for field battles:** `DefaultSceneModel` + `Campaign.InitializeScenes` read `ModuleData/sp_battle_scenes.xml`
+  of every active module: rows `<Scene id= terrain= forest_density= map_indices=...>`. The root must be the SECOND child
+  of the document (declaration first, no comment before the root). Two scenes sharing a `map_index` trigger a
+  `FailedAssert` ("Multiple battle scenes for map patch", log only in retail) and a random pick. Custom battle lists come
+  from a `CustomBattleScenes` XmlNode that SubModule.xml must name. The campaign map's battle index map is one byte per cell.
+- **Terrain layer textures are looked up BY NAME per season** in `scene.xscene`, so same-name module textures reskin the
+  ground of every scene using them (309 ground textures covered 99 percent of layers over 108 land scenes). The campaign
+  map terrain itself is a 2.1 GB virtual-texture tile set that a module cannot override; named terrain-layer textures and
+  the `mainmap_cliff_*`, `mainmap_decal_*`, `worldmap_*` tree materials can be. Flora kinds name their materials, so
+  same-name material overrides could re-grade flora (unproven at the time). Sky, fog, terrain shape, navmesh and flora
+  placement cannot be reached by override (copy the scene folder instead).
+- **Prefabs:** a `Prefabs/*.xml` file in a module redefines a Native prefab by name with no registration (later module
+  wins; root `<prefabs>`, top-level `<game_entity name=...>`). Instances in scenes are baked at load and are NOT
+  `GameEntity` objects at runtime (one town: 9,030 top-level entities in the file, 1,978 at runtime), so runtime code can
+  only reach hand-placed ones. Redefine the prefab: keep the root's physics shape, drop its meta mesh and occlusion body
+  (a dropped occlusion body also stops people being culled behind lower replacement pieces), add your pieces as
+  children. 159 buildings were dressed this way and verified in game. Children transform with Euler order Rz Rx Ry.
+- **Settlement scenes:** 173 outdoor settlement scenes (53 town centres, 22 castles, 86 villages, 12 hideouts) carry about
+  447,000 top-level entities and 419,340 prefab instances of 3,609 prefabs. Overriding the metamesh by name was applied to
+  3,518 building meshes (95 percent of instances, 3.83 GB, 171 `bl2w_*` materials that are Native records with texture
+  guids swapped). Collision stays Native, so the baked navmesh still fits.
+- **Campaign-map scene:** a module `SceneObj/Main_map/scene.xscene` is the one the game loads (proved by scaling a town
+  3x). Settlement entities carry tagged children (gate, wall, siege, banner); untagged mesh and decal components can be
+  stripped and replaced by NEW top-level entities. Extra children under settlement entities crash the campaign load;
+  multi-material Z-up icon FBXs crash the map too; single-material meshes rotated +90 degrees about X work.
+- **Banners:** a banner key is groups of 10 numbers per layer (mesh, colour, colour2, w, h, x, y, stroke, mirror, rotation);
+  group 1 is the background. Icons come from the merged `BannerIcons` XML (ids 7000+); each icon is a quad of a material
+  whose texture is a 4x4 grid of 512 px cells (`texture_index` 0 top-left, row-major, 2048x2048 BC7). Shader
+  `gui_color_and_stroke`: G = fill, R = outline ring, A = coverage. Clans inside a kingdom are recoloured to the kingdom's
+  colours only if those hexes are palette entries. Banners are saved with the clan: a new campaign is needed.
+- **Main-menu video:** every active module's `Videos/initial_menu/<name>/` with a `*_pc.ivf` AND an `.ogg` is a
+  candidate; one is picked at random per screen. Native ships 8 (VP8 in IVF, 2560x1440, 24 fps, about 32 s, Ogg Vorbis
+  48 kHz). Ours: 1920x1080, VP8 two-pass, key frame every 48 frames, audio length equal to video length exactly.
+- **Shaders:** sources ship in `Shaders/Sources` (`.rs` shader with `main_vs`/`main_ps`/`main_cs`, flags as `#define`s; `.rsh`
+  include), compiled with the shipped `d3dcompiler_47.dll`; but variants are taken from `Shaders/D3D11/compressed_shader_cache.sack`
+  (about 1.5 GB) by a key of shader name + flag words with no source hash, so editing sources alone changes nothing.
+  Misses log `Missing shader from sack` and `compile_shader:` and are cached in a ProgramData folder. The console command
+  `resource.shader.recompile_single_shader <substring>` (call it through `Utilities.ExecuteCommandLineCommand`) evicts a
+  shader's keys. Modules cannot override core shaders or the Native default post-effect graph (first definition wins,
+  Native loads first). GPU skinning is compute-only and its palette is 64 bones.
+- **Post-effect inputs:** `postfx_graphs.xml` `<input index=N type=provided|node source=...>` becomes `texture<N>`; provided
+  sources include `gbuffer_depth`, `gbuffer_depth_with_water`, `gbuffer_normals`, `gbuffer_stencil`, `gbuffer_motion_vectors`,
+  `screen_rt`; index 4 is last frame, 5 the cube map. `gbuffer_stencil.g` low 4 bits are a material id (1 standard: bark,
+  characters, props; 3 terrain; 6 flora leaves; 7 and 9 far-tree billboards; 8 grass); 0x10 decals, 0x20 stationary, 0x40
+  not season-affected.
 
 ## Credits
 - **TaleWorlds Entertainment** for Bannerlord and the Modding Kit. Every format here was reverse-engineered from
