@@ -86,6 +86,14 @@ def test_managed_pe(tmp_path):
     assert scan.pe_info(p) == {"arch": "x86", "managed": True}
 
 
+def test_zengin_detected(tmp_path):
+    key, _ = engine_of(tmp_path, {"system/Gothic2.exe": _pe(False), "Data/Textures.vdf": b"x"})
+    assert key == "zengin"
+    # volume layout alone (vdfs loader + Data/*.vdf) is enough
+    key, _ = engine_of(tmp_path / "b", {"system/vdfs32g.dll": _pe(False), "Data/Worlds.vdf": b"x"})
+    assert key == "zengin"
+
+
 def test_nested_exe_fingerprinted(tmp_path):
     # Gothic-style layout: the game exe lives one level down in system/
     make(tmp_path, {"system/Gothic2.exe": _pe(managed=False), "Data/worlds.vdf": b"x"})

@@ -365,6 +365,9 @@ KNOWN = {
     "starfield": ("Creation Kit plugins, SFSE", "bethesda.md"),
     "elden ring": ("ModEngine2 (offline, EAC disabled) + Smithbox/DSMapStudio param/map edits; never online", "big-frameworks.md"),
     "grand theft auto v": ("Story mode only: ScriptHookV + ASI loader, OpenIV/CodeWalker; BattlEye guards GTA Online - never mod online", "big-frameworks.md"),
+    "gothic ii": ("Union plugin SDK (x86 DLL in system/autorun, gothic-api __G2A) + GD3D11; the GOG/Steam 2.7 exe must be swapped for 2.6.0.0-rev2 first; assets via ZenKit VDF", "zengin.md"),
+    "gothic 2": ("Union plugin SDK (x86 DLL in system/autorun, gothic-api __G2A) + GD3D11; the GOG/Steam 2.7 exe must be swapped for 2.6.0.0-rev2 first; assets via ZenKit VDF", "zengin.md"),
+    "gothic 1": ("Union plugin SDK (x86 DLL in system/autorun, gothic-api __G1) needs the 1.08k report build; assets via ZenKit VDF", "zengin.md"),
     "grand theft auto v enhanced": ("Story mode only: ScriptHookV (enhanced build) + ASI loader; BattlEye guards GTA Online - never mod online", "big-frameworks.md"),
     "cyberpunk 2077": ("REDmod / Cyber Engine Tweaks (Lua) / RED4ext / ArchiveXL, WolvenKit for assets", "big-frameworks.md"),
     "baldur's gate 3": ("Script Extender (Lua) + LSLib/Multitool for .pak, official mod.io toolkit", "big-frameworks.md"),
@@ -443,6 +446,7 @@ ENGINES = {
     "frostbite": ("Frostbite", "native.md", "Frosty Tool Suite for supported titles, offline only; most titles have kernel anti-cheat"),
     "electron": ("Electron / NW.js / HTML5", "misc-engines.md", "extract resources/app.asar (or package.nw), patch JS, open devtools"),
     "love2d": ("LÖVE (Lua)", "misc-engines.md", "the .love/exe is a zip of Lua; patch or inject with lovely"),
+    "zengin": ("ZenGin (Gothic 1/2)", "zengin.md", "Union plugin SDK (x86 C++ DLL in system/autorun, gothic-api headers for engine internals); GD3D11 swaps the DX7 renderer for real D3D11; assets in Data/*.vdf via ZenKit"),
     "java": ("Java", "misc-engines.md", "decompile jars (Vineflower/CFR), patch with a mod loader or bytecode (Mixin/ASM)"),
     "defold": ("Defold", "misc-engines.md", "unpack game.arcd; Lua scripts"),
     "cocos": ("Cocos2d-x", "native.md", "Lua/JS scripts if bundled; else native hooks"),
@@ -537,6 +541,11 @@ def detect(ix: Index) -> tuple[list[tuple[str, int, list[str], dict]], dict]:
     # Ren'Py
     if ix.has_dir("renpy") and ix.has_dir("game"):
         add("renpy", 100, ["renpy/ + game/"], archives=len(ix.find("game/*.rpa")))
+
+    # ZenGin (Gothic 1/2): the exe lives in system/, assets in Data/*.vdf volumes
+    if ix.has("system/gothic.exe", "system/gothic1.exe", "system/gothic2.exe") or \
+            (ix.has("system/vdfs32g.dll", "system/vdfs32.dll") and ix.has("data/*.vdf")):
+        add("zengin", 95, ix.find("system/gothic*.exe")[:1] + ix.find("data/*.vdf")[:1])
 
     # XNA / FNA / MonoGame / .NET
     xna = ix.find("fna.dll", "monogame.framework.dll", "microsoft.xna.framework*.dll", "*/fna.dll")
