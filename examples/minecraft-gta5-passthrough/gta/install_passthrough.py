@@ -377,6 +377,8 @@ def _file_state(parent_fd: int, name: str) -> tuple[os.stat_result, str] | None:
 
 def _remove_via_quarantine(parent: int, name: str, quarantine: str,
                            expected: tuple[os.stat_result, str]) -> bool:
+    if _file_state(parent, quarantine) is not None and _file_state(parent, name) is not None:
+        return False
     try:
         _parent_rename(parent, name, quarantine)
     except FileNotFoundError:
@@ -417,6 +419,17 @@ def _restore_quarantine(parent: int, name: str, quarantine: str) -> None:
     _parent_fsync(parent)
 
 
+def _collapse_duplicate_quarantine(parent: int, name: str, quarantine: str) -> bool:
+    visible = _file_state(parent, name)
+    hidden = _file_state(parent, quarantine)
+    if (visible is None or hidden is None
+            or (visible[0].st_dev, visible[0].st_ino) != (hidden[0].st_dev, hidden[0].st_ino)):
+        return False
+    _parent_unlink(parent, quarantine)
+    _parent_fsync(parent)
+    return True
+
+
 def rollback(root: Path, entries: list[dict]) -> bool:
     """Validate pinned parent directories before removing any owned file."""
     decisions = []
@@ -436,6 +449,19 @@ def rollback(root: Path, entries: list[dict]) -> bool:
             stage_state = _file_state(parent_fd, stage_name) if stage_name is not None else None
             stage_quarantine_state = (_file_state(parent_fd, stage_quarantine)
                                       if stage_quarantine is not None else None)
+            if (target_state is not None and target_quarantine_state is not None
+                    and (target_state[0].st_dev, target_state[0].st_ino)
+                    == (target_quarantine_state[0].st_dev, target_quarantine_state[0].st_ino)):
+                if not _collapse_duplicate_quarantine(parent_fd, leaf, target_quarantine):
+                    complete = False
+                target_quarantine_state = None
+            if (stage_name is not None and stage_quarantine is not None
+                    and stage_state is not None and stage_quarantine_state is not None
+                    and (stage_state[0].st_dev, stage_state[0].st_ino)
+                    == (stage_quarantine_state[0].st_dev, stage_quarantine_state[0].st_ino)):
+                if not _collapse_duplicate_quarantine(parent_fd, stage_name, stage_quarantine):
+                    complete = False
+                stage_quarantine_state = None
             if target_state is not None and target_quarantine_state is not None:
                 print(f"preserving ambiguous target and quarantine: {entry['path']}", file=sys.stderr)
                 complete = False
@@ -500,6 +526,16 @@ def _recover(root: Path, journal: Path) -> None:
         public = [{"path": entry["path"], "sha256": entry["sha256"]} for entry in entries]
         if installed != public:
             fail(f"install journal does not match ownership manifest: {journal}")
+        if not _targets_match(root, installed):
+            if not rollback(root, entries):
+                fail(f"invalid committed install has changed files; journal retained: {journal}")
+            manifest.unlink()
+            marker.unlink()
+            _fsync_dir(root)
+            journal.unlink()
+            _fsync_dir(root)
+            print("recovered an invalid committed passthrough install", file=sys.stderr)
+            return
         cleanup_complete = True
         pinned: list[tuple[int, str, bool]] = []
         try:
@@ -611,6 +647,20 @@ def _remove(root: Path) -> None:
     manifest = root / MANIFEST_NAME
     marker = root / MANIFEST_MARKER_NAME
     _recover(root, root / JOURNAL_NAME)
+    if not manifest.exists() and not manifest.is_symlink() and (marker.exists() or marker.is_symlink()):
+        entries = read_receipt(marker)
+        targets_remain = False
+        for entry in entries:
+            target = destination(root, entry["path"])
+            if target.exists() or target.is_symlink():
+                targets_remain = True
+                break
+        if targets_remain:
+            fail(f"orphaned ownership marker still has managed targets: {marker}")
+        marker.unlink()
+        _fsync_dir(root)
+        print("recovered interrupted ownership receipt removal", file=sys.stderr)
+        return
     if not _manifest_has_ownership_marker(manifest, marker):
         fail(f"ownership manifest marker is missing or mismatched: {marker}")
     entries = read_receipt(manifest)

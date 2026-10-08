@@ -3,13 +3,16 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import io
 import json
 import os
 import re
 import signal
 import shutil
+import stat
 import subprocess
 import sys
+import tarfile
 import time
 import types
 import urllib.error
@@ -214,6 +217,24 @@ def test_fal_explicit_failed_status_is_terminal_provider_failure(tmp_path, monke
         fal.run("fal-ai/test", {}, quiet=True, timeout=0)
     records = [json.loads(line) for line in (tmp_path / "home" / "fal-requests.jsonl").read_text().splitlines()]
     assert [record["state"] for record in records] == ["submission_attempt", "submitted", "provider_failed"]
+
+
+@pytest.mark.parametrize("status", ["CANCELED", "CANCELLED"])
+def test_fal_run_cancellation_is_terminal_provider_failure(tmp_path, monkeypatch, status):
+    monkeypatch.setenv("UM_HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(fal, "submit", lambda *_args, **_kwargs: {"request_id": "req-cancelled"})
+    calls = []
+
+    def status_response(*args, **kwargs):
+        calls.append((args, kwargs))
+        return {"status": status}
+
+    monkeypatch.setattr(fal, "_req", status_response)
+    with pytest.raises(SystemExit):
+        fal.run("fal-ai/test", {}, quiet=True, timeout=0)
+    records = [json.loads(line) for line in (tmp_path / "home" / "fal-requests.jsonl").read_text().splitlines()]
+    assert [record["state"] for record in records] == ["submission_attempt", "submitted", "provider_failed"]
+    assert len(calls) == 1
 
 
 def test_fal_result_records_reconciliation_outcome(tmp_path, monkeypatch):
@@ -778,6 +799,95 @@ def test_example_recovery_retains_journal_for_tampered_committed_stage(tmp_path)
     assert (game / f".args.txt.um-part-{nonce}").exists()
 
 
+def test_example_rollback_preserves_distinct_existing_quarantine(tmp_path):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    target = game / "args.txt"
+    target.write_bytes(b"owned")
+    entry = {"path": "args.txt", "sha256": hashlib.sha256(b"owned").hexdigest()}
+    quarantine = game / helper._quarantine_name("args.txt", entry, "target")
+    quarantine.write_bytes(b"foreign-quarantine")
+    assert helper.rollback(game, [entry]) is False
+    assert target.read_bytes() == b"owned"
+    assert quarantine.read_bytes() == b"foreign-quarantine"
+
+
+def test_example_rollback_finishes_interrupted_changed_file_restoration(tmp_path, monkeypatch):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    entry = {"path": "args.txt", "sha256": hashlib.sha256(b"owned").hexdigest()}
+    quarantine = game / helper._quarantine_name("args.txt", entry, "target")
+    quarantine.write_bytes(b"user-changed")
+    original_unlink = helper._parent_unlink
+    interrupted = False
+
+    def interrupt_after_restore(parent, name):
+        nonlocal interrupted
+        if not interrupted and name == quarantine.name and (game / "args.txt").exists():
+            interrupted = True
+            raise KeyboardInterrupt("restore linked before quarantine unlink")
+        original_unlink(parent, name)
+
+    monkeypatch.setattr(helper, "_parent_unlink", interrupt_after_restore)
+    with pytest.raises(KeyboardInterrupt):
+        helper.rollback(game, [entry])
+    monkeypatch.setattr(helper, "_parent_unlink", original_unlink)
+    assert helper.rollback(game, [entry]) is False
+    assert (game / "args.txt").read_bytes() == b"user-changed"
+    assert not quarantine.exists()
+
+
+def test_example_recovery_invalidates_receipt_when_committed_target_is_missing(tmp_path):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    digest = hashlib.sha256(b"owned").hexdigest()
+    nonce = "b" * 16
+    entry = {"path": "args.txt", "sha256": digest, "nonce": nonce}
+    journal = game / helper.JOURNAL_NAME
+    manifest = game / helper.MANIFEST_NAME
+    marker = game / helper.MANIFEST_MARKER_NAME
+    journal.write_text(json.dumps({"format": 1, "state": "installing", "entries": [entry]}), encoding="utf-8")
+    manifest.write_text(json.dumps({"format": 1, "state": "installed", "entries": [
+        {"path": "args.txt", "sha256": digest},
+    ]}), encoding="utf-8")
+    os.link(manifest, marker)
+    helper.recover(game, journal)
+    assert not journal.exists()
+    assert not manifest.exists()
+    assert not marker.exists()
+
+
+def test_example_remove_recovers_marker_only_receipt_retirement(tmp_path, monkeypatch):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    source = tmp_path / "args-source.txt"
+    source.write_bytes(b"installer")
+    helper.install(game, [str(source), "args.txt"])
+    original_unlink = Path.unlink
+    interrupted = False
+
+    def interrupt_marker(path, *args, **kwargs):
+        nonlocal interrupted
+        if (not interrupted and path.name == helper.MANIFEST_MARKER_NAME
+                and not (game / helper.MANIFEST_NAME).exists()):
+            interrupted = True
+            raise KeyboardInterrupt("receipt retirement interrupted")
+        return original_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "unlink", interrupt_marker)
+    with pytest.raises(KeyboardInterrupt):
+        helper.remove(game)
+    monkeypatch.setattr(Path, "unlink", original_unlink)
+    helper.remove(game)
+    assert not (game / helper.MANIFEST_MARKER_NAME).exists()
+    assert not (game / "args.txt").exists()
+
+
 def test_example_remove_recovers_crash_after_quarantine_rename(tmp_path, monkeypatch):
     helper = _installer_module()
     game = tmp_path / "game"
@@ -1063,6 +1173,47 @@ def test_example_installer_preserves_committed_install_when_manifest_fsync_fails
     assert target.read_bytes() == b"installer"
     assert not journal.exists()
     assert not any(game.glob(".args.txt.um-part-*"))
+
+
+def test_release_verifier_rejects_mode_mutated_wheel(tmp_path, monkeypatch):
+    verifier = _release_verifier_module()
+    wheel = tmp_path / "mutated.whl"
+    dist_info = f"{verifier.DIST}-{verifier.VERSION}.dist-info"
+    source_name = "um/__init__.py"
+    names = [source_name, f"{dist_info}/METADATA", f"{dist_info}/WHEEL",
+             f"{dist_info}/entry_points.txt", f"{dist_info}/licenses/LICENSE",
+             f"{dist_info}/RECORD"]
+    with zipfile.ZipFile(wheel, "w") as archive:
+        for name in names:
+            info = zipfile.ZipInfo(name)
+            info.external_attr = (stat.S_IFREG | (0o755 if name == source_name else 0o644)) << 16
+            archive.writestr(info, b"source" if name == source_name else b"")
+    monkeypatch.setattr(verifier, "git_paths", lambda *_args: {source_name})
+    monkeypatch.setattr(verifier, "git_modes", lambda *_args: {source_name: 0o644})
+    monkeypatch.setattr(verifier, "git_blob", lambda *_args: b"source")
+    with pytest.raises(SystemExit, match="wheel mode differs from source"):
+        verifier.inspect_wheel(wheel, tmp_path, "a" * 40)
+
+
+def test_release_verifier_rejects_mode_mutated_sdist(tmp_path, monkeypatch):
+    verifier = _release_verifier_module()
+    sdist = tmp_path / "mutated.tar.gz"
+    prefix = f"{verifier.DIST}-{verifier.VERSION}"
+    with tarfile.open(sdist, "w:gz") as archive:
+        source = tarfile.TarInfo(f"{prefix}/bin/um")
+        source.mode = 0o644
+        source.size = len(b"source")
+        archive.addfile(source, io.BytesIO(b"source"))
+        metadata = b"Name: universal-modder\nVersion: 0.2.0\n"
+        package = tarfile.TarInfo(f"{prefix}/PKG-INFO")
+        package.mode = 0o644
+        package.size = len(metadata)
+        archive.addfile(package, io.BytesIO(metadata))
+    monkeypatch.setattr(verifier, "git_paths", lambda *_args: {"bin/um"})
+    monkeypatch.setattr(verifier, "git_modes", lambda *_args: {"bin/um": 0o755})
+    monkeypatch.setattr(verifier, "git_blob", lambda *_args: b"source")
+    with pytest.raises(SystemExit, match="sdist mode differs from source"):
+        verifier.inspect_sdist(sdist, tmp_path, "a" * 40)
 
 
 def test_release_verifier_rejects_duplicate_record_rows():

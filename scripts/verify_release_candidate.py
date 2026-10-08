@@ -192,6 +192,21 @@ def git_paths(root: Path, commit: str, prefix: str | None = None) -> set[str]:
     return {name for name in payload.rstrip("\0").split("\0") if name}
 
 
+def git_modes(root: Path, commit: str, prefix: str | None = None) -> dict[str, int]:
+    command = ["git", "ls-tree", "-r", "-z", commit]
+    if prefix is not None:
+        command += ["--", prefix]
+    payload = _git_output(command, root).decode()
+    modes = {}
+    for entry in payload.rstrip("\0").split("\0"):
+        if not entry:
+            continue
+        metadata, name = entry.split("\t", 1)
+        mode = metadata.split(" ", 1)[0]
+        modes[name] = 0o755 if mode == "100755" else 0o644
+    return modes
+
+
 def git_blob(root: Path, commit: str, rel: str) -> bytes:
     return _git_output(["git", "show", f"{commit}:{rel}"], root)
 
@@ -217,6 +232,7 @@ def inspect_wheel(path: Path, root: Path, commit: str) -> list[str]:
             if kind not in (0, stat.S_IFREG, stat.S_IFDIR):
                 raise SystemExit(f"non-regular wheel member: {info.filename}")
         source_files = git_paths(root, commit, "um")
+        source_modes = git_modes(root, commit, "um")
         metadata_files = {
             f"{dist_info}/METADATA", f"{dist_info}/WHEEL", f"{dist_info}/entry_points.txt",
             f"{dist_info}/licenses/LICENSE", f"{dist_info}/RECORD",
@@ -228,6 +244,9 @@ def inspect_wheel(path: Path, root: Path, commit: str) -> list[str]:
         for source_name in source_files:
             if archive.read(source_name) != git_blob(root, commit, source_name):
                 raise SystemExit(f"wheel bytes differ from source: {source_name}")
+            actual_mode = stat.S_IMODE(archive.getinfo(source_name).external_attr >> 16)
+            if actual_mode != source_modes[source_name]:
+                raise SystemExit(f"wheel mode differs from source: {source_name}")
         metadata_identity(archive.read(f"{dist_info}/METADATA"), path.name)
         record_name = f"{dist_info}/RECORD"
         rows = list(csv.reader(io.StringIO(archive.read(record_name).decode("utf-8"))))
@@ -259,6 +278,7 @@ def inspect_sdist(path: Path, root: Path, commit: str) -> list[str]:
             raise SystemExit(f"non-regular sdist member in {path}")
         files = {m.name: m for m in members if m.isfile()}
         expected_paths = git_paths(root, commit)
+        source_modes = git_modes(root, commit)
         expected = {f"{prefix}/{name}" for name in expected_paths} | {f"{prefix}/PKG-INFO"}
         if set(files) != expected:
             extra = sorted(set(files) - expected)
@@ -286,6 +306,8 @@ def inspect_sdist(path: Path, root: Path, commit: str) -> list[str]:
                 metadata_identity(payload, path.name)
             elif payload != git_blob(root, commit, rel.as_posix()):
                 raise SystemExit(f"sdist bytes differ from source: {rel}")
+            elif stat.S_IMODE(member.mode) != source_modes[rel.as_posix()]:
+                raise SystemExit(f"sdist mode differs from source: {rel}")
         return names
 
 
