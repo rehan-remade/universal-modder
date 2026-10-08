@@ -207,6 +207,9 @@ ComfyUI defaults to loopback. A remote server must use HTTPS and requires the ex
 Backups contain save data and original source paths and are not encrypted. Protect `UM_HOME`, apply retention
 appropriate to the game/account, and run a restore drill before destructive work. Restore validates every
 member and digest, rejects traversal/symlinks, stages the complete result, and keeps a pre-restore snapshot.
+The crash-durability guarantee includes directory-entry flushes on POSIX/WSL. Native Windows preserves the
+transaction and recovery journal logic, but Python does not expose an equivalent directory `fsync`; do not
+claim power-loss durability there until the native-Windows fault-injection lane has passed.
 
 ## Made a mod with it?
 Put the badge on your mod's page:

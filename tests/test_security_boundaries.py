@@ -28,6 +28,16 @@ def _release_verifier_module():
     return module
 
 
+def _installer_module():
+    path = (Path(__file__).resolve().parents[1] / "examples" / "minecraft-gta5-passthrough" / "gta"
+            / "install_passthrough.py")
+    spec = importlib.util.spec_from_file_location("install_passthrough", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def _archive(path: Path, source: Path, files: dict[str, bytes], *, metadata: dict | None = None) -> Path:
     records = metadata or {
         name: {
@@ -167,6 +177,47 @@ def test_fal_paid_post_is_not_retried_after_ambiguous_network_failure(monkeypatc
     assert len(calls) == 1
 
 
+def test_fal_paid_post_http_5xx_is_ambiguous(monkeypatch):
+    def fail(req, timeout=None):
+        raise urllib.error.HTTPError(req.full_url, 503, "unavailable", {}, None)
+
+    monkeypatch.setattr(fal, "fal_key", lambda: "test-only-placeholder")
+    monkeypatch.setattr(fal, "_urlopen", fail)
+    with pytest.raises(fal.AmbiguousSubmissionError):
+        fal._req("POST", fal.QUEUE + "/fal-ai/test", {"prompt": "x"})
+
+
+def test_fal_provider_failure_records_terminal_lifecycle_state(tmp_path, monkeypatch):
+    monkeypatch.setenv("UM_HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(fal, "submit", lambda *_args, **_kwargs: {"request_id": "req-1"})
+    monkeypatch.setattr(fal, "_req", lambda *_args, **_kwargs: {"status": "COMPLETED", "error": "failed"})
+    with pytest.raises(SystemExit):
+        fal.run("fal-ai/test", {}, quiet=True)
+    records = [json.loads(line) for line in (tmp_path / "home" / "fal-requests.jsonl").read_text().splitlines()]
+    assert records[-1]["state"] == "provider_failed"
+
+
+def test_fal_pinned_connection_uses_validated_ip_and_original_tls_name(monkeypatch):
+    seen = {}
+
+    class Context:
+        def wrap_socket(self, sock, server_hostname=None):
+            seen["sni"] = server_hostname
+            return sock
+
+    raw = object()
+
+    def connect(address, *_args):
+        seen["address"] = address
+        return raw
+
+    monkeypatch.setattr(fal.socket, "create_connection", connect)
+    connection = fal._PinnedHTTPSConnection("v3.fal.media", "8.8.8.8", timeout=1)
+    connection._context = Context()
+    connection.connect()
+    assert seen == {"address": ("8.8.8.8", 443), "sni": "v3.fal.media"}
+
+
 def test_fal_ambiguous_submission_writes_redacted_recovery_receipt(tmp_path, monkeypatch):
     monkeypatch.setenv("UM_HOME", str(tmp_path / "home"))
     monkeypatch.setattr(fal, "submit", lambda *_args, **_kwargs: (_ for _ in ()).throw(fal.AmbiguousSubmissionError("lost")))
@@ -303,6 +354,27 @@ def test_kb_remote_parser_rejects_lookalike_github_urls(url):
     assert kb._github_remote(url) is None
 
 
+def test_kb_existing_branch_is_never_deleted_by_collision_preflight(tmp_path):
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=tmp_path, check=True)
+    (tmp_path / "tracked").write_text("x", encoding="utf-8")
+    subprocess.run(["git", "add", "tracked"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-qm", "init"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "branch", "kb/collision"], cwd=tmp_path, check=True)
+    with pytest.raises(SystemExit):
+        kb._ensure_branch_absent(tmp_path, "kb/collision")
+    branches = subprocess.check_output(["git", "branch", "--format=%(refname:short)"], cwd=tmp_path, text=True).splitlines()
+    assert "kb/collision" in branches
+
+
+def test_ci_generates_coverage_xml_and_scans_clean_export():
+    workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" / "test.yml").read_text(encoding="utf-8")
+    assert "--cov-report=xml" in workflow
+    assert "um publish check ." not in workflow
+    assert "um publish check \"$RUNNER_TEMP/candidate\"" in workflow
+
+
 def test_all_host_manifests_match_package_version():
     root = Path(__file__).resolve().parents[1]
     match = re.search(r'^version = "([^"]+)"$', (root / "pyproject.toml").read_text(), re.M)
@@ -391,3 +463,56 @@ def test_example_uninstall_validates_entire_receipt_before_deleting(tmp_path):
     result = subprocess.run([sys.executable, str(helper), "remove", str(game)], capture_output=True, text=True)
     assert result.returncode != 0
     assert owned.read_bytes() == b"owned"
+
+
+def test_example_uninstall_validates_all_ancestors_before_any_deletion(tmp_path):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    outside = tmp_path / "outside"
+    game.mkdir()
+    outside.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    args = game / "args.txt"
+    args.write_bytes(b"owned")
+    nested_digest = hashlib.sha256(b"nested").hexdigest()
+    receipt = game / helper.MANIFEST_NAME
+    receipt.write_text(json.dumps({"entries": [
+        {"path": "reshade-shaders/Shaders/MCPassthrough.fx", "sha256": nested_digest},
+        {"path": "args.txt", "sha256": hashlib.sha256(b"owned").hexdigest()},
+    ]}), encoding="utf-8")
+    (game / "reshade-shaders").symlink_to(outside, target_is_directory=True)
+    with pytest.raises(SystemExit):
+        helper.remove(game)
+    assert args.read_bytes() == b"owned"
+
+
+def test_example_installer_does_not_clobber_file_created_after_preflight(tmp_path, monkeypatch):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    source = tmp_path / "args-source.txt"
+    source.write_bytes(b"installer")
+    original_write = helper.write_json_atomic
+
+    def race(path, payload):
+        original_write(path, payload)
+        (game / "args.txt").write_bytes(b"user")
+
+    monkeypatch.setattr(helper, "write_json_atomic", race)
+    with pytest.raises(SystemExit):
+        helper.install(game, [str(source), "args.txt"])
+    assert (game / "args.txt").read_bytes() == b"user"
+
+
+def test_release_verifier_rejects_duplicate_record_rows():
+    verifier = _release_verifier_module()
+    rows = [["um/__init__.py", "sha256=x", "1"], ["um/__init__.py", "sha256=x", "1"]]
+    with pytest.raises(SystemExit):
+        verifier.validate_record_rows(rows, {"um/__init__.py"})
+
+
+def test_release_verifier_rejects_forbidden_sdist_directories():
+    verifier = _release_verifier_module()
+    with pytest.raises(SystemExit):
+        verifier.validate_sdist_paths(["universal_modder-0.2.0/.venv/"])

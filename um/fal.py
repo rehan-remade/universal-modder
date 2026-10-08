@@ -23,6 +23,7 @@ Model ids move fast: `um fal search` / the fal MCP's search_models find the curr
 from __future__ import annotations
 
 import base64
+import http.client
 import ipaddress
 import json
 import mimetypes
@@ -30,6 +31,7 @@ import os
 import re
 import secrets
 import socket
+import ssl
 import sys
 import time
 import urllib.error
@@ -168,6 +170,8 @@ def _req(method: str, url: str, body=None, headers=None, auth=True, raw=False, t
                 return payload if raw else (json.loads(payload) if payload else {})
         except urllib.error.HTTPError as e:
             detail = bounded_read(e, 64 << 10, "fal error response").decode(errors="replace")[:1500]
+            if method not in {"GET", "HEAD"} and e.code in {500, 502, 503, 504}:
+                raise AmbiguousSubmissionError(f"HTTP {e.code}") from e
             if e.code in (429, 500, 502, 503, 504) and attempt + 1 < attempts:
                 time.sleep(2 * (attempt + 1))
                 continue
@@ -247,7 +251,7 @@ EXT = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp", "image/
        "audio/x-wav": ".wav", "video/mp4": ".mp4", "model/gltf-binary": ".glb", "application/octet-stream": ""}
 
 
-def _validate_public_download_url(url: str) -> None:
+def _validate_public_download_url(url: str) -> tuple[str, int, tuple[str, ...]]:
     scheme, host, _ = _origin(url)
     if scheme != "https":
         die(f"fal output URL must use HTTPS: {url.split('?')[0]}")
@@ -262,6 +266,8 @@ def _validate_public_download_url(url: str) -> None:
         ip = ipaddress.ip_address(raw)
         if not ip.is_global:
             die(f"refusing fal output URL resolving to non-public address {ip}")
+    parsed = urllib.parse.urlparse(url)
+    return host, parsed.port or 443, tuple(sorted(addresses))
 
 
 class _PublicDownloadRedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -270,11 +276,58 @@ class _PublicDownloadRedirectHandler(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
-_DOWNLOAD_OPENER = urllib.request.build_opener(_PublicDownloadRedirectHandler())
+class _NoDownloadRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+class _PinnedHTTPSConnection(http.client.HTTPSConnection):
+    """TLS connection whose TCP peer is one of the addresses validated before use."""
+    def __init__(self, host: str, pinned_ip: str, **kwargs):
+        self._pinned_ip = pinned_ip
+        super().__init__(host, **kwargs)
+
+    def connect(self) -> None:
+        self.sock = socket.create_connection((self._pinned_ip, self.port), self.timeout, self.source_address)
+        self.sock = self._context.wrap_socket(self.sock, server_hostname=self.host)
+
+
+class _PinnedHTTPSHandler(urllib.request.HTTPSHandler):
+    def __init__(self, pinned_ip: str):
+        super().__init__(context=ssl.create_default_context())
+        self._pinned_ip = pinned_ip
+
+    def https_open(self, req):
+        return self.do_open(lambda host, **kwargs: _PinnedHTTPSConnection(host, self._pinned_ip, **kwargs), req)
 
 
 def _download_open(req, timeout):
-    return _DOWNLOAD_OPENER.open(req, timeout=timeout)
+    current = req
+    for _redirect in range(6):
+        _host, _port, addresses = _validate_public_download_url(current.full_url)
+        last_error: BaseException | None = None
+        for address in addresses:
+            opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoDownloadRedirect(),
+                                                  _PinnedHTTPSHandler(address))
+            try:
+                return opener.open(current, timeout=timeout)
+            except urllib.error.HTTPError as exc:
+                if exc.code not in {301, 302, 303, 307, 308}:
+                    raise
+                location = exc.headers.get("Location")
+                if not location:
+                    raise
+                target = urllib.parse.urljoin(current.full_url, location)
+                _validate_public_download_url(target)
+                current = urllib.request.Request(target, headers={"User-Agent": "universal-modder"})
+                break
+            except (OSError, urllib.error.URLError) as exc:
+                last_error = exc
+        else:
+            if last_error is not None:
+                raise last_error
+            raise urllib.error.URLError("fal output host has no usable validated address")
+    raise urllib.error.URLError("too many fal output redirects")
 
 
 def download_outputs(result: dict, out: Path, name: str) -> list[str]:
@@ -325,29 +378,40 @@ def run(endpoint: str, inp: dict, timeout: float = 1800, quiet: bool = False) ->
     """Submit to the queue, poll (printing logs to stderr), return the result JSON."""
     receipt = data_dir() / "fal-requests.jsonl"
     operation_id = secrets.token_hex(16)
-    append_private_jsonl(receipt, {"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "state": "submission_attempt",
-                                   "endpoint": endpoint, "operation_id": operation_id})
+    def record(state: str, request_id: str | None = None) -> None:
+        event = {"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "state": state,
+                 "endpoint": endpoint, "operation_id": operation_id}
+        if request_id is not None:
+            event["request_id"] = request_id
+        append_private_jsonl(receipt, event)
+
+    record("submission_attempt")
     try:
         job = submit(endpoint, inp)
     except AmbiguousSubmissionError as exc:
-        append_private_jsonl(receipt, {"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "state": "submission_ambiguous",
-                                       "endpoint": endpoint, "operation_id": operation_id})
+        record("submission_ambiguous")
         die(f"fal submission outcome is ambiguous ({exc}); do not resubmit automatically. "
             f"Inspect {receipt} and the fal dashboard using operation {operation_id}")
     rid = job.get("request_id")
     if not isinstance(rid, str) or not re.fullmatch(r"[A-Za-z0-9._-]{1,200}", rid):
-        append_private_jsonl(receipt, {"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "state": "accepted_without_request_id",
-                                       "endpoint": endpoint, "operation_id": operation_id})
+        record("accepted_without_request_id")
         die("fal returned an invalid request id")
     status_url = job.get("status_url") or f"{QUEUE}/{endpoint}/requests/{rid}/status"
     response_url = job.get("response_url") or f"{QUEUE}/{endpoint}/requests/{rid}"
-    _validate_auth_url(status_url)
-    _validate_auth_url(response_url)
-    append_private_jsonl(receipt, {"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "state": "submitted", "endpoint": endpoint,
-                                   "request_id": rid, "operation_id": operation_id})
+    try:
+        _validate_auth_url(status_url)
+        _validate_auth_url(response_url)
+    except BaseException:
+        record("accepted_with_invalid_provider_urls", rid)
+        raise
+    record("submitted", rid)
     t0, seen, last = time.time(), 0, ""
     while True:
-        st = _req("GET", status_url + ("&" if "?" in status_url else "?") + "logs=1")
+        try:
+            st = _req("GET", status_url + ("&" if "?" in status_url else "?") + "logs=1")
+        except BaseException:
+            record("poll_unavailable", rid)
+            raise
         s = st.get("status")
         logs = st.get("logs") or []
         if not quiet:
@@ -361,14 +425,18 @@ def run(endpoint: str, inp: dict, timeout: float = 1800, quiet: bool = False) ->
         seen, last = len(logs), s
         if s == "COMPLETED":
             if st.get("error"):
+                record("provider_failed", rid)
                 die(f"{endpoint} failed: {st['error']}")
-            res = _req("GET", response_url)
+            try:
+                res = _req("GET", response_url)
+            except BaseException:
+                record("completed_response_unavailable", rid)
+                raise
             res["_request_id"], res["_endpoint"] = rid, endpoint
-            append_private_jsonl(receipt,
-                                 {"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "state": "completed", "endpoint": endpoint,
-                                  "request_id": rid, "operation_id": operation_id})
+            record("completed", rid)
             return res
         if time.time() - t0 > timeout:
+            record("poll_timeout", rid)
             die(f"{endpoint}: still {s} after {timeout:.0f}s (request {rid}); check later with `um fal result {endpoint} {rid}`")
         time.sleep(1.0 if time.time() - t0 < 30 else 3.0)
 

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Transactional, ownership-scoped installer for the GTA passthrough example."""
+"""Transactional, ownership-scoped installer for the GTA passthrough example.
+
+Directory-entry power-loss durability is enforced on POSIX/WSL. Native Windows retains the ownership and
+recovery protocol but cannot claim the same durability because Python exposes no directory fsync there.
+"""
 from __future__ import annotations
 
 import hashlib
@@ -114,15 +118,20 @@ def read_receipt(path: Path) -> list[dict]:
 
 
 def rollback(root: Path, entries: list[dict]) -> bool:
+    """Validate the complete rollback topology before removing any owned file."""
+    decisions: list[tuple[dict, Path, bool]] = []
     complete = True
     for entry in reversed(entries):
         target = destination(root, entry["path"])
-        if target.is_file() and sha256(target) == entry["sha256"]:
-            target.unlink()
-            _fsync_dir(target.parent)
-        elif target.exists():
+        owned = target.is_file() and sha256(target) == entry["sha256"]
+        if target.exists() and not owned:
             print(f"preserving changed file: {entry['path']}", file=sys.stderr)
             complete = False
+        decisions.append((entry, target, owned))
+    for _entry, target, owned in decisions:
+        if owned:
+            target.unlink()
+            _fsync_dir(target.parent)
     return complete
 
 
@@ -162,12 +171,14 @@ def install(root: Path, pairs: list[str]) -> None:
     if not planned:
         print("nothing new was installed")
         return
-    public_entries = [{"path": item["path"], "sha256": item["sha256"]} for item in planned]
+    public_entries: list[dict] = []
     write_json_atomic(journal, {"format": 1, "state": "installing", "entries": public_entries})
+    active_tmp: Path | None = None
     try:
         for item in planned:
             target = destination(root, item["path"], create_parents=True)
             tmp = target.with_name(f".{target.name}.um-part-{os.getpid()}")
+            active_tmp = tmp
             flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
             if hasattr(os, "O_NOFOLLOW"):
                 flags |= os.O_NOFOLLOW
@@ -184,12 +195,24 @@ def install(root: Path, pairs: list[str]) -> None:
                 tmp.unlink(missing_ok=True)
                 fail(f"copied bytes failed verification: {item['path']}")
             destination(root, item["path"])
-            os.replace(tmp, target)
+            try:
+                os.link(tmp, target, follow_symlinks=False)
+            except FileExistsError:
+                fail(f"refusing to replace file created during install: {item['path']}")
             _fsync_dir(target.parent)
-        os.replace(journal, manifest)
+            public_entries.append({"path": item["path"], "sha256": item["sha256"]})
+            write_json_atomic(journal, {"format": 1, "state": "installing", "entries": public_entries})
+            tmp.unlink()
+            active_tmp = None
+        write_json_atomic(manifest, {"format": 1, "state": "installed", "entries": public_entries})
+        journal.unlink()
         _fsync_dir(root)
     except BaseException:
-        rollback(root, public_entries)
+        if active_tmp is not None:
+            active_tmp.unlink(missing_ok=True)
+        if rollback(root, public_entries):
+            journal.unlink(missing_ok=True)
+            _fsync_dir(root)
         raise
     print(f"installed into {root}; ownership manifest: {manifest}")
 

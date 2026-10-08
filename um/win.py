@@ -24,6 +24,7 @@ import hashlib
 import json
 import os
 import queue
+import signal
 import shutil
 import stat
 import subprocess
@@ -41,6 +42,13 @@ HERE = Path(__file__).resolve().parent
 TOOLS = HERE / "ps1"          # shipped inside the package so `uv tool install` gets them too
 FFMPEG_URL = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
 MAX_FFMPEG_ZIP_BYTES = 1 << 30
+MAX_PROTOCOL_LINE = 64 << 10
+
+
+def _child_group_kwargs() -> dict:
+    if os.name == "nt":
+        return {"creationflags": getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)}
+    return {"start_new_session": True}
 
 
 def _check_platform():
@@ -53,12 +61,29 @@ def _stop_child(process: subprocess.Popen, timeout: float = 5) -> None:
     if process.poll() is not None:
         process.wait()
         return
-    process.terminate()
+    if os.name == "nt" and getattr(process, "pid", None):
+        subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"], capture_output=True, timeout=timeout)
+    elif getattr(process, "pid", None):
+        try:
+            os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+        except (OSError, ProcessLookupError):
+            process.terminate()
+    else:
+        process.terminate()
     try:
         process.wait(timeout)
     except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait(timeout)
+        if os.name != "nt" and getattr(process, "pid", None):
+            try:
+                os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+            except (OSError, ProcessLookupError):
+                process.kill()
+        else:
+            process.kill()
+        try:
+            process.wait(timeout)
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError("child process tree could not be reaped after forced termination") from exc
 
 
 def _readline_bounded(process: subprocess.Popen, timeout: float, label: str) -> str:
@@ -71,7 +96,11 @@ def _readline_bounded(process: subprocess.Popen, timeout: float, label: str) -> 
 
     def reader() -> None:
         try:
-            results.put((True, stdout.readline()))
+            try:
+                value = stdout.readline(MAX_PROTOCOL_LINE + 1)
+            except TypeError:  # minimal file-like test doubles may not accept a size
+                value = stdout.readline()
+            results.put((True, value))
         except BaseException as exc:
             results.put((False, exc))
 
@@ -85,6 +114,9 @@ def _readline_bounded(process: subprocess.Popen, timeout: float, label: str) -> 
         _stop_child(process)
         raise RuntimeError(f"{label} output failed: {value}")
     line = str(value).strip()
+    if len(line) > MAX_PROTOCOL_LINE:
+        _stop_child(process)
+        raise RuntimeError(f"{label} exceeded the {MAX_PROTOCOL_LINE}-byte protocol-line limit")
     if not line:
         _stop_child(process)
         raise RuntimeError(f"{label} exited without a protocol response")
@@ -219,7 +251,7 @@ def setup(args=None):
             shutil.rmtree(stage, ignore_errors=True)
             z.unlink(missing_ok=True)
     ff = ffmpeg_win()
-    out = subprocess.run([ff, "-hide_banner", "-h", "filter=gfxcapture"], capture_output=True, text=True).stdout
+    out = subprocess.run([ff, "-hide_banner", "-h", "filter=gfxcapture"], capture_output=True, text=True, timeout=30).stdout
     print("ffmpeg", ff, "(gfxcapture ok)" if "gfxcapture" in out else "(WARNING: no gfxcapture in this build)")
     enc = pick_encoder(ff)
     (d / "config.json").write_text(json.dumps(dict(encoder=enc)))
@@ -230,7 +262,7 @@ def pick_encoder(ff: str) -> str:
     """h264_nvenc / h264_amf / h264_qsv if the GPU takes a test frame, else libx264."""
     for enc in ("h264_nvenc", "h264_amf", "h264_qsv"):
         r = subprocess.run([ff, "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "color=black:s=256x256:d=0.1", "-c:v", enc, "-f", "null", "-"],
-                           capture_output=True, text=True)
+                           capture_output=True, text=True, timeout=30)
         if r.returncode == 0:
             return enc
     return "libx264"
@@ -268,7 +300,8 @@ def pid_of(name: str) -> int | None:
 
 def kill(pid: int):
     """By exact PID. (Pattern kills - pkill -f, taskkill /IM with wildcards - can hit the agent's own shell or other apps.)"""
-    r = subprocess.run(["taskkill.exe" if is_wsl() else "taskkill", "/PID", str(int(pid)), "/F"], capture_output=True, text=True)
+    r = subprocess.run(["taskkill.exe" if is_wsl() else "taskkill", "/PID", str(int(pid)), "/F"],
+                       capture_output=True, text=True, timeout=15)
     if r.returncode:
         die(f"taskkill failed ({r.returncode}): {(r.stderr or r.stdout).strip()[-800:]}")
     print((r.stdout or r.stderr).strip())
@@ -415,8 +448,8 @@ class Recorder:
             else:
                 self.audio = subprocess.Popen([ps_exe(), "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", tool_path("ProcLoopback.ps1"),
                                                "-TargetPid", str(pid), "-Out", self.base + ".audio.raw"],
-                                              stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                                              cwd="/mnt/c" if is_wsl() else None)
+                                              stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                                              cwd="/mnt/c" if is_wsl() else None, **_child_group_kwargs())
                 try:
                     self.header = json.loads(_readline_bounded(self.audio, 15, "process audio capture"))
                 except (TimeoutError, RuntimeError, json.JSONDecodeError):
@@ -426,9 +459,15 @@ class Recorder:
                 t_audio = time.time()
         self.t_video = time.time()
         self.log = Path(to_posix(self.base + ".ffmpeg.log"))
-        self.video = subprocess.Popen([ff, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", _source(self.exe, self.hwnd, self.title, crop=self.crop),
-                                       "-vf", ",".join(vf), *codec, "-pix_fmt", "yuv420p", "-colorspace", "bt709", "-color_range", "tv", "-flush_packets", "1", self.base + ".mkv"],
-                                      stdin=subprocess.PIPE, stderr=open(self.log, "w"))
+        try:
+            self.video = subprocess.Popen([ff, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", _source(self.exe, self.hwnd, self.title, crop=self.crop),
+                                           "-vf", ",".join(vf), *codec, "-pix_fmt", "yuv420p", "-colorspace", "bt709", "-color_range", "tv", "-flush_packets", "1", self.base + ".mkv"],
+                                          stdin=subprocess.PIPE, stderr=open(self.log, "w"), **_child_group_kwargs())
+        except BaseException:
+            if self.audio:
+                _stop_child(self.audio)
+                self.audio = None
+            raise
         self.t_audio = t_audio
         return self
 
@@ -444,8 +483,7 @@ class Recorder:
                 self.video.wait(20)
             except subprocess.TimeoutExpired:
                 print("ffmpeg ignored q; killing it", file=sys.stderr)
-                self.video.kill()
-                self.video.wait(5)
+                _stop_child(self.video)
         meta = dict(video=self.base + ".mkv")
         if self.audio:
             try:
@@ -453,8 +491,7 @@ class Recorder:
                 self.audio.stdin.flush()
                 self.audio.wait(10)
             except (OSError, subprocess.TimeoutExpired):
-                self.audio.kill()
-                self.audio.wait(5)
+                _stop_child(self.audio)
             meta.update(self.header, audio=self.base + ".audio.raw", audio_offset_s=round(self.t_video - self.t_audio + self.STARTUP, 3))
         path = Path(to_posix(self.base + ".json"))
         path.write_text(json.dumps(meta, indent=1))
@@ -474,7 +511,8 @@ class Drive:
     def __init__(self, proc: str):
         _check_platform()
         self.p = subprocess.Popen([ps_exe(), "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", tool_path("WinDrive.ps1"), "-Proc", proc],
-                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=1, cwd="/mnt/c" if is_wsl() else None)
+                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=1,
+                                  cwd="/mnt/c" if is_wsl() else None, **_child_group_kwargs())
         self.ready = _readline_bounded(self.p, 15, "Windows input helper startup")
         if self.ready != "ready":
             _stop_child(self.p)
@@ -524,8 +562,7 @@ class Drive:
             self.p.stdin.close()
             self.p.wait(5)
         except (OSError, subprocess.TimeoutExpired):
-            self.p.kill()
-            self.p.wait(5)
+            _stop_child(self.p)
 
 
 # --------------------------------------------------------------------------- registry
@@ -541,12 +578,13 @@ def reg(action: str, key: str, value: str | None = None, data: str | None = None
         backup = local_appdata() / "reg-backups"
         backup.mkdir(exist_ok=True)
         bfile = backup / f"{key.replace(chr(92), '_').replace(':', '')}-{time.strftime('%Y%m%d-%H%M%S')}-{time.time_ns()}.reg"
-        exported = subprocess.run([exe, "export", key, to_win(bfile) if is_wsl() else str(bfile)], capture_output=True, text=True)
+        exported = subprocess.run([exe, "export", key, to_win(bfile) if is_wsl() else str(bfile)],
+                                  capture_output=True, text=True, timeout=30)
         if exported.returncode or not bfile.exists():
             die(f"registry backup failed; value was not changed: {(exported.stderr or exported.stdout).strip()[-800:]}")
         print("backup:", bfile)
         cmd = [exe, "add", key, "/v", value, "/t", typ, "/d", data, "/f"]
-    r = subprocess.run(cmd, capture_output=True, text=True)
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
     if r.returncode:
         die(f"registry command failed ({r.returncode}): {(r.stderr or r.stdout).strip()[-800:]}")
     print((r.stdout or r.stderr).replace("\r", "").strip())

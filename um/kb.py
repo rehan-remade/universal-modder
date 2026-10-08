@@ -21,6 +21,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 import urllib.parse
@@ -368,6 +369,14 @@ def _validate_upstream_url(url: str) -> None:
         die(f"origin remote {remote!r} does not match configured knowledge repository {expected!r}")
 
 
+def _ensure_branch_absent(repo: Path, branch: str) -> None:
+    result = subprocess.run(["git", "show-ref", "--verify", "--quiet", f"refs/heads/{branch}"], cwd=repo)
+    if result.returncode == 0:
+        die(f"refusing to replace or delete pre-existing local branch: {branch}")
+    if result.returncode != 1:
+        die(f"could not verify local branch absence: {branch}")
+
+
 def _publish_pr_isolated(repo: Path, root: Path, contribution: list[Path], branch: str, title: str,
                          body: str, can_push: bool, note_rel: str) -> str:
     """Build and publish the contribution from a disposable worktree; never mutate the caller's checkout."""
@@ -399,7 +408,7 @@ def _publish_pr_isolated(repo: Path, root: Path, contribution: list[Path], branc
     if added.returncode:
         shutil.rmtree(temp_root, ignore_errors=True)
         die(f"could not create isolated worktree: {(added.stderr or added.stdout).strip()[-800:]}")
-    success = False
+    success = branch_created = False
     try:
         work_root = worktree / root.relative_to(repo)
         staged_paths = []
@@ -412,6 +421,7 @@ def _publish_pr_isolated(repo: Path, root: Path, contribution: list[Path], branc
         result = subprocess.run(["git", "checkout", "-b", branch], cwd=worktree, capture_output=True, text=True)
         if result.returncode:
             die(f"git checkout -b failed: {(result.stderr or result.stdout).strip()[-800:]}")
+        branch_created = True
         idx, rows = build_index(work_root)
         index_md, index_json = work_root / "INDEX.md", work_root / "index.json"
         index_md.write_text(idx, **TEXT)
@@ -451,10 +461,18 @@ def _publish_pr_isolated(repo: Path, root: Path, contribution: list[Path], branc
         success = True
         return pr_url
     finally:
-        subprocess.run(["git", "worktree", "remove", "--force", str(worktree)], cwd=repo, capture_output=True, text=True)
-        shutil.rmtree(temp_root, ignore_errors=True)
-        if not success:
-            subprocess.run(["git", "branch", "-D", branch], cwd=repo, capture_output=True, text=True)
+        removed = subprocess.run(["git", "worktree", "remove", "--force", str(worktree)], cwd=repo,
+                                 capture_output=True, text=True)
+        if removed.returncode:
+            print(f"warning: could not unregister temporary worktree: {(removed.stderr or removed.stdout).strip()[-800:]}",
+                  file=sys.stderr)
+        else:
+            shutil.rmtree(temp_root, ignore_errors=True)
+        if not success and branch_created:
+            deleted = subprocess.run(["git", "branch", "-D", branch], cwd=repo, capture_output=True, text=True)
+            if deleted.returncode:
+                print(f"warning: could not remove transaction-created branch {branch}: "
+                      f"{(deleted.stderr or deleted.stdout).strip()[-800:]}", file=sys.stderr)
 
 
 def open_pr(path: Path, yes: bool):
@@ -534,6 +552,7 @@ def open_pr(path: Path, yes: bool):
     if not shutil.which("gh"):
         die("needs the GitHub CLI (gh) logged in; or push a branch and open the PR on github.com")
 
+    _ensure_branch_absent(repo, branch)
     _validate_pr_worktree(repo, allowed)
     print(_publish_pr_isolated(repo, root, contribution, branch, title, body, can_push, note_rel))
 

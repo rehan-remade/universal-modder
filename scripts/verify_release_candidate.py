@@ -55,6 +55,21 @@ def validate_names(names: list[str], label: Path) -> None:
                 raise SystemExit(f"file/directory prefix collision in {label}: {name!r}")
 
 
+def validate_record_rows(rows: list[list[str]], expected_names: set[str]) -> None:
+    if any(len(row) != 3 for row in rows):
+        raise SystemExit("wheel RECORD contains a malformed row")
+    recorded = [row[0] for row in rows]
+    if len(recorded) != len(set(recorded)) or set(recorded) != expected_names:
+        raise SystemExit("wheel RECORD inventory mismatch")
+
+
+def validate_sdist_paths(names: list[str]) -> None:
+    for name in names:
+        parts = PurePosixPath(name.rstrip("/")).parts
+        if FORBIDDEN_PARTS.intersection(parts) or (parts and parts[-1].lower() in SENSITIVE_NAMES):
+            raise SystemExit(f"forbidden path in sdist: {name}")
+
+
 def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -89,11 +104,13 @@ def inspect_wheel(path: Path, root: Path) -> list[str]:
             extra = sorted(set(names) - source_files - metadata_files)
             missing = sorted(source_files | metadata_files - set(names))
             raise SystemExit(f"wheel inventory mismatch; extra={extra[:8]} missing={missing[:8]}")
+        for source_name in source_files:
+            if archive.read(source_name) != (root / source_name).read_bytes():
+                raise SystemExit(f"wheel bytes differ from source: {source_name}")
         metadata_identity(archive.read(f"{dist_info}/METADATA"), path.name)
         record_name = f"{dist_info}/RECORD"
         rows = list(csv.reader(io.StringIO(archive.read(record_name).decode("utf-8"))))
-        if {row[0] for row in rows} != set(names) or any(len(row) != 3 for row in rows):
-            raise SystemExit("wheel RECORD inventory mismatch")
+        validate_record_rows(rows, set(names))
         for name, encoded, size in rows:
             if name == record_name:
                 if encoded or size:
@@ -114,6 +131,7 @@ def inspect_sdist(path: Path, root: Path) -> list[str]:
         members = archive.getmembers()
         names = [m.name for m in members]
         validate_names(names, path)
+        validate_sdist_paths(names)
         if len(members) > MAX_MEMBERS or sum(m.size for m in members if m.isfile()) > MAX_EXPANDED_BYTES:
             raise SystemExit(f"sdist exceeds member or expanded-size limit: {path}")
         if any(not (m.isfile() or m.isdir()) for m in members):
@@ -125,10 +143,20 @@ def inspect_sdist(path: Path, root: Path) -> list[str]:
             extra = sorted(set(files) - expected)
             missing = sorted(expected - set(files))
             raise SystemExit(f"sdist inventory mismatch; extra={extra[:8]} missing={missing[:8]}")
+        expected_dirs = {prefix}
+        for name in expected:
+            parent = PurePosixPath(name).parent
+            while parent.as_posix() != ".":
+                expected_dirs.add(parent.as_posix())
+                if parent.as_posix() == prefix:
+                    break
+                parent = parent.parent
+        actual_dirs = {m.name.rstrip("/") for m in members if m.isdir()}
+        unexpected_dirs = actual_dirs - expected_dirs
+        if unexpected_dirs:
+            raise SystemExit(f"sdist directory inventory mismatch; extra={sorted(unexpected_dirs)[:8]}")
         for member_name, member in files.items():
             rel = PurePosixPath(member_name).relative_to(prefix)
-            if FORBIDDEN_PARTS.intersection(rel.parts) or rel.name.lower() in SENSITIVE_NAMES:
-                raise SystemExit(f"forbidden path in sdist: {rel}")
             extracted = archive.extractfile(member)
             if extracted is None:
                 raise SystemExit(f"cannot read sdist member: {member_name}")

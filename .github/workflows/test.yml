@@ -36,7 +36,7 @@ jobs:
       - name: Static checks
         run: uv run --frozen ruff check um tests scripts examples/minecraft-gta5-passthrough/gta/install_passthrough.py
       - name: Tests and enforced branch-coverage floor
-        run: uv run --frozen pytest --cov=um --cov-branch --cov-report=term-missing --cov-fail-under=53 -q
+        run: uv run --frozen pytest --cov=um --cov-branch --cov-report=term-missing --cov-report=xml --cov-fail-under=53 -q
       - name: Installed CLI contracts
         run: |
           uv run --frozen um --version
@@ -49,7 +49,10 @@ jobs:
           uv run --frozen um kb check --index
           python scripts/sync_skills.py --check
       - name: Nothing prohibited ships
-        run: uv run --frozen um publish check .
+        run: |
+          mkdir "$RUNNER_TEMP/candidate"
+          git archive HEAD | tar -x -C "$RUNNER_TEMP/candidate"
+          uv run --frozen um publish check "$RUNNER_TEMP/candidate"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
