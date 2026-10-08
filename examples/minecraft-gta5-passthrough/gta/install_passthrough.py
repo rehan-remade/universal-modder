@@ -265,7 +265,12 @@ def _targets_match(root: Path, entries: list[dict]) -> bool:
 def write_json_atomic(path: Path, payload: dict, *, replace: bool = False,
                       on_publish: Callable[[], None] | None = None,
                       ownership_marker: Path | None = None) -> None:
-    tmp = path.with_name(f".{path.name}.tmp-{os.getpid()}-{secrets.token_hex(8)}")
+    marker_backed = ownership_marker is not None and not replace
+    if marker_backed:
+        assert ownership_marker is not None
+        tmp = ownership_marker
+    else:
+        tmp = path.with_name(f".{path.name}.tmp-{os.getpid()}-{secrets.token_hex(8)}")
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
@@ -281,21 +286,17 @@ def write_json_atomic(path: Path, payload: dict, *, replace: bool = False,
         if on_publish is not None:
             on_publish()
     else:
-        marker_created = False
         try:
-            if ownership_marker is not None:
-                os.link(tmp, ownership_marker, follow_symlinks=False)
-                marker_created = True
+            if marker_backed:
                 _fsync_dir(path.parent)
             os.link(tmp, path, follow_symlinks=False)
         except FileExistsError:
-            if marker_created and ownership_marker is not None:
-                ownership_marker.unlink(missing_ok=True)
             tmp.unlink(missing_ok=True)
             fail(f"refusing to replace concurrently created receipt: {path}")
         if on_publish is not None:
             on_publish()
-        tmp.unlink()
+        if not marker_backed:
+            tmp.unlink()
     _fsync_dir(path.parent)
 
 
@@ -374,15 +375,18 @@ def _file_state(parent_fd: int, name: str) -> tuple[os.stat_result, str] | None:
         os.close(fd)
 
 
-def _remove_via_quarantine(parent: int, name: str,
+def _remove_via_quarantine(parent: int, name: str, quarantine: str,
                            expected: tuple[os.stat_result, str]) -> bool:
-    quarantine = f".{name}.um-remove-{secrets.token_hex(8)}"
     try:
         _parent_rename(parent, name, quarantine)
     except FileNotFoundError:
+        pass
+    except FileExistsError:
         return False
     captured = _file_state(parent, quarantine)
-    same = (captured is not None and captured[1] == expected[1]
+    if captured is None:
+        return False
+    same = (captured[1] == expected[1]
             and (captured[0].st_dev, captured[0].st_ino) == (expected[0].st_dev, expected[0].st_ino))
     if same:
         _parent_unlink(parent, quarantine)
@@ -398,6 +402,21 @@ def _remove_via_quarantine(parent: int, name: str,
     return False
 
 
+def _quarantine_name(name: str, entry: dict, kind: str) -> str:
+    token = entry.get("nonce") or entry["sha256"][:16]
+    return f".{name}.um-remove-{token}-{kind}"
+
+
+def _restore_quarantine(parent: int, name: str, quarantine: str) -> None:
+    try:
+        _parent_link(parent, quarantine, name)
+    except FileExistsError:
+        print(f"visible file exists; quarantine retained: {quarantine}", file=sys.stderr)
+        return
+    _parent_unlink(parent, quarantine)
+    _parent_fsync(parent)
+
+
 def rollback(root: Path, entries: list[dict]) -> bool:
     """Validate pinned parent directories before removing any owned file."""
     decisions = []
@@ -409,35 +428,62 @@ def rollback(root: Path, entries: list[dict]) -> bool:
             except OSError as exc:
                 fail(f"refusing unsafe destination ancestry for {entry['path']}: {exc}")
             stage_name = f".{leaf}.um-part-{entry['nonce']}" if entry.get("nonce") is not None else None
+            target_quarantine = _quarantine_name(leaf, entry, "target")
+            stage_quarantine = (_quarantine_name(stage_name, entry, "stage")
+                                if stage_name is not None else None)
             target_state = _file_state(parent_fd, leaf)
+            target_quarantine_state = _file_state(parent_fd, target_quarantine)
             stage_state = _file_state(parent_fd, stage_name) if stage_name is not None else None
-            owned = target_state is not None and target_state[1] == entry["sha256"]
+            stage_quarantine_state = (_file_state(parent_fd, stage_quarantine)
+                                      if stage_quarantine is not None else None)
+            if target_state is not None and target_quarantine_state is not None:
+                print(f"preserving ambiguous target and quarantine: {entry['path']}", file=sys.stderr)
+                complete = False
+            target_candidate = target_state or target_quarantine_state
+            restore_target = (target_state is None and target_quarantine_state is not None
+                              and target_quarantine_state[1] != entry["sha256"])
+            owned = target_candidate is not None and target_candidate[1] == entry["sha256"]
+            stage_candidate = stage_state or stage_quarantine_state
+            restore_stage = (stage_name is not None and stage_state is None
+                             and stage_quarantine_state is not None
+                             and stage_quarantine_state[1] != entry["sha256"])
             if stage_name is not None:
-                if target_state is None or stage_state is None:
+                if target_candidate is None or stage_candidate is None:
                     owned = False
                 else:
-                    owned = (owned and stage_state[1] == entry["sha256"]
-                             and (target_state[0].st_dev, target_state[0].st_ino)
-                             == (stage_state[0].st_dev, stage_state[0].st_ino))
-            if target_state is not None and not owned:
+                    owned = (owned and stage_candidate[1] == entry["sha256"]
+                             and (target_candidate[0].st_dev, target_candidate[0].st_ino)
+                             == (stage_candidate[0].st_dev, stage_candidate[0].st_ino))
+            if target_candidate is not None and not owned:
                 print(f"preserving changed file: {entry['path']}", file=sys.stderr)
                 complete = False
-            stage_valid = stage_state is not None and stage_state[1] == entry["sha256"]
-            if stage_state is not None and not stage_valid:
+            stage_valid = stage_candidate is not None and stage_candidate[1] == entry["sha256"]
+            if stage_candidate is not None and not stage_valid:
                 print(f"preserving changed install stage for: {entry['path']}", file=sys.stderr)
                 complete = False
-            decisions.append((entry, parent_fd, leaf, stage_name, owned, stage_valid,
-                              target_state, stage_state))
-        for (_entry, parent_fd, leaf, stage_name, owned, stage_valid,
-             target_state, stage_state) in decisions:
-            if owned and target_state is not None:
-                complete = _remove_via_quarantine(parent_fd, leaf, target_state) and complete
-            if stage_name is not None and stage_valid and stage_state is not None:
-                complete = _remove_via_quarantine(parent_fd, stage_name, stage_state) and complete
+            decisions.append((entry, parent_fd, leaf, stage_name, target_quarantine,
+                              stage_quarantine, owned, stage_valid, target_candidate, stage_candidate,
+                              restore_target, restore_stage))
+        for (_entry, parent_fd, leaf, stage_name, target_quarantine, stage_quarantine,
+             owned, stage_valid, target_candidate, stage_candidate,
+             restore_target, restore_stage) in decisions:
+            if restore_target:
+                _restore_quarantine(parent_fd, leaf, target_quarantine)
+            elif owned and target_candidate is not None:
+                complete = (_remove_via_quarantine(parent_fd, leaf, target_quarantine,
+                                                    target_candidate) and complete)
+            if (stage_name is not None and stage_quarantine is not None
+                    and restore_stage):
+                _restore_quarantine(parent_fd, stage_name, stage_quarantine)
+            elif (stage_name is not None and stage_quarantine is not None
+                  and stage_valid and stage_candidate is not None):
+                complete = (_remove_via_quarantine(parent_fd, stage_name, stage_quarantine,
+                                                    stage_candidate) and complete)
         return complete
     finally:
-        for (_entry, parent_fd, _leaf, _stage_name, _owned, _stage_valid,
-             _target_state, _stage_state) in decisions:
+        for (_entry, parent_fd, _leaf, _stage_name, _target_quarantine, _stage_quarantine,
+             _owned, _stage_valid, _target_candidate, _stage_candidate,
+             _restore_target, _restore_stage) in decisions:
             _parent_close(parent_fd)
 
 

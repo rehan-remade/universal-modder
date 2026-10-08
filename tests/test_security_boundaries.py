@@ -778,6 +778,64 @@ def test_example_recovery_retains_journal_for_tampered_committed_stage(tmp_path)
     assert (game / f".args.txt.um-part-{nonce}").exists()
 
 
+def test_example_remove_recovers_crash_after_quarantine_rename(tmp_path, monkeypatch):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    source = tmp_path / "args-source.txt"
+    source.write_bytes(b"installer")
+    helper.install(game, [str(source), "args.txt"])
+    original_unlink = helper._parent_unlink
+    interrupted = False
+
+    def interrupt_quarantine_unlink(parent, name):
+        nonlocal interrupted
+        if not interrupted and ".um-remove-" in name:
+            interrupted = True
+            raise KeyboardInterrupt("crash after quarantine rename")
+        original_unlink(parent, name)
+
+    monkeypatch.setattr(helper, "_parent_unlink", interrupt_quarantine_unlink)
+    with pytest.raises(KeyboardInterrupt):
+        helper.remove(game)
+    monkeypatch.setattr(helper, "_parent_unlink", original_unlink)
+    helper.remove(game)
+    assert not (game / "args.txt").exists()
+    assert not (game / helper.MANIFEST_NAME).exists()
+    assert not (game / helper.MANIFEST_MARKER_NAME).exists()
+    assert not list(game.glob("*.um-remove-*"))
+    assert not list(game.glob(".*.um-remove-*"))
+
+
+def test_example_recovery_removes_no_manifest_temp_hardlink(tmp_path, monkeypatch):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    source = tmp_path / "args-source.txt"
+    source.write_bytes(b"installer")
+    original_unlink = Path.unlink
+    interrupted = False
+
+    def interrupt_temp_unlink(path, *args, **kwargs):
+        nonlocal interrupted
+        if (not interrupted and f".{helper.MANIFEST_NAME}.tmp-" in path.name
+                and (game / helper.MANIFEST_NAME).exists()):
+            interrupted = True
+            raise KeyboardInterrupt("crash before manifest temp unlink")
+        return original_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "unlink", interrupt_temp_unlink)
+    try:
+        helper.install(game, [str(source), "args.txt"])
+    except KeyboardInterrupt:
+        pass
+    monkeypatch.setattr(Path, "unlink", original_unlink)
+    helper.recover(game, game / helper.JOURNAL_NAME)
+    assert not list(game.glob(f".{helper.MANIFEST_NAME}.tmp-*"))
+
+
 def test_example_installer_pins_root_identity_across_path_replacement(tmp_path, monkeypatch):
     helper = _installer_module()
     game = tmp_path / "game"
