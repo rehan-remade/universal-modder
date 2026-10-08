@@ -213,3 +213,17 @@ game finished installing.
 - **Enhanced edition:** GTA V Enhanced (DX12) needs a different ReShade/compositor path.
 - **Multiplayer Minecraft:** it works in principle, since it's just another client. It's untested.
 - **Latency:** Minecraft could render at the predicted pose, so re-projection is only a fallback.
+- **Check these with a real install before relying on the example.** See also
+  `knowledge/techniques/frame-compositing-depth-and-pose-sync.md`.
+  - **Pose lag:** the gotcha above says a lag of 1 frame, but the compositor defaults to 0 (a code comment
+    says 0 measured best) and only the director's `poselag` op changes it. Record the value used per capture.
+  - **`install.sh --remove`** deletes `ReShade.ini` unconditionally, including one the user had before
+    installing (install itself preserves it). The save helper copies its two saves into every discovered
+    profile.
+  - **Cleanup scope:** detach forgets barrier tracking without removing the barriers; fighter cleanup removes
+    every matching hostile or proxy in the Overworld, and hot-block cleanup can remove player-placed fire or
+    lava; any invisible villager counts as a proxy.
+  - **Frame reader:** it validates the magic but not every header size/capacity or the capture timestamps,
+    and checks the slot sequence after the GPU upload, which can't undo a partly overwritten image.
+  - **`ws_test.cpp`** passes when any received message contains `explosion`; it doesn't assert camera, depth,
+    ground columns or reconnects.

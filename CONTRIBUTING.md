@@ -43,7 +43,10 @@ rules below.
   - nothing that gives an edge over other players on servers you don't run (aimbots, ESP, speed hacks,
     bots);
   - no anti-cheat, DRM or ownership-check bypasses;
-  - no instructions for injecting into online clients protected by anti-cheat.
+  - no instructions for injecting into online clients protected by anti-cheat;
+  - one exception, for games that can no longer be bought anywhere: a note may say that a community route for
+    people without a copy exists and link the community's guide page. Its steps, keys, serials and files
+    stay out of the repo, and so do direct links to patched executables, cracks or game downloads.
 - **No secrets:** API keys, tokens, `.env` files. `um kb check` and `um publish check` catch the common
   ones.
 - **Honesty:**
