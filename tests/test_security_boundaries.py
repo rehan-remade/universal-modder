@@ -204,6 +204,16 @@ def test_fal_provider_failure_records_terminal_lifecycle_state(tmp_path, monkeyp
     assert records[-1]["state"] == "provider_failed"
 
 
+def test_fal_explicit_failed_status_is_terminal_provider_failure(tmp_path, monkeypatch):
+    monkeypatch.setenv("UM_HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(fal, "submit", lambda *_args, **_kwargs: {"request_id": "req-failed"})
+    monkeypatch.setattr(fal, "_req", lambda *_args, **_kwargs: {"status": "FAILED", "error": "rejected"})
+    with pytest.raises(SystemExit):
+        fal.run("fal-ai/test", {}, quiet=True, timeout=0)
+    records = [json.loads(line) for line in (tmp_path / "home" / "fal-requests.jsonl").read_text().splitlines()]
+    assert [record["state"] for record in records] == ["submission_attempt", "submitted", "provider_failed"]
+
+
 def test_fal_result_records_reconciliation_outcome(tmp_path, monkeypatch):
     monkeypatch.setenv("UM_HOME", str(tmp_path / "home"))
     monkeypatch.setattr(fal, "_req", lambda *_args, **_kwargs: {"output": "ok"})
@@ -713,6 +723,41 @@ def test_example_recovery_retains_journal_for_tampered_committed_stage(tmp_path)
     assert (game / f".args.txt.um-part-{nonce}").exists()
 
 
+def test_example_installer_preserves_committed_install_when_manifest_fsync_fails(tmp_path, monkeypatch):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    source = tmp_path / "args-source.txt"
+    source.write_bytes(b"installer")
+    manifest = game / helper.MANIFEST_NAME
+    journal = game / helper.JOURNAL_NAME
+    target = game / "args.txt"
+    original_fsync = helper._fsync_dir
+    injected = False
+
+    def fail_after_manifest_publication(path):
+        nonlocal injected
+        if not injected and manifest.exists() and target.exists():
+            injected = True
+            raise OSError("injected manifest durability failure")
+        return original_fsync(path)
+
+    monkeypatch.setattr(helper, "_fsync_dir", fail_after_manifest_publication)
+    with pytest.raises(OSError):
+        helper.install(game, [str(source), "args.txt"])
+    assert manifest.exists()
+    assert journal.exists()
+    assert target.read_bytes() == b"installer"
+
+    monkeypatch.setattr(helper, "_fsync_dir", original_fsync)
+    helper.recover(game, journal)
+    assert manifest.exists()
+    assert target.read_bytes() == b"installer"
+    assert not journal.exists()
+    assert not any(game.glob(".args.txt.um-part-*"))
+
+
 def test_release_verifier_rejects_duplicate_record_rows():
     verifier = _release_verifier_module()
     rows = [["um/__init__.py", "sha256=x", "1"], ["um/__init__.py", "sha256=x", "1"]]
@@ -752,3 +797,72 @@ def test_release_verifier_reads_only_the_frozen_commit(tmp_path):
     subprocess.run(["git", "commit", "-qam", "B"], cwd=tmp_path, check=True)
     assert verifier.git_blob(tmp_path, frozen, "tracked") == b"A"
     assert verifier.git_paths(tmp_path, frozen) == {"tracked"}
+
+
+def test_release_identity_derives_tree_from_the_frozen_commit(tmp_path, monkeypatch):
+    verifier = _release_verifier_module()
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=tmp_path, check=True)
+    (tmp_path / "tracked").write_text("A", encoding="utf-8")
+    subprocess.run(["git", "add", "tracked"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-qm", "A"], cwd=tmp_path, check=True)
+    commit_a = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp_path, text=True).strip()
+    tree_a = subprocess.check_output(["git", "rev-parse", f"{commit_a}^{{tree}}"], cwd=tmp_path, text=True).strip()
+    (tmp_path / "tracked").write_text("B", encoding="utf-8")
+    subprocess.run(["git", "commit", "-qam", "B"], cwd=tmp_path, check=True)
+    commit_b = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp_path, text=True).strip()
+    subprocess.run(["git", "checkout", "-q", commit_a], cwd=tmp_path, check=True)
+    original = verifier.subprocess.check_output
+
+    def move_head_before_tree(command, *args, **kwargs):
+        if command[:2] == ["git", "rev-parse"] and command[-1].endswith("^{tree}"):
+            subprocess.run(["git", "reset", "--hard", "-q", commit_b], cwd=tmp_path, check=True)
+        return original(command, *args, **kwargs)
+
+    monkeypatch.setattr(verifier.subprocess, "check_output", move_head_before_tree)
+    identity = verifier.source_identity(tmp_path)
+    assert identity == {"commit": commit_a, "tree": tree_a}
+
+
+def test_release_verifier_rejects_symlink_distribution_input(tmp_path):
+    verifier = _release_verifier_module()
+    real = tmp_path / "real.whl"
+    real.write_bytes(b"wheel")
+    link = tmp_path / "linked.whl"
+    link.symlink_to(real)
+    with pytest.raises(SystemExit):
+        verifier.snapshot_regular_file(link, tmp_path / "snapshot.whl")
+
+
+def test_release_verifier_preserves_preexisting_snapshot_destination(tmp_path):
+    verifier = _release_verifier_module()
+    source = tmp_path / "candidate.whl"
+    source.write_bytes(b"reviewed")
+    destination = tmp_path / "snapshot.whl"
+    destination.write_bytes(b"caller-owned")
+    with pytest.raises(FileExistsError):
+        verifier.snapshot_regular_file(source, destination)
+    assert destination.read_bytes() == b"caller-owned"
+
+
+def test_release_verifier_rejects_path_substitution_after_descriptor_open(tmp_path, monkeypatch):
+    verifier = _release_verifier_module()
+    source = tmp_path / "candidate.whl"
+    source.write_bytes(b"reviewed")
+    replacement = tmp_path / "replacement.whl"
+    replacement.write_bytes(b"substituted")
+    original_open = verifier.os.open
+    swapped = False
+
+    def swap_after_open(path, flags, *args, **kwargs):
+        nonlocal swapped
+        fd = original_open(path, flags, *args, **kwargs)
+        if not swapped and Path(path) == source:
+            swapped = True
+            replacement.replace(source)
+        return fd
+
+    monkeypatch.setattr(verifier.os, "open", swap_after_open)
+    with pytest.raises(SystemExit):
+        verifier.snapshot_regular_file(source, tmp_path / "snapshot.whl")

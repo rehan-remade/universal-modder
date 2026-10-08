@@ -230,8 +230,10 @@ def install(root: Path, pairs: list[str]) -> None:
         print("nothing new was installed")
         return
     public_entries: list[dict] = []
+    installed_entries: list[dict] = []
     write_json_atomic(journal, {"format": 1, "state": "installing", "entries": public_entries})
     active_tmp: Path | None = None
+    manifest_publication_attempted = False
     try:
         for item in planned:
             target = destination(root, item["path"], create_parents=True)
@@ -263,6 +265,7 @@ def install(root: Path, pairs: list[str]) -> None:
             _fsync_dir(target.parent)
             active_tmp = None
         installed_entries = [{"path": entry["path"], "sha256": entry["sha256"]} for entry in public_entries]
+        manifest_publication_attempted = True
         write_json_atomic(manifest, {"format": 1, "state": "installed", "entries": installed_entries})
         for entry in public_entries:
             stage = stage_path(root, entry)
@@ -271,6 +274,17 @@ def install(root: Path, pairs: list[str]) -> None:
         journal.unlink()
         _fsync_dir(root)
     except BaseException:
+        committed = False
+        if manifest_publication_attempted and manifest.exists():
+            try:
+                committed = read_receipt(manifest) == installed_entries
+            except SystemExit:
+                committed = False
+        if committed:
+            # The matching ownership receipt is the transaction commit point.
+            # Keep targets and recovery evidence rather than rolling back files
+            # that now have a published ownership record.
+            raise
         journaled_stages = {stage_path(root, entry) for entry in public_entries}
         if active_tmp is not None and active_tmp not in journaled_stages:
             active_tmp.unlink(missing_ok=True)

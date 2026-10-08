@@ -7,11 +7,13 @@ import csv
 import hashlib
 import io
 import json
+import os
 import re
 import stat
 import subprocess
 import sys
 import tarfile
+import tempfile
 import zipfile
 from email.parser import BytesParser
 from pathlib import Path, PurePosixPath
@@ -74,12 +76,67 @@ def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _file_identity(value: os.stat_result) -> tuple[int, int, int, int, int, int]:
+    return (value.st_dev, value.st_ino, value.st_mode, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
+
+
+def snapshot_regular_file(source: Path, destination: Path) -> Path:
+    """Snapshot one stable regular file through a validated descriptor."""
+    try:
+        before = os.stat(source, follow_symlinks=False)
+    except OSError as exc:
+        raise SystemExit(f"cannot inspect distribution input {source}: {exc}") from exc
+    if not stat.S_ISREG(before.st_mode) or before.st_size > MAX_ARCHIVE_BYTES:
+        raise SystemExit(f"distribution input is not an acceptable regular file: {source}")
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        source_fd = os.open(source, flags)
+    except OSError as exc:
+        raise SystemExit(f"cannot open distribution input safely {source}: {exc}") from exc
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    output_fd: int | None = None
+    destination_created = False
+    try:
+        opened = os.fstat(source_fd)
+        if not stat.S_ISREG(opened.st_mode) or _file_identity(opened) != _file_identity(before):
+            raise SystemExit(f"distribution input changed before descriptor binding: {source}")
+        output_fd = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0), 0o600)
+        destination_created = True
+        while True:
+            chunk = os.read(source_fd, 1 << 20)
+            if not chunk:
+                break
+            view = memoryview(chunk)
+            while view:
+                written = os.write(output_fd, view)
+                if written <= 0:
+                    raise SystemExit(f"could not snapshot distribution input: {source}")
+                view = view[written:]
+        os.fsync(output_fd)
+        after = os.fstat(source_fd)
+        try:
+            path_after = os.stat(source, follow_symlinks=False)
+        except OSError as exc:
+            raise SystemExit(f"distribution input disappeared during verification: {source}") from exc
+        if _file_identity(after) != _file_identity(opened) or _file_identity(path_after) != _file_identity(opened):
+            raise SystemExit(f"distribution input changed during verification: {source}")
+    except BaseException:
+        if destination_created:
+            destination.unlink(missing_ok=True)
+        raise
+    finally:
+        if output_fd is not None:
+            os.close(output_fd)
+        os.close(source_fd)
+    return destination
+
+
 def source_identity(root: Path) -> dict[str, str]:
     status = subprocess.check_output(["git", "status", "--porcelain=v1", "--untracked-files=all"], cwd=root, text=True)
     if status:
         raise SystemExit("source checkout is dirty; release artifacts must bind to clean committed bytes")
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
-    tree = subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"], cwd=root, text=True).strip()
+    tree = subprocess.check_output(["git", "rev-parse", f"{commit}^{{tree}}"], cwd=root, text=True).strip()
     return {"commit": commit, "tree": tree}
 
 
@@ -196,21 +253,29 @@ def main() -> int:
     identity = source_identity(root)
     commit = identity["commit"]
 
-    def distributions(directory: Path) -> dict[str, Path]:
-        return {p.name: p for p in directory.iterdir() if p.is_file() and (p.suffix == ".whl" or p.name.endswith(".tar.gz"))}
-
     expected_names = {f"{DIST}-{VERSION}-py3-none-any.whl", f"{DIST}-{VERSION}.tar.gz"}
-    a, b = distributions(left), distributions(right)
-    if set(a) != expected_names or set(b) != expected_names:
-        raise SystemExit(f"distribution names must be exactly {sorted(expected_names)}")
-    receipt: dict[str, object] = {"source": identity}
-    for name in sorted(a):
-        if digest(a[name]) != digest(b[name]):
-            raise SystemExit(f"non-reproducible distribution bytes: {name}")
-        members = inspect_wheel(a[name], root, commit) if name.endswith(".whl") else inspect_sdist(a[name], root, commit)
-        receipt[name] = {"sha256": digest(a[name]), "bytes": a[name].stat().st_size, "members": len(members)}
-    if source_identity(root) != identity:
-        raise SystemExit("source checkout identity changed during release verification")
+    with tempfile.TemporaryDirectory(prefix="um-release-verification-") as temporary:
+        snapshot_root = Path(temporary)
+
+        def distributions(directory: Path, label: str) -> dict[str, Path]:
+            try:
+                entries = list(directory.iterdir())
+            except OSError as exc:
+                raise SystemExit(f"cannot enumerate distribution directory {directory}: {exc}") from exc
+            if {entry.name for entry in entries} != expected_names or len(entries) != len(expected_names):
+                raise SystemExit(f"distribution names must be exactly {sorted(expected_names)}")
+            return {entry.name: snapshot_regular_file(entry, snapshot_root / label / entry.name)
+                    for entry in entries}
+
+        a, b = distributions(left, "a"), distributions(right, "b")
+        receipt: dict[str, object] = {"source": identity}
+        for name in sorted(a):
+            if digest(a[name]) != digest(b[name]):
+                raise SystemExit(f"non-reproducible distribution bytes: {name}")
+            members = inspect_wheel(a[name], root, commit) if name.endswith(".whl") else inspect_sdist(a[name], root, commit)
+            receipt[name] = {"sha256": digest(a[name]), "bytes": a[name].stat().st_size, "members": len(members)}
+        if source_identity(root) != identity:
+            raise SystemExit("source checkout identity changed during release verification")
     print(json.dumps(receipt, indent=2, sort_keys=True))
     return 0
 

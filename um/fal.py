@@ -415,6 +415,9 @@ def run(endpoint: str, inp: dict, timeout: float = 1800, quiet: bool = False) ->
         except BaseException:
             record("poll_unavailable", rid)
             raise
+        if not isinstance(st, dict):
+            record("poll_invalid_response", rid)
+            die(f"{endpoint}: provider returned an invalid status response for request {rid}")
         s = st.get("status")
         logs = st.get("logs") or []
         if not quiet:
@@ -426,10 +429,11 @@ def run(endpoint: str, inp: dict, timeout: float = 1800, quiet: bool = False) ->
                 pos = f" (queue position {st.get('queue_position')})" if s == "IN_QUEUE" and st.get("queue_position") is not None else ""
                 print(f"  [{endpoint}] {s}{pos}", file=sys.stderr)
         seen, last = len(logs), s
+        if st.get("error") or s in {"FAILED", "ERROR", "CANCELED", "CANCELLED"}:
+            detail = str(st.get("error") or s)
+            record("provider_failed", rid)
+            die(f"{endpoint} failed: {detail}")
         if s == "COMPLETED":
-            if st.get("error"):
-                record("provider_failed", rid)
-                die(f"{endpoint} failed: {st['error']}")
             try:
                 res = _req("GET", response_url)
             except BaseException:
