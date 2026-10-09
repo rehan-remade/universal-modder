@@ -29,6 +29,7 @@ MANIFEST_NAME = ".universal-modder-mcpassthrough-owned"
 MANIFEST_MARKER_NAME = ".universal-modder-mcpassthrough-owned-marker"
 JOURNAL_NAME = ".universal-modder-mcpassthrough-installing"
 LOCK_NAME = ".universal-modder-mcpassthrough-lock"
+MAX_RECEIPT_BYTES = 64 * 1024
 
 
 def fail(message: str) -> NoReturn:
@@ -107,18 +108,30 @@ def operation_lock(root: Path) -> Iterator[Path]:
             fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             fail(f"another passthrough install/remove/recovery is active: {parent / lock_name}")
+        locked = os.fstat(lock_fd)
+        named = os.stat(lock_name, dir_fd=parent_fd, follow_symlinks=False)
+        if ((locked.st_dev, locked.st_ino) != (named.st_dev, named.st_ino)
+                or not stat.S_ISREG(named.st_mode) or named.st_nlink != 1):
+            fail(f"passthrough operation lock changed during acquisition: {parent / lock_name}")
         root_fd = os.open(root.name, parent_flags, dir_fd=parent_fd)
         root_identity = os.fstat(root_fd)
         pinned = Path(f"/proc/self/fd/{root_fd}")
         if not pinned.is_dir():
             fail("/proc/self/fd is required to pin the selected game directory; run from WSL/Linux")
-        yield pinned
         try:
-            current = os.stat(root.name, dir_fd=parent_fd, follow_symlinks=False)
-        except OSError as exc:
-            fail(f"selected game directory changed during operation: {root}: {exc}")
-        if (current.st_dev, current.st_ino) != (root_identity.st_dev, root_identity.st_ino):
-            fail(f"selected game directory identity changed during operation: {root}")
+            yield pinned
+        finally:
+            identity_error = None
+            try:
+                current = os.stat(root.name, dir_fd=parent_fd, follow_symlinks=False)
+                if (current.st_dev, current.st_ino) != (root_identity.st_dev, root_identity.st_ino):
+                    identity_error = f"selected game directory identity changed during operation: {root}"
+            except OSError as exc:
+                identity_error = f"selected game directory changed during operation: {root}: {exc}"
+            if identity_error is not None:
+                if sys.exc_info()[0] is None:
+                    fail(identity_error)
+                print(identity_error, file=sys.stderr)
     finally:
         if root_fd is not None:
             os.close(root_fd)
@@ -327,13 +340,27 @@ def write_json_atomic(path: Path, payload: dict, *, replace: bool = False,
 
 
 def read_receipt(path: Path, *, journal: bool = False) -> list[dict]:
-    if path.is_symlink() or not path.is_file():
-        fail(f"ownership receipt is not a regular file: {path}")
-    data: object = None
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    fd: int | None = None
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        fd = os.open(path, flags)
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_RECEIPT_BYTES:
+            fail(f"ownership receipt is not a bounded regular file: {path}")
+        payload = bytearray()
+        while len(payload) <= MAX_RECEIPT_BYTES:
+            chunk = os.read(fd, min(8192, MAX_RECEIPT_BYTES + 1 - len(payload)))
+            if not chunk:
+                break
+            payload.extend(chunk)
+        if len(payload) > MAX_RECEIPT_BYTES:
+            fail(f"ownership receipt exceeds {MAX_RECEIPT_BYTES} bytes: {path}")
+        data: object = json.loads(bytes(payload).decode("utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         fail(f"invalid ownership receipt {path}: {exc}")
+    finally:
+        if fd is not None:
+            os.close(fd)
     expected_state = "installing" if journal else "installed"
     if not isinstance(data, dict) or data.get("format") != 1 or data.get("state") != expected_state:
         fail(f"invalid ownership receipt format/state: {path}")
@@ -452,6 +479,7 @@ def _restore_quarantine(parent: int, name: str, quarantine: str) -> None:
     except FileExistsError:
         print(f"visible file exists; quarantine retained: {quarantine}", file=sys.stderr)
         return
+    _parent_fsync(parent)
     _parent_unlink(parent, quarantine)
     _parent_fsync(parent)
 
@@ -577,11 +605,10 @@ def _recover(root: Path, journal: Path) -> None:
         if not _manifest_has_ownership_marker(manifest, marker):
             fail(f"ownership manifest is not bound to this transaction; journal retained: {journal}")
         if not _targets_match(root, installed):
-            marker.unlink()
-            _fsync_dir(root)
             if not rollback(root, entries):
                 fail(f"invalid committed install has changed files; journal retained: {journal}")
             manifest.unlink()
+            marker.unlink()
             _fsync_dir(root)
             journal.unlink()
             _fsync_dir(root)
@@ -715,10 +742,30 @@ def _recover_marker_only_receipt(root: Path) -> bool:
     return False
 
 
+def _recover_manifest_only_receipt(root: Path) -> bool:
+    manifest = root / MANIFEST_NAME
+    marker = root / MANIFEST_MARKER_NAME
+    journal = root / JOURNAL_NAME
+    if ((journal.exists() or journal.is_symlink()) or marker.exists() or marker.is_symlink()
+            or (not manifest.exists() and not manifest.is_symlink())):
+        return False
+    entries = read_receipt(manifest)
+    for entry in entries:
+        target = destination(root, entry["path"])
+        if target.exists() or target.is_symlink():
+            fail(f"unmarked ownership manifest still has managed targets: {manifest}")
+    manifest.unlink()
+    _fsync_dir(root)
+    print("recovered interrupted unmarked receipt removal", file=sys.stderr)
+    return True
+
+
 def _remove(root: Path) -> None:
     manifest = root / MANIFEST_NAME
     marker = root / MANIFEST_MARKER_NAME
     _recover(root, root / JOURNAL_NAME)
+    if _recover_manifest_only_receipt(root):
+        return
     if _recover_marker_only_receipt(root):
         return
     if not _manifest_has_ownership_marker(manifest, marker):
@@ -749,6 +796,7 @@ def recover(root: Path, journal: Path) -> None:
     _require_supported_platform()
     with operation_lock(root) as pinned:
         _recover(pinned, pinned / JOURNAL_NAME)
+        _recover_manifest_only_receipt(pinned)
         _recover_marker_only_receipt(pinned)
 
 

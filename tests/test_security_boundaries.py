@@ -1,6 +1,7 @@
 """Adversarial security-boundary tests for production-readiness hardening."""
 from __future__ import annotations
 
+import errno
 import hashlib
 import importlib.util
 import io
@@ -796,7 +797,7 @@ def test_example_recovery_retains_journal_for_tampered_committed_stage(tmp_path)
         helper.recover(game, journal)
     assert journal.exists()
     assert manifest.exists()
-    assert not (game / helper.MANIFEST_MARKER_NAME).exists()
+    assert (game / helper.MANIFEST_MARKER_NAME).exists()
     assert (game / f".args.txt.um-part-{nonce}").exists()
 
 
@@ -838,6 +839,32 @@ def test_example_quarantine_capture_is_atomic_no_clobber(tmp_path, monkeypatch):
     assert quarantine.read_bytes() == b"foreign-race"
 
 
+def test_example_atomic_noreplace_fails_closed_when_libc_symbol_is_missing(tmp_path, monkeypatch):
+    helper = _installer_module()
+    monkeypatch.setattr(helper.ctypes, "CDLL", lambda *_args, **_kwargs: object())
+    with pytest.raises(SystemExit, match="renameat2"):
+        helper._parent_rename_noreplace(0, "source", "target")
+
+
+def test_example_atomic_noreplace_fails_closed_when_filesystem_rejects_it(tmp_path, monkeypatch):
+    helper = _installer_module()
+
+    class RejectingRename:
+        argtypes = None
+        restype = None
+
+        def __call__(self, *_args):
+            helper.ctypes.set_errno(errno.ENOSYS)
+            return -1
+
+    class FakeLibc:
+        renameat2 = RejectingRename()
+
+    monkeypatch.setattr(helper.ctypes, "CDLL", lambda *_args, **_kwargs: FakeLibc())
+    with pytest.raises(SystemExit, match="lacks atomic no-replace"):
+        helper._parent_rename_noreplace(0, "source", "target")
+
+
 def test_example_rollback_finishes_interrupted_changed_file_restoration(tmp_path, monkeypatch):
     helper = _installer_module()
     game = tmp_path / "game"
@@ -861,6 +888,35 @@ def test_example_rollback_finishes_interrupted_changed_file_restoration(tmp_path
     monkeypatch.setattr(helper, "_parent_unlink", original_unlink)
     assert helper.rollback(game, [entry]) is False
     assert (game / "args.txt").read_bytes() == b"user-changed"
+    assert not quarantine.exists()
+
+
+def test_example_restore_fsyncs_visible_link_before_quarantine_unlink(tmp_path, monkeypatch):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    quarantine = game / ".args.txt.um-remove-test-target"
+    quarantine.write_bytes(b"changed")
+    parent = os.open(game, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    events = []
+    original_unlink = helper._parent_unlink
+
+    def record_fsync(_parent):
+        events.append("fsync")
+
+    def record_unlink(parent_fd, name):
+        if name == quarantine.name:
+            assert events == ["fsync"]
+        original_unlink(parent_fd, name)
+
+    monkeypatch.setattr(helper, "_parent_fsync", record_fsync)
+    monkeypatch.setattr(helper, "_parent_unlink", record_unlink)
+    try:
+        helper._restore_quarantine(parent, "args.txt", quarantine.name)
+    finally:
+        os.close(parent)
+    assert events == ["fsync", "fsync"]
+    assert (game / "args.txt").read_bytes() == b"changed"
     assert not quarantine.exists()
 
 
@@ -931,6 +987,50 @@ def test_example_status_is_bounded_read_only_json(tmp_path, capsys):
     }
     after = {path.name: path.read_bytes() for path in game.iterdir() if path.is_file()}
     assert after == before
+
+
+def test_example_status_cli_is_available(tmp_path, monkeypatch, capsys):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    monkeypatch.setattr(sys, "argv", ["install_passthrough.py", "status", str(game)])
+    assert helper.main() == 0
+    assert json.loads(capsys.readouterr().out)["root"] == str(game)
+
+
+def test_example_recover_retires_manifest_only_when_targets_are_absent(tmp_path):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    manifest = game / helper.MANIFEST_NAME
+    manifest.write_text(json.dumps({"format": 1, "state": "installed", "entries": []}), encoding="utf-8")
+    helper.recover(game, game / helper.JOURNAL_NAME)
+    assert not manifest.exists()
+
+
+def test_example_marker_only_recovery_refuses_broken_symlink_target(tmp_path):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    marker = game / helper.MANIFEST_MARKER_NAME
+    marker.write_text(json.dumps({"format": 1, "state": "installed", "entries": [
+        {"path": "args.txt", "sha256": "0" * 64},
+    ]}), encoding="utf-8")
+    (game / "args.txt").symlink_to("missing-target")
+    with pytest.raises(SystemExit, match="destination symlink"):
+        helper.recover(game, game / helper.JOURNAL_NAME)
+    assert marker.exists()
+    assert (game / "args.txt").is_symlink()
+
+
+def test_example_read_receipt_rejects_oversized_input(tmp_path):
+    helper = _installer_module()
+    receipt = tmp_path / "receipt"
+    receipt.write_bytes(b" " * (helper.MAX_RECEIPT_BYTES + 1))
+    with pytest.raises(SystemExit, match="bounded regular"):
+        helper.read_receipt(receipt)
 
 
 def test_example_remove_refuses_marker_only_receipt_while_managed_target_remains(tmp_path):
@@ -1398,9 +1498,16 @@ def test_release_identity_ignores_git_replacement_objects(tmp_path):
     subprocess.run(["git", "replace", commit_a, commit_b], cwd=tmp_path, check=True)
     subprocess.run(["git", "checkout", "-q", commit_a], cwd=tmp_path, check=True)
     subprocess.run(["git", "reset", "--hard", "-q", commit_a], cwd=tmp_path, check=True)
-    with pytest.raises(SystemExit):
-        verifier.source_identity(tmp_path)
-    subprocess.run(["git", "--no-replace-objects", "reset", "--hard", "-q", commit_a], cwd=tmp_path, check=True)
+    replacement_enabled_env = dict(os.environ)
+    replacement_enabled_env.pop("GIT_NO_REPLACE_OBJECTS", None)
+    assert subprocess.check_output(
+        ["git", "log", "-1", "--format=%s", commit_a], cwd=tmp_path, text=True,
+        env=replacement_enabled_env,
+    ).strip() == "B"
+    assert verifier._git_output(
+        ["git", "log", "-1", "--format=%s", commit_a], tmp_path, text=True,
+    ).strip() == "A"
+    assert verifier.git_blob(tmp_path, commit_a, "tracked") == b"A"
     assert verifier.source_identity(tmp_path) == {"commit": commit_a, "tree": tree_a}
 
 
