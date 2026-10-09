@@ -33,6 +33,7 @@ tags:
 - projectiles
 - bullet-param
 - inline-hook
+- raycast-by-projectile
 ---
 # Portal gun prototype via dinput8 proxy DLL: player, camera and angle offsets
 
@@ -41,7 +42,8 @@ game, and walking into one moves the player to the other with the facing rotated
 (offline) and works on open floor, as confirmed by the user and by the log. Teleports are sometimes accepted by the game only
 after a delay (see "Why the teleport lags"). The session then moved on to the game's own projectile ("bullet")
 system, because a projectile is the natural in-world object and trigger for a portal: from our own code we can now
-spawn a real Prism Stone projectile. This note is mostly a verified memory map for this build plus the traps we hit.
+spawn a real Prism Stone projectile, and a fast ownerless projectile fired along the camera ray works as a ray cast: its stopping
+point places an upright portal flat on a wall. This note is mostly a verified memory map for this build plus the traps we hit.
 
 ## Setup
 - Game: Steam app 570940, build id 10943698, `DarkSoulsRemastered.exe` 50,286,344 bytes (SHA-256
@@ -172,6 +174,57 @@ Found by RTTI plus Ghidra headless on the runtime dump. All addresses are relati
   repos/soulsmods/Paramdex/contents/DS1R/...` fetches them.
 
 
+## Aimed shot: using a spawned projectile as the ray cast
+Instead of writing a collision query, fire a bullet along the camera ray and read where it stops. Verified in the real game
+(offline), repeatable (same aim gave identical numbers), no crashes.
+- Spawn an ownerless Prism Stone bullet (id 130) with the replayed create-info, using the camera position + 1 m and the camera
+  forward as direction. The bullet's BulletParam row is edited in memory only for the shot and restored afterwards: life 1.5 s,
+  gravity in and out of range 0, distance 500, initial/max/min velocity 40, accelerations 0. Rows are heap memory, so a crash
+  or restart reverts them.
+- Spawn-transform convention (found because the first replays flew backwards): a bullet's velocity is `M * (0, 0, -1)` where
+  M is the row-major 3x4 at create-info +0x40. To fire along direction d use columns `[right, up, -d | t]` with
+  `right = normalize(cross(worldUp, -d))` and `up = cross(-d, right)`.
+- Detect the hit: poll the in-use `BulletIns` list (`[BulletMan + 0x08]`, next at +0x348, 0x360-byte objects; param id +0x94 and
+  owner +0x9c identify yours). State 2 is flying, state 4 means finished. The position at +0x10 when it turns 4 is the impact.
+  Do this once per frame inside the player's `ChrCtrl::Update` hook, because 30 ms polling from another thread can miss the
+  single frame the bullet sits in state 4.
+- Accuracy: at 40 m/s a frame moves about 0.67 m, so the impact can overshoot the surface by up to that (measured 0.60 m and
+  0.10 m). Two stages fix it: after the fast scouting hit, fire a slow shot (6 m/s, about 0.1 m per frame) from 1.2 m before
+  the scouting impact along the same ray and use its impact. The user judged portals placed this way as nearly flush with
+  the wall (slightly raised, like messages or bloodstains).
+- The surface normal is not stored in the bullet. For upright portals use the horizontal part of the reversed flight direction
+  and skip steep (floor/ceiling) hits. This is exact only for shots that hit the wall squarely.
+
+## Wall portals need a touch trigger
+A portal drawn on a wall cannot be entered by the plane-crossing test, because the wall stops the player before the plane is
+crossed (the log simply had no "crossed" lines). The trigger for wall portals is: body point within 0.6 m in front of the plane,
+inside the ring ellipse, and moving toward the wall; reappear 0.9 m in front of a wall destination (must exceed the trigger
+distance, or you bounce straight back). This trigger is built but was not yet confirmed in the game at the time of writing.
+
+## Live param tables (this build)
+Table index (the `type` in the param-manager lookup) with row counts read from the running game; the type-name string is at
+`table + 0xC`, the row count is a u16 at `table + 0xA`, and row entries are `{u32 id, u32 dataOffset, u32 nameOffset}` starting
+at `table + 0x30`: 0 EQUIP_PARAM_WEAPON 1245, 1 PROTECTOR 324, 2 ACCESSORY 41, 3 GOODS 272, 4 REINFORCE_WEAPON 469,
+5 REINFORCE_PROTECTOR 17, 6 NPC 556, 7 ATK_PARAM (NPC) 2164, 8 ATK_PARAM (PC) 1397, 9 NPC_THINK 476, 10 OBJECT 947,
+11 BULLET 632, 12 and 13 BEHAVIOR (NPC and PC), 14 MAGIC 141, 15 SP_EFFECT 850, 16 SP_EFFECT_VFX 232, 19 ITEMLOT 1536,
+0x21 HIT_MTRL, 0x22 KNOCKBACK. Row layouts match Paramdex `DS1R/Defs`. AtkParam (0x80 bytes): hit radii at +0x00 to +0x0c,
+knockback +0x10, SpEffect ids 0 to 4 at +0x18 to +0x28, damage (phys, magic, fire, thunder, stamina) as u16 at +0x50 to +0x58,
+dmgLevel +0x72, mapHitType +0x73. There are many zero-damage, zero-knockback, no-effect attacks, for example NPC table ids
+3108, 3109, 3113, 3119, 3120, 3128, 3129, 3134, 3136, 3137, 3144 and 3146 (hit radius 1.6), and PC table ids 222 and 322.
+
+## Collision-trigger probe: what is known
+Goal: a world-fixed hit volume that reacts to the player, using the game's own hit manager (global exe+0x1c7a050) instead of
+coordinates. Results so far, from logs:
+- A bullet created with FollowType 1 (wait state) follows a transform belonging to its OWNER (a dummy poly). Owned by the
+  player it hovers 0.3 to 1.0 m from the player's body and moves with them; ownerless it snaps to the world origin within about
+  a second and stays there. So a fixed trigger must use FollowType 0 (fly state) with zero velocity.
+- Ownerless wait-state bullet with an NPC-table attack (3146) ended in 16 to 30 ms, with its position jumping 20 m down;
+  with a PC-table attack (222) it stayed alive (at the origin). Which AtkParam table an ownerless bullet reads is still open.
+- Ownerless bullets are simulated and collide with the world exactly like owned ones, but show no visual effect (the owned stone
+  shows its effect). An overlay marker is a workable stand-in for testing.
+- Untested at the time of writing: the fly-state zero-speed probe walking into the player.
+
+
 ## Build steps
 1. Back up your saves, put Steam in Offline Mode, and find the module base (fixed 0x140000000).
 2. Build the proxy (forward `DirectInput8Create` from the system `dinput8.dll`, start a thread in `DllMain`),
@@ -192,6 +245,8 @@ Found by RTTI plus Ghidra headless on the runtime dump. All addresses are relati
 - Projectile spawn: hooked BulletMan::Spawn while the user threw a Prism Stone and cast spells (create-info bytes logged),
   then replayed it from our own hook on the player's ChrCtrl::Update; the user saw the stone appear and fall, the log shows
   a valid handle each time. The ownerless variant returned a valid handle but its position is unverified.
+- Aimed shot: F3 and Ctrl+F6 at the same aim gave identical impacts; the two-stage refine measured the fast shot overshooting the
+  surface by 0.60 m and 0.10 m in two shots; the user confirmed the rings sit nearly flush on the wall (log: SHOT HIT / SHOT refine).
 - Havok capsule: the two triples equal the player position exactly during normal play; per-tick traces with and without
   writing them show teleports landing near the target in 5 of 5 runs (earlier version: one run pinned at the start).
 - NOT verified: the bow aim camera, fall velocity and momentum, behaviour after loading a different map, the
@@ -233,6 +288,14 @@ Found by RTTI plus Ghidra headless on the runtime dump. All addresses are relati
     BulletMan+0; spawned bullets are 0x320-byte objects on the in-use list at BulletMan+0x28. **Fix:** walk that list.
 11. **Symptom.** A bullet spawned with no owner appeared nowhere visible. **Cause:** unknown (the position probably comes from
     the owner's dummy poly, with a default when there is none). **Fix:** not found yet.
+12. **Symptom.** Replayed spawn fires the projectile backwards. **Cause:** velocity is the spawn matrix times (0, 0, -1), not +z.
+    **Fix:** build the 3x4 with the third column equal to the negated direction.
+13. **Symptom.** A shot-placed wall portal can never be entered. **Cause:** a wall stops the player before the plane is crossed.
+    **Fix:** a touch trigger within about 0.6 m in front of the plane (see "Wall portals need a touch trigger").
+14. **Symptom.** A wait-state (FollowType 1 or 2) bullet teleports to (0, 0, 0) or hugs the player. **Cause:** it follows its
+    owner's dummy-poly transform. **Fix:** use FollowType 0 with zero velocity for a fixed volume.
+15. **Symptom.** The impact reading is 0.6 m inside the wall. **Cause:** a 40 m/s bullet moves 0.67 m per frame and state 4 is
+    seen after the step. **Fix:** refine with a slow shot (6 m/s) fired from just before the first impact.
 
 ## Assets
 None generated. The portals are GDI-drawn rings.
@@ -242,8 +305,11 @@ One long session (about a day of wall-clock with many launch cycles, each needin
 
 ## Open questions
 - The game's own position-teleport function (or the correct warp-field offsets for this build), to remove the acceptance delay.
-- Where the position of an ownerless bullet comes from, and whether an ownerless attack-carrying bullet can hit the player
-  (then a zero-damage bullet with a marker SpEffect would be a real collision trigger).
+- Does a fly-state, zero-speed, zero-damage bullet with an attack param react to the player (state 3 or 4 near the player)? If yes it
+  is a true collision trigger; if not, the hit manager's overlap and team test (exe+0x1c7a050, candidates 0x1403b8400, 0x1403b7290,
+  0x1403e6450) has to be read or hooked, or a Havok phantom with a contact listener used instead.
+- Which AtkParam table (NPC or PC) an ownerless bullet reads, and how to give an ownerless bullet a visible effect (or whether a
+  non-player owner such as a nearby NPC is the answer).
 - The bullet impact surface normal (only the position is directly readable from BulletIns).
 - Velocity and fall speed offsets, to keep momentum through a portal.
 - Whether CameraMan is also the bow aim camera.

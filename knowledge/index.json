@@ -597,7 +597,8 @@
    "havok",
    "projectiles",
    "bullet-param",
-   "inline-hook"
+   "inline-hook",
+   "raycast-by-projectile"
   ]
  },
  {
