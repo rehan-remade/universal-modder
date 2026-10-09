@@ -573,7 +573,8 @@
    "Zig 0.17.0 (zig cc, x86_64-windows-gnu)",
    "Ghidra 12.1.4",
    "Python 3 ctypes (ReadProcessMemory) and capstone",
-   "DSR-Gadget source (reference only)"
+   "DSR-Gadget source (reference only)",
+   "Paramdex DS1R defs and names (soulsmods/Paramdex, reference)"
   ],
   "anti_cheat": "none found by um scan (play offline only)",
   "status": "in-progress",
@@ -581,7 +582,7 @@
    "Claude Code (Sonnet 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-07",
+  "date": "2026-10-08",
   "links": [
    "https://github.com/JKAnderson/DSR-Gadget",
    "https://soulsmodding.com/"
@@ -592,7 +593,11 @@
    "memory-map",
    "teleport",
    "overlay",
-   "rtti"
+   "rtti",
+   "havok",
+   "projectiles",
+   "bullet-param",
+   "inline-hook"
   ]
  },
  {

@@ -12,12 +12,13 @@ tools:
 - Ghidra 12.1.4
 - Python 3 ctypes (ReadProcessMemory) and capstone
 - DSR-Gadget source (reference only)
+- Paramdex DS1R defs and names (soulsmods/Paramdex, reference)
 anti_cheat: none found by um scan (play offline only)
 status: in-progress
 agents:
 - Claude Code (Sonnet 5.5)
 humans: []
-date: '2026-10-07'
+date: '2026-10-08'
 links:
 - https://github.com/JKAnderson/DSR-Gadget
 - https://soulsmodding.com/
@@ -28,14 +29,19 @@ tags:
 - teleport
 - overlay
 - rtti
+- havok
+- projectiles
+- bullet-param
+- inline-hook
 ---
 # Portal gun prototype via dinput8 proxy DLL: player, camera and angle offsets
 
 A hotkey-driven portal prototype for Dark Souls Remastered: two portals (blue and orange) are drawn over the
 game, and walking into one moves the player to the other with the facing rotated. It runs in the real game
-(offline) and works on open floor, as confirmed by the user and by the log. It fails when walls lie between the
-portals (position snaps back); that is still open. This note is mostly a verified memory map for this build plus
-the traps we hit.
+(offline) and works on open floor, as confirmed by the user and by the log. Teleports are sometimes accepted by the game only
+after a delay (see "Why the teleport lags"). The session then moved on to the game's own projectile ("bullet")
+system, because a projectile is the natural in-world object and trigger for a portal: from our own code we can now
+spawn a real Prism Stone projectile. This note is mostly a verified memory map for this build plus the traps we hit.
 
 ## Setup
 - Game: Steam app 570940, build id 10943698, `DarkSoulsRemastered.exe` 50,286,344 bytes (SHA-256
@@ -50,7 +56,8 @@ the traps we hit.
 A dinput8 proxy DLL (forwards `DirectInput8Create`, starts a thread) plus direct memory access. Params alone
 cannot express portals, ModEngine2 supports DSR but is archived and not needed for this, and DSR-Gadget is a
 separate external process (and GPL-3.0). Item and projectile work (params via Soulstruct, Smithbox or
-DSMapStudio with Paramdex) is the planned next step and is not started.
+DSMapStudio with Paramdex) is the planned item side; the projectile system itself has been located and a
+spawn from our own code verified (see below).
 
 ## How the game works (what we had to learn)
 The executable on disk is protected: there is an extra large, high-entropy `.text` section after `.idata` and the
@@ -89,6 +96,82 @@ change every launch, the chains do not.
   ellipse; write the physics position to the linked portal with local x mirrored; rotate the angle by
   `yaw(nB) - yaw(-nA)`, where `yaw(x, z) = atan2(-x, z)`; keep re-writing the destination for about 0.3 s.
 
+## Why the teleport lags: the Havok character capsule
+Tracing the position every tick during the destination hold (reading BEFORE each write, with QPC time) showed the game
+keeps the old position for roughly 10 to 40 ticks (about 0.2 to 0.7 s) before accepting the write; in one older run it
+never accepted it for the whole 75-tick hold. So the position field we write is not the one the game trusts.
+- The character's physics is a Havok `hkpCharacterProxy` (RTTI present, vtable 0x141469648). Found by a read-only
+  pointer-graph scan from PlayerIns (depth 3, vtable match): `PlayerIns + 0x7b8 -> +0x58` (also reachable via
+  `+0x18 -> +0x188 -> +0x38` and `+0x38 -> +0x3c8 -> +0x508`).
+- Two float triples inside it equal the player position exactly: `(*(proxy + 0x80)) + 0x120` and
+  `(*(proxy + 0x180)) + 0x320` (the second lags by about 0.001). Writing both together with the player position during
+  the hold made every teleport land near the target (offsets 0.00 to 2.4), none pinned at the start, but the delay before
+  acceptance remained. The real teleport entry point has not been found (DSR-Gadget's bonfire-warp signature, which does
+  match this build, only reloads you at your last bonfire; it is not a position teleport).
+- `ChrCtrl` (vtable 0x14132aab0) is `PlayerIns + 0x18`: `ChrCtrl + 0x28` is ChrPosData, `+0x18` is the motion/proxy
+  driver (accumulated move vector at +0x140/+0x170), and the per-frame update is vtable slot 30 (exe+0x37c250).
+- A walking player moves roughly 0.1 units per tick, and `Sleep(4)` on Windows sleeps about 15.6 ms, so "ticks" are not
+  4 ms. Use real time (`GetTickCount64`, QPC) for cooldowns. A tick-based cooldown of 150 became about 2.3 s and made the
+  trigger feel much smaller than the drawn ring, because crossings during it were silently ignored.
+
+## The game's projectile ("bullet") system
+Found by RTTI plus Ghidra headless on the runtime dump. All addresses are relative to base 0x140000000.
+- **BulletMan** singleton: global at exe+0x1c7a488 (constructor 0x140429440). Pools: 0x80 x 0x360-byte entries at `+0x00`
+  (an emitter-like object), 0x40 x 800-byte `BulletIns` at `+0x20`, and 4 x 0x318 bytes at `+0x40`. In-use `BulletIns`
+  objects hang on a list: head `[BulletMan + 0x28]`, next `[obj + 0x308]`; `obj + 0` is the bullet handle. Handles look
+  like 0xff02ff00.
+- **BulletIns** (vtable 0x141342a70, 0x320 bytes): position vec4 at +0x10, orientation at +0x20, velocity at +0x30,
+  state at +0x88 (1 wait, 2 fly, 3 explosion, 4 none; classes BulletWaitState, BulletFlyState, BulletExplosionState),
+  timer at +0x1f4, BulletParam id at +0x94, owner at +0x9c. The update function is exe+0x1404246a0. Movement is
+  kinematic (position += velocity * dt), not a Havok body. Each tick the bullet pushes its transform to a hit-volume
+  manager (global exe+0x1c7a050, a pool of 0x80 entries of 0x230 bytes keyed by the handle at BulletIns+0x54). Those
+  hit volumes are capsules between two points, mostly bone-attached to an owning character; a bullet with
+  `atkId_Bullet = 0` (all three Prism Stone rows) does no hit test at all.
+- **Spawn API:** `exe+0x429ba0 = BulletMan::Spawn(BulletMan*, BulletCreateInfo*)` returns the bullet handle or -1. It
+  builds a 328-byte spawn info (0x14042a1c0), takes a BulletIns from the free list (0x14042a920), initialises it
+  (0x140420ef0) and positions it (0x1404241d0). The game calls it from a bullet emitter (0x14031d380) and for child
+  bullets on explosion (0x140427380), which passes owner = -1, so ownerless bullets are a normal case.
+- **BulletCreateInfo** (recorded from a real Prism Stone throw by hooking Spawn; byte offsets): +0x00 owner ChrIns
+  handle (the player was 0x10044000 in every capture; 0xffffffff = none), +0x0c BulletParam id (direct), +0x10 goods id
+  (370 for the Prism Stone), +0x1c dummy-poly/placement id (-1 = owner default), +0x30 byte flag 1, +0x40..+0x6f spawn
+  transform, +0x70..+0x9f owner transform (+0xa0..+0xcf a copy), +0xd0 -1, +0xd8 a float, +0xdc 1. Transforms are
+  row-major 3x4: rows `[cos 0 -sin | tx]`, `[0 1 0 | ty]`, `[sin 0 cos | tz]` for a yaw rotation, so local +z maps to the
+  same forward vector as the facing angle. Spell casts use the same 0x100-byte shape with their own bullet ids (3040 and
+  6000 seen) and the player as owner.
+- **Spawning from our own code works.** A hook on the player's `ChrCtrl::Update` (exe+0x37c250, 16 stolen bytes) runs
+  queued spawn requests on the game's own thread. A key press that queued a replay of the captured create-info with
+  bullet 130 and a new transform 3 units ahead produced a real Prism Stone that fell to the floor (seen by the user), with
+  no crash. With owner = 0xffffffff the call also returned a valid handle, but nothing visible appeared where expected;
+  where an ownerless bullet's position comes from is not yet known.
+- **Why this matters for portals:** a spawned projectile is a real object the game simulates and removes; its impact
+  (state goes to 3) gives a world position, and a bullet that carries an attack param with a marker SpEffect could act as
+  a collision trigger. Not done yet.
+
+## Param access at runtime and the Prism Stone rows
+- Param manager global at exe+0x1c7e000: `file(type) = [man + 0x18 + (type * 9) * 8]`, row table `t = [file + 0x38]`, id
+  table at `t + (([t - 0x10] + 0xf) & ~0xf)` holding sorted `{u32 id, s32 rowIndex}` pairs, `n = *(u16*)(t + 10)`,
+  row = `t + *(u32*)(t + 0x34 + rowIndex * 0xc)`. BulletParam is type 0xb. This lets the DLL read (and edit, since it is
+  heap memory) any row at runtime. The row layout matches Paramdex `DS1R/Defs/BulletParam.xml` (size 0xa0): +0x00 atkId,
+  +0x04 sfxId_Bullet, +0x08 sfxId_Hit, +0x10 life, +0x14 dist, +0x1c/+0x20 gravity, +0x28 initial velocity, +0x44 hit
+  radius, +0x60 SpEffect for the shooter, +0x68 HitBulletID, +0x6c..+0x7c SpEffect 0 to 4, +0x92 isPenetrate, +0x9a bits
+  0 to 2 FollowType (0 or above 2 = fly state, 1 to 2 = wait state), +0x9b bit 1 isHitBothTeam.
+- Prism Stone: goods id 370; bullets 130 (flying stone, life about 2 s, speed 2, gravity 9.8, atk 0), 131 (hit marker,
+  life 0.04) and 132 (lingering light, life 1.0 s). All have no attack, no SpEffect and FollowType 0.
+
+## Reading and hooking at runtime (what worked)
+- A 14-byte absolute-jump inline hook (`FF 25 00 00 00 00 <addr>`) with a trampoline of the stolen instructions is enough.
+  Refuse to patch unless the prologue bytes match what the dump shows (protects other builds). Both hooks (Spawn at
+  exe+0x429ba0 with 20 stolen bytes, ChrCtrl::Update at exe+0x37c250 with 16) installed from the mod thread without
+  crashes. Do not call game functions from your own thread; queue the request and run it from a game-thread hook.
+- Ghidra headless against the dump project: `analyzeHeadless <projdir> <proj> -process -noanalysis -scriptPath <dir>
+  -postScript DecompAt.java <hex addrs>`, with a small GhidraScript that decompiles the function at each address. A
+  "callers of" script and a "functions referencing this address" script (for a singleton's global) were the fastest way from
+  a singleton to the code that uses it. Pass the project directory and the project name separately.
+- Community data helps: Paramdex (soulsmods/Paramdex, `DS1R/Defs` and `Names`) gives param layouts and row names and
+  matched the offsets we decompiled. `gh api -H "Accept: application/vnd.github.raw"
+  repos/soulsmods/Paramdex/contents/DS1R/...` fetches them.
+
+
 ## Build steps
 1. Back up your saves, put Steam in Offline Mode, and find the module base (fixed 0x140000000).
 2. Build the proxy (forward `DirectInput8Create` from the system `dinput8.dll`, start a thread in `DllMain`),
@@ -106,6 +189,11 @@ change every launch, the chains do not.
   staying fixed while turning and walking is the oracle for the matrix and FOV.
 - Teleport: the log (`teleport ... hold done: offset 0.00`) and the user confirming they were moved and rotated,
   on open floor.
+- Projectile spawn: hooked BulletMan::Spawn while the user threw a Prism Stone and cast spells (create-info bytes logged),
+  then replayed it from our own hook on the player's ChrCtrl::Update; the user saw the stone appear and fall, the log shows
+  a valid handle each time. The ownerless variant returned a valid handle but its position is unverified.
+- Havok capsule: the two triples equal the player position exactly during normal play; per-tick traces with and without
+  writing them show teleports landing near the target in 5 of 5 runs (earlier version: one run pinned at the start).
 - NOT verified: the bow aim camera, fall velocity and momentum, behaviour after loading a different map, the
   camera after a teleport, and anything online (never tested; play offline).
 
@@ -122,21 +210,29 @@ change every launch, the chains do not.
    not in its table, so the layout differs. **Fix:** do not use them on an unknown build. Direct position and
    angle writes are safe.
 4. **Symptom.** Hotkeys do nothing in a proxy DLL. **Cause:** F12 is Steam's screenshot key and is swallowed, and
-   an exact-HWND foreground check plus the `GetAsyncKeyState & 1` edge flag were unreliable. **Fix:** avoid F12,
-   treat the game as focused when the foreground window belongs to the game's process, and track key edges with
+   an exact-HWND foreground check plus the `GetAsyncKeyState & 1` edge flag were unreliable. **Fix:** avoid F12 if Steam's
+   screenshot hotkey is bound (on the author's PC F12 reached the game and worked in a later session, so check your Steam
+   settings), treat the game as focused when the foreground window belongs to the game's process, and track key edges with
    the high bit.
 5. **Symptom.** Static analysis of the exe shows "Failed to disassemble" and decompiler "Unable to resolve
    constructor" everywhere. **Cause:** the code is protected on disk. **Fix:** analyse a runtime dump (see above).
 6. **Symptom.** Teleporting fails or snaps back in some spots but works on open floor (hold-end position is back near
-   the start). **Cause:** unconfirmed; the destination was a spot the player had stood on, so it is not simply a
-   blocked target. Hypothesis: a collision-swept move stops at walls between the portals. **Fix:** not found yet.
+   the start). **Cause:** the written position is not the authoritative one: the game keeps a Havok character-proxy capsule and takes
+   our write only after a delay, sometimes none. It is not a wall sweep (per-tick traces showed the position staying
+   near the start, not stopping at a wall). **Fix (partial):** also write the two capsule triples (see "Why the teleport
+   lags"); all teleports then landed, with a delay. The game's real teleport function is still unknown.
 7. **Symptom.** A blind "N units ahead" portal placement lands in walls. **Cause:** no collision query.
-   **Fix:** planned: use the game's own projectile impact position and normal.
+   **Fix:** planned: use the game's own projectile impact position (BulletIns state 3, position at +0x10); the surface
+   normal is not stored there (approximate it from the flight direction).
 8. **Symptom.** `um` crashes printing the game name on a Windows console. **Cause:** cp932 console encoding.
    **Fix:** set `PYTHONUTF8=1`. Also `um kb search` needs PyYAML.
 9. **Symptom.** A test write landed in unrelated memory. **Cause:** a scan result went stale after the player object
    was reallocated. **Fix:** re-resolve the chain from the global each time and only write to addresses that
    currently match the expected values.
+10. **Symptom.** A watcher for a spawned bullet logged "not in pool" forever. **Cause:** it scanned the 0x80 x 0x360 pool at
+    BulletMan+0; spawned bullets are 0x320-byte objects on the in-use list at BulletMan+0x28. **Fix:** walk that list.
+11. **Symptom.** A bullet spawned with no owner appeared nowhere visible. **Cause:** unknown (the position probably comes from
+    the owner's dummy poly, with a default when there is none). **Fix:** not found yet.
 
 ## Assets
 None generated. The portals are GDI-drawn rings.
@@ -145,10 +241,11 @@ None generated. The portals are GDI-drawn rings.
 One long session (about a day of wall-clock with many launch cycles, each needing a DLL copy and relaunch).
 
 ## Open questions
-- Why teleports snap back when walls lie between the portals, and how to disable or bypass the sweep safely (for
-  example a map-collision flag, the Havok character proxy position, or the game's own warp function).
-- Correct warp-field offsets for this build, if the game's warp is to be used.
+- The game's own position-teleport function (or the correct warp-field offsets for this build), to remove the acceptance delay.
+- Where the position of an ownerless bullet comes from, and whether an ownerless attack-carrying bullet can hit the player
+  (then a zero-damage bullet with a marker SpEffect would be a real collision trigger).
+- The bullet impact surface normal (only the position is directly readable from BulletIns).
 - Velocity and fall speed offsets, to keep momentum through a portal.
 - Whether CameraMan is also the bow aim camera.
-- The item: pyromancy-style and spell-style projectiles via params, and using projectile impacts for portal
-  placement; giving the item at runtime (DSR-Gadget lists an ItemGet function signature).
+- The item itself: giving it at runtime (DSR-Gadget lists an ItemGet signature that also matches this build) and defining
+  pyromancy and sorcery shots through params.
