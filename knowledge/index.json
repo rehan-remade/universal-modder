@@ -1056,6 +1056,47 @@
   ]
  },
  {
+  "path": "games/guilty-gear-xrd-rev-2/rev2-fighter-passed-through-into-ikemen-go-lock-step-steppin.md",
+  "kind": "game",
+  "title": "Rev2 fighter passed through into IKEMEN GO: lock-step stepping, shared GPU layer and frame pacing",
+  "game": "Guilty Gear Xrd REV 2",
+  "games_also": [
+   "IKEMEN GO"
+  ],
+  "game_version": "Guilty Gear Xrd -REVELATOR- (REV 2) Steam app 520440, build 11284329, 32-bit GuiltyGearXrd.exe (UE3, D3D9); IKEMEN GO pinned at commit 07558c8 (universal-fighter fork)",
+  "platform": "windows",
+  "engine": "unreal",
+  "route": "passthrough",
+  "tools": [
+   "Frida 17.22.2 (Python bindings + JS agent)",
+   "capstone 5.0.7 (offline disassembly)",
+   "D3D9On12 (Windows' Direct3DCreate9On12)",
+   "WGL_NV_DX_interop2 + D3D11/D3D12 shared handles",
+   "MSYS2 MinGW64 Go toolchain (IKEMEN build)"
+  ],
+  "anti_cheat": "none in offline Training mode. The agent refuses to install outside offline Training (it checks the game mode) and nothing touches online play.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-08",
+  "links": [
+   "https://github.com/jerezereh/universal-fighter/tree/passthrough-v2-receiver"
+  ],
+  "tags": [
+   "fighting-game",
+   "lock-step",
+   "frame-pacing",
+   "ue3",
+   "d3d9on12",
+   "shared-gpu-texture",
+   "wgl-nv-dx-interop",
+   "frida",
+   "ikemen"
+  ]
+ },
+ {
   "path": "games/half-life/half-life-1-weapons-and-monsters-in-minecraft.md",
   "kind": "game",
   "title": "Half-Life 1's weapons and monsters as a Minecraft Fabric mod, from a GoldSrc model converter",
