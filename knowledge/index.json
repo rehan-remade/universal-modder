@@ -1012,6 +1012,39 @@
   ]
  },
  {
+  "path": "games/melon-sandbox/assessing-android-38-2-modding-and-a-lua-save-prototype.md",
+  "kind": "game",
+  "title": "Assessing Android 38.2 modding and a Lua-save prototype",
+  "game": "Melon Sandbox",
+  "games_also": [],
+  "game_version": "38.2 (APKPure XAPK; versionCode 445; armeabi-v7a split)",
+  "platform": "other",
+  "engine": "unity-il2cpp",
+  "route": "other",
+  "tools": [
+   "melon-lua 5.2.5",
+   "Python 3.12",
+   "Android SDK command-line tools"
+  ],
+  "anti_cheat": "Not assessed; the package was not installed or run",
+  "status": "in-progress",
+  "agents": [
+   "GitHub Copilot (Auto)"
+  ],
+  "humans": [],
+  "date": "2026-10-10",
+  "links": [
+   "https://github.com/xunxiing/MelonLuaSandbox"
+  ],
+  "tags": [
+   "android",
+   "il2cpp",
+   "lua-chip",
+   "melsave",
+   "unverified"
+  ]
+ },
+ {
   "path": "games/mewgenics/combat-roster-panel.md",
   "kind": "game",
   "title": "Combat Roster Panel: a native ImGui party panel for Mewgenics, drawn with the game's own art, fonts and text",
