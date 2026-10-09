@@ -796,6 +796,7 @@ def test_example_recovery_retains_journal_for_tampered_committed_stage(tmp_path)
         helper.recover(game, journal)
     assert journal.exists()
     assert manifest.exists()
+    assert not (game / helper.MANIFEST_MARKER_NAME).exists()
     assert (game / f".args.txt.um-part-{nonce}").exists()
 
 
@@ -811,6 +812,30 @@ def test_example_rollback_preserves_distinct_existing_quarantine(tmp_path):
     assert helper.rollback(game, [entry]) is False
     assert target.read_bytes() == b"owned"
     assert quarantine.read_bytes() == b"foreign-quarantine"
+
+
+def test_example_quarantine_capture_is_atomic_no_clobber(tmp_path, monkeypatch):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    target = game / "args.txt"
+    target.write_bytes(b"owned")
+    entry = {"path": "args.txt", "sha256": hashlib.sha256(b"owned").hexdigest()}
+    quarantine = game / helper._quarantine_name("args.txt", entry, "target")
+    original_rename = helper._parent_rename_noreplace
+    raced = False
+
+    def insert_foreign_before_capture(parent, source, destination):
+        nonlocal raced
+        if not raced and destination == quarantine.name:
+            raced = True
+            quarantine.write_bytes(b"foreign-race")
+        return original_rename(parent, source, destination)
+
+    monkeypatch.setattr(helper, "_parent_rename_noreplace", insert_foreign_before_capture)
+    assert helper.rollback(game, [entry]) is False
+    assert target.read_bytes() == b"owned"
+    assert quarantine.read_bytes() == b"foreign-race"
 
 
 def test_example_rollback_finishes_interrupted_changed_file_restoration(tmp_path, monkeypatch):
@@ -883,9 +908,45 @@ def test_example_remove_recovers_marker_only_receipt_retirement(tmp_path, monkey
     with pytest.raises(KeyboardInterrupt):
         helper.remove(game)
     monkeypatch.setattr(Path, "unlink", original_unlink)
-    helper.remove(game)
+    helper.recover(game, game / helper.JOURNAL_NAME)
     assert not (game / helper.MANIFEST_MARKER_NAME).exists()
     assert not (game / "args.txt").exists()
+
+
+def test_example_status_is_bounded_read_only_json(tmp_path, capsys):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    before = {path.name: path.read_bytes() for path in game.iterdir() if path.is_file()}
+    helper.status(game)
+    report = json.loads(capsys.readouterr().out)
+    assert report == {
+        "entries": [],
+        "journal": "absent",
+        "manifest": "absent",
+        "marker": "absent",
+        "receipt_bound": False,
+        "root": str(game),
+    }
+    after = {path.name: path.read_bytes() for path in game.iterdir() if path.is_file()}
+    assert after == before
+
+
+def test_example_remove_refuses_marker_only_receipt_while_managed_target_remains(tmp_path):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    target = game / "args.txt"
+    target.write_bytes(b"owned")
+    marker = game / helper.MANIFEST_MARKER_NAME
+    marker.write_text(json.dumps({"format": 1, "state": "installed", "entries": [
+        {"path": "args.txt", "sha256": hashlib.sha256(b"owned").hexdigest()},
+    ]}), encoding="utf-8")
+    with pytest.raises(SystemExit, match="managed targets"):
+        helper.remove(game)
+    assert marker.exists()
+    assert target.read_bytes() == b"owned"
 
 
 def test_example_remove_recovers_crash_after_quarantine_rename(tmp_path, monkeypatch):
@@ -1020,7 +1081,7 @@ def test_example_installer_process_lock_is_released_after_sigkill(tmp_path):
         "from pathlib import Path\n"
         f"s=importlib.util.spec_from_file_location('h',{str(helper_path)!r});"
         "h=importlib.util.module_from_spec(s);s.loader.exec_module(h)\n"
-        f"def hold(root,pairs): Path({str(ready)!r}).write_text('ready'); time.sleep(60)\n"
+        f"def hold(root,pairs,display_root=None): Path({str(ready)!r}).write_text('ready'); time.sleep(60)\n"
         f"h._install=hold;h.install(Path({str(game)!r}),[])\n"
     )
     child = subprocess.Popen([sys.executable, "-c", code])
@@ -1045,7 +1106,7 @@ def test_example_installer_rollback_preserves_leaf_replaced_after_validation(tmp
     target = game / "args.txt"
     target.write_bytes(b"owned")
     entry = {"path": "args.txt", "sha256": hashlib.sha256(b"owned").hexdigest()}
-    original = helper._parent_rename
+    original = helper._parent_rename_noreplace
     swapped = False
 
     def race(parent, name, quarantine):
@@ -1058,7 +1119,7 @@ def test_example_installer_rollback_preserves_leaf_replaced_after_validation(tmp
             os.close(fd)
         original(parent, name, quarantine)
 
-    monkeypatch.setattr(helper, "_parent_rename", race)
+    monkeypatch.setattr(helper, "_parent_rename_noreplace", race)
     assert helper.rollback(game, [entry]) is False
     assert target.read_bytes() == b"user-concurrent-data"
 
@@ -1216,6 +1277,44 @@ def test_release_verifier_rejects_mode_mutated_sdist(tmp_path, monkeypatch):
         verifier.inspect_sdist(sdist, tmp_path, "a" * 40)
 
 
+def test_release_verifier_rejects_mode_mutated_generated_metadata(tmp_path, monkeypatch):
+    verifier = _release_verifier_module()
+    dist_info = f"{verifier.DIST}-{verifier.VERSION}.dist-info"
+    source_name = "um/__init__.py"
+    wheel = tmp_path / "metadata-mutated.whl"
+    metadata_names = [f"{dist_info}/METADATA", f"{dist_info}/WHEEL",
+                      f"{dist_info}/entry_points.txt", f"{dist_info}/licenses/LICENSE",
+                      f"{dist_info}/RECORD"]
+    with zipfile.ZipFile(wheel, "w") as archive:
+        for name in [source_name, *metadata_names]:
+            info = zipfile.ZipInfo(name)
+            mode = 0o755 if name == f"{dist_info}/METADATA" else 0o644
+            info.external_attr = (stat.S_IFREG | mode) << 16
+            archive.writestr(info, b"source" if name == source_name else b"")
+    monkeypatch.setattr(verifier, "git_paths", lambda *_args: {source_name})
+    monkeypatch.setattr(verifier, "git_modes", lambda *_args: {source_name: 0o644})
+    monkeypatch.setattr(verifier, "git_blob", lambda *_args: b"source")
+    with pytest.raises(SystemExit, match="generated metadata mode"):
+        verifier.inspect_wheel(wheel, tmp_path, "a" * 40)
+
+    sdist = tmp_path / "metadata-mutated.tar.gz"
+    prefix = f"{verifier.DIST}-{verifier.VERSION}"
+    with tarfile.open(sdist, "w:gz") as archive:
+        source = tarfile.TarInfo(f"{prefix}/bin/um")
+        source.mode = 0o755
+        source.size = len(b"source")
+        archive.addfile(source, io.BytesIO(b"source"))
+        metadata = b"Name: universal-modder\nVersion: 0.2.0\n"
+        package = tarfile.TarInfo(f"{prefix}/PKG-INFO")
+        package.mode = 0o755
+        package.size = len(metadata)
+        archive.addfile(package, io.BytesIO(metadata))
+    monkeypatch.setattr(verifier, "git_paths", lambda *_args: {"bin/um"})
+    monkeypatch.setattr(verifier, "git_modes", lambda *_args: {"bin/um": 0o755})
+    with pytest.raises(SystemExit, match="PKG-INFO mode"):
+        verifier.inspect_sdist(sdist, tmp_path, "a" * 40)
+
+
 def test_release_verifier_rejects_duplicate_record_rows():
     verifier = _release_verifier_module()
     rows = [["um/__init__.py", "sha256=x", "1"], ["um/__init__.py", "sha256=x", "1"]]
@@ -1356,6 +1455,28 @@ def test_release_verifier_main_rechecks_named_inputs_before_success(tmp_path, mo
     monkeypatch.setattr(verifier, "inspect_sdist", inspect_sdist)
     monkeypatch.setattr(sys, "argv", ["verify_release_candidate.py", str(left), str(right)])
     with pytest.raises(SystemExit, match="changed after snapshot"):
+        verifier.main()
+
+
+def test_release_verifier_main_rechecks_source_identity_before_success(tmp_path, monkeypatch):
+    verifier = _release_verifier_module()
+    left = tmp_path / "left"
+    right = tmp_path / "right"
+    left.mkdir()
+    right.mkdir()
+    names = [f"{verifier.DIST}-{verifier.VERSION}-py3-none-any.whl",
+             f"{verifier.DIST}-{verifier.VERSION}.tar.gz"]
+    for directory in (left, right):
+        for name in names:
+            (directory / name).write_bytes(b"same")
+    original = {"commit": "a" * 40, "tree": "b" * 40}
+    changed = {"commit": "c" * 40, "tree": "d" * 40}
+    identities = iter([original, changed])
+    monkeypatch.setattr(verifier, "source_identity", lambda _root: next(identities))
+    monkeypatch.setattr(verifier, "inspect_wheel", lambda *_args: {"member"})
+    monkeypatch.setattr(verifier, "inspect_sdist", lambda *_args: {"member"})
+    monkeypatch.setattr(sys, "argv", ["verify_release_candidate.py", str(left), str(right)])
+    with pytest.raises(SystemExit, match="source checkout identity changed"):
         verifier.main()
 
 

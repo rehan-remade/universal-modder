@@ -203,6 +203,8 @@ def git_modes(root: Path, commit: str, prefix: str | None = None) -> dict[str, i
             continue
         metadata, name = entry.split("\t", 1)
         mode = metadata.split(" ", 1)[0]
+        if mode not in {"100644", "100755"}:
+            raise SystemExit(f"unsupported Git mode for release source {name}: {mode}")
         modes[name] = 0o755 if mode == "100755" else 0o644
     return modes
 
@@ -241,6 +243,13 @@ def inspect_wheel(path: Path, root: Path, commit: str) -> list[str]:
             extra = sorted(set(names) - source_files - metadata_files)
             missing = sorted(source_files | metadata_files - set(names))
             raise SystemExit(f"wheel inventory mismatch; extra={extra[:8]} missing={missing[:8]}")
+        for metadata_name in metadata_files:
+            mode = stat.S_IMODE(archive.getinfo(metadata_name).external_attr >> 16)
+            if mode != 0o644:
+                raise SystemExit(f"wheel generated metadata mode is not 0644: {metadata_name}")
+        for info in infos:
+            if info.is_dir() and stat.S_IMODE(info.external_attr >> 16) != 0o755:
+                raise SystemExit(f"wheel directory mode is not 0755: {info.filename}")
         for source_name in source_files:
             if archive.read(source_name) != git_blob(root, commit, source_name):
                 raise SystemExit(f"wheel bytes differ from source: {source_name}")
@@ -296,6 +305,9 @@ def inspect_sdist(path: Path, root: Path, commit: str) -> list[str]:
         unexpected_dirs = actual_dirs - expected_dirs
         if unexpected_dirs:
             raise SystemExit(f"sdist directory inventory mismatch; extra={sorted(unexpected_dirs)[:8]}")
+        for member in members:
+            if member.isdir() and stat.S_IMODE(member.mode) != 0o755:
+                raise SystemExit(f"sdist directory mode is not 0755: {member.name}")
         for member_name, member in files.items():
             rel = PurePosixPath(member_name).relative_to(prefix)
             extracted = archive.extractfile(member)
@@ -304,6 +316,8 @@ def inspect_sdist(path: Path, root: Path, commit: str) -> list[str]:
             payload = extracted.read()
             if rel.as_posix() == "PKG-INFO":
                 metadata_identity(payload, path.name)
+                if stat.S_IMODE(member.mode) != 0o644:
+                    raise SystemExit("sdist generated PKG-INFO mode is not 0644")
             elif payload != git_blob(root, commit, rel.as_posix()):
                 raise SystemExit(f"sdist bytes differ from source: {rel}")
             elif stat.S_IMODE(member.mode) != source_modes[rel.as_posix()]:

@@ -6,6 +6,8 @@ installer from WSL so descriptor-relative ancestry checks and directory fsync re
 """
 from __future__ import annotations
 
+import ctypes
+import errno
 import hashlib
 import json
 import os
@@ -173,6 +175,30 @@ def _parent_link(parent: int, source: str, target: str) -> None:
 
 def _parent_rename(parent: int, source: str, target: str) -> None:
     os.rename(source, target, src_dir_fd=parent, dst_dir_fd=parent)
+
+
+def _parent_rename_noreplace(parent: int, source: str, target: str) -> None:
+    """Atomically move one child without replacing an existing destination."""
+    for value in (source, target):
+        if not value or value in {".", ".."} or "/" in value or "\\" in value or "\0" in value:
+            fail(f"unsafe child name for atomic rename: {value!r}")
+    libc = ctypes.CDLL(None, use_errno=True)
+    renameat2 = getattr(libc, "renameat2", None)
+    if renameat2 is None:
+        fail("atomic no-replace rename is unavailable; use a Linux/WSL filesystem with renameat2")
+    renameat2.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p,
+                          ctypes.c_uint]
+    renameat2.restype = ctypes.c_int
+    if renameat2(parent, os.fsencode(source), parent, os.fsencode(target), 1) == 0:
+        return
+    error = ctypes.get_errno()
+    if error == errno.EEXIST:
+        raise FileExistsError(error, os.strerror(error), target)
+    if error == errno.ENOENT:
+        raise FileNotFoundError(error, os.strerror(error), source)
+    if error in {errno.ENOSYS, errno.EINVAL, errno.EOPNOTSUPP, errno.EXDEV}:
+        fail(f"filesystem lacks atomic no-replace rename support: {os.strerror(error)}")
+    raise OSError(error, os.strerror(error), source)
 
 
 def _parent_fsync(parent: int) -> None:
@@ -375,31 +401,42 @@ def _file_state(parent_fd: int, name: str) -> tuple[os.stat_result, str] | None:
         os.close(fd)
 
 
+def _matches_expected(current: tuple[os.stat_result, str],
+                      expected: tuple[os.stat_result, str]) -> bool:
+    return (current[1] == expected[1]
+            and (current[0].st_dev, current[0].st_ino)
+            == (expected[0].st_dev, expected[0].st_ino))
+
+
 def _remove_via_quarantine(parent: int, name: str, quarantine: str,
                            expected: tuple[os.stat_result, str]) -> bool:
-    if _file_state(parent, quarantine) is not None and _file_state(parent, name) is not None:
-        return False
-    try:
-        _parent_rename(parent, name, quarantine)
-    except FileNotFoundError:
-        pass
-    except FileExistsError:
-        return False
-    captured = _file_state(parent, quarantine)
-    if captured is None:
-        return False
-    same = (captured[1] == expected[1]
-            and (captured[0].st_dev, captured[0].st_ino) == (expected[0].st_dev, expected[0].st_ino))
-    if same:
+    if name == quarantine:
+        captured = _file_state(parent, quarantine)
+        if captured is None:
+            return True
+        if not _matches_expected(captured, expected):
+            return False
         _parent_unlink(parent, quarantine)
         _parent_fsync(parent)
         return True
     try:
-        _parent_link(parent, quarantine, name)
+        _parent_rename_noreplace(parent, name, quarantine)
+    except FileExistsError:
+        return False
+    except FileNotFoundError:
+        return _file_state(parent, name) is None and _file_state(parent, quarantine) is None
+    _parent_fsync(parent)
+    captured = _file_state(parent, quarantine)
+    if captured is None:
+        return False
+    if _matches_expected(captured, expected):
+        _parent_unlink(parent, quarantine)
+        _parent_fsync(parent)
+        return True
+    try:
+        _parent_rename_noreplace(parent, quarantine, name)
     except FileExistsError:
         print(f"preserving concurrently replaced file in quarantine: {quarantine}", file=sys.stderr)
-    else:
-        _parent_unlink(parent, quarantine)
     _parent_fsync(parent)
     return False
 
@@ -496,14 +533,17 @@ def rollback(root: Path, entries: list[dict]) -> bool:
             if restore_target:
                 _restore_quarantine(parent_fd, leaf, target_quarantine)
             elif owned and target_candidate is not None:
-                complete = (_remove_via_quarantine(parent_fd, leaf, target_quarantine,
+                target_name = leaf if _file_state(parent_fd, leaf) is not None else target_quarantine
+                complete = (_remove_via_quarantine(parent_fd, target_name, target_quarantine,
                                                     target_candidate) and complete)
             if (stage_name is not None and stage_quarantine is not None
                     and restore_stage):
                 _restore_quarantine(parent_fd, stage_name, stage_quarantine)
             elif (stage_name is not None and stage_quarantine is not None
                   and stage_valid and stage_candidate is not None):
-                complete = (_remove_via_quarantine(parent_fd, stage_name, stage_quarantine,
+                candidate_name = (stage_name if _file_state(parent_fd, stage_name) is not None
+                                  else stage_quarantine)
+                complete = (_remove_via_quarantine(parent_fd, candidate_name, stage_quarantine,
                                                     stage_candidate) and complete)
         return complete
     finally:
@@ -520,17 +560,28 @@ def _recover(root: Path, journal: Path) -> None:
     manifest = root / MANIFEST_NAME
     marker = root / MANIFEST_MARKER_NAME
     if manifest.exists() or manifest.is_symlink():
-        if not _manifest_has_ownership_marker(manifest, marker):
-            fail(f"ownership manifest is not bound to this transaction; journal retained: {journal}")
         installed = read_receipt(manifest)
         public = [{"path": entry["path"], "sha256": entry["sha256"]} for entry in entries]
         if installed != public:
             fail(f"install journal does not match ownership manifest: {journal}")
-        if not _targets_match(root, installed):
+        if not marker.exists() and not marker.is_symlink():
+            if _targets_match(root, installed):
+                fail(f"ownership marker is missing while managed targets remain: {journal}")
             if not rollback(root, entries):
                 fail(f"invalid committed install has changed files; journal retained: {journal}")
             manifest.unlink()
+            journal.unlink()
+            _fsync_dir(root)
+            print("recovered an invalid unmarked passthrough install", file=sys.stderr)
+            return
+        if not _manifest_has_ownership_marker(manifest, marker):
+            fail(f"ownership manifest is not bound to this transaction; journal retained: {journal}")
+        if not _targets_match(root, installed):
             marker.unlink()
+            _fsync_dir(root)
+            if not rollback(root, entries):
+                fail(f"invalid committed install has changed files; journal retained: {journal}")
+            manifest.unlink()
             _fsync_dir(root)
             journal.unlink()
             _fsync_dir(root)
@@ -569,7 +620,7 @@ def _recover(root: Path, journal: Path) -> None:
     print("recovered an interrupted passthrough install", file=sys.stderr)
 
 
-def _install(root: Path, pairs: list[str]) -> None:
+def _install(root: Path, pairs: list[str], display_root: Path | None = None) -> None:
     manifest = root / MANIFEST_NAME
     marker = root / MANIFEST_MARKER_NAME
     journal = root / JOURNAL_NAME
@@ -640,13 +691,13 @@ def _install(root: Path, pairs: list[str]) -> None:
             journal.unlink(missing_ok=True)
             _fsync_dir(root)
         raise
-    print(f"installed into {root}; ownership manifest: {manifest}")
+    shown_root = display_root if display_root is not None else root
+    print(f"installed into {shown_root}; ownership manifest: {shown_root / MANIFEST_NAME}")
 
 
-def _remove(root: Path) -> None:
+def _recover_marker_only_receipt(root: Path) -> bool:
     manifest = root / MANIFEST_NAME
     marker = root / MANIFEST_MARKER_NAME
-    _recover(root, root / JOURNAL_NAME)
     if not manifest.exists() and not manifest.is_symlink() and (marker.exists() or marker.is_symlink()):
         entries = read_receipt(marker)
         targets_remain = False
@@ -660,6 +711,15 @@ def _remove(root: Path) -> None:
         marker.unlink()
         _fsync_dir(root)
         print("recovered interrupted ownership receipt removal", file=sys.stderr)
+        return True
+    return False
+
+
+def _remove(root: Path) -> None:
+    manifest = root / MANIFEST_NAME
+    marker = root / MANIFEST_MARKER_NAME
+    _recover(root, root / JOURNAL_NAME)
+    if _recover_marker_only_receipt(root):
         return
     if not _manifest_has_ownership_marker(manifest, marker):
         fail(f"ownership manifest marker is missing or mismatched: {marker}")
@@ -689,12 +749,68 @@ def recover(root: Path, journal: Path) -> None:
     _require_supported_platform()
     with operation_lock(root) as pinned:
         _recover(pinned, pinned / JOURNAL_NAME)
+        _recover_marker_only_receipt(pinned)
+
+
+def _path_state(path: Path) -> str:
+    if path.is_symlink():
+        return "symlink"
+    if not path.exists():
+        return "absent"
+    if path.is_file():
+        return "regular"
+    if path.is_dir():
+        return "directory"
+    return "other"
+
+
+def _status(root: Path, display_root: Path | None = None) -> None:
+    journal = root / JOURNAL_NAME
+    manifest = root / MANIFEST_NAME
+    marker = root / MANIFEST_MARKER_NAME
+    report: dict[str, object] = {
+        "root": str(display_root if display_root is not None else root),
+        "journal": _path_state(journal),
+        "manifest": _path_state(manifest),
+        "marker": _path_state(marker),
+        "receipt_bound": _manifest_has_ownership_marker(manifest, marker),
+        "entries": [],
+    }
+    receipt = journal if journal.exists() and not journal.is_symlink() else manifest
+    if receipt.exists() and not receipt.is_symlink():
+        try:
+            entries = read_receipt(receipt, journal=receipt == journal)
+        except SystemExit as exc:
+            report["receipt_error"] = str(exc)
+        else:
+            entry_states = []
+            for entry in entries:
+                target = destination(root, entry["path"])
+                item = {"path": entry["path"], "target": _path_state(target)}
+                nonce = entry.get("nonce")
+                if nonce is not None:
+                    item["stage"] = _path_state(target.with_name(f".{target.name}.um-part-{nonce}"))
+                item["target_quarantine"] = _path_state(
+                    target.with_name(_quarantine_name(target.name, entry, "target")))
+                if nonce is not None:
+                    stage_name = f".{target.name}.um-part-{nonce}"
+                    item["stage_quarantine"] = _path_state(
+                        target.with_name(_quarantine_name(stage_name, entry, "stage")))
+                entry_states.append(item)
+            report["entries"] = entry_states
+    print(json.dumps(report, indent=2, sort_keys=True))
+
+
+def status(root: Path) -> None:
+    _require_supported_platform()
+    with operation_lock(root) as pinned:
+        _status(pinned, root)
 
 
 def install(root: Path, pairs: list[str]) -> None:
     _require_supported_platform()
     with operation_lock(root) as pinned:
-        _install(pinned, pairs)
+        _install(pinned, pairs, root)
 
 
 def remove(root: Path) -> None:
@@ -704,17 +820,22 @@ def remove(root: Path) -> None:
 
 
 def main() -> int:
-    if len(sys.argv) < 3 or sys.argv[1] not in {"install", "remove"}:
-        fail("usage: install_passthrough.py install|remove GTA_DIR [SOURCE TARGET ...]")
+    if len(sys.argv) < 3 or sys.argv[1] not in {"install", "remove", "recover", "status"}:
+        fail("usage: install_passthrough.py install|remove|recover|status GTA_DIR [SOURCE TARGET ...]")
     mode = sys.argv[1]
     raw_root = Path(sys.argv[2])
     if raw_root.is_symlink() or not (raw_root / "GTA5.exe").is_file():
         fail(f"GTA5.exe not found in a regular game directory: {raw_root}")
     root = raw_root.resolve(strict=True)
-    if mode == "remove":
+    if mode in {"remove", "recover", "status"}:
         if len(sys.argv) != 3:
-            fail("remove takes no source arguments")
-        remove(root)
+            fail(f"{mode} takes no source arguments")
+        if mode == "remove":
+            remove(root)
+        elif mode == "recover":
+            recover(root, root / JOURNAL_NAME)
+        else:
+            status(root)
     else:
         install(root, sys.argv[3:])
     return 0
