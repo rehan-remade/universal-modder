@@ -730,6 +730,49 @@
   ]
  },
  {
+  "path": "games/disney-s-extremely-goofy-skateboarding/widescreen-texture-overrides-and-a-geometry-based-cartoon-lo.md",
+  "kind": "game",
+  "title": "Widescreen, texture overrides and a geometry-based cartoon look for Disney's Extremely Goofy Skateboarding (D3D8 ASI plugin)",
+  "game": "Disney's Extremely Goofy Skateboarding",
+  "games_also": [],
+  "game_version": "Retail PC CD release (Krome Studios / Disney Interactive, 2001), Skating.exe 911,491 bytes; Windows 11 Home 26200",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "native-hook",
+  "tools": [
+   "Ultimate ASI Loader 9.7.4 (32-bit, as dinput8.dll)",
+   "safetyhook",
+   "Ghidra 12.1.4 + GhidraMCP",
+   "MSVC (VS Build Tools) + CMake, Win32",
+   "Python 3 + Pillow / OpenCV",
+   "ComfyUI + Qwen-Image-Edit-2511 (textures)",
+   "Real-ESRGAN / 4x-UltraSharpV2 (textures)"
+  ],
+  "anti_cheat": "none (offline single-player). The retail disc build uses SecuROM 4, which does not start on Windows 10/11; nothing here touches or describes the protection.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-09",
+  "links": [],
+  "tags": [
+   "d3d8",
+   "widescreen",
+   "hor-plus",
+   "hud",
+   "borderless",
+   "asi-loader",
+   "texture-replacement",
+   "upscale",
+   "cel-shading",
+   "toon",
+   "outlines",
+   "inverted-hull",
+   "draw-call-log"
+  ]
+ },
+ {
   "path": "games/dragon-s-dogma-2/blink-strike-teleports-behind-the-target-reframework-lua-ski.md",
   "kind": "game",
   "title": "Blink Strike teleports behind the target (REFramework Lua skill rework)",
