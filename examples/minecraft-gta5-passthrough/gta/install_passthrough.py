@@ -316,8 +316,17 @@ def write_json_atomic(path: Path, payload: dict, *, replace: bool = False,
     fd = os.open(tmp, flags, 0o600)
     try:
         data = (json.dumps(payload, sort_keys=True) + "\n").encode()
-        os.write(fd, data)
+        view = memoryview(data)
+        while view:
+            written = os.write(fd, view)
+            if written <= 0:
+                fail(f"could not write ownership receipt: {tmp}")
+            view = view[written:]
         os.fsync(fd)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        _fsync_dir(path.parent)
+        raise
     finally:
         os.close(fd)
     if replace:
@@ -340,7 +349,8 @@ def write_json_atomic(path: Path, payload: dict, *, replace: bool = False,
 
 
 def read_receipt(path: Path, *, journal: bool = False) -> list[dict]:
-    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    flags = (os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+             | getattr(os, "O_NONBLOCK", 0))
     fd: int | None = None
     try:
         fd = os.open(path, flags)
@@ -356,7 +366,7 @@ def read_receipt(path: Path, *, journal: bool = False) -> list[dict]:
         if len(payload) > MAX_RECEIPT_BYTES:
             fail(f"ownership receipt exceeds {MAX_RECEIPT_BYTES} bytes: {path}")
         data: object = json.loads(bytes(payload).decode("utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, RecursionError) as exc:
         fail(f"invalid ownership receipt {path}: {exc}")
     finally:
         if fd is not None:

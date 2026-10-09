@@ -1027,10 +1027,74 @@ def test_example_marker_only_recovery_refuses_broken_symlink_target(tmp_path):
 
 def test_example_read_receipt_rejects_oversized_input(tmp_path):
     helper = _installer_module()
+    assert helper.MAX_RECEIPT_BYTES == 65_536
     receipt = tmp_path / "receipt"
-    receipt.write_bytes(b" " * (helper.MAX_RECEIPT_BYTES + 1))
+    receipt.write_bytes(b" " * 65_537)
     with pytest.raises(SystemExit, match="bounded regular"):
         helper.read_receipt(receipt)
+
+
+def test_example_read_receipt_rejects_fifo_without_blocking(tmp_path):
+    helper = _installer_module()
+    receipt = tmp_path / "receipt-fifo"
+    os.mkfifo(receipt)
+    with pytest.raises(SystemExit, match="bounded regular"):
+        helper.read_receipt(receipt)
+
+
+def test_example_read_receipt_rejects_pathological_json_nesting(tmp_path):
+    helper = _installer_module()
+    receipt = tmp_path / "receipt-deep"
+    receipt.write_text("[" * 1_100 + "]" * 1_100, encoding="utf-8")
+    with pytest.raises(SystemExit, match="invalid ownership receipt"):
+        helper.read_receipt(receipt)
+
+
+def test_example_atomic_receipt_write_completes_short_writes(tmp_path, monkeypatch):
+    helper = _installer_module()
+    receipt = tmp_path / "receipt"
+    original_write = helper.os.write
+    first = True
+
+    def short_once(fd, data):
+        nonlocal first
+        if first and len(data) > 1:
+            first = False
+            return original_write(fd, data[:len(data) // 2])
+        return original_write(fd, data)
+
+    monkeypatch.setattr(helper.os, "write", short_once)
+    helper.write_json_atomic(receipt, {"format": 1, "state": "installed", "entries": []})
+    assert helper.read_receipt(receipt) == []
+
+
+def test_example_manifest_only_recovery_refuses_managed_target(tmp_path):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    target = game / "args.txt"
+    target.write_bytes(b"owned")
+    manifest = game / helper.MANIFEST_NAME
+    manifest.write_text(json.dumps({"format": 1, "state": "installed", "entries": [
+        {"path": "args.txt", "sha256": hashlib.sha256(b"owned").hexdigest()},
+    ]}), encoding="utf-8")
+    with pytest.raises(SystemExit, match="managed targets"):
+        helper.recover(game, game / helper.JOURNAL_NAME)
+    assert manifest.exists()
+    assert target.read_bytes() == b"owned"
+
+
+def test_example_status_does_not_recover_manifest_only_evidence(tmp_path, capsys):
+    helper = _installer_module()
+    game = tmp_path / "game"
+    game.mkdir()
+    (game / "GTA5.exe").write_bytes(b"game")
+    manifest = game / helper.MANIFEST_NAME
+    manifest.write_text(json.dumps({"format": 1, "state": "installed", "entries": []}), encoding="utf-8")
+    helper.status(game)
+    report = json.loads(capsys.readouterr().out)
+    assert report["manifest"] == "regular"
+    assert manifest.exists()
 
 
 def test_example_remove_refuses_marker_only_receipt_while_managed_target_remains(tmp_path):
