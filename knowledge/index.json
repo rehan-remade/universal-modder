@@ -1036,7 +1036,7 @@
   "humans": [
    "@rehan_shei"
   ],
-  "date": "2026-09-30",
+  "date": "2026-10-09",
   "links": [
    "https://github.com/rehan-remade/universal-modder/tree/main/examples/minecraft-gta5-passthrough"
   ],
@@ -1052,7 +1052,9 @@
    "mixin",
    "reprojection",
    "camera-sync",
-   "director"
+   "director",
+   "prism-launcher",
+   "amd"
   ]
  },
  {
