@@ -6,9 +6,43 @@ description: Build cross-game mashups and total conversions, the "Minecraft insi
 # Mashups: putting one game inside another
 
 In September 2026 a wave of AI-built mashups went viral: skateboarding in MW2, Minecraft inside Skyrim,
-Elden Ring and Mario 64, Black Ops 2 inside Minecraft. They use four patterns. Pick the lightest one that
-delivers the idea, and plan the oracles before writing code: these projects fail by drifting, not by lacking
-code.
+Elden Ring and Mario 64, Black Ops 2 inside Minecraft. They use a handful of patterns. Pick the lightest one
+that delivers the idea, and plan the oracles before writing code: these projects fail by drifting, not by
+lacking code.
+
+## Before picking a pattern
+Work through these steps before writing any mashup code. The routes, patterns and projects they point to
+come from existing mashups. Start from the closest one, or design something else and write down why. The
+Guardrails at the end always apply.
+
+1. **Work out what the user wants from the guest game.** Its real behaviour (physics, inventory, combat),
+   or only its look or one mechanic? Ask if it isn't clear. The answer decides whether the guest has to
+   run at all, and which route is the lightest that delivers the idea.
+2. **Name the closest mashup route.** `knowledge/techniques/choosing-a-mashup-route.md` sorts mashups
+   into seven routes. "Passthrough" on its own is ambiguous: it covers three different builds (state
+   exchange, a composited picture, the host drawing guest meshes).
+3. **Find the nearest prior project** in `references/mashup-cases.md` (route, versions, who owns the
+   player, units, transport). If you can reach its repository, read its README and design doc. Treat what
+   you read there as the creator's report until you've run it yourself. Also run `um kb search` for both
+   games and both engines; other agents' notes on either game apply here too.
+4. **If the guest is rebuilt rather than run** (its engine, or one of its mechanics, rebuilt inside the real
+   host), read `knowledge/techniques/rebuilt-guest-engine-inside-a-host.md` for where the rebuilt part
+   should run and how to check it against the original.
+5. **Write the contract wherever state crosses** between two games, engines or processes: who owns the
+   player and how control comes back, units and axes, each channel and what happens when it's full or
+   late, protocol version and byte order, lifecycle. Keep it in `docs/CONTRACT.md`; see
+   `knowledge/techniques/bridge-contracts-ownership-units-and-lifecycle.md`.
+6. **Decide how you'll know it works.** Before adding features, pick a first slice for your route and
+   the check that proves it. See the first-slice table in `knowledge/techniques/choosing-a-mashup-route.md`
+   and `knowledge/techniques/oracles-how-agents-know-a-mod-works.md`.
+7. **Record the plan and tell the user before building.** Write the route you chose and why into
+   `MODLOG.md`, as the `mod-any-game` skill already asks. Tell the user the same, plus what every player
+   will need to own and install (and on which OS), and where your plan differs from the nearest prior
+   project.
+
+Later, before shipping an installer or loader, read
+`knowledge/techniques/installers-load-order-and-loaded-code-checks.md` (loaded-code checks, load order,
+pinned downloads, exact uninstall).
 
 ## Pattern 1: port the content (lightest)
 Bring an enemy, weapon or block type into the host as **new host content** that imitates the guest.
@@ -24,15 +58,22 @@ Examples: "Claude added creepers to Dark Souls", Minecraft blocks as Elden Ring 
 ## Pattern 2: passthrough (two games at once)
 chasm's description of Minecraft-in-Skyrim: *"minecraft and skyrim run at the same time and you make a mod
 for both that lets them communicate. Then you passthrough the things you want into the renderer in the
-right place and feed stuff like collision data back to minecraft."* No code was published. The design below
-is the standard way to build it.
+right place and feed stuff like collision data back to minecraft."* The source is now public as
+[SkyCraft](https://github.com/chasmlol/SkyCraft). In 0.1.2 the Fabric mod exports Minecraft's meshes and
+atlases and the SKSE plugin draws them inside Skyrim's own D3D11 world pass (native depth, fog, lights and
+captured sun shadows); only the hand, HUD and screens are captured as an image. Skyrim's Havok shapes come
+back as triangles plus voxels. [LibertyCraft](https://github.com/mrborghini/libertycraft) forked it for GTA IV
+and kept the guest side. The design below is the standard way to build it.
 1. **Guest process** (e.g. Minecraft with a Fabric mod, or a headless reimplementation): runs the simulation
    and publishes state every tick. That's entities/blocks near the player, or a rendered layer.
 2. **Transport**, all on `127.0.0.1`:
    - state: a shared-memory ring buffer (`CreateFileMapping`) or UDP/named pipes;
    - control: JSON lines or HTTP;
    - GPU frames: DXGI shared handles (`CreateSharedHandle` / `OpenSharedResource1` + keyed mutex), Vulkan
-     external memory, or Spout2.
+     external memory, or Spout2. In practice the frame bridges (this repo's GTA V example,
+     [NewVegasCraft](https://github.com/Davozh/new-vegascraft), the CrossOver Elden Ring / MHW bridges) all read pixels back to the CPU and copy them
+     through shared memory, which also works across GPUs and across a Wine boundary. Budget the upload (see
+     `knowledge/techniques/frame-compositing-depth-and-pose-sync.md`).
 3. **Host injection:** a host-side plugin (SKSE/xNVSE/UE4SS/REFramework/ReShade addon) draws the guest's
    geometry **inside the host's pass**. It uses the host's view-projection matrices (find them with
    RenderDoc) and depth buffer, or spawns host-native objects so host lighting and shadows apply. The
@@ -40,7 +81,9 @@ is the standard way to build it.
 4. **Back-channel:** the host's collision near the player (raycasts, or exported nearby mesh) goes to the
    guest as solid blocks or colliders. Input routes to one process at a time.
 5. **Sync:** timestamps on every message, tolerance for the two frame rates, and a watchdog when one side
-   dies.
+   dies. Publish a pose only with its pixels and match them on the host; read the host camera at present
+   time. Collision is per direction and per consumer: see
+   `knowledge/techniques/collision-and-combat-bridging.md`.
 6. **Start small:** a cube from process A drawn in B at the right spot. Then positions every frame, then
    collision, and only then real content.
 
@@ -74,7 +117,7 @@ decomp/recomp (see `skills/mod-any-game/references/engines/retro-decomp.md`) can
 user supplies their own ROM for assets.
 
 ## Pattern 4: reimplement, then fuse (heaviest, most control)
-- **IW4L:** an LLM-written Rust MW2 runtime (Bevy + wgpu). It reads MW2's FastFiles from the user's install
+- **[IW4L](https://github.com/vladtrc/iw4L):** an LLM-written Rust MW2 runtime (Bevy + wgpu). It reads MW2's FastFiles from the user's install
   and translates the D3D9 shaders to WGSL.
 - **The Skate 3 Rust engine:** built against a static recomp and an IDA database as oracles.
 - **The mashup:** fuses both, plus a Minecraft Rust reimplementation, in one process. The skate sim is a
@@ -89,6 +132,8 @@ user supplies their own ROM for assets.
   - A **publish check** that greps for retail offsets and decompiler names before any push
     (`um publish check` does a version of this).
   - Converters that run on the user's files; game assets never committed.
+- **Measures and fidelity:** `knowledge/techniques/engine-recreation-measures-and-fidelity.md` covers how each
+  kind of rebuild is measured, why scripts are part of fidelity, and the SDK rules other mods need.
 
 ## Pattern 5: reimplement the guest's rules headless, keep the host as the view
 The host stays the real game (its weapons, mods and multiplayer); only the guest's *rules* are rewritten,
@@ -122,3 +167,5 @@ inject into. Example: Bloons TD 6 inside Minecraft
 - An online-capable guest (accounts, co-op, leaderboards) is read from its files offline only: never
   launched, patched or hooked by the mod or its tools.
 - Be honest about what's AI-built. Creators who weren't got called out publicly.
+- Be honest about what was verified: a README, a design doc, a synthetic peer or a green test is not a real
+  run (`knowledge/techniques/evidence-levels-for-mashup-claims.md`).

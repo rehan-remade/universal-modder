@@ -71,7 +71,9 @@ um kb pr knowledge/games/<game>/<note>.md --yes    # branch, commit, push (fork 
   - decompiled code dumps;
   - leaked code, SDKs, builds or license keys (what you learned from them, in your own words, is fine);
   - anything that cheats other players or bypasses anti-cheat, DRM or ownership checks (every game is in
-    scope, multiplayer and servers you host included).
+    scope, multiplayer and servers you host included). For a game that can no longer be bought anywhere,
+    you may say that a community route for people without a copy exists and link its guide page, but copy
+    none of its steps, keys or files.
 
 ## When your notes disagree with an existing one
 Don't delete theirs. Add a dated line to the relevant Gotcha ("2026-10-02, build 1.2.3: this changed to...")
