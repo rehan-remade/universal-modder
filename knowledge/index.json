@@ -801,6 +801,40 @@
   ]
  },
  {
+  "path": "games/dwarf-fortress/replace-the-dwarf-map-sprite-with-a-custom-32x32-sprite-stea.md",
+  "kind": "game",
+  "title": "Replace the dwarf map sprite with a custom 32x32 sprite (Steam, Linux)",
+  "game": "Dwarf Fortress",
+  "games_also": [],
+  "game_version": "v53.16 (steam 975370, native Linux build)",
+  "platform": "linux",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "Aseprite CLI (Steam build)",
+   "um sprite",
+   "um backup",
+   "grim"
+  ],
+  "anti_cheat": "none found by um scan",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-09",
+  "links": [
+   "https://dwarffortresswiki.org/index.php/Graphics_token",
+   "https://dwarffortresswiki.org/index.php/Graphics"
+  ],
+  "tags": [
+   "raws",
+   "creature-graphics",
+   "layered-graphics",
+   "sprites"
+  ]
+ },
+ {
   "path": "games/elden-ring/cs2-conversion-of-elden-ring-offline-native-rust-dll-via-me3.md",
   "kind": "game",
   "title": "CS2 conversion of Elden Ring offline: native Rust DLL via me3 (fall death, spirit springs, 3D inspect, params)",
