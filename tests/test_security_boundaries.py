@@ -1068,6 +1068,30 @@ def test_example_atomic_receipt_write_completes_short_writes(tmp_path, monkeypat
     assert helper.read_receipt(receipt) == []
 
 
+def test_example_atomic_receipt_write_cleans_residue_after_failure(tmp_path, monkeypatch):
+    helper = _installer_module()
+    original_write = helper.os.write
+
+    def fail_write(_fd, _data):
+        raise OSError("injected receipt write failure")
+
+    monkeypatch.setattr(helper.os, "write", fail_write)
+    for marker_backed in (False, True):
+        destination = tmp_path / ("manifest" if marker_backed else "journal")
+        marker = tmp_path / "marker" if marker_backed else None
+        with pytest.raises(OSError, match="injected receipt write failure"):
+            helper.write_json_atomic(
+                destination,
+                {"format": 1, "state": "installed", "entries": []},
+                ownership_marker=marker,
+            )
+        assert not destination.exists()
+        if marker is not None:
+            assert not marker.exists()
+        assert not list(tmp_path.glob(f".{destination.name}.tmp-*"))
+    monkeypatch.setattr(helper.os, "write", original_write)
+
+
 def test_example_manifest_only_recovery_refuses_managed_target(tmp_path):
     helper = _installer_module()
     game = tmp_path / "game"
