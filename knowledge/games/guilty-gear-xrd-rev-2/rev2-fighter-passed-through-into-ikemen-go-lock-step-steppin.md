@@ -39,9 +39,10 @@ tags:
 > Rev2 one frame at a time (lock-step) over a loopback protocol; Rev2 renders the fighter into a named shared D3D12
 > texture that IKEMEN samples with no CPU copy; hits found by IKEMEN's collision are replayed through Rev2's own hit
 > pipeline, so Rev2 plays its native reactions. Verified with AI-vs-AI smoke matches in the real games (exit codes,
-> per-step logs, screenshots) and by the human playing. It works end to end but is **not yet playable at 60 FPS** on an
-> Iris Xe laptop: lock-step puts the whole guest round trip inside every host frame. The frame-pacing findings below
-> are the main reason for this note.
+> per-step logs, screenshots) and by the human playing. Inside IKEMEN it is **not playable at 60 FPS** on an Iris Xe
+> laptop: lock-step puts the whole guest round trip inside every host frame. A minimal custom arena (Rust, D3D11) that
+> runs a pipelined tick barrier instead holds **60 drawn FPS** with the same Rev2 fighter; the human confirmed it plays
+> well hands-on. The frame-pacing findings below are the main reason for this note.
 
 ## Setup
 - Windows 11, Intel Iris Xe (integrated; shared by both games), 60 Hz panel.
@@ -120,8 +121,12 @@ and if serving replace it with the configured cap (`fstp st(0)` then `fld [rate]
 - Frame data cross-checked against kkots' overlay by the human (5P: 4 startup, 4 active, 6 recovery).
 - **Pacing results (single smoke runs, noisy):** native cap: ~15 ms per step, IKEMEN fell behind and drew 5-15 FPS
   in human play. Cap 240 + vsync off: steps ~11 ms, ~59-60 ticks/s. Unlimited cap: worse (Rev2 floods the shared GPU).
-  Render on demand + IKEMEN vsync off + same-frame image: ~59 ticks/s, **drawn 35-37 FPS**. Not verified: guard, air
-  hits, knockdowns, P2 side, characters other than Sol.
+  Render on demand + IKEMEN vsync off + same-frame image: ~59 ticks/s, **drawn 35-37 FPS**.
+- **Pipelined barrier arena** (frame N: collect every fighter's tick N, resolve hits, post tick N+1, draw N while the
+  guests compute N+1; D3D11 compositor with GPU-side fence waits; waitable flip swap chain): 59.8-60 drawn FPS, guest
+  step 9.8-12 ms entirely off the critical path (barrier wait ~0.05 ms). Per step inside Rev2: ~7 ms from pickup to
+  captured layer; Python adapter 0.5 ms; shared-memory transport (below) saved ~1 ms over Frida RPC + a host hop.
+- Not verified: guard, air hits, knockdowns, characters other than Sol; a second real guest in the arena.
 
 ## Gotchas
 1. **IKEMEN looked fine in logs but drew 5-15 FPS on screen.** **Cause:** the profile counted guest ticks per second,
@@ -159,8 +164,33 @@ and if serving replace it with the configured cap (`fstp st(0)` then `fld [rate]
 12. **IKEMEN panicked on the first request (hello took 544 ms, timeout 500).** **Cause:** the first GPU capture is cold.
     **Fix:** prime one frame before announcing readiness.
 13. **A hard-killed producer never wrote its report or restored the game.** **Cause:** `Popen.terminate` is
-    `TerminateProcess` on Windows. **Fix:** start it in a new process group and send `CTRL_BREAK_EVENT`, mapping
-    `SIGBREAK` to `KeyboardInterrupt`.
+    `TerminateProcess` on Windows. **Fix:** start it in a new process group and send `CTRL_BREAK_EVENT`.
+14. **...but raising `KeyboardInterrupt` from that handler later broke the host connection ("invalid host message
+    size").** **Cause:** the exception landed inside a socket RPC and left half a reply unread. **Fix:** the handler only
+    sets a stop flag that the serve loop checks between requests.
+15. **The first frame timed out with no hint why.** **Cause:** the game window was minimized; UE3 stops presenting.
+    **Fix:** detect a minimized window of the game's process and say so.
+16. **Frames with a hit cost ~10 ms more.** **Cause:** hit/contact were separate requests, each an injection plus an
+    observe that waits for a present. **Fix:** a `step-events` capability: hits for the previous tick ride in the next
+    step and are queued ahead of its battle update.
+17. **The guest could overwrite its shared texture while the host still copied it.** **Fix:** a second named fence
+    ("release"): the host signals it after its copy (GPU-side), the producer's queue waits on it before the next copy.
+    Negotiated per session, and the producer CPU-signals it whenever a session or the agent ends.
+18. **With the release fence on, Rev2 and the host froze, and the arena became unkillable.** **Cause:** the producer
+    captured a frame internally that the host never saw, so its release never came; Rev2's copy queue waited, Rev2's
+    D3D9-on-12 queue waited behind it, and the host's GPU wait on Rev2's ready fence never completed (a process cannot
+    exit with stuck GPU work). **Fix:** release off while capturing internally; the host also confirms on the CPU,
+    bounded to 250 ms, that a guest's ready fence will complete before telling the GPU to wait on it.
+19. **Shared-memory replies were occasionally missed in tests.** **Cause:** a late reply to an older command and the
+    current reply can coalesce into one auto-reset event signal. **Fix:** trust the reply's sequence number and re-check
+    it in short waits until the deadline.
+20. **Walking stopped dead although the arena showed open space.** **Cause:** the guest kept its own position between
+    sessions and had drifted to Rev2's stage wall (~1.26M world units); the camera follows the fighter, so nothing
+    showed. **Fix:** guest positions are internal: start each session at Rev2's centre and shift the fighter back (with
+    the host-to-guest anchor, so the host sees no jump) whenever it is in neutral far from centre.
+21. **An asymmetric crop was wrong whenever the fighter faced left.** **Cause:** the crop was in screen left/right.
+    **Fix:** back/up/forward/down, mirrored with facing; sized from measured per-move extents (effects reach the screen
+    edges, the body much less).
 
 ## Assets
 None created. The fighter is rendered live by the user's own Rev2; nothing from the game is copied or committed.
@@ -169,13 +199,12 @@ None created. The fighter is rendered live by the user's own Rev2; nothing from 
 About two days of agent sessions with one human launching games, opening Training and playing.
 
 ## Open questions
-- **Getting to 60 drawn FPS.** Per host frame at the latest run: transport ~4 ms (host → producer → Frida host → JS
-  agent and back), Rev2 tick ~2 ms, render to present ~3 ms, GPU layer copy ~1-2 ms, IKEMEN import ~5 ms. Options:
-  1. **Shared-memory transport** (as the GTA V / Portal 2 notes use) instead of sockets + Frida RPC on the hot path.
-  2. **Reply with state at the tick and let the image follow** via the fence, so Rev2's render overlaps host work.
-  3. **One frame of input delay** for the guest character: step tick N+1 with tick N's input during the host's draw.
-     No visual lag; one extra frame of input latency (delay-based netplay at 1 frame).
-  4. **Rollback** using IKEMEN's rollback support; needs Rev2 state save/restore.
-  5. **Free-running guest** with the host taking the newest finished frame, like the other passthrough notes; needs a
-     fighting-game equivalent of their prediction/re-projection.
+- **Lock-step inside an existing engine vs a barrier host.** Inside IKEMEN the per-frame cost was transport ~4 ms, Rev2
+  tick ~2, render to present ~3, GPU layer copy ~1-2, IKEMEN import ~5 (an OpenGL interop lock on Intel). A pipelined
+  barrier host removes the guest from the critical path at the cost of one frame of display latency, uniform for every
+  fighter (as a game's own render thread does). Free-running guests with clock sync were rejected: drift drops or
+  doubles animation frames and puts cross-game hits on variable ticks. Rollback would need Rev2 save states.
+- **Pushback, walls and corner rules** should be the host's (coordinator's) for all fighters; today each guest applies
+  its own and the arena has none. Guest-native post-processing and correct alpha for additive effects (true
+  transparency instead of reconstructing it from colour) are open.
 - Hit/contact properties (guard, air, knockdown, pushback) are mapped roughly; the protocol is being redesigned.
