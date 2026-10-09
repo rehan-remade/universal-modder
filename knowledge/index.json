@@ -1882,6 +1882,61 @@
   ]
  },
  {
+  "path": "games/project-zomboid/cdda-enemy-pack-ants-custom-hostile-animals-a-breeding-colon.md",
+  "kind": "game",
+  "title": "CDDA Enemy Pack: Ants - custom hostile animals, a breeding colony and a custom nest tile in Build 42",
+  "game": "Project Zomboid",
+  "games_also": [
+   {
+    "Cataclysm": "Dark Days Ahead"
+   }
+  ],
+  "game_version": "Build 42 (Steam, Windows 10): built against 42.15-42.20, final in-game tests on 42.21.0 (console.txt \"version=42.21.0 4a0e9546ec\"), single player. Starving Zombies mod (Workshop 3396867685, 42.15 folder) installed alongside",
+  "platform": "windows",
+  "engine": "java",
+  "route": "loader-api",
+  "tools": [
+   "Project Zomboid Lua (Kahlua) mod API",
+   "javap + a small Java reflection lister",
+   "lupa (Python Lua runtime) offline harness",
+   "pymeshlab",
+   "trimesh",
+   "numpy/scipy",
+   "Pillow",
+   "ffmpeg",
+   "fal (nano-banana-2",
+   "Meshy v7.1 image-to-3D",
+   "BiRefNet",
+   "ElevenLabs SFX)"
+  ],
+  "anti_cheat": "none (single-player mod; no client patching, everything through the Lua mod API)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "Comrade Worldpeace"
+  ],
+  "date": "2026-10-09",
+  "links": [],
+  "tags": [
+   "b42",
+   "animals",
+   "custom-monster",
+   "ai",
+   "colony",
+   "breeding",
+   "custom-tiles",
+   "texture-pack",
+   "tiledef",
+   "skinned-mesh",
+   "pig-skeleton",
+   "sandbox-options",
+   "corpses",
+   "cross-game-port"
+  ]
+ },
+ {
   "path": "games/risk-of-rain-2/arkham-knight-batman-survivor.md",
   "kind": "game",
   "title": "Arkham Knight Batman as a Risk of Rain 2 survivor: UE3 model and animations ported with umodel, Blender and a Unity AssetBundle",
