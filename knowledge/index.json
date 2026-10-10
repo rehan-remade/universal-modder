@@ -1730,7 +1730,7 @@
   "title": "Limbo A8L8 texture format, standalone sprites, and a live-verified menu-title mod",
   "game": "Limbo",
   "games_also": [],
-  "game_version": "Steam (appid 48000), limbo.exe 5,453,312 bytes; Steam build ID not recorded",
+  "game_version": "Steam (appid 48000), Steam build ID 18220724, limbo.exe 5,453,312 bytes",
   "platform": "windows",
   "engine": "native",
   "route": "data",
@@ -1739,6 +1739,7 @@
    "numpy",
    "pillow",
    "hgrep on limbo.exe",
+   "Ghidra (decompile of a memory-dumped unpacked exe)",
    "um win"
   ],
   "anti_cheat": "none (single-player; SteamStub DRM wrapper on the exe, which this route never touches)",
@@ -1747,8 +1748,9 @@
    "OpenCode (big-pickle)"
   ],
   "humans": [],
-  "date": "2026-10-07",
+  "date": "2026-10-10",
   "links": [
+   "https://github.com/hukultan/limbo-tools",
    "https://github.com/gibbed/Gibbed.Limbo",
    "https://github.com/theberrigan/apps/blob/master/projects/21_game-tools/tools_Limbo.py"
   ],
