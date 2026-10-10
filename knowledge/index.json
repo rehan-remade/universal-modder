@@ -690,6 +690,77 @@
   ]
  },
  {
+  "path": "games/dcs-world/putting-the-fc3-mig-29-on-sfm-under-its-original-unit-names.md",
+  "kind": "game",
+  "title": "Putting the FC3 MiG-29 on SFM under its original unit names",
+  "game": "DCS World",
+  "games_also": [],
+  "game_version": "DCS 2.9.30.28536 (Windows, MT build), Flaming Cliffs 3 MiG-29A/G/S",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "mod manager (OvGME-style staging folder)",
+   "Python lupa for Lua syntax checks"
+  ],
+  "anti_cheat": "none; single player and servers you run only. The DCS integrity check (pure clients) fails on the edited entry.lua, and on a server that doesn't check, a retuned SFM jet would be an unfair edge",
+  "status": "working",
+  "agents": [
+   "Claude Code (claude-opus-5-5)"
+  ],
+  "humans": [],
+  "date": "2026-10-08",
+  "links": [],
+  "tags": [
+   "dcs",
+   "edge-engine",
+   "fc3",
+   "mig-29",
+   "sfm",
+   "unit-replace",
+   "add_aircraft",
+   "entry.lua",
+   "ejection-crash"
+  ]
+ },
+ {
+  "path": "games/dead-cells/libgdx-rebuild-from-res-pak.md",
+  "kind": "game",
+  "title": "Rebuilding Dead Cells' core loop in libGDX, reading the game's own res.pak at runtime",
+  "game": "Dead Cells",
+  "games_also": [],
+  "game_version": "Steam macOS build, version string 35 (build date 2023-10-01)",
+  "platform": "macos",
+  "engine": "haxe",
+  "route": "reimplementation",
+  "tools": [
+   "libGDX 1.14.2 (LWJGL3)",
+   "hlbc",
+   "python3 (pak/BTMX readers)",
+   "JDK 21"
+  ],
+  "anti_cheat": "none (single-player); nothing in the install is modified, the rebuild only reads res.pak",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-09",
+  "links": [],
+  "tags": [
+   "reimplementation",
+   "heaps",
+   "hashlink",
+   "castledb",
+   "atlas",
+   "palette-swap",
+   "normal-maps",
+   "procgen",
+   "room-templates",
+   "platformer"
+  ]
+ },
+ {
   "path": "games/detroit-become-human/segs-data-container-mesh-animation-and-cloth-in-blender.md",
   "kind": "game",
   "title": "Detroit: Become Human: SEGS/DATA_CONTAINER editing (mesh, animation, cloth) in Blender",
@@ -1052,7 +1123,9 @@
    "mixin",
    "reprojection",
    "camera-sync",
-   "director"
+   "director",
+   "prism-launcher",
+   "amd"
   ]
  },
  {
@@ -1209,6 +1282,50 @@
    "fabric",
    "shields",
    "vehicles"
+  ]
+ },
+ {
+  "path": "games/halo-trial/max-payne-bullet-time-shootdodge-and-voice-in-halo-trial-via.md",
+  "kind": "game",
+  "title": "Max Payne bullet time, shootdodge and voice in Halo Trial via Chimera Lua on macOS/Wine",
+  "game": "Halo Trial",
+  "games_also": [
+   "Max Payne (Demo)"
+  ],
+  "game_version": "Halo Trial (Halo PC demo) halo.exe FileVersion 01.00.00.0578, 2,785,280 bytes; Chimera 1.0.0.r1307.1f292fc; Max Payne Demo (2001), x_demodatas.ras 97,939,389 bytes",
+  "platform": "macos",
+  "engine": "native",
+  "route": "loader-api",
+  "tools": [
+   "Chimera r1307 (global Lua scripts)",
+   "GameHub Wine build 10000073",
+   "mtld3d (D3D9 -> Metal)",
+   "x87sidecar",
+   "zig cc via `uvx --from ziglang` (Windows SendInput helper)",
+   "afplay"
+  ],
+  "anti_cheat": "None. Campaign only here; keep the script off on servers you don't host (Chimera server_type 'dedicated'). Max Payne Demo is single-player.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-07",
+  "links": [
+   "https://github.com/ernestask/libras",
+   "https://github.com/SnowyMouse/chimera"
+  ],
+  "tags": [
+   "mashup",
+   "bullet-time",
+   "chimera",
+   "lua",
+   "wine",
+   "macos",
+   "ras",
+   "sendinput",
+   "sidecar",
+   "blam"
   ]
  },
  {
@@ -1922,6 +2039,105 @@
   ]
  },
  {
+  "path": "games/project-zomboid/cdda-enemy-pack-ants-custom-hostile-animals-a-breeding-colon.md",
+  "kind": "game",
+  "title": "CDDA Enemy Pack: Ants - custom hostile animals, a breeding colony and a custom nest tile in Build 42",
+  "game": "Project Zomboid",
+  "games_also": [
+   "Cataclysm: Dark Days Ahead"
+  ],
+  "game_version": "Build 42 (Steam, Windows 10): built against 42.15-42.20, final in-game tests on 42.21.0 (console.txt \"version=42.21.0 4a0e9546ec\"), single player. Starving Zombies mod (Workshop 3396867685, 42.15 folder) installed alongside",
+  "platform": "windows",
+  "engine": "java",
+  "route": "loader-api",
+  "tools": [
+   "Project Zomboid Lua (Kahlua) mod API",
+   "javap + a small Java reflection lister",
+   "lupa (Python Lua runtime) offline harness",
+   "pymeshlab",
+   "trimesh",
+   "numpy/scipy",
+   "Pillow",
+   "ffmpeg",
+   "fal (nano-banana-2, Meshy v7.1 image-to-3D, BiRefNet, ElevenLabs SFX)"
+  ],
+  "anti_cheat": "none (single-player mod; no client patching, everything through the Lua mod API)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "Comrade Worldpeace"
+  ],
+  "date": "2026-10-09",
+  "links": [
+   "https://github.com/CleverRaven/Cataclysm-DDA"
+  ],
+  "tags": [
+   "b42",
+   "animals",
+   "custom-monster",
+   "ai",
+   "colony",
+   "breeding",
+   "custom-tiles",
+   "texture-pack",
+   "tiledef",
+   "skinned-mesh",
+   "pig-skeleton",
+   "sandbox-options",
+   "corpses",
+   "cross-game-port"
+  ]
+ },
+ {
+  "path": "games/resident-evil-2-2019/dlss5-neural-rendering-dlss-frame-generation-in-a-custom-ref.md",
+  "kind": "game",
+  "title": "DLSS5 neural rendering + DLSS frame generation in a custom REFramework build, with Tobii eye tracking",
+  "game": "Resident Evil 2 (2019)",
+  "games_also": [],
+  "game_version": "Steam 883710, build 11636119 (DX12 / ray-tracing update)",
+  "platform": "windows",
+  "engine": "re-engine",
+  "route": "native-hook",
+  "tools": [
+   "REFramework (pd-upscaler branch, a24c345, custom build)",
+   "PDPerfPlugin (Nexus RE2 mod 2611)",
+   "NVIDIA NGX (DLSS SR 310.8.0, DLSS NR 310.8.0)",
+   "NVIDIA Streamline 2.14.1 (DLSS-G 310.9.1, Reflex, PCL)",
+   "Tobii Stream Engine runtime 4.1 to 4.25 (tested range)",
+   "ReShade 6.8.0 + RenoDX (HDR fix)",
+   "PresentMon"
+  ],
+  "anti_cheat": "none found by um scan; single-player only",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "GautamtmD"
+  ],
+  "date": "2026-10-09",
+  "links": [
+   "https://github.com/praydog/REFramework/tree/pd-upscaler",
+   "https://github.com/NVIDIA-RTX/Streamline/releases/tag/v2.14.1",
+   "https://www.nexusmods.com/residentevil22019/mods/2611",
+   "https://www.nexusmods.com/residentevil22019/mods/1644"
+  ],
+  "tags": [
+   "dlss",
+   "dlss-nr",
+   "frame-generation",
+   "streamline",
+   "reflex",
+   "reshade",
+   "hdr",
+   "eye-tracking",
+   "tobii",
+   "render-pipeline"
+  ]
+ },
+ {
   "path": "games/risk-of-rain-2/arkham-knight-batman-survivor.md",
   "kind": "game",
   "title": "Arkham Knight Batman as a Risk of Rain 2 survivor: UE3 model and animations ported with umodel, Blender and a Unity AssetBundle",
@@ -2559,6 +2775,49 @@
    "eden",
    "file-format",
    "reverse-engineering"
+  ]
+ },
+ {
+  "path": "games/the-dark-legions/reloaded-single-dll-fix.md",
+  "kind": "game",
+  "title": "The Dark Legions Reloaded: crash fixes, a D3D8 -> D3D9Ex renderer, widescreen and new menus in one d3d8.dll",
+  "game": "The Dark Legions",
+  "games_also": [],
+  "game_version": "1.1.0 (Mascot Entertainment, 2004), retail CD install, Windows 11 24H2",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "native-hook",
+  "tools": [
+   "Rust 1.99 (i686-pc-windows-msvc, static CRT)",
+   "Ghidra 12.1 (headless scripts)",
+   "WinDbg / WER LocalDumps",
+   "Process Monitor",
+   "d3dcompiler_47 (runtime HLSL)",
+   "dgVoodoo2 2.87.5 (studied, then replaced)"
+  ],
+  "anti_cheat": "none (2004 single-player RTS; LAN multiplayer only, not touched)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "GR33N"
+  ],
+  "date": "2026-10-09",
+  "links": [],
+  "tags": [
+   "d3d8",
+   "d3d9ex",
+   "proxy-dll",
+   "crash-fix",
+   "heap-corruption",
+   "widescreen",
+   "menus",
+   "fonts",
+   "fog",
+   "dgvoodoo",
+   "rts",
+   2004
   ]
  },
  {
@@ -3587,6 +3846,61 @@
    "frame-grab",
    "warp",
    "seqlock"
+  ]
+ },
+ {
+  "path": "techniques/d3d8-to-d3d9ex-wrapper-in-one-dll.md",
+  "kind": "technique",
+  "title": "Replacing dgVoodoo with your own D3D8 -> D3D9Ex wrapper in one DLL",
+  "tags": [
+   "d3d8",
+   "d3d9ex",
+   "wrapper",
+   "proxy-dll",
+   "supersampling",
+   "lanczos",
+   "msaa",
+   "xyzrhw",
+   "widescreen",
+   "gamma",
+   "fog",
+   "rust"
+  ],
+  "date": "2026-10-09",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "GR33N"
+  ],
+  "links": []
+ },
+ {
+  "path": "techniques/dgvoodoo2-internals-and-spying-on-a-packed-d3d-wrapper.md",
+  "kind": "technique",
+  "title": "What dgVoodoo2 really does to an old D3D8 game, and how to spy on a packed D3D wrapper",
+  "tags": [
+   "dgvoodoo",
+   "d3d8",
+   "d3d11",
+   "wrapper",
+   "dxbc",
+   "vtable-hooks",
+   "id3d10multithread",
+   "scaling",
+   "filtering",
+   "fog",
+   "renderdoc"
+  ],
+  "date": "2026-10-09",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "GR33N"
+  ],
+  "links": [
+   "https://dege.freeweb.hu/dgVoodoo2/"
   ]
  },
  {
@@ -4715,6 +5029,33 @@
    "Selene0623"
   ],
   "links": []
+ },
+ {
+  "path": "techniques/tobii-eye-tracking-in-any-pc-game-stream-engine-without-ship.md",
+  "kind": "technique",
+  "title": "Tobii eye tracking in any PC game: Stream Engine without shipping Tobii's files",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "GautamtmD"
+  ],
+  "date": "2026-10-09",
+  "links": [
+   "https://developer.tobii.com/pc-gaming/downloads/",
+   "https://developer.tobii.com/pc-gaming/design-guidelines/explored-features/",
+   "https://www.tobii.com/products/integration/tobii-sdk-license"
+  ],
+  "tags": [
+   "tobii",
+   "eye-tracking",
+   "head-tracking",
+   "extended-view",
+   "stream-engine",
+   "camera",
+   "input"
+  ]
  },
  {
   "path": "techniques/trackmania-forever-3ds-model-export-in-blender.md",
