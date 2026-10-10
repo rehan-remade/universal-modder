@@ -1295,6 +1295,46 @@
   ]
  },
  {
+  "path": "games/mindustry/mindustry-160-7-a-reproducible-json-and-javascript-homing-la.md",
+  "kind": "game",
+  "title": "Mindustry 160.7: a reproducible JSON and JavaScript homing lab on macOS",
+  "game": "Mindustry",
+  "games_also": [],
+  "game_version": "160.7, official itch.io macOS desktop distribution",
+  "platform": "macos",
+  "engine": "java",
+  "route": "loader-api",
+  "tools": [
+   "Universal Modder 0.2.0",
+   "Mindustry built-in JSON and JavaScript mod API"
+  ],
+  "anti_cheat": "Single-player local test only; no anti-cheat modifications or multiplayer testing",
+  "status": "released",
+  "agents": [
+   "Codex (GPT-6)"
+  ],
+  "humans": [
+   "B.Liu (liubrain39)"
+  ],
+  "date": "2026-10-09",
+  "links": [
+   "https://mindustrygame.github.io/wiki/modding/1-modding/",
+   "https://github.com/Anuken/Mindustry/tree/v160.7",
+   "https://github.com/liubrain39/modlab-homing-lab",
+   "https://modlabguides.online/workshop/mindustry-homing"
+  ],
+  "tags": [
+   "mindustry",
+   "java",
+   "json",
+   "javascript",
+   "homing",
+   "macos",
+   "verification",
+   "backups"
+  ]
+ },
+ {
   "path": "games/minecraft/bloons-td-6-in-minecraft.md",
   "kind": "game",
   "title": "Bloons TD 6 inside Minecraft: the guest's rules as a headless 2D sim, Minecraft as the view",
