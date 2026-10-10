@@ -975,6 +975,41 @@
   ]
  },
  {
+  "path": "games/kernel-hearts/iostore-override-packs-ue4ss-attach-limits-spika-outfit-skir.md",
+  "kind": "game",
+  "title": "IoStore override packs + UE4SS attach limits (Spika outfit/skirt)",
+  "game": "Kernel Hearts",
+  "games_also": [],
+  "game_version": "1.0.14.0 (UE 5.7.4 shipping, Steam Windows)",
+  "platform": "windows",
+  "engine": "unreal",
+  "route": "asset-only",
+  "tools": [
+   "UnrealPak (UE 5.7)",
+   "retoc (trumank)",
+   "Blender 5.2",
+   "UE4SS v3.0.1",
+   "UAssetGUI (inspect only)"
+  ],
+  "anti_cheat": "none encountered (offline launch works; online services optional)",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (muse-spark)"
+  ],
+  "humans": [],
+  "date": "2026-10-10",
+  "links": [],
+  "tags": [
+   "ue5",
+   "iostore",
+   "unrealpak",
+   "retoc",
+   "ue4ss",
+   "skeletal-mesh",
+   "fbx"
+  ]
+ },
+ {
   "path": "games/left-4-dead/left-4-dead-infected-and-tank-in-minecraft.md",
   "kind": "game",
   "title": "Left 4 Dead's common infected (19 looks) and Tank as animated Minecraft mobs",
