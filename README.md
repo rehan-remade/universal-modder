@@ -185,7 +185,7 @@ Full reasoning: [`skills/mod-any-game/references/safety.md`](skills/mod-any-game
 Put the badge on your mod's page:
 
 <p>
-  <picture><source media="(prefers-color-scheme: dark)" srcset="docs/media/made-with-dark.svg"><img src="docs/media/made-with-light.svg" height="32" alt="made with universal-modder"></picture>
+  <a href="https://github.com/rehan-remade/universal-modder"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/media/made-with-dark.svg"><img src="docs/media/made-with-light.svg" height="32" alt="made with universal-modder"></picture></a>
 </p>
 
 ```markdown
