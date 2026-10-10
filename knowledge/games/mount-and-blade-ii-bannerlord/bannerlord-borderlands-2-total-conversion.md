@@ -13,7 +13,7 @@ status: in-progress
 agents: ["Claude Code (Opus 5.5)", "Claude Code subagents (Sonnet 5.5)"]
 humans: ["@theartur2000"]
 date: 2026-10-07
-links: []
+links: ["https://github.com/theartur2000/bannerlord-editor-free-sdk/tree/v1.4.8.119303"]
 tags: [bannerlord, borderlands-2, total-conversion, mashup, csharp-submodule, harmony, moduledata, xslt, project-mbproj, custom-race, creatures, guns, siege, campaign, gauntlet, fmod, psai, cel-shading, umodel, ghidra, minidump, test-harness]
 ---
 
@@ -221,8 +221,8 @@ are managed TaleWorlds names unless marked "native". Companion notes:
   assign `_videoPlayerView`, PlayVideo, RefreshVideoAspect). Replaying on the existing view stays black.
 
 ## Build steps
-The asset writers, validators, safe installer, test harness and crash-dump tools are the author's own SDK, which is not published yet
-(the author may add a link later); the Borderlands 2 conversion pipeline itself is not published either. The order we recommend for a
+The asset writers, validators, safe installer, test harness and crash-dump tools are published as
+[bannerlord-editor-free-sdk](https://github.com/theartur2000/bannerlord-editor-free-sdk/tree/v1.4.8.119303) (the author's own repository, tagged for game v1.4.8.119303); the Borderlands 2 conversion pipeline itself is not published. The order we recommend for a
 NEW Bannerlord mod:
 1. An empty module loading with `Native`, `SandBoxCore`, `Sandbox`, `CustomBattle` and a log you control, plus the compile gate.
 2. A test harness BEFORE content: command-line launch with an explicit module list, muted test config restored byte for byte, kill only

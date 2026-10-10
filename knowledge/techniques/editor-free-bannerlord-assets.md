@@ -327,8 +327,8 @@ One asset per package is what the editor writes, and it does not scale: the game
   missing-asset counts from the game's logs) steps.
 
 ## Build steps
-The project's CLI, build scripts and installer are the author's own tooling and are not published here yet (the
-author may link them later). What they do, in order:
+The asset writers, validators and installer are published as
+[bannerlord-editor-free-sdk](https://github.com/theartur2000/bannerlord-editor-free-sdk/tree/v1.4.8.119303) (the author's own repository, tagged for game v1.4.8.119303). What they do, in order:
 - **Stage, never write into the module directly.** Textures (the usage, albedo / normalmap / specularmap /
   heightmap, picked from a `_d` / `_n` / `_s` / `_h` file suffix), materials (diffuse and normal slots, static or
   skinned), meshes (skinned when the FBX has a skin), animations (one take per FBX file), skeletons (at most 64
