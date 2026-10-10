@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/ow-mods/owml/master/schemas/config_schema.json",
+  "enabled": true,
+  "settings": {
+    "assetFolder": {
+      "type": "text",
+      "value": "",
+      "title": "Converted assets folder",
+      "tooltip": "Folder written by tools/convert.py. Empty = %LOCALAPPDATA%/OWPortalGun"
+    },
+    "equipKey": {
+      "type": "text",
+      "value": "5",
+      "title": "Equip key",
+      "tooltip": "Key that takes the portal gun out and puts it away"
+    },
+    "volume": {
+      "type": "slider",
+      "value": 0.7,
+      "min": 0,
+      "max": 1,
+      "title": "Portal gun volume"
+    }
+  }
+}

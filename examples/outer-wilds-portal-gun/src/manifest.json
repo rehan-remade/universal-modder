@@ -1,0 +1,10 @@
+{
+  "$schema": "https://raw.githubusercontent.com/ow-mods/owml/master/schemas/manifest_schema.json",
+  "filename": "OWPortalGun.dll",
+  "author": "charlystereo",
+  "name": "Portal Gun",
+  "uniqueName": "charlystereo.PortalGun",
+  "version": "0.1.0",
+  "owmlVersion": "2.16.3",
+  "dependencies": []
+}

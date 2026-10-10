@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>OWPortalGun</AssemblyName>
+    <RootNamespace>OWPortalGun</RootNamespace>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <NoWarn>MSB3270</NoWarn>
+    <DebugType>portable</DebugType>
+    <!-- Where `dotnet build` drops the mod; override with -p:ModDir=... -->
+    <ModDir Condition="'$(ModDir)' == '' and '$(OS)' == 'Windows_NT'">$(AppData)/OuterWildsModManager/OWML/Mods/charlystereo.PortalGun</ModDir>
+    <ModDir Condition="'$(ModDir)' == '' and '$(OS)' != 'Windows_NT'">$(HOME)/.local/share/OuterWildsModManager/OWML/Mods/charlystereo.PortalGun</ModDir>
+    <OutputPath>$(ModDir)</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="OWML" Version="2.16.3" />
+    <PackageReference Include="OuterWildsGameLibs" Version="1.1.16.1372" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="manifest.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="default-config.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

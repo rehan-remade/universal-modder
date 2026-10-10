@@ -1743,6 +1743,96 @@
   ]
  },
  {
+  "path": "games/outer-wilds/portal-2-portal-gun-in-outer-wilds-1-1-16-owml-see-through-p.md",
+  "kind": "game",
+  "title": "Portal 2 portal gun in Outer Wilds 1.1.16 (OWML): see-through portals, momentum, ship and scout",
+  "game": "Outer Wilds",
+  "games_also": [
+   "Portal 2"
+  ],
+  "game_version": "1.1.16.1372 (Steam 753640, buildid 20230391), Unity 2019.4.39f1 Mono, Echoes of the Eye installed",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "loader-api",
+  "tools": [
+   "Outer Wilds Mod Manager 0.15.7 (GUI + owmods CLI)",
+   "OWML 2.16.3",
+   "HarmonyX (bundled with OWML)",
+   "NuGet OWML 2.16.3 + OuterWildsGameLibs 1.1.16.1372 (publicized refs), net48",
+   "ilspycmd 9.1 (.NET 8)",
+   "Python 3.14 + Pillow + numpy (converter)"
+  ],
+  "anti_cheat": "none (single-player)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "charlystereo"
+  ],
+  "date": "2026-10-10",
+  "links": [
+   "https://github.com/ow-mods/owml",
+   "https://github.com/ow-mods/ow-mod-man"
+  ],
+  "tags": [
+   "unity",
+   "owml",
+   "harmony",
+   "portals",
+   "stencil",
+   "oblique-camera",
+   "render-texture",
+   "teleport",
+   "viewmodel",
+   "momentum",
+   "mashup",
+   "portal-2"
+  ]
+ },
+ {
+  "path": "games/portal-2/portal-2-portal-gun-viewmodel-converted-for-another-engine-v.md",
+  "kind": "game",
+  "title": "Portal 2 portal gun viewmodel converted for another engine: VPK, MDL v49, VTF, sounds",
+  "game": "Portal 2",
+  "games_also": [
+   "Outer Wilds"
+  ],
+  "game_version": "Steam 620 (2026 build), portal2/pak01_dir.vpk",
+  "platform": "windows",
+  "engine": "source",
+  "route": "asset-only",
+  "tools": [
+   "Python 3.14 + Pillow + numpy (own VPK/MDL/VTX/VVD/VTF readers)"
+  ],
+  "anti_cheat": "none (files only, the game never runs)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "charlystereo"
+  ],
+  "date": "2026-10-10",
+  "links": [
+   "https://developer.valvesoftware.com/wiki/MDL",
+   "https://developer.valvesoftware.com/wiki/VTF",
+   "https://developer.valvesoftware.com/wiki/VPK"
+  ],
+  "tags": [
+   "source",
+   "mdl",
+   "vvd",
+   "vtx",
+   "vtf",
+   "vpk",
+   "viewmodel",
+   "animation",
+   "content-port",
+   "portal-gun"
+  ]
+ },
+ {
   "path": "games/portal-2/portalcraft-minecraft-inside-portal-2.md",
   "kind": "game",
   "title": "Portalcraft: real Minecraft inside Portal 2 (passthrough mod)",
@@ -3723,6 +3813,29 @@
    "vertex-format",
    "hashing",
    "dunia2"
+  ]
+ },
+ {
+  "path": "techniques/driving-a-game-from-a-mod-side-command-file-lab-profile-wake.md",
+  "kind": "technique",
+  "title": "Driving a game from a mod-side command file: lab profile, wake-up and oracle without touching input",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "charlystereo"
+  ],
+  "date": "2026-10-10",
+  "links": [],
+  "tags": [
+   "oracle",
+   "test-harness",
+   "automation",
+   "dev-bridge",
+   "unity",
+   "owml",
+   "outer-wilds"
   ]
  },
  {

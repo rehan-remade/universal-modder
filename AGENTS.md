@@ -36,7 +36,7 @@ repo, they almost always want to **mod a game**, or to learn how a game was modd
   `skills/`, then copy it over; a test fails while the copies differ.
 - **Engine playbooks:** `skills/mod-any-game/references/engines/`.
 - **Worked examples:** `examples/terraria-tmodloader`, `examples/aoe2-de-civ`,
-  `examples/minecraft-gta5-passthrough`.
+  `examples/minecraft-gta5-passthrough`, `examples/outer-wilds-portal-gun`.
 
 ## Rules (full reasoning in `skills/mod-any-game/references/safety.md`)
 - **What you can mod:** any game the user owns: single-player, multiplayer, or servers the user hosts.
