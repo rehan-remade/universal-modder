@@ -19,7 +19,7 @@ tags: [reimplementation, heaps, hashlink, castledb, atlas, palette-swap, normal-
 
 # Rebuilding Dead Cells' core loop in libGDX, reading the game's own res.pak at runtime
 
-> A personal clean-room rebuild of Dead Cells' first biome in Java/libGDX. Behaviour is reimplemented from
+> A personal reimplementation of Dead Cells' first biome in Java/libGDX. Behaviour is reimplemented from
 > study notes of a decompile; every asset (atlases, room templates, CastleDB data, sounds, music) is read at
 > runtime from the user's own `res.pak`, and nothing is copied into the project. A generated Prison level is
 > playable end to end (rooms, hero moveset, sword combo, Zombie and Archer AI, exit to the next depth). That
@@ -39,8 +39,9 @@ free of game files: it only works for someone who owns the game, and nothing nee
 ## How the game works (what we had to learn)
 **Containers and formats** (all little-endian):
 - **PAK** (Heaps): `"PAK"`, version byte, header size, data size, then (Dead Cells only) a **64-byte stamp**,
-  then a recursive tree of entries: name, flags (bit 0 = directory, bit 1 = 64-bit position stored as a
-  double), position, size, CRC. Data offsets are relative to the header size.
+  then a recursive tree of entries. Each entry is a u8-length name and a flags byte. A directory (bit 0) has a
+  u32 child count and its children; a file has its position (u32, or an f64 when bit 1 is set), size and
+  checksum (Adler-32 in Heaps' own packer). Data offsets are relative to the header size.
 - **BATL** atlases (`atlas/*.atlas`): `"BATL"`, then pages. Each page is a length-prefixed PNG name followed by
   entries: a length-prefixed name and nine u16 values (index, x, y, w, h, trimX, trimY, origW, origH), with an
   empty name ending the page and an empty page name ending the file. A trailing `_NN` in the name is the frame
@@ -62,7 +63,9 @@ free of game files: it only works for someone who owns the game, and nothing nee
   `glowInnerColor`. The shading detail is in the `_n` pages.
 - **Most level tiles (wall bodies, `dirt`) have black albedo.** Their look comes from normal maps under lights,
   and the front-wall layer goes through a 256×1 gradient (`gradients/<gradientName>.png`, named in
-  `biome.layers`). The HXSL shader bodies are not recoverable with hlbc, so any lighting has to be your own.
+  `biome.layers`). hlbc doesn't decompile the HXSL shaders because they aren't functions: in Heaps, each
+  shader class's `SRC` static is the shader serialized to Base64 (`hxsl.Serializer`). We didn't decode them,
+  so the lighting here is our own.
 - **Every `sfx/**/*.wav` is actually Ogg Vorbis** (magic `OggS`).
 
 **Simulation** (numbers from CDB and the decompile study; behaviour reimplemented, not copied):
@@ -117,7 +120,7 @@ None generated. Everything is read from the user's install at runtime.
 One session, about 4,000 lines of Java.
 
 ## Open questions
-- The exact lighting and gradient formula (HXSL bodies were not decompiled). How Dead Cells maps light to the
-  front-wall gradient is a guess here.
+- The exact lighting and gradient formula (we didn't decode the shaders' `SRC` strings). How Dead Cells maps
+  light to the front-wall gradient is a guess here.
 - The default skin renders red/tan/cyan, which seems plausible but wasn't compared with an in-game capture.
 - Other mobs, items, scrolls, shops, bosses, saves, wall-run spots, slopes, parallax and fog are not rebuilt yet.
