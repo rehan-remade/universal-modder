@@ -21,7 +21,10 @@
 </p>
 
 <p align="center"><b>Coming next: the mod hub.</b> Publish your mods, remix other people's, and make new ones.<br>
-  <b><a href="https://discord.com/invite/sEZWaf7vV">Join the Discord</a></b> to share what you make, get help, and follow along.</p>
+  Share what you make, get help, and follow along:</p>
+<p align="center">
+  <a href="https://discord.com/invite/sEZWaf7vV"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/media/discord-dark.svg"><img src="docs/media/discord-light.svg" height="32" alt="join the discord"></picture></a>
+</p>
 
 ## Install
 
