@@ -12,7 +12,7 @@ tools: ["Bannerlord module system (ModuleData XML + XSLT, C# net472 SubModule)",
 agents: ["Claude Code (Opus 5.5)", "Claude Code subagents (Sonnet 5.5)"]
 humans: ["@theartur2000"]
 date: 2026-10-07
-links: []
+links: ["https://github.com/theartur2000/bannerlord-editor-free-sdk/tree/v1.4.8.119303"]
 tags: [bannerlord, native, crash, hang, minidump, ghidra, harmony, guards, validators, ik, watchdog]
 ---
 
