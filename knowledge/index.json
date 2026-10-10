@@ -653,6 +653,56 @@
   ]
  },
  {
+  "path": "games/civilization-vi/total-conversion-middle-earth-trees-civs-2d-leaders-custom-3.md",
+  "kind": "game",
+  "title": "Total conversion (Middle-earth): trees, civs, 2D leaders, custom 3D wonders, victory reskin",
+  "game": "Civilization VI",
+  "games_also": [],
+  "game_version": "Civ VI 1.0.12.68 (Steam 289070, build 15296837), Gathering Storm ruleset",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "Civilization VI Development Tools (SDK + SDK Assets, Steam)",
+   "Civ6AssetCooker_FinalRelease",
+   "FbxImporter_Release.dll (from the Asset Editor)",
+   "Blender 5.2",
+   "fal (nano-banana-2, trellis-2, birefnet/v2)",
+   "ffmpeg gfxcapture",
+   "sqlite3",
+   "custom SendInput mouse (PowerShell)"
+  ],
+  "anti_cheat": "none (EOSSDK is Epic Online Services for 2K accounts, not anti-cheat); single player only",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-10",
+  "links": [
+   "https://forums.civfanatics.com/forums/civ6-creation-customization.538/"
+  ],
+  "tags": [
+   "total-conversion",
+   "data-mod",
+   "modinfo",
+   "sqlite",
+   "lua",
+   "tech-tree",
+   "custom-civ",
+   "2d-leader",
+   "fallback-leader",
+   "wonder-3d",
+   "granny",
+   "fgx",
+   "asset-cooker",
+   "headless-sdk",
+   "victory-screen",
+   "autoplay",
+   "test-harness"
+  ]
+ },
+ {
   "path": "games/cult-of-the-lamb/cult-of-the-lamb.md",
   "kind": "game",
   "title": "Cult of the Lamb recon: Unity Mono, and Doorstop files without a BepInEx folder (likely r2modman)",
