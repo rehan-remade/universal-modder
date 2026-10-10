@@ -984,7 +984,8 @@
    "raws",
    "creature-graphics",
    "layered-graphics",
-   "sprites"
+   "sprites",
+   "load-order"
   ]
  },
  {
