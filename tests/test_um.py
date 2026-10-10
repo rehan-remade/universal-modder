@@ -3,6 +3,7 @@
     uv run --with pytest pytest -q
 """
 import json
+import os
 import shutil
 import struct
 import subprocess
@@ -65,8 +66,8 @@ def test_gamemaker_and_rpgmaker(tmp_path):
     assert engine_of(tmp_path / "b", {"www/js/rpg_core.js": "//", "Game.exe": b"MZ"})[0] == "rpgmaker-mvmz"
 
 
-def test_managed_pe(tmp_path):
-    # minimal PE32 with a CLR header directory entry
+def _pe(managed=True):
+    # minimal PE32, optionally with a CLR header directory entry
     pe = bytearray(1024)
     pe[0:2] = b"MZ"
     struct.pack_into("<I", pe, 0x3C, 0x80)
@@ -74,10 +75,86 @@ def test_managed_pe(tmp_path):
     struct.pack_into("<H", pe, 0x84, 0x14C)
     opt = 0x80 + 24
     struct.pack_into("<H", pe, opt, 0x10B)
-    struct.pack_into("<I", pe, opt + 96 + 14 * 8, 0x2000)
+    if managed:
+        struct.pack_into("<I", pe, opt + 96 + 14 * 8, 0x2000)
+    return bytes(pe)
+
+
+def test_managed_pe(tmp_path):
     p = tmp_path / "Game.exe"
-    p.write_bytes(bytes(pe))
+    p.write_bytes(_pe())
     assert scan.pe_info(p) == {"arch": "x86", "managed": True}
+
+
+def test_zengin_detected(tmp_path):
+    key, _ = engine_of(tmp_path, {"system/Gothic2.exe": _pe(False), "Data/Textures.vdf": b"x"})
+    assert key == "zengin"
+    # volume layout alone (vdfs loader + Data/*.vdf) is enough
+    key, _ = engine_of(tmp_path / "b", {"system/vdfs32g.dll": _pe(False), "Data/Worlds.vdf": b"x"})
+    assert key == "zengin"
+
+
+def test_nested_exe_fingerprinted(tmp_path):
+    # Gothic-style layout: the game exe lives one level down in system/
+    make(tmp_path, {"system/Gothic2.exe": _pe(managed=False), "Data/worlds.vdf": b"x"})
+    _, facts = scan.detect(scan.Index(tmp_path))
+    assert facts["executables"]["system/gothic2.exe"] == {"arch": "x86", "managed": False}
+
+
+def test_redist_exes_skipped(tmp_path):
+    # installer/runtime folders (Steam _CommonRedist, GOG __redist/__support, EA __installer) and
+    # uninstallers at any depth are not the game
+    make(tmp_path, {"Game.exe": _pe(False), "_CommonRedist/vcredist/vc_redist.exe": _pe(False),
+                    "__redist/dotnet/setup.exe": _pe(), "__support/app/helper.exe": _pe(),
+                    "__installer/Touchup.exe": _pe(), "system/unins000.exe": _pe(),
+                    "system/Gothic2.exe": _pe(False)})
+    _, facts = scan.detect(scan.Index(tmp_path))
+    assert list(facts["executables"]) == ["game.exe", "system/gothic2.exe"]
+    assert scan._in_skip_dir("__redist/x.jar") and scan._in_skip_dir("a/_commonredist/b/x.exe")
+    assert not scan._in_skip_dir("supporters/x.exe") and not scan._in_skip_dir("__redist.exe")
+
+
+def _named_game(tmp_path, name, files):
+    d = tmp_path / name
+    make(d, dict({f"f{i}.txt": "x" for i in range(6)}, **files))
+    return scan.scan(str(d))
+
+
+def test_zengin_route_only_for_classic_gothic(tmp_path):
+    # classic Gothic 1/2 get the ZenGin playbook from detection, with the exe-build check in the route
+    r = _named_game(tmp_path, "Gothic II", {"system/Gothic2.exe": _pe(False), "Data/Worlds.vdf": b"x"})
+    assert r["engine"]["key"] == "zengin" and r["playbook"].endswith("zengin.md")
+    assert "exe build" in r["routes"][0]["route"]
+    # Gothic 1 Remake (UE5) and Gothic III (Genome) contain "gothic 1"/"gothic ii" but aren't ZenGin
+    for name, files in (("Gothic 1 Remake", {"Gothic1Remake/Content/Paks/a.pak": b"x"}),
+                        ("Gothic III", {"Gothic3.exe": _pe(False), "Data/a.pak": b"x"})):
+        r = _named_game(tmp_path, name, files)
+        assert all(rt["playbook"] != "zengin.md" for rt in r["routes"]), name
+        assert not r["playbook"].endswith("zengin.md"), name
+
+
+def test_deep_tooling_jars_not_java_engine(tmp_path):
+    # a Ghidra/SDK tree inside the game folder must not mislabel a native game as Java
+    make(tmp_path, {"Game.exe": _pe(False),
+                    "Dev Folder/tools/thirdparty/ghidra/support/launchsupport.jar": b"x",
+                    "Dev Folder/tools/thirdparty/ghidra/gradle/gradle-wrapper.jar": b"x"})
+    hits, _ = scan.detect(scan.Index(tmp_path))
+    assert all(k != "java" for k, *_ in hits)
+    # but a jar where the game ships it (root / one level down) still detects
+    key, _ = engine_of(tmp_path / "b", {"game.jar": b"x", "jre/bin/java.exe": _pe(False)})
+    assert key == "java"
+
+
+def test_unicode_output_on_cp1252_console(tmp_path):
+    # `um kb show` must not UnicodeEncodeError when stdout isn't UTF-8
+    kb = tmp_path / "kb"
+    (kb / "games/x").mkdir(parents=True)
+    (kb / "games/x/n.md").write_text("---\ntitle: LÖVE → test\n---\n# LÖVE →\n", encoding="utf-8")
+    env = dict(os.environ, PYTHONIOENCODING="cp1252", UM_KB=str(kb),
+               PYTHONPATH=str(Path(__file__).resolve().parents[1]))
+    r = subprocess.run([sys.executable, "-m", "um", "kb", "show", "n.md"],
+                       capture_output=True, encoding="utf-8", env=env)
+    assert r.returncode == 0 and "LÖVE →" in r.stdout
 
 
 def test_vdf():
