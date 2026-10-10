@@ -228,6 +228,28 @@ feel and attacks.
 - **Choice:** F6 switches between Crash and Croc and saves to the add-on's ini.
 - **Cache location:** the converter writes the rig into a local cache next to the mod, not
   `%LOCALAPPDATA%`; sandboxed writes there may be virtualised.
+- **Camera when the scene pass gives none** (Crash 1's Cortex boss, sparse map views): derive it from Crash's
+  own skinned buffer. VP = World⁻¹ · WVP of the 4016-byte player buffer. In normal levels it equals the scene
+  camera exactly, so use it only as a fallback. Also accept a lone camera candidate written ≥ 3 times/frame,
+  and views up to 1000 units away (the airship node on the island map).
+- **Mounts** (Hog Wild's hog): other models drawn centred under the player, about 100/s while riding and 0
+  otherwise. While mounted, loop the guest's balancing clip instead of letting the bobbing trigger jump and
+  land clips.
+- **Croc's moveset only:**
+  - Crash reads keyboard and mouse through user32, not DirectInput: its DirectInput object only serves pads,
+    and no raw input is registered. So patch the exe's imports `GetKeyboardState`, `GetKeyState` and
+    `XInputGetState`, and subclass the game window.
+  - **Hide Crash-only moves:** crouch/slide/body slam (right mouse; pad B and RT), Speed Shoes (Shift),
+    bazooka (Q), the air spin, and the Crash 3 double jump.
+  - **Croc's stomp:** a second jump in the air presses Crash's slide button for 150 ms. The engine's body
+    slam then breaks what's below and shows the impact dust.
+  - **Edges:** take key edges from `GetAsyncKeyState`. The game's own sources disagree for a few ms and
+    create fake re-presses.
+- **Test tooling:** `um win drive "idle N"` doesn't wait; it reports seconds since the last input. Use
+  `sleep <ms>` inside one drive call for timed combos. Separate drive calls are too slow: each one starts
+  PowerShell.
+- **Verified with the user's completed saves:** Crash 1's island map, the Cortex boss, Upstream (water) and
+  Hog Wild; Crash 2's warp room and Hang Eight on foot.
 
 ## Assets
 None generated. Croc is drawn by his own engine from the user's install; nothing from either game is
@@ -237,7 +259,7 @@ redistributed.
 About one day of agent time over three sessions, with the human mostly away.
 
 ## Open questions
-- **Native port follow-ups:** stomp and turn clips, a character-select UI, water/vehicle/boss levels.
+- **Native port follow-ups:** a character-select UI (F6 only now), Crash 2/3 vehicles and Coco levels, bonus rounds,
+  gamepad filter verification with a real controller, user rebinding support.
 - **Remaining issues:**
   - pose lag of 1–3 frames during fast camera moves (reproject);
-  - hand-back for vehicle levels, bosses and cutscenes;
