@@ -36,7 +36,7 @@ tags: [d3d8, d3d9ex, proxy-dll, crash-fix, heap-corruption, widescreen, menus, f
 ## Route and why
 Native hooks from a proxy `d3d8.dll`. First tried: a `wsock32.dll` proxy for the patches plus dgVoodoo2 for
 graphics. That worked, but needed two files and a config, and dgVoodoo could not fix things inside the
-game's rendering (fog, 2D layout, menus). Making `d3d8.dll` ours gave one file and full control of every
+game's rendering (2D layout, menus). Making `d3d8.dll` ours gave one file and full control of every
 draw. Every byte patch checks the original bytes first and logs instead of patching if they differ.
 
 ## How the game works (what we had to learn)
@@ -75,7 +75,8 @@ draw. Every byte patch checks the original bytes first and logs instead of patch
 - Graphics: frame-by-frame capture (every draw's state + picture after it, on a hotkey) to find which
   draw produced a bug; F11 screenshots at monitor resolution compared side by side with dgVoodoo.
 - Performance: a sampling profiler on the main thread (1 ms) with phases from the game's log lines.
-- Not verified: multiplayer; hours-long AI-only soak tests; any PC but one (Windows 11, 2560x1600 monitor).
+- Not verified: the Steam release (app 492530); multiplayer; hours-long AI-only soak tests; any PC but one
+  (Windows 11, 2560x1600 monitor).
 
 ## Gotchas
 1. **Blue blotches near the camera.** **Cause:** table fog + infinite-far projection. **Fix:** far plane 1e6.

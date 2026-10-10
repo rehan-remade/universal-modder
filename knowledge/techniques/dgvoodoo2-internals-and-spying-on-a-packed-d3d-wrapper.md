@@ -20,7 +20,8 @@ links: ["https://dege.freeweb.hu/dgVoodoo2/"]
 ## When to use it
 - You want to know why a game looks or behaves differently under dgVoodoo (or any packed D3D wrapper) and
   copy the good part into a mod of your own (e.g. a single-DLL fix without dgVoodoo).
-- RenderDoc / PIX refuse to capture (packed wrapper, its own device creation path, a UAC-elevated game).
+- RenderDoc / PIX don't capture it in your setup (ours: a packed wrapper with its own device creation path, and
+  a UAC-elevated game; see Gotcha 4).
 
 ## How: a spy d3d11.dll
 dgVoodoo's D3D8.dll is packed (one section, entropy ~7.9, imports only LoadLibrary / GetProcAddress /
@@ -71,9 +72,10 @@ VirtualProtect). It loads `d3d11.dll` by name, and the game's folder comes first
 
 ## Gotchas
 1. **Symptom:** the spy logs the splash screen, then no draws at all. **Cause:** dgVoodoo queries
-   `ID3D10Multithread` (9b7e4a00-342c-4106-a19f-4f2704f689f0) and turns protection on; Direct3D then swaps
-   thread-safe entries into the context vtable, replacing your hooks. **Fix:** a thread re-checks the vtable
-   every ~50 ms; a slot that no longer points at your hook holds the new original, so store it and hook again.
+   `ID3D10Multithread` (9b7e4e00-342c-4106-a19f-4f2704f689f0, the same IID as ID3D11Multithread) and turns
+   protection on; Direct3D then swaps thread-safe entries into the context vtable, replacing your hooks.
+   **Fix:** a thread re-checks the vtable every ~50 ms; a slot that no longer points at your hook holds the new
+   original, so store it and hook again.
 2. **Symptom:** you look for deferred contexts or a second device. **Cause:** the same vtable swap (1).
    dgVoodoo used only the immediate context. **Fix:** check the vtable first.
 3. **Symptom:** a screenshot of dgVoodoo is 4:3 while the monitor showed it stretched. **Cause:** in windowed

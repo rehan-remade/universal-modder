@@ -37,8 +37,10 @@ links: []
    a non-integer ratio, never stretch by a few percent: that makes pixel-drawn text uneven.
 4. **2D (pre-transformed XYZRHW vertices):** D3D9 draws them at the exact pixel given, so on a 2x target the
    whole interface lands in the top-left quarter. Bind a generated vs_2_0 per FVF that maps game pixels to
-   the scaled target. Map x as (x - 0.5) * scale: games put their 2D corners on 0.5, which at 1x hid a row and
-   a column that show at 2x/3x.
+   the scaled target, through a vertex declaration that declares the position as POSITION (float4): SetFVF
+   with XYZRHW means POSITIONT, and D3D9 skips vertex processing, your shader included, for POSITIONT. Map x
+   as (x - 0.5) * scale: games put their 2D corners on 0.5, which at 1x hid a row and a column that show at
+   2x/3x.
 5. **Gamma:** a windowed / FLIPEX device cannot set the monitor's gamma ramp. Keep the game's
    SetGammaRamp as a 256x1 texture and apply it in the last filter pass (on every filter, including soft).
 6. **Performance:** see Gotchas 3 and 4. After those, the wrapper's own cost was ~15% of a frame.
