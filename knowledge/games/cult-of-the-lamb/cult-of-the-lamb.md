@@ -1,76 +1,113 @@
 ---
 kind: game
-title: 'Cult of the Lamb recon: Doorstop remnant, no BepInEx payload, Unity Mono'
+title: 'Cult of the Lamb recon: Unity Mono, and Doorstop files without a BepInEx folder (likely r2modman)'
 game: Cult of the Lamb
 games_also: []
-game_version: 'Unity engine 2022.3.62f2 (game build unverified this pass)'
+game_version: 'Steam; Unity 2022.3.62f2 (per um scan); game build not read'
 platform: windows
 engine: unity-mono
 route: loader-api
-tools: ["UnityDoorstop bootstrapper (payload missing)", "BepInEx 5 (recommended, not installed)"]
+tools: ["BepInEx 5 (Thunderstore BepInExPack_CultOfTheLamb)", "r2modman / Thunderstore Mod Manager", "HarmonyX", "ILSpy"]
 anti_cheat: 'none detected'
-status: working
+status: in-progress
 agents:
 - OpenCode (Muse Spark)
 humans: [PatrickJnr]
 date: '2026-10-08'
-links: ["https://docs.bepinex.dev"]
-tags: ["cult-of-the-lamb", "unity", "mono", "bepinex", "recon", "scan"]
+links: ["https://docs.bepinex.dev", "https://thunderstore.io/c/cult-of-the-lamb/"]
+tags: ["cult-of-the-lamb", "unity", "mono", "bepinex", "doorstop", "r2modman", "thunderstore", "recon"]
 ---
 
-# Cult of the Lamb recon: Doorstop remnant, no BepInEx payload, Unity Mono
+# Cult of the Lamb recon: Unity Mono, and Doorstop files without a BepInEx folder (likely r2modman)
 
-> Read-only recon of Cult of the Lamb (Steam 1313140): Unity Mono (engine 2022.3.62f2, Massive Monster) with a **non-functional loader remnant** — UnityDoorstop bootstrapper (`winhttp.dll` 25 KB + `doorstop_config.ini` targeting `BepInEx\core\BepInEx.Preloader.dll`) but **no `BepInEx/` payload directory**, so nothing loads. An earlier revision of this note overstated this as "BepInEx installed" on the strength of scan's loader flag alone; corrected after finding the missing payload. Recommended route is a fresh BepInEx 5 install with HarmonyX. Verified from `um scan` JSON plus file-level checks; not launched.
+> Read-only recon of Cult of the Lamb (Steam app 1313140): Unity 2022.3.62f2 with Mono, so `Assembly-CSharp.dll`
+> decompiles and BepInEx 5 + HarmonyX is the route. The game root has UnityDoorstop's `winhttp.dll`,
+> `doorstop_config.ini` and `run_bepinex.sh` but no `BepInEx/` folder. That's what r2modman and Thunderstore Mod
+> Manager leave behind, because they keep BepInEx in their profile, so the install is probably modded through a
+> manager rather than broken. Nothing was built or launched, and no manager profile was looked for.
 
 ## Setup
 
-- Install: `E:\Steam\steamapps\common\Cult of the Lamb\`. 3,840 files indexed.
-- Engine: `unity-mono` [100%] evidence `UnityPlayer + Managed/Assembly-CSharp.dll`; `data_dir` `cult of the lamb_data`, version `2022.3.62f2`, company `Massive Monster`, product `Cult Of The Lamb`.
-- Exes: `Cult Of The Lamb.exe` + `UnityCrashHandler64.exe` (x64 unmanaged).
-- Loaders: **UnityDoorstop bootstrapper only, payload missing.** Present: `winhttp.dll` (25,088 bytes, Doorstop proxy) + `doorstop_config.ini` (`enabled=true`, `targetAssembly=BepInEx\core\BepInEx.Preloader.dll`) + `run_bepinex.sh` (Linux helper). Absent: the entire `BepInEx/` directory, so the configured preloader path resolves to nothing and no mods load. Scan still flags `BepInEx` from `doorstop_config.ini` alone — a true-positive for "Doorstop was here", a false-positive for "loader functional". No mod dirs, no saves found, no anti-cheat.
+- Steam, Windows, x64. `um scan` reports engine `unity-mono` from `UnityPlayer` + `Managed/Assembly-CSharp.dll`.
+  `app.info` gives company `Massive Monster`, product `Cult Of The Lamb`, and the scan reads Unity `2022.3.62f2`.
+- Exes: `Cult Of The Lamb.exe`, `UnityCrashHandler64.exe`.
+- Game root: `winhttp.dll` (the UnityDoorstop proxy), `doorstop_config.ini` (`enabled=true`,
+  `targetAssembly=BepInEx\core\BepInEx.Preloader.dll`, BepInEx 5's preloader) and `run_bepinex.sh` (BepInEx's
+  launcher script for Linux and macOS). No `BepInEx/` folder.
+- Thunderstore has a Cult of the Lamb community with `BepInExPack_CultOfTheLamb`, a preconfigured BepInEx 5.4 pack.
+- No anti-cheat.
 
 ## Route and why
 
-**BepInEx 5 + HarmonyX, freshly installed** (read `Managed/Assembly-CSharp.dll` with ILSpy; assets via AssetRipper/UABEA) — scan's `unity.md` route. First repair or remove the dead Doorstop remnant (`winhttp.dll` + `doorstop_config.ini` with no payload behind them), then install BepInEx 5 for Unity Mono; a stale proxy DLL can shadow a fresh install's own bootstrapper. Native hooks unnecessary.
-
-### BepInEx facts (docs fetched 2026-10-08 from docs.bepinex.dev)
-
-- BepInEx ("BepIn Injector Extensible") is an MIT-licensed patcher/plugin framework for Mono-backed Unity games: drop-in install, built-in config/logging, runtime patching via Harmony + MonoMod, in-memory assembly patching via Cecil behind UnityDoorstop — the exact stack whose Doorstop half is stranded on this install.
-- Moddability classification: community-established (BepInEx/HarmonyX). No anti-cheat on this install. Version compatibility between BepInEx 5.x and this Unity 2022.3 build was not verified (no payload to test against).
+BepInEx 5 + HarmonyX: read `Managed/Assembly-CSharp.dll` with ILSpy, and use AssetRipper or UABEA for assets if
+needed. This is the `unity.md` playbook's route. On an install like this one, use the existing manager profile
+rather than installing BepInEx into the game folder by hand. If there's no profile, the Thunderstore pack is the
+community's standard BepInEx for this game. Rejected: native hooks, which a Mono game doesn't need.
 
 ## How the game works (what we had to learn)
 
-- Unity Mono game: managed assembly is decompilable; BepInEx hosts C# plugins + Harmony patches.
-- No anti-cheat on this install, so offline/online scope is unrestricted by protections (normal online etiquette still applies).
+- Unity Mono: the game code is `Cult Of The Lamb_Data/Managed/Assembly-CSharp.dll`, which ILSpy decompiles.
+  BepInEx plugins patch it at runtime with HarmonyX.
+- UnityDoorstop: Windows loads the proxy `winhttp.dll` from the game folder, and it starts the assembly named in
+  `doorstop_config.ini`, or by `--doorstop-target` on the command line, before the game's own code runs.
+- r2modman and Thunderstore Mod Manager keep `BepInEx/` (core, plugins, config) inside their profile folder. They
+  copy only the pack's root files into the game folder (`ModLinker.performLink` in r2modman) and launch the game
+  with `--doorstop-enable true --doorstop-target <profile>\BepInEx\core\BepInEx.Preloader.dll`
+  (`BepInExGameInstructions`). A game folder with Doorstop files and no `BepInEx/` is their normal footprint.
+- r2modman profiles live in `%APPDATA%\r2modmanPlus-local\COTL\profiles\<name>\`. Thunderstore Mod Manager keeps
+  its own data folder.
 
 ## Build steps
 
-1. `um scan "Cult of the Lamb" --json` (expect `unity-mono`/100%, BepInEx loader).
-2. Confirm BepInEx version + plugin list from its config/log after a launch (not done here).
-3. New mods: BepInEx 5 plugin project against Unity 2022.3 / .NET Framework-era APIs as appropriate.
+1. `um scan "Cult of the Lamb" --json`: expect `unity-mono` and a BepInEx loader flag from `doorstop_config.ini`.
+2. If the root has Doorstop files but no `BepInEx/`, look for a manager profile
+   (`%APPDATA%\r2modmanPlus-local\COTL\profiles\`, or Thunderstore Mod Manager's data folder) before changing
+   anything. This wasn't done on this install.
+3. New mod: a BepInEx 5 plugin in C# with HarmonyX, referencing `Assembly-CSharp.dll` and the Unity DLLs from
+   `Managed/`.
+4. Put the plugin DLL in the profile's `BepInEx/plugins/`, launch through the manager, and read the profile's
+   `BepInEx/LogOutput.log`.
 
 ## Verification
 
-- Scan JSON fields quoted above, including engine version/company/product from `app.info`; `doorstop_config.ini` contents read (target assembly path); `BepInEx/` absence + `winhttp.dll` presence/size checked; `run_bepinex.sh` noted.
-- NOT verified: launch, whether the dead Doorstop proxy breaks a cold start, save locations, exact game build.
+- Read directly on 2026-10-08: `um scan` output, `app.info`, the contents of `doorstop_config.ini`, the presence of
+  `winhttp.dll` and `run_bepinex.sh`, and the absence of `BepInEx/`.
+- The r2modman behaviour comes from its source (`ModLinker.performLink`, `BepInExGameInstructions`). It wasn't
+  observed on this machine.
+- Not verified: launching, whether a manager profile exists here, save locations, the game build, and whether the
+  Thunderstore pack works on this build.
 
 ## Gotchas
 
-1. **No mod dirs flagged, and no payload behind the loader flag.** Cause: plugins would live under `BepInEx/plugins`, which is not in scan's `MOD_DIRS` — and here the directory does not exist at all. Fix: inventory `BepInEx/` directly for the active set (same gap class as Kenshi's RE_Kenshi miss, milder).
-2. **Scan's `BepInEx` flag overclaims.** Cause: `doorstop_config.ini` alone triggers the loader entry; the configured `targetAssembly` is never checked for existence. Fix for future agents: treat a Doorstop flag as "bootstrapper present" and verify `BepInEx/core/BepInEx.Preloader.dll` exists before calling the loader installed. Recommended UM improvement: only report BepInEx when the config's target assembly (or `BepInEx/core/`) exists on disk.
+1. **Doorstop files in the game root but no `BepInEx/` folder.** It looks like a dead, half-removed BepInEx, and
+   `um scan` still reports BepInEx. **Cause:** r2modman and Thunderstore Mod Manager keep BepInEx in their profile,
+   copy only the root files (`winhttp.dll`, `doorstop_config.ini`, `run_bepinex.sh`) into the game folder, and
+   point Doorstop at the profile with `--doorstop-target` at launch. **Fix:** look for a manager profile before
+   calling the install broken. Don't delete `winhttp.dll` or the ini: that breaks every modded launch from the
+   manager.
 
 ## Assets
 
-None produced (recon only).
+None (recon only).
 
 ## Open questions
 
-- Whether the dead Doorstop proxy breaks a cold start (launch test, not done).
-- Save/config locations (scan found none).
-- Exact game build vs BepInEx 5.x support (re-check at install time).
+- Is there an r2modman or Thunderstore Mod Manager profile for Cult of the Lamb on this machine, and what's in it?
+- What a plain Steam launch does with these files, since the ini's relative target
+  `BepInEx\core\BepInEx.Preloader.dll` doesn't exist in the game folder. Not tested.
+- Save and config location: scan found none. Unity's default would be
+  `%USERPROFILE%\AppData\LocalLow\Massive Monster\Cult Of The Lamb` (company and product from `app.info`), but
+  that wasn't checked.
+- Which BepInEx 5.4 build the Thunderstore pack carries, and whether it runs on Unity 2022.3.62f2.
 
 ## Sources and verification
 
-- Local install: `doorstop_config.ini` contents (target assembly path), `BepInEx/` absence, `winhttp.dll` presence/size (25,088 bytes), `run_bepinex.sh` name, engine version/company/product from `app.info`. Date: 2026-10-08.
-- docs.bepinex.dev (fetched 2026-10-08): BepInEx is an MIT-licensed patcher/plugin framework for Mono-backed Unity games (drop-in install, config/logging, Harmony+MonoMod runtime patching, Cecil in-memory patching via UnityDoorstop).
-- `um scan "Cult of the Lamb" --json`: engine `unity-mono`/100%; loader flag fires on `doorstop_config.ini` alone (overclaim documented in Gotchas) — reproduced in-session.
+- Local install, read-only, 2026-10-08: `um scan "Cult of the Lamb" --json`, `app.info`, `doorstop_config.ini`,
+  the root file listing.
+- docs.bepinex.dev (fetched 2026-10-08): BepInEx is an MIT-licensed plugin and patcher framework for Unity Mono
+  games, with runtime patching through Harmony and MonoMod and preloader patching through Cecil, started by
+  UnityDoorstop.
+- r2modman source: `ModLinker.performLink` (copies the profile's root files into the game folder) and
+  `BepInExGameInstructions` (the Doorstop launch arguments).
+- thunderstore.io/c/cult-of-the-lamb (checked 2026-10-09): `BepInExPack_CultOfTheLamb` by BepInEx, "Preconfigured
+  and ready to use".

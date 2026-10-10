@@ -1,80 +1,119 @@
 ---
 kind: game
-title: 'Fallout 4 recon: F4SE + Creation Kit installed, Vortex-managed mod set'
+title: 'Fallout 4 recon: F4SE for runtime 1.11.221 next to Address Library databases for 1.10.x only'
 game: Fallout 4
 games_also: []
-game_version: 'F4SE binary targets runtime 1_11_221 (per filename; game build otherwise unverified)'
+game_version: 'Steam; F4SE build for runtime 1.11.221 installed; Fallout4.exe FileVersion not read (unverified)'
 platform: windows
 engine: creation
 route: data
-tools: ["F4SE (installed, runtime 1_11_221)", "Creation Kit (installed)", "Vortex (folder marker)", "xEdit/FO4Edit (docs-described)"]
+tools: ["F4SE (build for runtime 1.11.221)", "Address Library for F4SE Plugins", "Creation Kit", "FO4Edit (xEdit)", "Vortex"]
 anti_cheat: 'none detected'
-status: working
+status: in-progress
 agents:
 - OpenCode (Muse Spark)
 humans: [PatrickJnr]
 date: '2026-10-08'
-links: []
-tags: ["fallout-4", "creation", "f4se", "esp", "esl", "vortex", "recon", "scan"]
+links: ["https://f4se.silverlock.org", "https://www.nexusmods.com/fallout4/mods/42147"]
+tags: ["fallout-4", "creation", "f4se", "address-library", "commonlibf4", "esp", "esl", "vortex", "recon"]
 ---
 
-# Fallout 4 recon: F4SE + Creation Kit installed, Vortex-managed mod set
+# Fallout 4 recon: F4SE for runtime 1.11.221 next to Address Library databases for 1.10.x only
 
-> Read-only recon of Fallout 4 (Steam 377160): Creation engine at 100% confidence (DLC `.esm` set), x64 binaries, **F4SE script extender installed** (runtime 1_11_221), **Creation Kit installed**, and a Vortex-managed, ESL-heavy mod set in `Data/`. Recommended route is ESP/ESL plugins via FO4Edit + Creation Kit with F4SE plugins under MO2/Vortex. Verified from `um scan` JSON and directory listings; not launched.
+> Read-only recon of a modded Steam install of Fallout 4 (app 377160): Creation engine, x64, F4SE and the
+> Creation Kit installed, and Vortex deploying into `Data/`. The useful finding is a mismatch. The game root has
+> `f4se_1_11_221.dll`, but `Data/F4SE/Plugins/` only had `version-1-10-*.bin` Address Library databases, so any
+> F4SE plugin built on Address Library would fail on 1.11.221 until a matching database is installed. Nothing was
+> built or launched, and the game exe's own version wasn't read.
 
 ## Setup
 
-- Install: `F:\SteamLibrary\steamapps\common\Fallout 4\`. 1,981 files indexed.
-- Engine: `creation` [100%] evidence `data/dlccoast.esm`, `data/dlcnukaworld.esm`, `data/dlcrobot.esm`.
-- Exes (root): `Fallout4.exe`, `Fallout4Launcher.exe`, `f4se_loader.exe`, `CreationKit.exe` (all x64 unmanaged).
-- Loaders: **Script Extender (Bethesda)** flagged from `f4se_loader.exe`. Root F4SE files: `f4se_1_11_221.dll`, `f4se_loader.exe`, `f4se_readme.txt`, `f4se_whatsnew.txt`.
-- `Data/` census (top extensions): `.js` 464, `.json` 332, `.pak` 223, `.ba2` 217, `.png` 154, `.esl` 89, `.pex` 29 (+ `.svg`/`.html`/`.css` UI assets) — a heavily modded tree with script sources and UI-framework files, not a clean install.
-- `Data/F4SE/Plugins/`: `F4Viewer` (+`.dll`), `PrismaUI_F4` (+`.dll`, `.ini`, `_CEF` dir), `__folder_managed_by_vortex`, and `version-1-10-*.bin` files (prior-generation F4SE artifacts — this install has been modded across runtimes).
-- Mod dirs flagged: `mods`, `data/scripts`. Saves: `Documents/My Games/Fallout4` exists but contains no `Saves/` directory (no playthrough saves here).
-- No anti-cheat found.
+- Steam install (app 377160), Windows, x64. `um scan` reports engine `creation` from the DLC `.esm` masters in
+  `Data/`, and the Script Extender loader from `f4se_loader.exe`.
+- Root exes: `Fallout4.exe`, `Fallout4Launcher.exe`, `CreationKit.exe`, `f4se_loader.exe`.
+- F4SE in the game root: `f4se_1_11_221.dll`, `f4se_loader.exe`, `f4se_readme.txt`, `f4se_whatsnew.txt`. The DLL's
+  name is the game runtime that F4SE build targets.
+- `Data/F4SE/Plugins/` held F4SE plugin DLLs, a Vortex marker (`__folder_managed_by_vortex`) and Address Library
+  databases named `version-1-10-*.bin`, with none for 1.11.x.
+- Game build: not established. See Gotcha 2 for how not to read it.
+- Current F4SE builds (f4se.silverlock.org, 2026-10-08): 0.7.9 for runtime 1.11.240, 0.7.2 for 1.10.984, 0.6.23
+  for 1.10.163. Steam and GOG are supported but are on different versions; the Windows Store version isn't.
+- No anti-cheat.
 
 ## Route and why
 
-**ESP/ESL data plugins first** (FO4Edit, Creation Kit — installed), **F4SE plugins** (`Data/F4SE/Plugins/*.dll`) for engine extension, managed under Vortex/MO2 — scan's `bethesda.md` route, and every piece is already present. Native hooks are the wrong layer for a Creation game with a working extender. Rejected: clean-room native approaches while F4SE loads.
+Data plugins first: `.esp`/`.esl` made in FO4Edit or the Creation Kit for items, records and quests. F4SE plugin
+DLLs (`Data/F4SE/Plugins/*.dll`) only when the change needs engine code. Most are built on CommonLibF4 and
+Address Library, which ties them to the game's runtime version. Install both through the mod manager that owns the
+install (Vortex here). This is the `bethesda.md` playbook's route. Rejected: native hooks outside F4SE, since the
+extender already provides a loader and a plugin API.
 
 ## How the game works (what we had to learn)
 
-- Creation data model: `.esm` masters + `.ba2` archives; mods add `.esp`/`.esl`/loose files; F4SE extends Papyrus scripting and exposes native plugin APIs.
-- 64-bit game (unlike New Vegas): extender/tooling must match x64.
-- Vortex manages this install (`__folder_managed_by_vortex`); load order lives in the manager profile + `Plugins.txt`, not in the game folder.
-- `PrismaUI_F4` + CEF + `.js`/`.html`/`.css` assets show UI-framework mods are active here (Chromium-embedded UI inside the game process).
-- Moddability classification: officially tolerated + community-established (ESP/ESL + F4SE + manager). Single-player, no protections found.
+- Content is `.esm` masters plus `.ba2` archives. Mods add `.esp`/`.esl` plugins and loose files under `Data/`.
+  Load order lives in `Plugins.txt` and the manager's profile, not in the game folder.
+- Each F4SE build supports one game runtime, named in its DLL (`f4se_1_11_221.dll`). After a game update, F4SE
+  needs the build for the new runtime.
+- Address Library: CommonLibF4-based plugins don't hardcode addresses. They look up IDs in a per-runtime database.
+  CommonLibF4's `IDDatabase::load` opens `Data/F4SE/Plugins/version-<runtime>.bin` (the runtime with dashes, e.g.
+  `version-1-10-163-0.bin`) and fails hard if that file is missing. The databases present have to cover the
+  runtime the game actually runs.
+- `__folder_managed_by_vortex` in a folder means Vortex deploys into it. Add and remove mods through Vortex, not
+  by hand, so its deployment stays consistent.
 
 ## Build steps
 
-1. `um scan "Fallout 4" --json` (expect `creation`/100%, F4SE loader flag, CK exe, `mods` + `data/scripts` dirs).
-2. Read `Data/` census + `F4SE/Plugins/` for the active set; check F4SE `whatsnew` for the installed generation.
-3. New mods: ESP/ESL in xEdit/CK; F4SE `.dll` plugins for engine work; keep everything manager-side (Vortex/MO2), never hand-drop into `Data/` on a managed install.
+1. `um scan "Fallout 4" --json`: expect engine `creation` and the Script Extender loader flag.
+2. Read the game's version: `(Get-Item "<install>\Fallout4.exe").VersionInfo.FileVersion` in PowerShell, or any
+   other `GetFileVersionInfo` reader. Compare it with the `f4se_<runtime>.dll` in the game root.
+3. Check `Data/F4SE/Plugins/` for `version-<that runtime>.bin`. If it's missing, install the Address Library
+   release for that runtime through the manager before launching with F4SE plugins.
+4. Data mods: `.esp`/`.esl` in FO4Edit or the Creation Kit. Engine mods: an F4SE plugin DLL against CommonLibF4.
+   Install both through the manager.
+5. Back up `Documents/My Games/Fallout4` (`um backup`) before the first modded launch.
 
 ## Verification
 
-- Scan JSON fields quoted above; root F4SE file list, `Data/` extension census, `F4SE/Plugins/` listing, saves-folder emptiness — all read directly.
-- NOT verified: launch, F4SE load, plugin ABI match against the installed runtime generation, load order, exact game build (F4SE filename implies runtime 1_11_221; game exe carries no checked version string).
+- Read directly on 2026-10-08: the root F4SE files, the `Data/F4SE/Plugins/` listing (plugin DLLs, Vortex marker,
+  `version-1-10-*.bin`), `CreationKit.exe` in the root, and `um scan` output.
+- The Address Library behaviour comes from CommonLibF4's `IDDatabase::load`, not from a launch on this install.
+- Not verified: launching, F4SE loading, whether the installed plugins use Address Library, the game exe's
+  FileVersion, load order.
 
 ## Gotchas
 
-1. **F4SE generation must match the game runtime.** Cause: `f4se_1_11_221.dll` targets one runtime; the `version-1-10-*.bin` files show this install previously tracked older ones. Fix: after any game update, re-verify F4SE-vs-runtime match before launching with mods.
-2. **Vortex-managed tree.** Cause: `__folder_managed_by_vortex` marker. Fix: add/remove mods through Vortex (or migrate deliberately to MO2), not by hand-dropping files into `Data/`.
-3. **No saves despite a modded tree.** Cause: `Saves/` empty. Fix: this install is modded but unplayed (or saves live elsewhere) — back up `Documents/My Games/Fallout4` once a playthrough exists.
+1. **Address Library databases for 1.10.x only, next to F4SE for 1.11.221.** `Data/F4SE/Plugins/` had
+   `version-1-10-*.bin` files that look like leftovers from an older F4SE. **Cause:** they're Address Library
+   databases, one per runtime. CommonLibF4-based plugins open `version-<runtime>.bin` for the running game and fail
+   hard when it's missing, so on 1.11.221 they need `version-1-11-221-0.bin`. **Fix:** install the Address Library
+   release that matches the game's runtime. Don't treat the 1.10.x files as junk from F4SE. Not reproduced here,
+   since the game wasn't launched.
+2. **No version string in the first 6 MB of `Fallout4.exe`.** A raw byte scan of the start of the exe found no
+   version, so the game build was left unknown. **Cause:** the VERSIONINFO resource sits in the `.rsrc` section
+   near the end of the file. **Fix:** read it through the Windows API, e.g.
+   `(Get-Item Fallout4.exe).VersionInfo.FileVersion` in PowerShell. CommonLibF4 reads the same resource with
+   `GetFileVersionInfo`. Not run on this install yet.
 
 ## Assets
 
-None produced (recon only).
+None (recon only).
 
 ## Open questions
 
-- Exact game runtime build (no version resource found in first 6 MB of `Fallout4.exe`; F4SE filename implies runtime 1_11_221, while current F4SE builds target 1.11.240/1.10.984/1.10.163 — resolve the match before launching modded).
-- Full `.esp` count and load order (extension census cut at top-12; enumerate before load-order work).
-- F4Viewer/PrismaUI versions and update state.
+- The game's actual runtime (read `Fallout4.exe`'s FileVersion). If it's 1.11.240, the target of current F4SE
+  0.7.9, the installed `f4se_1_11_221.dll` is out of date too. If it's 1.11.221, F4SE matches and only the Address
+  Library database is missing.
+- Which Address Library release covers 1.11.221 (not checked).
+- Whether the installed F4SE plugins depend on Address Library (not checked).
 
 ## Sources and verification
 
-- Local install: F4SE root file list (`f4se_1_11_221.dll` et al), `Data/` extension census, `F4SE/Plugins/` listing (F4Viewer, PrismaUI_F4+CEF, Vortex marker, `version-1-10-*.bin`), empty `Saves/`, CK presence, missing FO4 version resource. Date: 2026-10-08.
-- f4se.silverlock.org (fetched 2026-10-08): current builds 0.7.9 (runtime 1.11.240), 0.7.2 (1.10.984), 0.6.23 (1.10.163), 0.6.21 VR-only; supports latest Steam **and** GOG (currently different versions); editor needs no modification but custom pex/psc when available; **no Windows Store support**. Nexus mirror: nexusmods.com/fallout4/mods/42147.
-- creationkit.com (checked 2026-10-08): official CK wiki is **down for backend maintenance** (notice dated 2024/02/07, still served) — do not treat it as a working reference until it returns; prefer FO4Edit/xEdit docs and the locally installed Creation Kit help.
-- `um scan "Fallout 4" --json`: engine `creation`/100%, F4SE loader flag, CK exe — reproduced in-session.
+- Local install, read-only, 2026-10-08: root F4SE files, `Data/F4SE/Plugins/` listing, `CreationKit.exe`,
+  `um scan "Fallout 4" --json`.
+- f4se.silverlock.org (fetched 2026-10-08): 0.7.9 for 1.11.240, 0.7.2 for 1.10.984, 0.6.23 for 1.10.163 (0.6.21 is
+  VR only). Latest Steam and GOG supported, on different versions; no Windows Store support. Nexus mirror:
+  nexusmods.com/fallout4/mods/42147.
+- CommonLibF4 `IDDatabase::load`: opens `Data/F4SE/Plugins/version-<runtime>.bin` and fails if it's missing. Its
+  runtime version comes from the exe's version resource via `GetFileVersionInfo`.
+- creationkit.com (checked 2026-10-08): the official CK wiki served a backend-maintenance notice dated 2024-02-07.
+  Until it's back, FO4Edit's docs and the installed Creation Kit's help are the working references.

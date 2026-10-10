@@ -1,79 +1,106 @@
 ---
 kind: game
-title: 'Factorio 2.0.72 recon: official Lua API, Space Age, no mods installed'
+title: 'Factorio 2.0 recon: official Lua mod API, info.json, mods under %APPDATA%'
 game: Factorio
 games_also: []
-game_version: '2.0.72 win64 Steam + Space Age (from factorio-current.log dated 2026-01-05)'
+game_version: '2.0.x win64 Steam + Space Age; 2.0.72 at last launch (log dated 2026-01-05); installed version not read'
 platform: windows
 engine: native
 route: loader-api
-tools: ["official Lua modding API", "in-game mod portal"]
+tools: ["official Lua modding API", "Mod Portal (mods.factorio.com)"]
 anti_cheat: 'none detected'
-status: working
+status: in-progress
 agents:
 - OpenCode (Muse Spark)
 humans: [PatrickJnr]
 date: '2026-10-08'
-links: ["https://lua-api.factorio.com", "https://mods.factorio.com", "https://wiki.factorio.com", "https://forums.factorio.com", "https://factorio.com"]
-tags: ["factorio", "lua", "mod-api", "space-age", "recon", "scan"]
+links: ["https://lua-api.factorio.com", "https://lua-api.factorio.com/latest/auxiliary/mod-structure.html", "https://mods.factorio.com", "https://wiki.factorio.com", "https://forums.factorio.com"]
+tags: ["factorio", "lua", "mod-api", "info-json", "space-age", "recon"]
 ---
 
-# Factorio 2.0.72 recon: official Lua API, Space Age, no mods installed
+# Factorio 2.0 recon: official Lua mod API, info.json, mods under %APPDATA%
 
-> Read-only recon of Factorio 2.0.72 (Steam 427520, Space Age): native C++ game with an official Lua mod API (`data.lua` + `control.lua`), full Lua API docs shipped in `doc-html/`, and user data (mods/saves/logs) under `%APPDATA%\Factorio`. Verified from `um scan` JSON, the game log, and directory listings; not launched.
+> Read-only recon of Factorio on Steam (app 427520) with the Space Age DLC: a native C++ game with an official Lua
+> mod API. Mods are folders or zips in `%APPDATA%\Factorio\mods`, each with an `info.json`. `data.lua` defines
+> prototypes and `control.lua` does runtime scripting, and the API reference ships with the game in `doc-html/`.
+> Nothing was built or launched, and the version below comes from an old log, not from the install.
 
 ## Setup
 
-- Install: `E:\Steam\steamapps\common\Factorio\`. Real binary at `bin\x64\factorio.exe` (scan's root-only exe list sees just `unins000.exe` — limitation noted below). 19,041 files indexed.
-- Version: `2.0.72 (build 84292, win64, steam, space-age)` from `%APPDATA%\Factorio\factorio-current.log`; log also confirms config/data/write-data paths.
-- Engine: scan says `native` [10%] (`no known engine signature`) — correct in the sense of "custom native engine", with the known-game route carrying the real answer (official Lua API, `misc-engines.md`).
-- User data: `%APPDATA%\Factorio` exists with `mods/` (only `mod-list.json` — no mods installed), `saves/`, `player-data.json`, current/previous logs. Install `data/` holds `base/`, `core/`, `elevated-rails/`, `quality/`, `space-age/` (DLC present).
-- `doc-html/` ships the Lua API reference: 148 `classes/`, 422 `concepts/`, 278 `prototypes/` pages — the modding spec, on disk.
+- Steam, Windows x64. The game binary is `bin\x64\factorio.exe`, not in the install root.
+- Version: the last launch was `2.0.72 (build 84292, win64, steam, space-age)`, from
+  `%APPDATA%\Factorio\factorio-current.log` dated 2026-01-05. Steam has probably updated the game since. The
+  installed version is in `data/base/info.json`, which wasn't read (Gotcha 1).
+- The install's `data/` has `base/`, `core/` and the Space Age folders `elevated-rails/`, `quality/` and
+  `space-age/`.
+- User data: `%APPDATA%\Factorio` holds `mods/` (with `mod-list.json`), `saves/`, `player-data.json` and the logs.
+  The log also prints the config, data and write-data paths the game uses.
+- `doc-html/` in the install is the Lua API reference (classes, concepts, prototypes).
+- Current releases (lua-api.factorio.com, 2026-10-08): stable 2.0.77, experimental 2.1.21.
 
 ## Route and why
 
-**Official Lua API**: `mods/` folder under `%APPDATA%\Factorio` (`data.lua` + `control.lua`), plus the in-game mod portal. No loader, no hooks, no patching needed — this is also scan's known-game route. Rejected: native hooks (unsupported and unnecessary against an official API).
+The official Lua API: develop in `%APPDATA%\Factorio\mods` and publish on the Mod Portal. No loader, hooks or
+patching. `um scan`'s known-game route says the same (`misc-engines.md`). Rejected: native hooks, which are
+unsupported and unnecessary next to an official API.
 
 ## How the game works (what we had to learn)
 
-- Native x64 game; mods are zip/folder overdrops in `%APPDATA%\Factorio\mods`, enabled via `mod-list.json` and the in-game portal (which also handles Space Age dependency gating).
-- Data lives in install `data/` (`base`, `core`, DLC folders); never edit in place — override via mod files.
-- Scan caveats (same family as Kenshi): exes fingerprinted at root only (`bin\x64\factorio.exe` missed); mod dirs detected under the install only (`%APPDATA%` mods missed, though `save_hints` did find the saves path).
-
-### Ecosystem currency (fetched 2026-10-08 from official sources)
-
-- API docs live at lua-api.factorio.com with per-version trees: latest **stable 2.0.77**, experimental **2.1.21**. Installed game is **2.0.72** — five patches behind stable; match the doc tree to the game (read the 2.0.7x history, not `/latest/`) or update the game first.
-- Canonical venues (all linked from the API docs front page): Mod Portal (mods.factorio.com) for distribution + dependency resolution, wiki.factorio.com for guides, forums.factorio.com for API questions.
-- Moddability classification: officially supported, first-party (data/control stages, migrations, dependencies). Everything below the API surface (rendering, simulation core) is unsupported-by-design — native modification is not a route here.
+- `info.json` is the only mandatory file in a mod (Lua API docs, "Mod structure"). `name`, `version`, `title` and
+  `author` are mandatory. `factorio_version` defaults to `"0.12"` when it's left out, so set it to `"2.0"`. A mod
+  that uses Space Age content lists `space-age` in `dependencies`.
+- Naming: an unzipped mod folder is `{name}_{version}` or just `{name}`. A zip must be `{name}_{version}.zip`, and
+  the folder inside it can have any name.
+- Stages: `data.lua` (with `data-updates.lua` and `data-final-fixes.lua`) defines prototypes. `control.lua` is
+  runtime scripting.
+- Mods are enabled in `mods/mod-list.json` or the in-game Mods menu, which also downloads from the Mod Portal and
+  resolves dependencies.
+- The base game and the DLC sit in the install's `data/` with their own `info.json`. Don't edit them in place;
+  override from a mod.
+- The online API docs are versioned (`lua-api.factorio.com/<version>/`), and `/latest/` is the newest stable.
+  Read the tree for the installed version, or the `doc-html/` that ships with the install.
 
 ## Build steps
 
-1. `um scan Factorio --json` (expect `native`/10% + known Lua-API route + `%APPDATA%\Factorio` saves).
-2. Read `factorio-current.log` head for exact version; read `%APPDATA%\Factorio\mods\mod-list.json` for the active set.
-3. New mods: folder/zip in `%APPDATA%\Factorio\mods` following `doc-html/` prototypes; enable via mod-list or in-game portal.
+1. `um scan Factorio --json`: expect engine `native`, the known-game Lua API route, and the `%APPDATA%\Factorio`
+   saves hint.
+2. Read the installed version from `data/base/info.json` (`version`) and use the matching API docs.
+3. Create `%APPDATA%\Factorio\mods\<name>\` with an `info.json` (`name`, `version`, `title`, `author`,
+   `factorio_version: "2.0"`), then `data.lua` for prototypes and/or `control.lua` for runtime scripting.
+4. Back up `%APPDATA%\Factorio\saves` (`um backup`), then enable the mod in `mod-list.json` or the in-game Mods
+   menu.
 
 ## Verification
 
-- Scan JSON, log head (version/build/paths), `%APPDATA%` listing (mods + saves + logs), `data/` DLC folders, `doc-html/` page counts — all read directly.
-- NOT verified: launching with a mod, portal downloads, Space Age prototype overrides, multiplayer mod sync.
+- Read directly on 2026-10-08: `um scan` output, the head of `factorio-current.log` (version, build, paths), the
+  `%APPDATA%\Factorio` listing, the install's `data/` folders and `doc-html/`.
+- From the docs: the `info.json` rules and folder naming (Lua API "Mod structure" page, checked 2026-10-09), and
+  the current versions (2026-10-08).
+- Not verified: the installed version, launching with a mod, Mod Portal downloads, Space Age prototype overrides,
+  multiplayer mod sync.
 
 ## Gotchas
 
-1. **Scan shows no game exe.** Cause: root-only exe fingerprinting; the binary is `bin\x64\factorio.exe`. Fix: check `bin/` when `executables` looks empty.
-2. **Scan shows no mod folders.** Cause: mod-dir detection is install-scoped; Factorio mods live in `%APPDATA%\Factorio\mods`. Fix: check the saves-hint paths too.
-3. **Engine `native [10%]` looks alarming.** Cause: no engine signature table entry for Factorio's custom engine. Fix: the known-game route is the operative line; engine key here means "custom native", not "unknown risk".
+1. **The version in `factorio-current.log` can be months old.** The log read here said 2.0.72 and was dated
+   2026-01-05. **Cause:** the game writes that log when it starts, and Steam updates the files without launching
+   the game. **Fix:** read `version` from `data/base/info.json` in the install.
 
 ## Assets
 
-None produced (recon only). Factorio mods are code/prototypes; art would follow the game's sprite-spec docs if ever needed.
+None (recon only). Factorio mods are mostly prototypes and Lua. Art would follow the sprite specs in the
+prototype docs.
 
 ## Open questions
 
-- Exact Space Age prototype gaps for any future mod idea (read `doc-html/prototypes`).
-- Headless-server mod sync behavior (server not present here).
+- The installed version (read `data/base/info.json`).
+- How mods sync to a headless server (there's no server on this machine).
 
 ## Sources and verification
 
-- Local install + user data: version/build/Space Age from `factorio-current.log` (2026-01-05), `%APPDATA%\Factorio` listing (mods with only `mod-list.json`, saves, logs), `data/` DLC folders, `doc-html/` page counts (148 classes / 422 concepts / 278 prototypes), `bin\x64\factorio.exe` path. Date: 2026-10-08.
-- lua-api.factorio.com (fetched 2026-10-08): versioned API trees — latest stable **2.0.77**, experimental 2.1.21 (installed 2.0.72: read the matching tree); front page links Mod Portal (mods.factorio.com), wiki.factorio.com, forums.factorio.com, factorio.com.
-- `um scan Factorio --json`: known-game Lua-API route + `%APPDATA%\Factorio` saves hint — reproduced in-session (engine key itself is uninformative `native`/10%).
+- Local install and user data, read-only, 2026-10-08: the head of `factorio-current.log` (dated 2026-01-05), the
+  `%APPDATA%\Factorio` listing, the `data/` folders, `doc-html/`, `bin\x64\factorio.exe`.
+- lua-api.factorio.com (fetched 2026-10-08): versioned API trees, latest stable 2.0.77, experimental 2.1.21. The
+  front page links the Mod Portal, the wiki and the forums.
+- lua-api.factorio.com/latest/auxiliary/mod-structure.html (checked 2026-10-09): `info.json` is "the only
+  mandatory file", its mandatory fields, the `factorio_version` default, folder and zip naming.
+- `um scan Factorio --json`, run in-session.
