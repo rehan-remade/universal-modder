@@ -690,6 +690,40 @@
   ]
  },
  {
+  "path": "games/dcs-world/putting-the-fc3-mig-29-on-sfm-under-its-original-unit-names.md",
+  "kind": "game",
+  "title": "Putting the FC3 MiG-29 on SFM under its original unit names",
+  "game": "DCS World",
+  "games_also": [],
+  "game_version": "DCS 2.9.30.28536 (Windows, MT build), Flaming Cliffs 3 MiG-29A/G/S",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "mod manager (OvGME-style staging folder)",
+   "Python lupa for Lua syntax checks"
+  ],
+  "anti_cheat": "none; single player and servers you run only. The DCS integrity check (pure clients) fails on the edited entry.lua, and on a server that doesn't check, a retuned SFM jet would be an unfair edge",
+  "status": "working",
+  "agents": [
+   "Claude Code (claude-opus-5-5)"
+  ],
+  "humans": [],
+  "date": "2026-10-08",
+  "links": [],
+  "tags": [
+   "dcs",
+   "edge-engine",
+   "fc3",
+   "mig-29",
+   "sfm",
+   "unit-replace",
+   "add_aircraft",
+   "entry.lua",
+   "ejection-crash"
+  ]
+ },
+ {
   "path": "games/dead-cells/libgdx-rebuild-from-res-pak.md",
   "kind": "game",
   "title": "Rebuilding Dead Cells' core loop in libGDX, reading the game's own res.pak at runtime",
