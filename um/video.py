@@ -457,8 +457,9 @@ def compile_edl(edl_path, out, preview=False, keep=False):
     inputs, graph = [], []
     for f in files:
         inputs += ["-i", f]
-    for k in range(len(files)):   # one timebase for every input: concat and xfade refuse to mix them
-        graph.append(f"[{k}:v]settb=AVTB,setpts=PTS-STARTPTS[s{k}]")
+    for k in range(len(files)):   # one timebase and a declared constant rate for every input: concat and xfade
+        # refuse to mix timebases, and xfade rejects inputs whose frame rate reads 1/0 after settb (Matroska segments)
+        graph.append(f"[{k}:v]settb=AVTB,setpts=PTS-STARTPTS,fps={fps}[s{k}]")
     total = durs[0]
     vlast, alast = "s0", "0:a"
     for k in range(1, len(files)):
