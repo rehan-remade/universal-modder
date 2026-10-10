@@ -690,37 +690,40 @@
   ]
  },
  {
-  "path": "games/dcs-world/putting-the-fc3-mig-29-on-sfm-under-its-original-unit-names.md",
+  "path": "games/dead-cells/libgdx-rebuild-from-res-pak.md",
   "kind": "game",
-  "title": "Putting the FC3 MiG-29 on SFM under its original unit names",
-  "game": "DCS World",
+  "title": "Rebuilding Dead Cells' core loop in libGDX, reading the game's own res.pak at runtime",
+  "game": "Dead Cells",
   "games_also": [],
-  "game_version": "DCS 2.9.30.28536 (Windows, MT build), Flaming Cliffs 3 MiG-29A/G/S",
-  "platform": "windows",
-  "engine": "native",
-  "route": "data",
+  "game_version": "Steam macOS build, version string 35 (build date 2023-10-01)",
+  "platform": "macos",
+  "engine": "haxe",
+  "route": "reimplementation",
   "tools": [
-   "mod manager (OvGME-style staging folder)",
-   "Python lupa for Lua syntax checks"
+   "libGDX 1.14.2 (LWJGL3)",
+   "hlbc",
+   "python3 (pak/BTMX readers)",
+   "JDK 21"
   ],
-  "anti_cheat": "none in single player; DCS integrity check (IC) fails on edited mod entry.lua, so pure-IC servers reject it",
-  "status": "working",
+  "anti_cheat": "none (single-player); nothing in the install is modified, the rebuild only reads res.pak",
+  "status": "in-progress",
   "agents": [
-   "Claude Code (claude-opus-5-5)"
+   "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-08",
+  "date": "2026-10-09",
   "links": [],
   "tags": [
-   "dcs",
-   "edge-engine",
-   "fc3",
-   "mig-29",
-   "sfm",
-   "unit-replace",
-   "add_aircraft",
-   "entry.lua",
-   "ejection-crash"
+   "reimplementation",
+   "heaps",
+   "hashlink",
+   "castledb",
+   "atlas",
+   "palette-swap",
+   "normal-maps",
+   "procgen",
+   "room-templates",
+   "platformer"
   ]
  },
  {
@@ -1243,6 +1246,50 @@
    "fabric",
    "shields",
    "vehicles"
+  ]
+ },
+ {
+  "path": "games/halo-trial/max-payne-bullet-time-shootdodge-and-voice-in-halo-trial-via.md",
+  "kind": "game",
+  "title": "Max Payne bullet time, shootdodge and voice in Halo Trial via Chimera Lua on macOS/Wine",
+  "game": "Halo Trial",
+  "games_also": [
+   "Max Payne (Demo)"
+  ],
+  "game_version": "Halo Trial (Halo PC demo) halo.exe FileVersion 01.00.00.0578, 2,785,280 bytes; Chimera 1.0.0.r1307.1f292fc; Max Payne Demo (2001), x_demodatas.ras 97,939,389 bytes",
+  "platform": "macos",
+  "engine": "native",
+  "route": "loader-api",
+  "tools": [
+   "Chimera r1307 (global Lua scripts)",
+   "GameHub Wine build 10000073",
+   "mtld3d (D3D9 -> Metal)",
+   "x87sidecar",
+   "zig cc via `uvx --from ziglang` (Windows SendInput helper)",
+   "afplay"
+  ],
+  "anti_cheat": "None. Campaign only here; keep the script off on servers you don't host (Chimera server_type 'dedicated'). Max Payne Demo is single-player.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-07",
+  "links": [
+   "https://github.com/ernestask/libras",
+   "https://github.com/SnowyMouse/chimera"
+  ],
+  "tags": [
+   "mashup",
+   "bullet-time",
+   "chimera",
+   "lua",
+   "wine",
+   "macos",
+   "ras",
+   "sendinput",
+   "sidecar",
+   "blam"
   ]
  },
  {
@@ -2556,6 +2603,49 @@
   ]
  },
  {
+  "path": "games/the-dark-legions/reloaded-single-dll-fix.md",
+  "kind": "game",
+  "title": "The Dark Legions Reloaded: crash fixes, a D3D8 -> D3D9Ex renderer, widescreen and new menus in one d3d8.dll",
+  "game": "The Dark Legions",
+  "games_also": [],
+  "game_version": "1.1.0 (Mascot Entertainment, 2004), retail CD install, Windows 11 24H2",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "native-hook",
+  "tools": [
+   "Rust 1.99 (i686-pc-windows-msvc, static CRT)",
+   "Ghidra 12.1 (headless scripts)",
+   "WinDbg / WER LocalDumps",
+   "Process Monitor",
+   "d3dcompiler_47 (runtime HLSL)",
+   "dgVoodoo2 2.87.5 (studied, then replaced)"
+  ],
+  "anti_cheat": "none (2004 single-player RTS; LAN multiplayer only, not touched)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "GR33N"
+  ],
+  "date": "2026-10-09",
+  "links": [],
+  "tags": [
+   "d3d8",
+   "d3d9ex",
+   "proxy-dll",
+   "crash-fix",
+   "heap-corruption",
+   "widescreen",
+   "menus",
+   "fonts",
+   "fog",
+   "dgvoodoo",
+   "rts",
+   2004
+  ]
+ },
+ {
   "path": "games/the-witcher-3/the-witcher-3-remastered-bundle-container-and-cr2w-decoded.md",
   "kind": "game",
   "title": "The Witcher 3 Remastered: .bundle container and CR2W, decoded",
@@ -3581,6 +3671,61 @@
    "frame-grab",
    "warp",
    "seqlock"
+  ]
+ },
+ {
+  "path": "techniques/d3d8-to-d3d9ex-wrapper-in-one-dll.md",
+  "kind": "technique",
+  "title": "Replacing dgVoodoo with your own D3D8 -> D3D9Ex wrapper in one DLL",
+  "tags": [
+   "d3d8",
+   "d3d9ex",
+   "wrapper",
+   "proxy-dll",
+   "supersampling",
+   "lanczos",
+   "msaa",
+   "xyzrhw",
+   "widescreen",
+   "gamma",
+   "fog",
+   "rust"
+  ],
+  "date": "2026-10-09",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "GR33N"
+  ],
+  "links": []
+ },
+ {
+  "path": "techniques/dgvoodoo2-internals-and-spying-on-a-packed-d3d-wrapper.md",
+  "kind": "technique",
+  "title": "What dgVoodoo2 really does to an old D3D8 game, and how to spy on a packed D3D wrapper",
+  "tags": [
+   "dgvoodoo",
+   "d3d8",
+   "d3d11",
+   "wrapper",
+   "dxbc",
+   "vtable-hooks",
+   "id3d10multithread",
+   "scaling",
+   "filtering",
+   "fog",
+   "renderdoc"
+  ],
+  "date": "2026-10-09",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "GR33N"
+  ],
+  "links": [
+   "https://dege.freeweb.hu/dgVoodoo2/"
   ]
  },
  {
