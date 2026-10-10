@@ -38,6 +38,7 @@ from um.common import die
 
 QUEUE = "https://queue.fal.run"
 REST = "https://rest.fal.ai"
+CDN = "https://v3.fal.media"
 PLATFORM = "https://api.fal.ai/v1"
 OPENAPI = "https://fal.ai/api/openapi/queue/openapi.json"
 
@@ -121,6 +122,16 @@ def _req(method: str, url: str, body=None, headers=None, auth=True, raw=False, t
 # --------------------------------------------------------------------------- files
 
 
+def _upload_cdn(name: str, ctype: str, data: bytes) -> str:
+    """fal's CDN (the route fal-client uses): a short-lived upload token, then one POST of the bytes."""
+    tok = _req("POST", f"{REST}/storage/auth/token?storage_type=fal-cdn-v3", {})
+    req = urllib.request.Request(f"{CDN}/files/upload", data=data, method="POST", headers={
+        "Authorization": f"{tok['token_type']} {tok['token']}", "Content-Type": ctype, "X-Fal-File-Name": name,
+        "Accept": "application/json", "User-Agent": "universal-modder"})
+    with urllib.request.urlopen(req, timeout=600) as r:
+        return json.loads(r.read())["access_url"]
+
+
 def upload(path: str | Path) -> str:
     """Local file -> URL fal models can read (fal storage). Small files fall back to a data URI."""
     p = Path(path)
@@ -131,14 +142,15 @@ def upload(path: str | Path) -> str:
         ctype = "model/gltf-binary"
     data = p.read_bytes()
     try:
-        init = _req("POST", f"{REST}/storage/upload/initiate?storage_type=gcs", {"file_name": p.name, "content_type": ctype})
-        put = urllib.request.Request(init["upload_url"], data=data, headers={"Content-Type": ctype}, method="PUT")
-        urllib.request.urlopen(put, timeout=600).read()
-        return init["file_url"]
-    except SystemExit:
-        if len(data) < 8 << 20:
-            return f"data:{ctype};base64,{base64.b64encode(data).decode()}"
-        raise
+        return _upload_cdn(p.name, ctype, data)
+    except SystemExit:  # _req already printed why
+        err = "see above"
+    except (urllib.error.URLError, OSError, KeyError, ValueError) as e:
+        err = str(e)
+    if len(data) < 8 << 20:
+        print(f"fal upload failed ({err}); sending {p.name} inline as a data URI", file=sys.stderr)
+        return f"data:{ctype};base64,{base64.b64encode(data).decode()}"
+    die(f"could not upload {p.name} ({len(data):,} bytes) to fal storage ({err}); the data-URI fallback only covers files under 8 MiB")
 
 
 def _as_url(v: str) -> str:
@@ -170,7 +182,7 @@ EXT = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp", "image/
 
 def download_outputs(result: dict, out: Path, name: str) -> list[str]:
     out.mkdir(parents=True, exist_ok=True)
-    files, used, first_key = [], set(), None
+    files, used, first_key, failed = [], set(), None, []
     for trail, url, ctype in _urls_in(result):
         ext = Path(urllib.parse.urlparse(url).path).suffix or EXT.get(ctype.split(";")[0], "")
         key = re.sub(r"\[\d+\]", "", trail).split(".")[-1] or "file"
@@ -188,9 +200,17 @@ def download_outputs(result: dict, out: Path, name: str) -> list[str]:
             path = out / f"{stem}_{n}{ext}"
         used.add(path.name)
         req = urllib.request.Request(url, headers={"User-Agent": "universal-modder"})
-        with urllib.request.urlopen(req, timeout=600) as r:
-            path.write_bytes(r.read())
+        try:
+            with urllib.request.urlopen(req, timeout=600) as r:
+                path.write_bytes(r.read())
+        except (urllib.error.URLError, OSError) as e:  # keep going: the other outputs are still worth saving
+            failed.append(f"{url} ({e})")
+            continue
         files.append(str(path))
+    if failed:
+        rid, ep = result.get("_request_id"), result.get("_endpoint") or "<endpoint>"
+        die("the job finished but these outputs did not download:\n  " + "\n  ".join(failed) +
+            (f"\nrequest {rid}: try again later with `um fal result {ep} {rid}`" if rid else ""))
     return files
 
 
@@ -225,7 +245,7 @@ def run(endpoint: str, inp: dict, timeout: float = 1800, quiet: bool = False) ->
             if st.get("error"):
                 die(f"{endpoint} failed: {st['error']}")
             res = _req("GET", response_url)
-            res["_request_id"] = rid
+            res["_request_id"], res["_endpoint"] = rid, endpoint
             return res
         if time.time() - t0 > timeout:
             die(f"{endpoint}: still {s} after {timeout:.0f}s (request {rid}); check later with `um fal result {endpoint} {rid}`")

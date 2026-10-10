@@ -18,7 +18,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from um.common import die, is_mac, is_windows, is_wsl, to_posix
+from um.common import die, is_mac, is_windows, is_wsl, ps_exe, to_posix
 
 MAX_ENTRIES = 80_000
 MAX_DEPTH = 6
@@ -55,7 +55,7 @@ def win_folders() -> dict:
         ps = ("$f=[Environment]; "
               "@($f::GetFolderPath('UserProfile'),$f::GetFolderPath('MyDocuments'),$f::GetFolderPath('ApplicationData'),"
               "$f::GetFolderPath('LocalApplicationData')) -join '|'")
-        exe = "powershell.exe" if is_wsl() else "powershell"
+        exe = ps_exe()
         try:
             out = subprocess.run([exe, "-NoProfile", "-Command", ps], capture_output=True, text=True, timeout=30,
                                  cwd="/mnt/c" if is_wsl() else None).stdout.strip()
@@ -66,8 +66,34 @@ def win_folders() -> dict:
     return cache["v"]
 
 
+def steam_registry_root() -> Path | None:
+    """Where Steam says it lives (Windows registry); many installs aren't under Program Files (e.g. C:\\Steam)."""
+    if is_windows():
+        import winreg
+        for hive, key, value in ((winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam", "SteamPath"),
+                                 (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Valve\Steam", "InstallPath")):
+            try:
+                with winreg.OpenKey(hive, key) as k:
+                    return Path(winreg.QueryValueEx(k, value)[0])
+            except OSError:
+                continue
+    elif is_wsl():
+        try:
+            out = subprocess.run(["reg.exe", "query", r"HKCU\Software\Valve\Steam", "/v", "SteamPath"], capture_output=True,
+                                 text=True, timeout=15, cwd="/mnt/c").stdout
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        m = re.search(r"SteamPath\s+REG_SZ\s+(.+)", out)
+        if m:
+            return Path(to_posix(m.group(1).strip()))
+    return None
+
+
 def steam_roots() -> list[Path]:
     cands = []
+    reg = steam_registry_root()
+    if reg:
+        cands.append(reg)
     if is_windows():
         cands += [Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")) / "Steam", Path(r"C:\Program Files\Steam")]
     elif is_wsl():
@@ -325,6 +351,15 @@ LOADERS = [
     ("Hollow Knight Modding API", ("*modding api*", "*/managed/mods/*")),
 ]
 
+# folders whose exes/jars belong to installers and runtimes, not the game (matched with leading "_" stripped,
+# so GOG's __redist/__support, EA's __installer and Steam's _CommonRedist count)
+SKIP_DIRS = {"redist", "commonredist", "vcredist", "directx", "installer", "installers", "support"}
+
+
+def _in_skip_dir(rel: str) -> bool:
+    return any(part.lstrip("_") in SKIP_DIRS for part in rel.split("/")[:-1])
+
+
 MOD_DIRS = ["mods", "mod", "addons", "plugins", "custom", "workshop", "usermods", "~mods", "content/paks/~mods", "data/scripts", "bepinex/plugins"]
 
 # known games: better routes than the engine default
@@ -347,6 +382,7 @@ KNOWN = {
     "risk of rain 2": ("BepInEx 5 + R2API (Thunderstore)", "unity.md"),
     "hollow knight": ("Hollow Knight Modding API (Lumafly installer), C# mods", "unity.md"),
     "slay the spire": ("ModTheSpire + BaseMod (Java, SpirePatch)", "misc-engines.md"),
+    "slay the spire 2": ("the game's own mod loader: C# .dll + Godot .pck + .json manifest in mods/; BaseLib (NuGet Alchyr.Sts2.BaseLib) for cards, relics and characters", "godot.md"),
     "balatro": ("Steamodded + lovely (Lua injection into the LÖVE game)", "misc-engines.md"),
     "factorio": ("official Lua modding API (mods/ folder, data.lua + control.lua)", "misc-engines.md"),
     "counter-strike 2": ("Workshop maps / Source 2 tools; local -insecure only. VAC: never inject on official servers", "source.md"),
@@ -370,9 +406,25 @@ KNOWN_SAVES = {
     "counter-strike 2": [],
 }
 
-ONLINE_ONLY = ["valorant", "league of legends", "fortnite", "apex legends", "pubg", "rainbow six siege", "call of duty", "destiny 2",
-               "genshin impact", "escape from tarkov", "battlefield", "overwatch", "counter-strike 2", "dota 2", "marvel rivals",
-               "the finals", "rust", "dead by daylight", "naraka", "warframe", "deadlock"]
+# Live-service games, matched against the whole name (see online_only): a substring test flagged Rusty Lake ("rust"),
+# Battlefield 1942 and the 2009 Modern Warfare 2. Older entries in a series with an online-only sibling are left to the
+# anti-cheat scan, which still warns when a protected client is installed.
+ONLINE_ONLY = ["valorant", "league of legends", "fortnite", "apex legends", "pubg", "pubg battlegrounds", "rainbow six siege",
+               "rainbow six siege x", "tom clancy s rainbow six siege", "tom clancy s rainbow six siege x", "call of duty",
+               "call of duty hq", "call of duty warzone", "destiny 2", "genshin impact", "escape from tarkov", "battlefield 2042",
+               "battlefield 6", "overwatch", "overwatch 2", "counter strike 2", "dota 2", "marvel rivals", "the finals", "rust",
+               "dead by daylight", "naraka bladepoint", "warframe", "deadlock"]
+
+
+def _plain(name: str) -> str:
+    """'Tom Clancy's Rainbow Six® Siege' -> 'tom clancy s rainbow six siege'."""
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", name.lower().replace("®", "").replace("™", "")).split())
+
+
+def online_only(name: str) -> str | None:
+    """The ONLINE_ONLY entry this game's name is, if any. Whole names only, never substrings."""
+    n = _plain(name)
+    return n if n in ONLINE_ONLY else None
 
 ENGINES = {
     # key: (label, playbook, route)
@@ -400,6 +452,7 @@ ENGINES = {
     "frostbite": ("Frostbite", "native.md", "Frosty Tool Suite for supported titles, offline only; most titles have kernel anti-cheat"),
     "electron": ("Electron / NW.js / HTML5", "misc-engines.md", "extract resources/app.asar (or package.nw), patch JS, open devtools"),
     "love2d": ("LÖVE (Lua)", "misc-engines.md", "the .love/exe is a zip of Lua; patch or inject with lovely"),
+    "zengin": ("ZenGin (Gothic 1/2)", "zengin.md", "Daedalus script mods first (MDK scripts -> .DAT in a .mod volume; Ikarus/LeGo, Ninja); Union plugin SDK (x86 C++ DLL in system/autorun, gothic-api headers) for engine code; GD3D11 renderer; assets in Data/*.vdf via ZenKit. Union/GD3D11 need G1 1.08k_mod or G2 NotR 2.6.0.0-rev2: check the exe build first (on Steam use the Workshop beta, don't swap the exe), see zengin.md"),
     "java": ("Java", "misc-engines.md", "decompile jars (Vineflower/CFR), patch with a mod loader or bytecode (Mixin/ASM)"),
     "defold": ("Defold", "misc-engines.md", "unpack game.arcd; Lua scripts"),
     "cocos": ("Cocos2d-x", "native.md", "Lua/JS scripts if bundled; else native hooks"),
@@ -495,9 +548,17 @@ def detect(ix: Index) -> tuple[list[tuple[str, int, list[str], dict]], dict]:
     if ix.has_dir("renpy") and ix.has_dir("game"):
         add("renpy", 100, ["renpy/ + game/"], archives=len(ix.find("game/*.rpa")))
 
+    # ZenGin (Gothic 1/2): the exe lives in system/, assets in Data/*.vdf volumes
+    if ix.has("system/gothic.exe", "system/gothic1.exe", "system/gothic2.exe") or \
+            (ix.has("system/vdfs32g.dll", "system/vdfs32.dll") and ix.has("data/*.vdf")):
+        add("zengin", 95, ix.find("system/gothic*.exe")[:1] + ix.find("data/*.vdf")[:1])
+
     # XNA / FNA / MonoGame / .NET
     xna = ix.find("fna.dll", "monogame.framework.dll", "microsoft.xna.framework*.dll", "*/fna.dll")
-    exes = [f for f in ix.files if f.endswith(".exe") and "/" not in f][:12]
+    # shallowest first: the main exe often sits one level down (Gothic's system/, UE's binaries/)
+    exes = sorted((f for f in ix.files if f.endswith(".exe") and not f.rsplit("/", 1)[-1].startswith("unins")
+                   and not _in_skip_dir(f)),
+                  key=lambda f: (f.count("/"), f))[:12]
     managed = []
     for e in exes:
         info = pe_info(ix.path(e))
@@ -564,7 +625,8 @@ def detect(ix: Index) -> tuple[list[tuple[str, int, list[str], dict]], dict]:
     # LÖVE, Java, Defold, Cocos, Haxe
     if ix.has("love.dll", "*.love", "lovec.exe"):
         add("love2d", 95, ix.find("love.dll", "*.love")[:1])
-    jars = ix.find("*.jar")
+    # shallow jars only: a bundled Ghidra/SDK in a dev subfolder isn't the game's engine
+    jars = [j for j in ix.find("*.jar") if j.count("/") <= 1 and not _in_skip_dir(j)]
     if jars and (ix.has_dir("jre", "jre/*", "jdk*", "java*") or len(jars) <= 5):
         add("java", 60, jars[:2])
     if ix.has("game.dmanifest", "game.arcd"):
@@ -628,7 +690,7 @@ def scan(query: str) -> dict:
     name = (game.get("name") or root.name)
     lname = name.lower()
     known = next((v for k, v in sorted(KNOWN.items(), key=lambda kv: -len(kv[0])) if k == lname or (k in lname and len(k) > 5)), None)
-    online = next((g for g in ONLINE_ONLY if g in lname), None)
+    online = online_only(name)
     routes = []
     if known:
         routes.append(dict(route=known[0], playbook=known[1], why="known game"))

@@ -6,6 +6,7 @@
     um backup restore terraria-saves [--to DIR] [--snapshot FILE] [--yes]
 
 Snapshots are zip files + a manifest (size + sha1 per file) in ~/.universal-modder/backups/<name>/.
+Snapshots created in the same second get numbered suffixes so earlier backups are never overwritten.
 restore first snapshots the current state (so a restore can itself be undone), then puts every file
 back and removes files that weren't in the snapshot only with --clean.
 Habit that saved the Terraria showcase: keep a pristine copy of any world/scenario a scripted take
@@ -50,12 +51,29 @@ def create(src: str, name: str | None = None, note: str = "") -> Path:
     if total > 20 << 30:
         die(f"{total / 2**30:.1f} GB - too big to snapshot casually; back up the specific subfolder you'll change")
     stamp = time.strftime("%Y%m%d-%H%M%S")
-    out = _root(name) / f"{stamp}.zip"
-    # strict_timestamps=False: some folders (e.g. Chromium caches in .minecraft) hold pre-1980 mtimes
-    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=6, strict_timestamps=False) as z:
-        for rel in files:
-            z.write(s / rel, rel)
-        z.writestr("_um_manifest.json", json.dumps(dict(source=str(src), created=stamp, note=note, files=files), indent=1))
+    root = _root(name)
+    # Don't reuse gaps left by deleted or failed backups: a new snapshot must sort after the existing ones.
+    sequences = (p.stem[len(stamp) + 1:] for p in root.glob(f"{stamp}_*.zip"))
+    sequence = max((int(n) + 1 for n in sequences if n.isdecimal()), default=0)
+    while True:
+        # '_' sorts after the original .zip; padding keeps the latest snapshot last even after 10+ collisions.
+        suffix = f"_{sequence:06d}" if sequence else ""
+        out = root / f"{stamp}{suffix}.zip"
+        try:
+            # Exclusive creation also prevents concurrent backups from overwriting each other.
+            # strict_timestamps=False: some folders (e.g. Chromium caches in .minecraft) hold pre-1980 mtimes
+            z = zipfile.ZipFile(out, "x", zipfile.ZIP_DEFLATED, compresslevel=6, strict_timestamps=False)
+            break
+        except FileExistsError:
+            sequence += 1
+    try:
+        with z:
+            for rel in files:
+                z.write(s / rel, rel)
+            z.writestr("_um_manifest.json", json.dumps(dict(source=str(src), created=stamp, note=note, files=files), indent=1))
+    except BaseException:
+        out.unlink(missing_ok=True)  # don't leave an incomplete archive as the latest snapshot
+        raise
     print(f"{out}  ({len(files)} files, {total / 2**20:.1f} MB)")
     return out
 

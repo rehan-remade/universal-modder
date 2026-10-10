@@ -20,7 +20,7 @@ repo, they almost always want to **mod a game**, or to learn how a game was modd
     - `scan`: installed games, engine, anti-cheat, loaders, saves, routes
     - `fal`: sprites, textures, PBR, 3D, rigs, SFX, music, voice, video via fal's REST API
     - `comfy`: images from a local ComfyUI server, with no API key
-    - `sprite` / `render3d`: art → engine-ready frames
+    - `sprite` / `render3d`: art → engine-ready frames (`render3d` needs Blender on PATH or `BLENDER=...`)
     - `win`: launch, screenshot, input, record on Windows (also from WSL)
     - `video`: contact sheets and EDL showcase edits
     - `backup`: snapshot and restore saves

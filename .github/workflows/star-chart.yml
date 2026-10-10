@@ -2,6 +2,9 @@ name: star chart
 on:
   schedule:
     - cron: "17 */6 * * *"
+  # GitHub drops scheduled runs under load (none ran in the chart's first 10 hours), so every merge redraws it too.
+  push:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: write

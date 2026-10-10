@@ -3,6 +3,7 @@
     uv run --with pytest pytest -q
 """
 import json
+import os
 import shutil
 import struct
 import subprocess
@@ -65,8 +66,8 @@ def test_gamemaker_and_rpgmaker(tmp_path):
     assert engine_of(tmp_path / "b", {"www/js/rpg_core.js": "//", "Game.exe": b"MZ"})[0] == "rpgmaker-mvmz"
 
 
-def test_managed_pe(tmp_path):
-    # minimal PE32 with a CLR header directory entry
+def _pe(managed=True):
+    # minimal PE32, optionally with a CLR header directory entry
     pe = bytearray(1024)
     pe[0:2] = b"MZ"
     struct.pack_into("<I", pe, 0x3C, 0x80)
@@ -74,10 +75,86 @@ def test_managed_pe(tmp_path):
     struct.pack_into("<H", pe, 0x84, 0x14C)
     opt = 0x80 + 24
     struct.pack_into("<H", pe, opt, 0x10B)
-    struct.pack_into("<I", pe, opt + 96 + 14 * 8, 0x2000)
+    if managed:
+        struct.pack_into("<I", pe, opt + 96 + 14 * 8, 0x2000)
+    return bytes(pe)
+
+
+def test_managed_pe(tmp_path):
     p = tmp_path / "Game.exe"
-    p.write_bytes(bytes(pe))
+    p.write_bytes(_pe())
     assert scan.pe_info(p) == {"arch": "x86", "managed": True}
+
+
+def test_zengin_detected(tmp_path):
+    key, _ = engine_of(tmp_path, {"system/Gothic2.exe": _pe(False), "Data/Textures.vdf": b"x"})
+    assert key == "zengin"
+    # volume layout alone (vdfs loader + Data/*.vdf) is enough
+    key, _ = engine_of(tmp_path / "b", {"system/vdfs32g.dll": _pe(False), "Data/Worlds.vdf": b"x"})
+    assert key == "zengin"
+
+
+def test_nested_exe_fingerprinted(tmp_path):
+    # Gothic-style layout: the game exe lives one level down in system/
+    make(tmp_path, {"system/Gothic2.exe": _pe(managed=False), "Data/worlds.vdf": b"x"})
+    _, facts = scan.detect(scan.Index(tmp_path))
+    assert facts["executables"]["system/gothic2.exe"] == {"arch": "x86", "managed": False}
+
+
+def test_redist_exes_skipped(tmp_path):
+    # installer/runtime folders (Steam _CommonRedist, GOG __redist/__support, EA __installer) and
+    # uninstallers at any depth are not the game
+    make(tmp_path, {"Game.exe": _pe(False), "_CommonRedist/vcredist/vc_redist.exe": _pe(False),
+                    "__redist/dotnet/setup.exe": _pe(), "__support/app/helper.exe": _pe(),
+                    "__installer/Touchup.exe": _pe(), "system/unins000.exe": _pe(),
+                    "system/Gothic2.exe": _pe(False)})
+    _, facts = scan.detect(scan.Index(tmp_path))
+    assert list(facts["executables"]) == ["game.exe", "system/gothic2.exe"]
+    assert scan._in_skip_dir("__redist/x.jar") and scan._in_skip_dir("a/_commonredist/b/x.exe")
+    assert not scan._in_skip_dir("supporters/x.exe") and not scan._in_skip_dir("__redist.exe")
+
+
+def _named_game(tmp_path, name, files):
+    d = tmp_path / name
+    make(d, dict({f"f{i}.txt": "x" for i in range(6)}, **files))
+    return scan.scan(str(d))
+
+
+def test_zengin_route_only_for_classic_gothic(tmp_path):
+    # classic Gothic 1/2 get the ZenGin playbook from detection, with the exe-build check in the route
+    r = _named_game(tmp_path, "Gothic II", {"system/Gothic2.exe": _pe(False), "Data/Worlds.vdf": b"x"})
+    assert r["engine"]["key"] == "zengin" and r["playbook"].endswith("zengin.md")
+    assert "exe build" in r["routes"][0]["route"]
+    # Gothic 1 Remake (UE5) and Gothic III (Genome) contain "gothic 1"/"gothic ii" but aren't ZenGin
+    for name, files in (("Gothic 1 Remake", {"Gothic1Remake/Content/Paks/a.pak": b"x"}),
+                        ("Gothic III", {"Gothic3.exe": _pe(False), "Data/a.pak": b"x"})):
+        r = _named_game(tmp_path, name, files)
+        assert all(rt["playbook"] != "zengin.md" for rt in r["routes"]), name
+        assert not r["playbook"].endswith("zengin.md"), name
+
+
+def test_deep_tooling_jars_not_java_engine(tmp_path):
+    # a Ghidra/SDK tree inside the game folder must not mislabel a native game as Java
+    make(tmp_path, {"Game.exe": _pe(False),
+                    "Dev Folder/tools/thirdparty/ghidra/support/launchsupport.jar": b"x",
+                    "Dev Folder/tools/thirdparty/ghidra/gradle/gradle-wrapper.jar": b"x"})
+    hits, _ = scan.detect(scan.Index(tmp_path))
+    assert all(k != "java" for k, *_ in hits)
+    # but a jar where the game ships it (root / one level down) still detects
+    key, _ = engine_of(tmp_path / "b", {"game.jar": b"x", "jre/bin/java.exe": _pe(False)})
+    assert key == "java"
+
+
+def test_unicode_output_on_cp1252_console(tmp_path):
+    # `um kb show` must not UnicodeEncodeError when stdout isn't UTF-8
+    kb = tmp_path / "kb"
+    (kb / "games/x").mkdir(parents=True)
+    (kb / "games/x/n.md").write_text("---\ntitle: LÖVE → test\n---\n# LÖVE →\n", encoding="utf-8")
+    env = dict(os.environ, PYTHONIOENCODING="cp1252", UM_KB=str(kb),
+               PYTHONPATH=str(Path(__file__).resolve().parents[1]))
+    r = subprocess.run([sys.executable, "-m", "um", "kb", "show", "n.md"],
+                       capture_output=True, encoding="utf-8", env=env)
+    assert r.returncode == 0 and "LÖVE →" in r.stdout
 
 
 def test_vdf():
@@ -120,6 +197,14 @@ def test_steam_games_utf8(tmp_path, monkeypatch, library_name, install_name, gam
         "path": str(game_path), "workshop": None,
     }]
 
+
+def test_steam_root_from_registry(tmp_path, monkeypatch):
+    # Steam installed outside Program Files (e.g. C:\Steam): its libraryfolders.vdf, and every library in it, was never read
+    root = tmp_path / "Steam"
+    (root / "steamapps").mkdir(parents=True)
+    monkeypatch.setattr(scan, "steam_registry_root", lambda: root)
+    assert root.resolve() in scan.steam_roots()
+
 def test_known_game_longest_key_wins(tmp_path):
     # "grand theft auto v" is a substring of "grand theft auto v enhanced";
     # the more specific entry must win, not whichever lands first in the dict
@@ -129,6 +214,85 @@ def test_known_game_longest_key_wins(tmp_path):
         (d / f"f{i}.txt").write_text("x")
     r = scan.scan(str(d))
     assert r["routes"][0]["route"] == scan.KNOWN["grand theft auto v enhanced"][0]
+
+
+def test_record_encodes_and_tags_bt709(tmp_path, monkeypatch):
+    # RGB frames -> yuv420p used the BT.601 matrix untagged; browsers read HD video as BT.709 and shift colours
+    from um import win
+    seen = {}
+    monkeypatch.setattr(win, "is_wsl", lambda: False)   # under WSL, Recorder calls wslpath through the patched Popen
+
+    class FakePopen:
+        def __init__(self, cmd, **kw):
+            seen["cmd"] = cmd
+    monkeypatch.setattr(win, "ffmpeg_win", lambda *a, **k: "ffmpeg")
+    monkeypatch.setattr(win, "encoder", lambda: "libx264")
+    monkeypatch.setattr(win.subprocess, "Popen", FakePopen)
+    win.Recorder(exe="Game.exe", out=str(tmp_path / "take"), audio=False).start()
+    cmd = seen["cmd"]
+    assert "out_color_matrix=bt709" in cmd[cmd.index("-vf") + 1]
+    assert cmd[cmd.index("-colorspace") + 1] == "bt709" and cmd[cmd.index("-color_range") + 1] == "tv"
+
+
+def test_auto_hdr_detection(monkeypatch):
+    # Auto HDR on an HDR display washes out captures of SDR games; um warns from the registry setting
+    from um import win
+    prefs = {"DirectXUserGlobalSettings": "AutoHDREnable=0;SwapEffectUpgradeEnable=1;",
+             r"E:\Games\Foo\Foo.exe": "AppStatus=1;AutoHDREnable=2097;",
+             r"E:\Games\Bar\Bar.exe": "AppStatus=1;AutoHDREnable=2096;"}
+    monkeypatch.setattr(win, "_gpu_prefs", lambda: prefs)
+    assert win.auto_hdr_on("Foo.exe") and win.auto_hdr_on("foo")
+    assert not win.auto_hdr_on("Bar.exe") and not win.auto_hdr_on("Other.exe") and not win.auto_hdr_on()
+    prefs["DirectXUserGlobalSettings"] = "AutoHDREnable=1;"
+    assert win.auto_hdr_on("Other.exe") and not win.auto_hdr_on("Bar.exe")
+
+
+def test_slay_the_spire_2_is_not_sts1(tmp_path):
+    # StS2 is Godot + C#; the StS1 entry (ModTheSpire, Java) must not match it
+    d = tmp_path / "Slay the Spire 2"
+    d.mkdir()
+    for i in range(6):
+        (d / f"f{i}.txt").write_text("x")
+    route = scan.scan(str(d))["routes"][0]["route"]
+    assert route == scan.KNOWN["slay the spire 2"][0] and "ModTheSpire" not in route
+
+
+def test_online_only_matches_whole_names():
+    # a substring test told agents to stop on single-player games: Rusty Lake ("rust"), Battlefield 1942, MW2 (2009)
+    for offline in ["Rusty Lake Paradise", "Rusted Warfare", "Battlefield 1942", "Call of Duty: Modern Warfare 2 (2009)",
+                    "Deadlock: Planetary Conquest", "The Final Station", "Trusty Rusty"]:
+        assert scan.online_only(offline) is None, offline
+    for online in ["Rust", "Counter-Strike 2", "Call of Duty®", "Tom Clancy's Rainbow Six® Siege", "PUBG: BATTLEGROUNDS",
+                   "Overwatch® 2", "Deadlock", "NARAKA: BLADEPOINT"]:
+        assert scan.online_only(online), online
+
+
+def test_scan_warns_only_for_online_games(tmp_path):
+    for name, warned in [("Rust", True), ("Rusty Lake Paradise", False)]:
+        d = tmp_path / name
+        d.mkdir()
+        for i in range(6):
+            (d / f"f{i}.txt").write_text("x")
+        assert any("online competitive" in w for w in scan.scan(str(d))["warnings"]) == warned, name
+
+
+def test_ffmpeg_download_is_checksummed(tmp_path, monkeypatch):
+    import hashlib, io
+    from um import win
+    payload = b"PK fake ffmpeg zip"
+    good = hashlib.sha256(payload).hexdigest()
+    sums = f"{'0' * 64}  ffmpeg-other.zip\n{good}  ffmpeg-master-latest-win64-gpl.zip\n".encode()
+    monkeypatch.delenv("UM_FFMPEG_SHA256", raising=False)
+    monkeypatch.setattr(win.urllib.request, "urlopen", lambda url, timeout=None: io.BytesIO(sums))
+    assert win.ffmpeg_sha256() == good
+    monkeypatch.setattr(win.urllib.request, "urlretrieve", lambda url, dst: Path(dst).write_bytes(payload))
+    z = tmp_path / "ffmpeg.zip"
+    win.download_ffmpeg(z)
+    assert z.read_bytes() == payload
+    monkeypatch.setenv("UM_FFMPEG_SHA256", "ab" * 32)        # a pin wins over the published sum
+    with pytest.raises(SystemExit):
+        win.download_ffmpeg(z)
+    assert not z.exists()                                      # a bad download is deleted, never extracted
 
 
 # --------------------------------------------------------------------------- sprite
@@ -201,6 +365,68 @@ def test_kv_and_urls(tmp_path):
     res = {"images": [{"url": "https://v3.fal.media/a.png", "content_type": "image/png"}, {"url": "https://v3.fal.media/b.png"}],
            "mask_image": {"url": "https://v3.fal.media/m.png"}}
     assert [u for _, u, _ in fal._urls_in(res)] == ["https://v3.fal.media/a.png", "https://v3.fal.media/b.png", "https://v3.fal.media/m.png"]
+
+
+def test_upload_uses_cdn_token_and_explains_big_failures(tmp_path, monkeypatch, capsys):
+    # storage/upload/initiate?storage_type=gcs now answers 400 "Invalid storage type"; files over 8 MiB then failed silently
+    calls = []
+    monkeypatch.setattr(fal, "_req", lambda method, url, body=None, **k: calls.append(url) or {"token": "t", "token_type": "Bearer"})
+
+    class Resp:
+        def __init__(self, req):
+            self.req = req
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return json.dumps({"access_url": "https://v3.fal.media/files/x/a.png"}).encode()
+    sent = []
+    monkeypatch.setattr(fal.urllib.request, "urlopen", lambda req, timeout=None: sent.append(req) or Resp(req))
+    f = tmp_path / "a.png"
+    f.write_bytes(b"\x89PNG")
+    assert fal.upload(f) == "https://v3.fal.media/files/x/a.png"
+    assert "storage_type=fal-cdn-v3" in calls[0] and sent[0].full_url == fal.CDN + "/files/upload"
+    assert sent[0].get_header("Authorization") == "Bearer t" and sent[0].get_header("X-fal-file-name") == "a.png"
+
+    def fail(req, timeout=None):
+        raise fal.urllib.error.URLError("boom")
+    monkeypatch.setattr(fal.urllib.request, "urlopen", fail)
+    assert fal.upload(f).startswith("data:image/png;base64,")              # small: inline fallback
+    big = tmp_path / "big.mp4"
+    big.write_bytes(b"\0" * ((8 << 20) + 1))
+    with pytest.raises(SystemExit):
+        fal.upload(big)
+    assert "only covers files under 8 MiB" in capsys.readouterr().err  # big: says why instead of a bare exit 1
+
+
+def test_failed_download_keeps_the_request_id(tmp_path, monkeypatch, capsys):
+    # a finished (paid) job whose output URL 404s must not vanish: say which request to fetch again
+    class Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return b"ok"
+
+    def urlopen(req, timeout=None):
+        if req.full_url.endswith("big.mov"):
+            raise fal.urllib.error.HTTPError(req.full_url, 404, "Not Found", {}, None)
+        return Resp()
+    monkeypatch.setattr(fal.urllib.request, "urlopen", urlopen)
+    res = {"video": {"url": "https://v3b.fal.media/files/x/big.mov"}, "thumb": {"url": "https://v3b.fal.media/files/x/t.png"},
+           "_request_id": "req-123", "_endpoint": "fal-ai/some-model"}
+    with pytest.raises(SystemExit):
+        fal.download_outputs(res, tmp_path, "clip")
+    err = capsys.readouterr().err
+    assert "big.mov" in err and "um fal result fal-ai/some-model req-123" in err
+    assert (tmp_path / "clip_thumb.png").read_bytes() == b"ok"   # the other outputs still saved
 
 
 # --------------------------------------------------------------------------- publish
@@ -294,6 +520,17 @@ def test_kb_new_check_search(tmp_path):
     assert kb.search(root, ["boon"], route="native-hook") == []
 
 
+def test_kb_search_matches_word_starts(tmp_path):
+    root = tmp_path / "knowledge" / "games" / "x"
+    root.mkdir(parents=True)
+    for name, title in [("a.md", "Trust and frustum culling"), ("b.md", "A Rust server plugin"), ("c.md", "Rusty Lake puzzles"),
+                        ("d.md", "Patching plugin.esp")]:
+        (root / name).write_text(f"---\nkind: game\ntitle: {title}\ngame: X\n---\n# {title}\n", encoding="utf-8")
+    found = {r["title"] for r in kb.search(tmp_path / "knowledge", ["rust"])}
+    assert found == {"A Rust server plugin", "Rusty Lake puzzles"}
+    assert [r["title"] for r in kb.search(tmp_path / "knowledge", [".esp"])] == ["Patching plugin.esp"]   # punctuation-led terms match anywhere
+
+
 def test_kb_check_rejects_secrets_and_dumps(tmp_path):
     note = tmp_path / "n.md"
     code = "\n".join(f"int x{i} = {i};" for i in range(160))
@@ -301,6 +538,18 @@ def test_kb_check_rejects_secrets_and_dumps(tmp_path):
                     f"```c\n{code}\n```\n" + "FAL" + "_KEY=abcdefghijklmnopqrstuvwxyz0123\n")
     fails, _ = kb.check_note(note)
     assert any("code block" in f for f in fails) and any("FAL_KEY" in f for f in fails)
+
+
+def test_kb_impossible_date_is_reported_not_raised(tmp_path):
+    # YAML turns an unquoted YYYY-MM-DD into a date; a day that doesn't exist raises ValueError, not YAMLError
+    root = tmp_path / "knowledge"
+    (root / "techniques").mkdir(parents=True)
+    note = root / "techniques" / "t.md"
+    note.write_text("---\nkind: technique\ntitle: t\ntags: [x]\ndate: 2026-09-31\nagents: [a]\n---\n# t\n", encoding="utf-8")
+    fails, _ = kb.check_note(note, root)
+    assert any("front matter is not valid YAML" in f for f in fails), fails   # the date error's wording varies by Python
+    kb.search(root, ["t"])                                             # one bad note must not break search or index
+    kb.build_index(root)
 
 
 @pytest.mark.parametrize("url", ["https://github.com/alice/universal-modder.git", "https://github.com/alice/universal-modder",
@@ -314,7 +563,112 @@ def test_pr_head_same_repo():
     assert kb.pr_head("kb/a-b", None) == "kb/a-b"
 
 
+# --------------------------------------------------------------------------- powershell
+
+def test_ps_exe_falls_back_to_full_path(tmp_path, monkeypatch):
+    # an agent's PATH often lacks System32\WindowsPowerShell\v1.0; bare "powershell" then raises WinError 2
+    from um import common
+    exe = tmp_path / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe"
+    exe.parent.mkdir(parents=True)
+    exe.write_bytes(b"MZ")
+    monkeypatch.setattr(common, "is_wsl", lambda: False)
+    monkeypatch.setattr(common.shutil, "which", lambda name: None)
+    monkeypatch.setenv("SystemRoot", str(tmp_path))
+    assert common.ps_exe() == str(exe)
+    monkeypatch.setattr(common.shutil, "which", lambda name: "/on/path/" + name)
+    assert common.ps_exe() == "/on/path/powershell"
+
+
 # --------------------------------------------------------------------------- backup
+
+@pytest.fixture
+def backup_same_second(tmp_path, monkeypatch):
+    monkeypatch.setattr(backup, "data_dir", lambda: tmp_path / "data")
+    monkeypatch.setattr(backup.time, "strftime", lambda *args: "20261006-120000")
+
+
+def test_backup_same_second_keeps_every_snapshot(tmp_path, backup_same_second):
+    src = tmp_path / "src"
+    paths = []
+    for i in range(12):
+        make(src, {"save.dat": f"version {i}"})
+        paths.append(backup.create(str(src), name="t", note=f"take {i}"))
+
+    assert len(set(paths)) == 12
+    assert paths[0].name == "20261006-120000.zip"  # keep the existing filename format when available
+    assert backup.snapshots("t") == paths         # latest selection still works after ten collisions
+    for i, path in enumerate(paths):
+        with backup.zipfile.ZipFile(path) as z:
+            assert z.read("save.dat") == f"version {i}".encode()
+        assert backup._manifest(path)["note"] == f"take {i}"
+    assert backup.diff("t")["changed"] == []
+    make(src, {"save.dat": "modified"})
+    backup.restore("t", yes=True)
+    assert (src / "save.dat").read_text() == "version 11"
+
+
+@pytest.mark.parametrize("removed", [0, 1])
+def test_backup_after_deleted_snapshot_is_still_latest(tmp_path, backup_same_second, removed):
+    src = tmp_path / "src"
+    make(src, {"save.dat": "old"})
+    paths = [backup.create(str(src), name="t") for _ in range(3)]
+    paths[removed].unlink()
+    make(src, {"save.dat": "new"})
+    newest = backup.create(str(src), name="t")
+
+    assert newest > paths[-1]
+    assert backup.snapshots("t")[-1] == newest
+    assert backup.diff("t")["changed"] == []
+
+
+def test_backup_concurrent_creates_keep_every_snapshot(tmp_path, backup_same_second):
+    from concurrent.futures import ThreadPoolExecutor
+
+    src = tmp_path / "src"
+    make(src, {"save.dat": "world"})
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        paths = list(pool.map(lambda i: backup.create(str(src), name="t", note=str(i)), range(8)))
+
+    assert len(set(paths)) == 8
+    assert backup.snapshots("t") == sorted(paths)
+    for i, path in enumerate(paths):
+        with backup.zipfile.ZipFile(path) as z:
+            assert z.read("save.dat") == b"world"
+        assert backup._manifest(path)["note"] == str(i)
+
+
+@pytest.mark.parametrize("error", [OSError, KeyboardInterrupt])
+def test_backup_failed_create_keeps_previous_snapshot(tmp_path, backup_same_second, monkeypatch, error):
+    src = tmp_path / "src"
+    make(src, {"save.dat": "pristine"})
+    first = backup.create(str(src), name="t")
+    original = first.read_bytes()
+
+    def fail_write(*args, **kwargs):
+        raise error("interrupted backup")
+
+    monkeypatch.setattr(backup.zipfile.ZipFile, "write", fail_write)
+    with pytest.raises(error, match="interrupted backup"):
+        backup.create(str(src), name="t")
+    assert backup.snapshots("t") == [first]
+    assert first.read_bytes() == original
+
+
+def test_backup_repeated_restores_keep_undo_snapshots(tmp_path, backup_same_second):
+    src = tmp_path / "src"
+    make(src, {"save.dat": "pristine"})
+    backup.create(str(src), name="t")
+    for state in ("first take", "second take"):
+        make(src, {"save.dat": state})
+        backup.restore("t", yes=True)
+        assert (src / "save.dat").read_text() == "pristine"
+
+    undo = backup.snapshots("t-pre-restore")
+    assert len(undo) == 2
+    for path, state in zip(undo, ("first take", "second take")):
+        with backup.zipfile.ZipFile(path) as z:
+            assert z.read("save.dat") == state.encode()
+
 
 def test_backup_handles_pre_1980_timestamps(tmp_path, monkeypatch):
     import os
@@ -461,3 +815,21 @@ def test_skill_copies_match():
         assert tree(root / copy) == src, (f"{copy} differs from skills/: rm -rf .agents/skills .claude/skills && "
                                           "cp -r skills .agents/skills && cp -r skills .claude/skills")
     assert not any((root / d).exists() for d in (".gemini/skills", ".github/skills")), "agents read .agents/skills"
+
+
+# --------------------------------------------------------------------------- hooks
+
+@pytest.mark.skipif(not shutil.which("cygpath"), reason="Git Bash / MSYS only")
+def test_path_hook_writes_a_posix_root(tmp_path):
+    # Claude Code passes ${CLAUDE_PLUGIN_ROOT} as C:/...; written as is, bash splits PATH at the drive colon
+    import os
+    root = tmp_path / "um root"
+    (root / "bin").mkdir(parents=True)
+    (root / "bin" / "um").write_text("#!/bin/sh\n")
+    env_file = tmp_path / "env.sh"
+    bash = str(Path(shutil.which("cygpath")).with_name("bash.exe"))
+    hook = Path(__file__).resolve().parents[1] / "hooks" / "add-to-path.sh"
+    subprocess.run([bash, str(hook), root.as_posix()], env={**os.environ, "CLAUDE_ENV_FILE": str(env_file)}, check=True)
+    value = env_file.read_text().split('"')[1]
+    prefix = value[:value.index("/bin:$PATH")]
+    assert prefix.startswith("/") and ":" not in prefix, value

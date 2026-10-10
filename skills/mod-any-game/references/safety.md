@@ -41,9 +41,12 @@ legal advice. When a game's EULA or mod policy matters, read it (search "<publis
   - patches, diffs, and converters or installers that transform the user's own files at install time.
 - Credit loaders, libraries and references, and disclose AI use honestly. Communities react badly to
   undisclosed "vibe-coded" releases, and some (certain recomp Discords) ban AI projects.
-- Takedowns happen even without assets (SNK and a Metal Slug recomp; Activision and the H2M mod). Commercial
-  use, monetization and leaked material raise the risk sharply. Knowledge from betas and leaks is fine to use;
-  don't ship leaked code or builds, or a mod that only runs with them.
+- Takedowns happen even without assets. Take-Two had GitHub take down re3 and reVC, the reverse-engineered
+  GTA III and Vice City code, then sued their authors ([2021](https://www.pcgamesn.com/gta-3-takedown)).
+  Activision sent the H2M mod a cease-and-desist the day before its launch
+  ([2024](https://www.videogameschronicle.com/news/activision-issues-cease-and-desist-to-modern-warfare-remastered-mod-that-shot-it-back-up-the-steam-charts/)).
+  Commercial use, monetization and leaked material raise the risk sharply. Knowledge from betas and leaks is
+  fine to use; don't ship leaked code or builds, or a mod that only runs with them.
 
 ## The user's machine
 - **Back up first:** `um backup create` for saves, profiles and config, before any modded launch. Restoring

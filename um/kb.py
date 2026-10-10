@@ -114,7 +114,7 @@ def parse(path: Path) -> tuple[dict, str]:
     import yaml
     try:
         meta = yaml.safe_load(m.group(1)) or {}
-    except yaml.YAMLError as e:
+    except (yaml.YAMLError, ValueError) as e:  # ValueError: a date YAML can't build, e.g. 2026-09-31
         return {"_yaml_error": str(e)}, m.group(2)
     return (meta if isinstance(meta, dict) else {}), m.group(2)
 
@@ -136,8 +136,14 @@ def slug(s: str) -> str:
 
 # --------------------------------------------------------------------------- search
 
+def _term(t: str) -> re.Pattern:
+    """A search term that must start a word: "rust" finds "Rust" and "rusty", not "trust" or "frustum".
+    A term that starts with punctuation (".esp", ".net") still matches anywhere, so it finds "plugin.esp"."""
+    return re.compile((r"(?<![a-z0-9])" if t[:1].isalnum() else "") + re.escape(t))
+
+
 def search(root: Path, terms: list[str], game=None, engine=None, route=None, limit=10) -> list[dict]:
-    terms = [t.lower() for t in terms if t.strip()]
+    terms = [_term(t.lower()) for t in terms if t.strip()]
     res = []
     for p, meta, body in notes(root):
         if game and slug(game) not in slug(str(meta.get("game", ""))) + " " + " ".join(slug(g) for g in meta.get("games_also") or []):
@@ -154,11 +160,11 @@ def search(root: Path, terms: list[str], game=None, engine=None, route=None, lim
         low = body.lower()
         score = 0
         for t in terms:
-            score += sum(w for w, f in fields.items() if t in f.lower())
-            score += min(5, low.count(t))
+            score += sum(w for w, f in fields.items() if t.search(f.lower()))
+            score += min(5, len(t.findall(low)))
         if terms and score == 0:
             continue
-        hits = [ln.strip() for ln in body.splitlines() if ln.strip() and any(t in ln.lower() for t in terms)][:3]
+        hits = [ln.strip() for ln in body.splitlines() if ln.strip() and any(t.search(ln.lower()) for t in terms)][:3]
         res.append(dict(score=score, path=p.relative_to(root).as_posix(), title=meta.get("title"), game=meta.get("game"),
                         engine=meta.get("engine"), route=meta.get("route"), status=meta.get("status"), hits=hits))
     res.sort(key=lambda r: -r["score"])

@@ -5,8 +5,9 @@ tags: [steam-workshop, modlist, compatibility, steam-web-api, scraping, rate-lim
 agents:
 - Claude Code (Opus 5)
 - Claude Code (Opus 5.5)
-humans: [RedSuper]
-date: '2026-10-04'
+- OpenCode (DeepSeek V4.1 Flash)
+humans: [RedSuper, Selene0623]
+date: '2026-10-05'
 links: ['https://partner.steamgames.com/doc/webapi/ISteamRemoteStorage', 'https://partner.steamgames.com/doc/webapi/ISteamNews']
 ---
 # Checking Steam Workshop mods against a game version: the public API, page scraping limits, and what evidence to trust
@@ -85,6 +86,11 @@ What misled us:
   stale. Prefer forks whose title and folders name the build you run, updated after its release.
 - **A fork may keep the original's mod id.** Then both can't be installed at once without ambiguity; unsubscribe
   the original.
+- **A whole Workshop can be invalidated at once by a re-release, not by a version bump.** Saints Row IV is the
+  case the community keeps repeating: creations stopped working with the Re-Elected update, and the advice given
+  to anyone wanting to use Workshop content is to play the legacy (pre-Re-Elected) branch instead (Rel/NEKO,
+  Watch Dogs Modding Discord, 2026-10-05). Worth checking before triaging items one by one: if the game was
+  re-released under a new name or appid, an old branch can be a better target than a fix list.
 
 ## Workflow that worked
 1. Read every installed `mod.info` (all version folders) and resolve ids, dependencies and duplicate ids locally.
@@ -104,3 +110,7 @@ What misled us:
    appear as `filedetails/?id=` links, not in any `sharedfile_` attribute. Fix: regex the links and dedupe.
 4. **The user "installed" a mod but it isn't on disk.** Cause: still downloading behind a large item, or never
    subscribed. Fix: check `downloads/<app>/` and the `.acf` before adding it to a modlist.
+5. **Every item on the list reads as broken, including ones that were fine last month.** Cause: the game was
+   re-released (Saints Row IV Re-Elected) and the Workshop content was built for the legacy branch. Fix: check
+   the release history and appid before triaging items; if a legacy branch exists, target it and re-check the
+   items against that build instead of compiling a fix list.

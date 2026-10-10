@@ -4,6 +4,7 @@ rem Uses the newest Visual Studio with the C++ x64 tools; set VCVARS to another 
 setlocal
 set HERE=%~dp0
 if not defined VCVARS for /f "usebackq delims=" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VCVARS=%%i\VC\Auxiliary\Build\vcvars64.bat"
+if not exist "%VCVARS%" (echo No Visual Studio with the C++ x64 tools was found. Install "Desktop development with C++" ^(Visual Studio 2022 or its Build Tools^), or set VCVARS to your vcvars64.bat& exit /b 1)
 if not exist "%HERE%third_party\shv\ScriptHookV.lib" (echo third_party is missing: run fetch_deps.sh first& exit /b 1)
 call "%VCVARS%" >nul || exit /b 1
 if not exist "%HERE%build" mkdir "%HERE%build"

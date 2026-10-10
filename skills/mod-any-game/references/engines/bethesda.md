@@ -7,8 +7,10 @@
 
 ## Use a mod manager for isolation
 Mod Organizer 2 (MO2) runs the game in a virtual file system with profiles. It never touches `Data/`,
-unlike manual installs. Make an MO2 instance per project and a profile per experiment. Vortex is the
-alternative.
+unlike manual installs. Make an MO2 instance per project and a profile per experiment.
+[Vortex](https://github.com/Nexus-Mods/Vortex) is the alternative, and on Linux
+[Amethyst](https://github.com/ChrisDKN/Amethyst-Mod-Manager) manages mods natively. Get mod managers from these
+official pages: look-alike repos with a zip in their releases are a common way to spread malware.
 
 ## Routes
 1. **Plugins (`.esp`/`.esm`/`.esl`):** records for weapons, NPCs, quests, cells, leveled lists.

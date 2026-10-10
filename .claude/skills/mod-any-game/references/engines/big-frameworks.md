@@ -53,7 +53,8 @@ reinvent it. Check each one's GitHub/Nexus page for the version matching the gam
   - Cyber Engine Tweaks: Lua, console, overlay;
   - RED4ext: native plugins;
   - ArchiveXL / TweakXL: new items and records;
-  - WolvenKit: projects, asset export/import.
+  - [WolvenKit](https://github.com/WolvenKit/WolvenKit): projects, asset export/import;
+  - the [REDmodding wiki](https://wiki.redmodding.org/cyberpunk-2077-modding) documents all of them.
 - **The Witcher 3:** REDkit (official editor), script mods (`.ws` merged with Script Merger).
 
 ## Larian (Baldur's Gate 3)
@@ -64,7 +65,8 @@ Many strategy games ship official tools:
 - Paradox: plain-text script mods (see misc-engines.md);
 - Total War: RPFM (Rusted PackFile Manager);
 - XCOM 2: the WOTC SDK;
-- Cities: Skylines: C# mods.
+- Cities: Skylines and Cities: Skylines II: C# mods, documented on the official wikis
+  ([CS1](https://skylines.paradoxwikis.com/Modding), [CS2](https://cs2.paradoxwikis.com/Modding)).
 
 Search "<game> modding wiki" before reverse engineering anything.
 
