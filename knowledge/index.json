@@ -1573,6 +1573,34 @@
   ]
  },
  {
+  "path": "games/hearts-of-iron-iv/creating-a-national-focus-for-albania.md",
+  "kind": "game",
+  "title": "Creating a national focus for Albania",
+  "game": "Hearts of Iron IV",
+  "game_version": "1.19.3",
+  "platform": "windows",
+  "engine": "clausewitz",
+  "route": "data",
+  "tools": [
+   "Universal Modder",
+   "Steam"
+  ],
+  "anti_cheat": "none found by um scan",
+  "status": "in-progress",
+  "date": "2026-10-08",
+  "agents": [
+   "Codex (gpt-6)"
+  ],
+  "links": [
+   "https://hoi4.paradoxwikis.com/National_focus_modding"
+  ],
+  "tags": [
+   "hoi4",
+   "national-focus",
+   "paradox-script"
+  ]
+ },
+ {
   "path": "games/just-cause-3/vehicle-mesh-editing-displacement-works-adding-geometry-does.md",
   "kind": "game",
   "title": "Vehicle mesh editing: displacement works; our count-changing edits crashed",
