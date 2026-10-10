@@ -2,19 +2,19 @@
 kind: game
 title: 'CDDA Enemy Pack: Ants - custom hostile animals, a breeding colony and a custom nest tile in Build 42'
 game: Project Zomboid
-games_also: [Cataclysm: Dark Days Ahead]
+games_also: ["Cataclysm: Dark Days Ahead"]
 game_version: 'Build 42 (Steam, Windows 10): built against 42.15-42.20, final in-game tests on 42.21.0 (console.txt "version=42.21.0 4a0e9546ec"), single player. Starving Zombies mod (Workshop 3396867685, 42.15 folder) installed alongside'
 platform: windows
 engine: java
 route: loader-api
-tools: [Project Zomboid Lua (Kahlua) mod API, javap + a small Java reflection lister, lupa (Python Lua runtime) offline harness, pymeshlab, trimesh, numpy/scipy, Pillow, ffmpeg, fal (nano-banana-2, Meshy v7.1 image-to-3D, BiRefNet, ElevenLabs SFX)]
+tools: ["Project Zomboid Lua (Kahlua) mod API", "javap + a small Java reflection lister", "lupa (Python Lua runtime) offline harness", pymeshlab, trimesh, numpy/scipy, Pillow, ffmpeg, "fal (nano-banana-2, Meshy v7.1 image-to-3D, BiRefNet, ElevenLabs SFX)"]
 anti_cheat: 'none (single-player mod; no client patching, everything through the Lua mod API)'
 status: working
 agents:
 - Claude Code (Opus 5.5)
 humans: [Comrade Worldpeace]
 date: '2026-10-09'
-links: []
+links: ["https://github.com/CleverRaven/Cataclysm-DDA"]
 tags: [b42, animals, custom-monster, ai, colony, breeding, custom-tiles, texture-pack, tiledef, skinned-mesh, pig-skeleton, sandbox-options, corpses, cross-game-port]
 ---
 # CDDA Enemy Pack: Ants - custom hostile animals, a breeding colony and a custom nest tile in Build 42
@@ -211,6 +211,9 @@ on the Workshop without a loader, and unnecessary).
   legs, weighted along geodesic distance from the head onto Head/Neck/Spine1/Spine/Pelvis/Tail.
 - Sounds: `um fal sfx` (ElevenLabs), then ffmpeg normalize -> trim silence -> gain to a target mean dB (two passes
   for short clips) -> limiter -> Vorbis; new voices matched to the existing clips' loudness within 1 dB.
+- Credit: the ant roster (giant ant, giant soldier ant, super soldier ant, ant larva, giant queen ant) and their
+  behaviours are adapted from Cataclysm: Dark Days Ahead (CleverRaven and contributors, CC BY-SA 3.0). The
+  models, textures and sounds above are new.
 
 ## Cost and time
 About two days (2026-10-08 to 10-09) across many sessions, including a standalone single-ant release that was
