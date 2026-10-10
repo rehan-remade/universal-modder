@@ -610,6 +610,44 @@
   ]
  },
  {
+  "path": "games/cars-fast-as-lightning/unlimited-coins-and-gems-in-cars-fast-as-lightning-1-3-2-ios.md",
+  "kind": "game",
+  "title": "Unlimited coins and gems in Cars: Fast as Lightning 1.3.2 (iOS) by runtime-hooking a stripped C++ binary",
+  "game": "Cars: Fast as Lightning",
+  "games_also": [],
+  "game_version": "1.3.2 (internal build 1722:53609:1.3.2b:ios:appstore), decrypted IPA, on iOS 16.3.1 rootless jailbreak",
+  "platform": "other",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "Ghidra 12.1.3 + PyGhidra",
+   "capstone 5",
+   "theos (master) + theos/sdks iPhoneOS16.5.sdk",
+   "GitHub Actions macos-14",
+   "Frida (earlier prototype, abandoned)"
+  ],
+  "anti_cheat": "none found client-side; game has a cloud save and server-driven ban/punish strings, but no balance signature or client-side validation was located. Offline-capable single player.",
+  "status": "working",
+  "agents": [
+   "DeepSeek Harness (deepseek-flash)"
+  ],
+  "humans": [],
+  "date": "2026-10-10",
+  "links": [],
+  "tags": [
+   "ios",
+   "jailbreak",
+   "theos",
+   "tweak",
+   "ghidra",
+   "arm64",
+   "stripped-symbols",
+   "mshookfunction",
+   "obfuscated-currency",
+   "gameloft"
+  ]
+ },
+ {
   "path": "games/cities-skylines/cities-skylines-modding-api-and-container-formats.md",
   "kind": "game",
   "title": "Cities: Skylines 1 and 2 modding: official APIs, editors, and the .crp/.locale containers",
