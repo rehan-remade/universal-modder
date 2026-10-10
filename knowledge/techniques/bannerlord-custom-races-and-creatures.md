@@ -46,15 +46,14 @@ Evidence tags: **[V]** seen in the running game or by a byte-exact round trip, *
   `_poses`, `_villager`, `_lord`, tavern and carry sets: **88 `as_human_*` sets, 7,649 actions**); `MBGlobals.GetActionSet` THROWS when
   one is missing (about 35 call sites of `FaceGen.GetMonsterWithSuffix`). A clip must exist for EVERY action type of the human set
   or the engine plays nothing; races copy all human sets and re-point only actions that have a clip.
-- **28 biped bone order.** Holsters (`holster_bone="biped_*"`), melee hit chains (right shoulder 21 -> hand 27, left 14 -> 20) and
-  C# `HumanBone` lookups resolve by the HUMAN biped index, so the first 28 bones of any humanoid skeleton must be in human biped
-  order (extras after 27). Hero rigs of 90 to 122 bones are 27 body + face + finger bones; dropping face and fingers leaves 28 to 36.
+- **28 biped bone order:** see "What the engine assumes about a human" in the asset note (first 28 bones in human biped order,
+  extras after 27). Hero rigs of 90 to 122 bones are 27 body + face + finger bones; dropping face and fingers leaves 28 to 36.
 - **Movement.** `movement_sets.xml` has 18 slot actions (idle, forward, backward, strafes, rotate, adders); the engine caches
   per-direction speed = distance per cycle / duration. Native locomotion clips are authored IN PLACE; speed comes from the agent and the
   clip's `bip_mov_ik` distance block, not the root channel. Recipe: one FBX per movement sequence, cycles in place, `bip_mov_ik` =
   metres per cycle measured from the planted foot.
-- **Key units.** Clip ranges are in stored keys; the editor resamples some imports at about 12.5 keys per second, others one per
-  frame. Measure the key rate per rig, or hit windows land on the wind-up instead of the contact frame.
+- **Key units:** see "Clip record" in the asset note. Measure the key rate per rig, or hit windows land on the wind-up instead of the
+  contact frame (gotcha 3).
 - **Layers.** Channel 0 is movement, channel 1 the upper body (ready, aim, release, reload, defend); the skeleton's per-bone
   `lowerbody` flag decides which bones channel 0 keeps. Never set `enforce_*` flags on ready, release, reload or defend clips.
 - **Combat clips** are written in copy mode from the Native clip of the same action. The hit window is `combat_parameters.xml`
@@ -69,9 +68,9 @@ Evidence tags: **[V]** seen in the running game or by a byte-exact round trip, *
   `AgentVisuals.GetBoneEntitialFrame` returns stale or NaN frames: call `Skeleton.ForceUpdateBoneFrames` first.
 - **Loop flags.** Conversation, inventory and pose "start" clips run once and rely on `continue_with` and the loop clip's `cyclic`
   flag; battles hide a missing one because movement re-issues idle.
-- **Face builder** runs for EVERY agent visual. `face_meta_mesh` first submesh is read unchecked; `facegen_apply_static_morph` runs
-  once per `<deform_keys>` entry and needs morph data; hair/beard lists are bound-checked, face, mouth, eyebrow and tattoo lists are
-  not. Put the fixed head in `body_meta_mesh`. `FaceGenVM` throws in randomise for a female skin with 0 beards.
+- **Face builder:** see "Skin and face" in the asset note and TN 13. In addition, hair and beard lists are bound-checked (face,
+  mouth, eyebrow and tattoo lists are not); put the fixed head in `body_meta_mesh`. `FaceGenVM` throws in randomise for a female skin
+  with 0 beards.
 - Tracks carry rotations per bone plus root translation only: non-root bone translations never animate; design rigs around rotations.
 - **Retargeting a foreign body onto Bannerlord joints:** fit each bone with an affine, move vertices by linear blend skinning. BL2 is
   right-handed, forward +X, up +Z; Bannerlord agents face +Y, left at -X. Native clips cannot drive a foreign skeleton (bind rotations
@@ -104,25 +103,16 @@ Evidence tags: **[V]** seen in the running game or by a byte-exact round trip, *
 - **Flight.** An agent cannot be held in the air: `TeleportToPosition` every tick is pulled back down. Fly a separate `GameEntity`.
 
 ## Gotchas
-1. **Symptom.** Soldiers slide with frozen feet, later drift and snap each cycle. **Cause:** locomotion baked fully in place froze the feet;
-   a multi-sequence take with baked travel drifted; Native run and walk clips have NO travel in the root channel. **Fix:** clips in place, one
-   single-take FBX per sequence, `bip_mov_ik` = metres per cycle from the planted ankle's speed x duration; turns get 0. [TN 6, V]
-2. **Symptom.** Every animation plays the same death pose. **Cause:** the editor's multi-take FBX import stores the first take's keys under every
-   take name. **Fix:** one take per FBX; verify imported keys against an FK dump, and look at the pose, not only foot ranges. [TN 5, V]
+1. **Soldiers slide with frozen feet, later drift and snap each cycle.** See TN 6.
+2. **Every animation plays the same death pose.** See TN 5.
 3. **Symptom.** Swings land on the wrong part of the arc. **Cause:** clip ranges are in stored keys and rigs store different rates (12.548 keys/s
    for one bake, one per frame for others). **Fix:** measure the key rate per rig and fit ranges in keys. [V]
 4. **Symptom.** Conversation, inventory and party-screen figures fall to the reference pose after 2 to 3 s. **Cause:** start clips run once; loop
    clips lacked `cyclic` and the start clip lacked `continue_with`. **Fix:** looping copies with Native's stock flags and follow-ups. [V]
-5. **Symptom.** AI troops with new combat clips deal no damage; troops swap weapons back ("Weapon wield interrupted"). **Cause:** plain clips on
-   attack/aim/equip actions: no combat parameter (window start defaults to 1.0), no step points, no `keep` flag. **Fix:** copy mode from the Native
-   clip (combat parameter, flags, blend times, follow-up, step points), keeping only animation, range and pairing. [TN 21, V]
-6. **Symptom.** Managed throw in the campaign UI, map or town code for a custom race. **Cause:** `MBGlobals.GetActionSet` throws on a missing
-   `as_<monster>[_female]<suffix>` set; `<race>_settlement/_slow/_fast/_child` monsters are looked up by name. **Fix:** generate all 88 suffix sets
-   and the four monster variants from Native's human variants. [TN 19, V]
-7. **Symptom.** Holstered items on the wrong bone, UI code reading past the bone array, hit chain misaligned. **Cause:** engine and managed code
-   resolve holsters, item bones and hit bones by HUMAN biped index. **Fix:** first 28 bones in biped order, extras after 27. [TN 16]
-8. **Symptom.** A Native clip on a custom skeleton plays garbage or crashes. **Cause:** the client checks neither bone count nor owner skeleton.
-   **Fix:** every clip stays on its own skeleton. [TN 22]
+5. **AI troops with new combat clips deal no damage; troops swap weapons back ("Weapon wield interrupted").** See TN 21.
+6. **Managed throw in the campaign UI, map or town code for a custom race.** See TN 19 (88 suffix sets and four monster variants).
+7. **Holstered items on the wrong bone, UI code reading past the bone array, hit chain misaligned.** See TN 16.
+8. **A Native clip on a custom skeleton plays garbage or crashes.** See TN 22.
 9. **Symptom.** Melee does about 1 damage per swing; blows register at attack progress 0.00 to 0.04 or with the back of the weapon. **Cause:** the
    race builder gave every race the CROSSBOW AIM frame on the weapon bone, so the blade swung sideways (blade reach 0.59 of Native). **Fix:** a per-rig
    grip rotation on the weapon bone searched over the melee release clips (reach 0.99); recompute landed blows with the engine's `ComputeRawDamage` if
@@ -130,12 +120,8 @@ Evidence tags: **[V]** seen in the running game or by a byte-exact round trip, *
 10. **Symptom.** AI never fires although it has line of sight; barely shoots. **Cause:** the AI shoot check traces from the eye (head-look bone frame +
     eye offset, moved back 0.45 x scale) and the eye sat inside the model's own mesh; the aim pose held the gun beside the body. **Fix:** eye at standing
     height, 5 cm in front of the front surface; a torso-only aim layer with the gun in front at chest height. [V]
-11. **Symptom.** Riders float 0.45 m above a custom mount's back with straight legs. **Cause:** rider clips are absolute from the mount origin; the
-    creature was modelled on the camel (rider pelvis 2.13 m) while its back is at horse height; `rider_sit_bone` does not lift or lower the rider.
-    **Fix:** `BASE = "horse"` (horse sets, usage rows, rider clips); horse gait speeds then apply. [TN 24, V]
-12. **Symptom.** Gait crash at creature spawn in an own quadruped set. **Cause:** gait clips need `quad_movement` as the FIRST of the (at most two)
-    parameter entries; the runtime logs "Clip usage data couldn't assigned. Limit ... is 2!". **Fix:** copy the Native horse clip's entry first, with your
-    own loop displacement. Not sufficient alone: see the canonical-id gotcha in the [game note](../games/mount-and-blade-ii-bannerlord/bannerlord-borderlands-2-total-conversion.md). [TN 9, V]
+11. **Riders float 0.45 m above a custom mount's back with straight legs.** See TN 24.
+12. **Gait crash at creature spawn in an own quadruped set.** See TN 9, and TN 8 for the canonical-id cause.
 13. **Symptom.** A player cannot switch from a heavy gun to melee on a creature mount; a mounted player cannot reload. **Cause:** native refuses the
     animated switch AWAY from a crossbow-class gun on a mount with `FamilyType` of 10 or more (182 of 210 refused; on foot 0), cause unknown; the
     generator wrote `CantReloadOnHorseback` on guns copied from the heavy crossbow usage. **Fix:** Harmony prefixes on `Agent.TryToWieldWeaponInSlot` and
@@ -151,9 +137,8 @@ Evidence tags: **[V]** seen in the running game or by a byte-exact round trip, *
     `GameEntity` built from the creature's skinned metamesh and skeleton along a precomputed arc to a navmesh landing spot; swap back in the same tick;
     far entities `DoNotTick` with hand ticks; fail-safe to a ground boss on any exception. Enemy AI aims at the parked agent's shadow, so count bullets at
     an airborne flyer as aimed. [V]
-17. **Symptom.** Small troops are missed by the AI and barely hit. **Cause:** scale 0.45 to 0.5 gives tiny hit capsules (a median-distance fit covers
-    31 to 67 percent of vertices). **Fix:** never scale below 0.65; refit capsules to the 92nd percentile (90 to 97 percent coverage; asset note, Hit
-    capsules). [TN 29; offline measurement]
+17. **Symptom.** Small troops are missed by the AI and barely hit. **Cause:** scale 0.45 to 0.5 gives tiny hit capsules. **Fix:** never scale
+    below 0.65; for the capsule refit see TN 29. [offline measurement]
 
 ## Seen in
 - [Borderlands 2 as a Bannerlord total conversion](../games/mount-and-blade-ii-bannerlord/bannerlord-borderlands-2-total-conversion.md), where every item here was learned.

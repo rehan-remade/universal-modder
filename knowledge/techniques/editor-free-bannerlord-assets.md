@@ -13,8 +13,8 @@ agents:
 - Claude Code (Opus 5.5)
 - Claude Code subagents (Sonnet 5.5)
 humans: ["@theartur2000"]
-date: '2026-10-05'
-links: ["https://github.com/rehan-remade/universal-modder/tree/main/examples/bannerlord-editor-free-sdk"]
+date: '2026-10-07'
+links: []
 tags: [bannerlord, tpac, rdc, runtimedatacache, packing, load-time, hang, ik, skeleton, ragdoll, animation, clip, action-set, project-mbproj, bone-limit, hit-capsule, minidump, asset-pipeline, total-conversion, custom-race, quadruped]
 ---
 # Editor-free assets for Mount & Blade II: Bannerlord: writing .tpac packages, skeletons and animation clips offline
@@ -261,6 +261,37 @@ A skeleton package holds one skeleton resource with two data entries.
 - Find the offenders offline from the skeleton's user data (hit capsule present, no `ik` joint, an ancestor
   with one). On 14 of our skeletons that was 146 bones.
 
+### Axes, materials, icons and colour grades
+From the Borderlands 2 total conversion
+([game note](../games/mount-and-blade-ii-bannerlord/bannerlord-borderlands-2-total-conversion.md)).
+- **Axes and units.** Character space is Z up, +Y forward, the character's left is -X. Native melee weapons run
+  along game +Z from the grip at the origin; axe heads point toward -X; blades lie flat in XZ; shields lie flat in
+  XY with the front on +Z. The editor keeps Blender's axes turned 180 degrees about Z (game = (-x, -y, z)), so a
+  mesh built on Blender +Z becomes game Z 0..L. Export weapons at global scale 0.01 (the editor imports with unit
+  None; a cm-based Blender file gives a 58 m axe). umodel glTF is 1 unit = 1 m. Read the imported bounding boxes to
+  learn the real axes, do not guess.
+- **Skinned FBX for the editor route (history):** Z up, +Y forward, primary bone axis Y, secondary X, no leaf
+  bones, armature named like the kit's `human_skeleton_notused`. A Y-up export plus the editor's "Convert to Z-up"
+  tore the arms; rewriting the rest orientation as PreRotation was a dead end. Our own writers made this moot.
+- **Materials:** shader `pbr_shading`; tick the `skinning` vertex layout for skinned meshes (else black and frozen
+  in bind pose); a normal map goes in the Bumpmap slot; a SpecularMap is mandatory (R specular, G gloss, B
+  occlusion; a neutral 40/50/255 texture works) or the mesh renders black in shade; static props have skinning off.
+  Stable shader guids: `pbr_shading` 71b6a0ce4f381142a1a648a29a083c8f, `gui_color_and_stroke`
+  31fd6eb92771ec468648b28d23ece108. Native normal-map convention: R = 128 minus slope along x, G = 128 minus slope
+  along the row (rows down). Native spec layout: R metalness, G gloss, B occlusion.
+- **Inventory thumbnails are not bbox-fitted for crossbow-class items.** `ItemThumbnailCache.GetItemPoseAndCamera`
+  puts the mesh at the item-tableau scene's `crossbow_frame` and renders from the child camera `crossbow_cam` (FOV
+  15, 256x120). A gun must lie along +Z with its top on +Y or its icon is a blob cut by the icon edge. Horses use
+  `horse_cam` and frame a horse-sized window, so a low creature shows only its back. Shields and thrown items use
+  the "goods" fit. Holster meshes double as the icons of ammo stacks.
+- **Empty packages:** a geometry package of about 325 bytes holds no mesh; a 36-byte texture package is an
+  interrupted import.
+- **Colour-grade LUT:** a 256x16 strip (x = red + 16*blue, y = green), import flags Do Not Compress, no mips, Dont
+  Degrade, "For Colorgrade". On the campaign map every region of `worldmap_color_grades.xml` (registered in
+  `project.mbproj`) maps to it; in missions `Scene.SetColorGradeBlend`, and the grade must be applied again after
+  the atmosphere loads. A heavy grade turns greens ochre, so pre-compensate any colour you author (a green beam
+  went in as teal).
+
 ## Packing
 One asset per package is what the editor writes, and it does not scale: the game's start-up cost is per file.
 - **Cost.** At start-up the engine opens every `.tpac` in the module's `Assets` folder (header and metadata) and
@@ -291,32 +322,25 @@ One asset per package is what the editor writes, and it does not scale: the game
   write to a loose set kept outside `Assets` (the game never reads it) and then repack only the groups whose
   members changed (usually one to three groups), verify, and copy over; a revert command restores the loose
   layout. The editor sees only the merged packages, so unpack first if it is ever needed again.
-```
-python tpac_pack.py scan | pack | verify | status | repack | unpack | native-check | logcheck
-```
+- Our packer (part of the author's tooling, not published here yet) has scan, pack, verify, status, repack, unpack,
+  native-check (rebuild Native's packages from their parsed parts) and logcheck (package read time and
+  missing-asset counts from the game's logs) steps.
 
 ## Build steps
-A condensed session. `bl2sdk.py` is our CLI; it stages everything and touches the module only on `install`.
-```
-cd scripts
-python bl2sdk.py texture my_gun_d.png               # suffix picks usage: _d albedo, _n normalmap, _s specular, _h height
-python bl2sdk.py material my_gun --diffuse my_gun_d --normal my_gun_n --static
-python bl2sdk.py mesh my_gun.fbx --name my_gun --material my_gun      # skinned when the FBX has a skin
-python bl2sdk.py anim my_run_take.fbx                                   # one take per FBX file
-python bl2sdk.py skeleton rig.gltf --name my_skeleton --type human      # <= 64 bones, root gets a ragdoll body
-python bl2sdk.py clips my_clips.txt --single                            # clips on the staged animations
-python bl2sdk.py clip-cache "my_clip_*"                                 # their runtime caches
-python bl2sdk.py verify true-race my_race_stage                         # NaN, bone-count, capsule, joint rules
-python bl2sdk.py install --dry
-python bl2sdk.py install                                                # game closed; backup + manifest
-python bl2sdk.py revert                                                 # undo the last install
-```
-- A whole race is one script run (`true_race.py <race>`, about 7 minutes after the animation lookup is
-  cached); a creature is `true_creature.py build|verify|gen`. Each builds skeleton, mesh, material, textures,
-  animations, clips, caches and the XML (action sets for every suffix, monster, race, troop), stages them, and
-  runs its validators before anything is installed.
-- `install` refuses to run while the game is running, copies stage files into the module with a backup and a
-  manifest, and `revert` restores. Install also refuses a stage whose `project.mbproj` ids are not canonical.
+The project's CLI, build scripts and installer are the author's own tooling and are not published here yet (the
+author may link them later). What they do, in order:
+- **Stage, never write into the module directly.** Textures (the usage, albedo / normalmap / specularmap /
+  heightmap, picked from a `_d` / `_n` / `_s` / `_h` file suffix), materials (diffuse and normal slots, static or
+  skinned), meshes (skinned when the FBX has a skin), animations (one take per FBX file), skeletons (at most 64
+  bones, a ragdoll body on the root), clips on the staged animations, then their runtime caches.
+- **Validate the stage** (NaN, bone-count, capsule and joint rules; see Verification), then a dry-run install.
+- A whole race is one script run (about 7 minutes after the animation lookup is cached); a creature has
+  separate build, verify and generate steps. Each builds skeleton, mesh, material, textures, animations, clips,
+  caches and the XML (action sets for every suffix, monster, race, troop), stages them, and runs its validators
+  before anything is installed.
+- Install refuses to run while the game is running, copies stage files into the module with a backup and a
+  manifest, and a revert command restores. Install also refuses a stage whose `project.mbproj` ids are not
+  canonical.
 - Clip rules the writers enforce, all found by crashes: movement-slot clips carry `bip_mov_ik` (decided by the
   action slot, not the clip name); quadruped gait clips carry `quad_movement` as the first parameter entry;
   combat, equip and defend clips are written in **copy mode** (the Native clip of the same action is copied and
@@ -365,20 +389,24 @@ def partner_problems(sets, clips, native_partner, native_counterpart):
   crash, upright, with correct gait, after the movement and face fixes; 13 variant skins x 2 passed in one run
   (0 crashes, same peak memory as a plain 1:1 battle); a quadruped skag with riders galloped without a crash once
   registration was canonical.
-- **Crash triage.** Every crash was handled the same way: Windows Error Reporting event for the faulting
-  offset, `%LOCALAPPDATA%\CrashDumps\*.dmp` read with the python `minidump` package (registers, the request
-  struct, stack return addresses), then Ghidra on a copy of the DLL for the function at that offset, then a data
-  or C# fix, then a validator rule so it cannot come back. For "Faulting module unknown, 0xc0000005": the
-  exception context in the dump is the WER handler, so scan the stack for the fault address; WER keeps 256 bytes
-  of code around it, enough to decode by hand and match a managed method. Often it is a vanilla managed
-  `NullReferenceException` inside a native callback, not your native crash.
-- **Hangs are not crashes.** A frozen game writes no crash report. Two ways to get a dump of the live process:
-  an external `MiniDumpWriteDump` (Task Manager's "create dump file" does the same), and an in-process watchdog
-  thread that notices the main thread has not ticked for 30 s and writes ONE dump of its own process (flags:
-  thread info, indirectly referenced memory, process thread data, unloaded modules, memory info; stacks and what
-  they point at, no heap, tens of MB), on a short-lived thread with a join timeout. Read it with the python
-  `minidump` package: take every thread's registers and stack, find the thread that is busy in native frames,
-  and note which thread the main thread is waiting on (gotcha 30 was found this way).
+- **Crash triage.** Every crash was handled the same way: Windows Error Reporting event for the faulting offset,
+  `%LOCALAPPDATA%\CrashDumps\*.dmp` read with the python `minidump` package (registers, the request struct, stack
+  return addresses), then Ghidra on a copy of the DLL for the function at that offset, then a data or C# fix, then
+  a validator rule so it cannot come back. For "Faulting module unknown, 0xc0000005": the exception context in the
+  dump is the WER handler, so scan the stack for the fault address (we found three copies); WER keeps 256 bytes of
+  code around it, enough to decode by hand and match a managed method, and the managed stack is in the game's log.
+  WER dumps have no heap and no thread info, so thread-walking scripts fail on them. Often it is a vanilla managed
+  `NullReferenceException` inside a native callback, not your native crash (two such cases are in the game note's
+  "Missions and sieges").
+- **Hangs are not crashes.** A frozen game writes no crash report. Two ways to get a dump of the live process: an
+  external `MiniDumpWriteDump` (Task Manager's "create dump file" does the same), and an in-process watchdog thread
+  that notices the main thread has not ticked for 30 s and writes ONE dump of its own process (flags 0x1960: thread
+  info, indirectly referenced memory, process thread data, unloaded modules, memory info; stacks and what they
+  point at, no heap, tens of MB), on a short-lived thread with a join timeout, skipped with under 3 GB free. On any
+  tick gap it first logs the main thread's managed stack: an empty stack with a busy CPU means the engine itself
+  hangs. Without a watchdog, hangs only show up as undecided fights or time caps. Read the dump with the python
+  `minidump` package: take every thread's registers and stack, find the thread that is busy in native frames, and
+  note which thread the main thread is waiting on (gotcha 30 was found this way).
 - **Probe artefacts.** Off-screen agents' bone frames are stale or NaN (the skeleton is not ticked while
   culled). Filter samples where both feet report the same point or five consecutive samples are identical
   before believing a "foot snap" number.
@@ -401,9 +429,10 @@ Each is symptom, cause, fix. Addresses are for the client build pinned in Setup.
 4. **Crash at first agent spawn after rewriting a clip.** Cause (seen once, mechanism not traced): a rewritten
    clip got new ids, leaving the old cache, named after the old package guid, next to a clip of the same name.
    Fix: a rewrite keeps the package and item guids so the cache name stays valid.
-5. **Every animation plays the same death pose.** Cause: the editor's multi-take FBX import stores the first
-   take's keys under every take name. Fix: one take per FBX file (or one combined take addressed by key ranges,
-   which then needs its own care, see 6).
+5. **Every animation plays the same death pose.** Cause: the editor's multi-take FBX import stores the first take's
+   keys under every take name. Fix: one take per FBX file (or one combined take addressed by key ranges, which then
+   needs its own care, see 6). Check imported keys against an FK dump of the source and look at the pose, not only
+   at foot ranges.
 6. **Soldiers slide with frozen feet, later drift and snap each cycle.** Cause, in three steps. Locomotion baked
    fully in place froze the feet (a clip on Native's own run animation cycled fine, so the clip files were not at
    fault); pelvis travel matched to the stride unfroze them. A combined multi-sequence take then drifted (baked
@@ -411,36 +440,40 @@ Each is symptom, cause, fix. Addresses are for the client build pinned in Setup.
    showed no travel in their root channel at all. Fix: clips in place, one single-take file per sequence, and
    `bip_mov_ik` value 1 = metres per cycle, measured as the planted ankle's backward speed times the duration;
    turns get 0.
-7. **Crash at the first walking agent, `+0x759c47`.** Cause: the movement-set code reads each movement slot's
-   clip `bip_mov_ik` entry with no null check (reads distance from address 8); clips written as plain clips
-   have none. Native gives the entry to every clip in slots forward through rotate. Fix: decide by action slot,
-   not clip name: every clip used in a forward, backward, strafe or rotate slot of any movement set is a
-   movement clip. Do not put an idle clip in a movement slot (distance 0 makes every direction speed 0).
+7. **Crash at the first walking agent, `+0x759c47`** (3 to 4 s after a custom-race agent spawns, when it starts to
+   move). Cause: the movement-set code reads each movement slot's clip `bip_mov_ik` entry with no null check (reads
+   distance from address 8); clips written as plain clips have none. Native gives the entry to every clip in slots
+   forward through rotate. Fix: decide by action slot, not clip name: every clip used in a forward, backward,
+   strafe, rotate, `patrol_walk` or turn slot of any movement set is a movement clip, with real metres per cycle.
+   Do not put an idle clip in a movement slot (distance 0 makes every direction speed 0).
 8. **Crash while spawning own-skeleton quadrupeds, `+0x760967`, then `+0x636b6e`, even for an exact copy of
-   Native's horse set on Native clips.** Cause (very probably; the fix changed several things at once, see
-   Not verified): our `project.mbproj` entries used made-up ids
-   (`soln_<mymod>_action_sets`, ...). The engine only merges canonical ids, so our sets and usage set were never
-   loaded and the monster named sets that did not exist. About a day went into native-RE theories about pace
-   tables (including a plausible "lookup miss on pace 1" story) before this was found by reading how two big
-   mods (The Old Realms, Shokuho) register theirs. Fix: canonical ids only, append your sets to the
-   engine files under those ids, add the one genuinely new file (usage sets) with its own line, and put a
-   validator in `install` that rejects non-canonical ids. At runtime log whether each monster's action set and
-   usage set exist (`IsValid`) at every mission start. Lesson: before reverse-engineering a crash that involves
-   a new id, prove the file loaded.
-9. **Quadruped gait clips: `quad_movement` entry.** The movement code reads it unchecked. Copy the Native
-   horse clip's entry for the same action, as the FIRST parameter entry (the runtime keeps only two), with your
-   own loop displacement. Not sufficient alone (see 8), and Native has a few clips (backward walk, dash, one
-   jump end) that lack it.
+   Native's horse set on Native clips.** Cause (very probably; the fix changed several things at once, see Not
+   verified): our `project.mbproj` entries used made-up ids (`soln_<mymod>_action_sets`, ...). The engine only
+   merges canonical ids, so our sets and usage set were never loaded and the monster named sets that did not exist.
+   About a day went into native-RE theories about pace tables (including a plausible "lookup miss on pace 1" story)
+   before this was found by reading how two big mods (The Old Realms, Shokuho) register theirs. Fix: canonical ids
+   only, append your sets to the engine files under those ids, add the one genuinely new file (usage sets) with its
+   own line, and put a validator in `install` that rejects non-canonical ids. At every mission start log, for each
+   custom monster, `MBActionSet.GetActionSet(name).IsValid` and `Agent.GetMonsterUsageIndex(usage) >= 0`, and
+   refuse to spawn agents that fail either. Lesson: before reverse-engineering a crash that involves a new id,
+   prove the file loaded.
+9. **Quadruped gait clips: `quad_movement` entry.** The movement code reads it unchecked. Copy the Native horse
+   clip's entry for the same action, as the FIRST parameter entry (the runtime keeps only two and logs `Clip usage
+   data couldn't assigned. Limit ... is 2!` for the rest), with your own loop displacement. Not sufficient alone
+   (see 8), and Native has a few clips (backward walk, dash, one jump end) that lack it.
 10. **Crash at melee contact, `+0x66d5a9`, and in AI melee decisions.** Cause: melee release, blocked and
     quick variants are looked up in a weapon-balance table keyed by clip index; a clip not registered in it
     yields a null entry. Registration happens when a clip's paired-animation string names the clip itself (175
     Native clips do). Copy mode had cleared the string, so none of the 284 table actions had a registered clip.
     Fix: set the paired string to the clip's own name.
-11. **Process dies at startup in "Initializing items", ucrtbase `0xc0000409`.** Cause: after fix 10, the
-    registration copies the clip name into a 64-byte buffer with `strcpy_s`; a name of 64 characters or more
-    fails fast (420 of our clips were 64 to 78). Native's longest is exactly 63. Fix: every clip and animation
-    name at most 63 characters (abbreviate systematically, add a hash tail for uniqueness); the validator
-    rejects longer.
+11. **Process dies at startup in "Initializing items", ucrtbase `0xc0000409`, even after rolling back.** Cause:
+    after fix 10, the registration copies the clip name into a 64-byte buffer with `strcpy_s`; a name of 64
+    characters or more fails fast (420 of our clips were 64 to 78 characters; counts from 420 to 1,280 such names
+    were seen over the project). Native's longest is exactly 63. Two more causes were found in the same crash: a
+    clip-cache size computed with the 28-bone constant instead of the skeleton's real bone count, and 8,470 stale
+    long-named clips left in the clip folder. Fix: every clip and animation name at most 63 characters (abbreviate
+    systematically, add a hash tail for uniqueness); the validator rejects longer; compute cache sizes from the
+    real bone count; move stale clips out of the folder.
 12. **Crash when an agent on a custom skeleton raises a shield, `+0x669cc5`.** Cause: the engine requests the
     defend clip with a blend factor of 0.5 whenever the off hand holds a weapon that can block ranged (every
     shield), then looks up the clip's `blends_with` action unchecked; -1 reads a heap word as a clip index. Native
@@ -454,17 +487,22 @@ Each is symptom, cause, fix. Addresses are for the client build pinned in Setup.
     skin's deform keys to a face mesh that has no morph targets (a placeholder), reading half-floats near
     address 0. Fix: empty `<deform_keys />` on every skin of a no-facegen race; keep the other lists at the
     human count.
-14. **NaN bone frames, eye position NaN, damage `int.MinValue`, only on AI agents.** Cause (inferred from the
-    code, then confirmed by the data fix): the monster's `spine_lower_bone` was the skeleton root, which has no
-    joint; the anim-system init walks from the head-look bone up to that bone reading a per-bone record with
-    index -1 and no check, producing garbage look-rotation shares. Fix: no bone from `head_look_direction_bone`
-    down to `spine_lower_bone` may be the root or lack a ragdoll joint to its parent; give the rig a real
-    chain (pelvis, spine, chest, neck, head) with joints. Measured: 15 of 84 eye-position samples were NaN before
-    the fix and 0 of 84 after, with sane damage; forcing bone-frame updates on culled agents had not helped,
-    which is how it was shown to be data and not culling.
+14. **NaN bone frames, eye position NaN, damage `int.MinValue` and an AI that never fires, only on AI agents.**
+    Cause (inferred from the code, then confirmed by the data fix): the monster's `spine_lower_bone` was the
+    skeleton root, which has no joint; the anim-system init walks from the head-look bone up to that bone reading a
+    per-bone record with index -1 and no check, producing garbage look-rotation shares. Fix: no bone from
+    `head_look_direction_bone` down to `spine_lower_bone` may be the root or lack a ragdoll joint to its parent;
+    give the rig a real chain (pelvis, spine, chest, neck, head) with joints. Measured: 15 of 84 eye-position
+    samples were NaN before the fix and 0 of 84 after, with sane damage; forcing bone-frame updates on culled
+    agents had not helped, which is how it was shown to be data and not culling.
 15. **A skeleton whose root bone has no ragdoll capsule.** Read from the death path: once an agent ragdolls the
-    code calls bone 0's ragdoll body with no null check. Fix: always a ragdoll capsule on the root. (Reasoned
-    from the code, not reproduced as a crash.)
+    code calls bone 0's ragdoll body with no null check. Fix: always a ragdoll capsule on the root, and a ragdoll
+    body on every bone the monster's `ragdoll_*` fields name. Evidence: this note reasoned it from the code and
+    did not reproduce it as a crash. Gotcha 11 of
+    [`bannerlord-native-crashes-and-hangs.md`](bannerlord-native-crashes-and-hangs.md) reports a crash seen in
+    the game at `+0x616dab` about 3 s after a custom boss died and names both causes (`ragdoll_*` monster bones
+    without a ragdoll body, and the root's missing body); its crash table labels that offset as the ragdoll
+    stationary check on `ragdoll_*` bones. Which of the two that crash confirmed is not recorded.
 16. **Holstered items on the wrong bone, human-index UI code reading past the bone array, hit chain
     misaligned.** Cause: engine and managed code resolve holsters, item bones and melee hit bones by
     **human biped index** and apply that index to the agent's own skeleton. Fix: bones 0..27 in human biped
@@ -479,19 +517,21 @@ Each is symptom, cause, fix. Addresses are for the client build pinned in Setup.
     monster), or do not derive from `human`; make the validator reject names missing from the skeleton.
 19. **Managed `throw` in the campaign UI, map or conversations for a custom race.** Cause: managed code builds
     action-set names as `as_<monster>[_female]<suffix>` (`_warrior`, `_facegen`, `_map`, `_map_with_banner`,
-    `_poses`, settlement suffixes) and throws on a missing one. Fix: generate the whole suffix family for each
-    race (copies of the race's warrior set are enough); 88 sets with 7,649 actions in our case.
+    `_poses`, settlement suffixes) and `MBGlobals.GetActionSet` throws on a missing one. Town code also looks up
+    the monsters `<race>_settlement`, `<race>_settlement_slow`, `<race>_settlement_fast` and `<race>_child` by
+    name. Fix: generate the whole suffix family for each race (copies of the race's warrior set are enough; 88 sets
+    with 7,649 actions in our case) and the four monster variants from Native's human variants.
 20. **Feet cross or slide while aiming.** Cause (hypothesis; the rule has been applied since the first 1:1 race
     and feet crossing measured 1.2 percent on the first 1:1 Goliath, but it was not A/B tested): channel 1
     (aim, release, reload, defend) can drive every bone except those with the skeleton's `lowerbody` flag; the
     first rig had the flag on bones with a human analog only, so the thigh parents and heels followed the
     full-body aim clip. Fix: set the flag on the root and on every bone whose path to the root runs only through
     hip and leg bones. There is no per-clip bone mask.
-21. **No damage from AI with new combat clips, or weapon swaps undone.** Cause: plain clips on attack, aim and
-    equip actions: no combat parameter (empty hit window), no step points (item switch at 0), no flags such as
-    `keep` on ready clips. Fix: copy mode from the Native clip of the same action (parameter, flags, sound,
-    blend times, follow-up action, step points), keeping only animation, range and pairing from the new
-    sequence; fit the contact frame of a melee swing inside the combat parameter's window; use a short motion
+21. **No damage from AI with new combat clips, or weapon swaps undone ("Weapon wield interrupted").** Cause: plain
+    clips on attack, aim and equip actions: no combat parameter (empty hit window), no step points (item switch at
+    0), no flags such as `keep` on ready clips. Fix: copy mode from the Native clip of the same action (parameter,
+    flags, sound, blend times, follow-up action, step points), keeping only animation, range and pairing from the
+    new sequence; fit the contact frame of a melee swing inside the combat parameter's window; use a short motion
     cut to the Native duration for equip.
 22. **A clip on the wrong skeleton plays garbage or crashes.** Cause: the client has no check on bone count or
     owner skeleton. Fix: keep every clip on its own skeleton; Native clips cannot drive a custom skeleton whose
@@ -499,20 +539,24 @@ Each is symptom, cause, fix. Addresses are for the client build pinned in Setup.
 23. **About 1 in 3 battles crashed at deployment end, `+0x6feb3f`.** Cause: our own probe called
     `GetActionAnimationName` with action index -1 (`act_none`); the native side skips every check for -1 and
     indexes a table with a heap word. Fix: never call action-indexed APIs with -1; check `Index >= 0`.
-24. **Riders float 0.45 m above a custom mount's back, legs straight.** Cause: the rider plays the same action
-    name as its mount and rider clips are absolute from the mount's origin; `rider_sit_bone` does not lift or
-    lower the rider. Fix: base the mount on the horse sets (horse rider clips seat the pelvis at 1.69 m) when
-    the creature's back is at horse height, not on the camel's.
-25. **Quadruped creature troops crash in many places, `+0x6f45a6`, `+0x6fca17`, `+0x6a1004`.** Cause: Native
-    builds a non-humanoid agent only from a horse item; a troop on a quadruped monster goes through
-    character-only steps (weapon component null at agent +0xad8, no facial controller past the quadruped anim
-    object, conversation tableau reads the leader as humanoid, AI target scoring reads the target's weapon
-    component). Fix: C# guards (skip the wield call, `SetSetupMorphNode(false)` and no voice for non-humanoid
-    skin builds, an empty weapon component, a humanoid stand-in in conversation tableaus), or avoid the path by
-    letting the creature be a mount with an invisible rider.
-26. **Crash at module load, `+0x730550`.** Cause: a `project.mbproj` entry pointing at an XSL-transformed or
-    non-existent file. The native loader reads these files as raw XML. Fix: real XML files that exist; use an
-    `.xslt` only beside a canonical engine file (see "same-named .xslt").
+24. **Riders float 0.45 m above a custom mount's back, legs straight.** Cause: the rider plays the same action name
+    as its mount and rider clips are absolute from the mount's origin; `rider_sit_bone` does not lift or lower the
+    rider. Fix: base the mount on the horse sets (horse rider clips seat the pelvis at 1.69 m, the camel's at
+    2.13 m) when the creature's back is at horse height, not on the camel's; horse gait speeds then apply.
+25. **Quadruped creature troops crash in many places, `+0x6f45a6`, `+0x6fca17`, `+0x6a1004`.** Cause: Native builds
+    a non-humanoid agent only from a horse item; a troop on a quadruped monster goes through character-only steps
+    (weapon component null at agent +0xad8, no facial controller past the quadruped anim object, voices,
+    conversation tableau reads the leader as humanoid, `Agent.set_Formation` needs a `HumanAIComponent`, which is
+    added only for `IsHumanoid`, and AI target scoring reads the TARGET's weapon component). C# guards (skip the
+    wield call, `SetSetupMorphNode(false)` and no voice for non-humanoid skin builds, an empty weapon component, a
+    humanoid stand-in in conversation tableaus) held for four sites, but the AI target scorer still crashed. Fix
+    that worked: avoid the path by letting the creature be a mount with an invisible rider (the jockey pair in
+    [`bannerlord-custom-races-and-creatures.md`](bannerlord-custom-races-and-creatures.md)).
+26. **Crash at module load, `+0x730550`** (for us, after adding a sound-event line to `project.mbproj`). Cause: a
+    `project.mbproj` entry pointing at an XSL-transformed or non-existent file. The native loader reads these files
+    as raw XML; the native sound loader also reads every module's `project.mbproj` itself and loads each named XML
+    raw, and an XSLT-only entry with no real XML behind it is the usual trigger. Fix: real XML files that exist;
+    use an `.xslt` only beside a canonical engine file (see "same-named .xslt").
 27. **Builds took an hour, or ran out of memory.** Cause: the animation lookup rescanned every package for each
     clip; and a 2048 x 2048 DXT1 encode with numpy needs about 1 GB per process. Fix: index packages once per
     process; run texture builds in small batches (one process per four textures) while the game is running.
@@ -523,26 +567,27 @@ Each is symptom, cause, fix. Addresses are for the client build pinned in Setup.
     leave a loose copy in `Assets`.
 29. **Hit capsules covering half the mesh.** See Hit capsules; the median radius fit was the cause, the 92nd
     percentile refit the fix. Measure coverage with a script, not by looking.
-30. **The game freezes (not a crash) when a jaw, toe, heel, cape or claw is hit.** Symptom: frame frozen, CPU
-    busy, no crash report; a watchdog sees the main thread stuck with an empty managed stack. Cause (from a
-    minidump of the frozen process): the main thread spins in the engine's parallel-for, waiting for the
-    parallel animation update; one worker thread never finishes its chunk. When a blow plays no hit-reaction
-    animation, the engine's blow handler posts an animation event with the blow's bone, and a helper walks up
-    from that bone past bones whose body part is none, shoulder or arm and puts a small hit IK (chain length 8)
-    on the bone it stops at. The IK solver then walks from the last chain bone that has an IK joint up to the
-    target, following parent indices. With no IK joint on the hit bone the start is bone -1, and the parent of -1
-    reads back as -1: an endless loop on a worker. The worker's registers showed bone -1, the target bone (jaw,
-    index 28) and, in the skeleton object, our skeleton's name. Native bones with hit capsules all have IK joints
-    (toes have no capsule); on our skeletons jaws, toes, heels, capes, claws and robot arms had capsules without
-    IK joints (146 bones on 14 skeletons). Functions named in the dump (client build 1.4.8.119303, image
-    addresses): `rgl_parallel_for` 0x1801f2de0, blow handler 0x1805ff470, hit-impulse IK 0x1805f5de0, chain-5 IK
-    solver 0x180768b60. Fix, data: give those bones IK joints, drop their hit capsules, or set their body part to
-    none, when the skeleton is built. Fix, runtime (what we installed because the skeletons were already
-    installed): a Harmony prefix on `Agent.HandleBlow` that remaps the blow's bone to the nearest safe ancestor
-    (jaw to head, toe to foot, cape to spine) before the engine handles it, from a table generated from the
-    skeletons; damage and body part are already decided at that point. Regenerate the table after any
-    skeleton change. **Guard built and compiled, not yet run in the game.** The same freeze had also appeared in
-    three cavalry fights with couched lances (riders' feet have toe capsules); that link is a fit, not proven.
+30. **The game freezes (not a crash) when a jaw, toe, heel, cape or claw is hit.** Symptom: frame frozen, CPU busy,
+    no crash report; a watchdog sees the main thread stuck with an empty managed stack. Cause (from a minidump of
+    the frozen process): the main thread spins in the engine's parallel-for, waiting for the parallel animation
+    update; one worker thread never finishes its chunk. When a blow plays no hit-reaction animation, the engine's
+    blow handler posts an animation event with the blow's bone, and a helper walks up from that bone past bones
+    whose body part is none, shoulder or arm and puts a small hit IK (chain length 8) on the bone it stops at. The
+    IK solver then walks from the last chain bone that has an IK joint up to the target, following parent indices.
+    With no IK joint on the hit bone the start is bone -1, and the parent of -1 reads back as -1: an endless loop
+    on a worker. The worker's registers showed bone -1, the target bone (jaw, index 28) and, in the skeleton
+    object, our skeleton's name. Native bones with hit capsules all have IK joints (toes have no capsule); on our
+    skeletons jaws, toes, heels, capes, claws and robot arms had capsules without IK joints (146 bones on 14
+    skeletons). Functions named in the dump (client build 1.4.8.119303, image addresses): `rgl_parallel_for`
+    0x1801f2de0, blow handler 0x1805ff470, hit-impulse IK 0x1805f5de0, chain-5 IK solver 0x180768b60. Fix, data:
+    give those bones IK joints, drop their hit capsules, or set their body part to none (or arm, which the helper
+    also walks past), when the skeleton is built. Fix, runtime (what we installed because the skeletons were
+    already installed): a Harmony prefix on `Agent.HandleBlow` (not the one-line `HandleBlowAux`, which the JIT may
+    inline past the patch) that remaps the blow's bone to the nearest safe ancestor (jaw to head, toe to foot, cape
+    to spine) before the engine handles it, from a table generated from the skeletons; damage and body part are
+    already decided at that point. Regenerate the table after any skeleton change. **Guard built and compiled, not
+    yet run in the game.** The same freeze had also appeared in three cavalry fights with couched lances (riders'
+    feet have toe capsules); that link is a fit, not proven.
 
 ## Not verified
 - **Clip partner fix** (gotcha 12): staged and checked offline (0 problems on all staged clips, 4,830 clip
@@ -574,93 +619,11 @@ Each is symptom, cause, fix. Addresses are for the client build pinned in Setup.
 - **No other game version:** everything is v1.4.8.119303. Offsets are stale on any update. Multiplayer and
   anti-cheat were never involved (single player only); do not assume any of this is safe there.
 
-## More facts from a total conversion
-
-Added from the Borderlands 2 total conversion ([`../games/mount-and-blade-ii-bannerlord/bannerlord-borderlands-2-total-conversion.md`](../games/mount-and-blade-ii-bannerlord/bannerlord-borderlands-2-total-conversion.md)). These complement the formats above.
-
-
-- **Axes and units.** Character space is Z up, +Y forward, the character's left is -X. Native melee weapons run along game
-  +Z from the grip at the origin; axe heads point toward -X; blades lie flat in XZ; shields lie flat in XY with the front on +Z.
-  The editor keeps Blender's axes turned 180 degrees about Z (game = (-x, -y, z)), so a mesh built on Blender +Z becomes
-  game Z 0..L. Export weapons at global scale 0.01 (the editor imports with unit None; a cm-based Blender file gives a
-  58 m axe). umodel glTF is 1 unit = 1 m. Read the imported bounding boxes to learn the real axes, do not guess.
-- **Skinned FBX for the editor route (history):** Z up, +Y forward, primary bone axis Y, secondary X, no leaf bones,
-  armature named like the kit's `human_skeleton_notused`. A Y-up export plus the editor's "Convert to Z-up" tore the
-  arms; rewriting the rest orientation as PreRotation was a dead end. Our own writers made this moot.
-- **Materials:** shader `pbr_shading`; tick the `skinning` vertex layout for skinned meshes (else black and frozen in bind
-  pose); a normal map goes in the Bumpmap slot; a SpecularMap is mandatory (R specular, G gloss, B occlusion; a neutral
-  40/50/255 texture works) or the mesh renders black in shade; static props have skinning off. Stable shader guids:
-  `pbr_shading` 71b6a0ce4f381142a1a648a29a083c8f, `gui_color_and_stroke` 31fd6eb92771ec468648b28d23ece108.
-  Native normal-map convention: R = 128 minus slope along x, G = 128 minus slope along the row (rows down). Native spec
-  layout: R metalness, G gloss, B occlusion.
-- **Inventory thumbnails are not bbox-fitted for crossbow-class items.** `ItemThumbnailCache.GetItemPoseAndCamera` puts the
-  mesh at the item-tableau scene's `crossbow_frame` and renders from the child camera `crossbow_cam` (FOV 15, 256x120).
-  A gun must lie along +Z with its top on +Y or its icon is a blob cut by the icon edge. Horses use `horse_cam` and frame a
-  horse-sized window, so a low creature shows only its back. Shields and thrown items use the "goods" fit. Holster
-  meshes double as the icons of ammo stacks.
-- **Empty packages:** a geometry package of about 325 bytes holds no mesh; a 36-byte texture package is an interrupted import.
-- **Colour-grade LUT:** a 256x16 strip (x = red + 16*blue, y = green), import flags Do Not Compress, no mips, Dont Degrade,
-  "For Colorgrade". On the campaign map every region of `worldmap_color_grades.xml` (registered in `project.mbproj`)
-  maps to it; in missions `Scene.SetColorGradeBlend`, and the grade must be applied again after the atmosphere loads.
-  A heavy grade turns greens ochre, so pre-compensate any colour you author (a green beam went in as teal).
-- **Scene folders** hold `scene.xscene` (XML: entities, terrain layers, atmosphere), `terrain.bin` (chunks MIDX, HGHT, NRML,
-  WGHT, PHYM; HGHT is PNG-like blocks with a non-standard header, not decoded), `navmesh.bin`, `flora.bin`, `prt_data.bin`
-  (baked lighting, settlement scenes only, up to 128 MB) and `atmosphere.xml`. `navmesh.bin` vertices are plain float
-  triples about 0.2 m above the terrain, readable by range + neighbour test (15k to 45k clean vertices per scene), so
-  you can read ground height offline. A module scene folder with the SAME name replaces the Native one (last module wins).
-  A renamed COPY of a Native battle scene under a new id works with text edits only (the scene id is not checked against
-  file contents), reusing Native terrain, navmesh and flora; no writer for terrain or navmesh exists.
-- **Scene choice for field battles:** `DefaultSceneModel` + `Campaign.InitializeScenes` read `ModuleData/sp_battle_scenes.xml`
-  of every active module: rows `<Scene id= terrain= forest_density= map_indices=...>`. The root must be the SECOND child
-  of the document (declaration first, no comment before the root). Two scenes sharing a `map_index` trigger a
-  `FailedAssert` ("Multiple battle scenes for map patch", log only in retail) and a random pick. Custom battle lists come
-  from a `CustomBattleScenes` XmlNode that SubModule.xml must name. The campaign map's battle index map is one byte per cell.
-- **Terrain layer textures are looked up BY NAME per season** in `scene.xscene`, so same-name module textures reskin the
-  ground of every scene using them (309 ground textures covered 99 percent of layers over 108 land scenes). The campaign
-  map terrain itself is a 2.1 GB virtual-texture tile set that a module cannot override; named terrain-layer textures and
-  the `mainmap_cliff_*`, `mainmap_decal_*`, `worldmap_*` tree materials can be. Flora kinds name their materials, so
-  same-name material overrides could re-grade flora (unproven at the time). Sky, fog, terrain shape, navmesh and flora
-  placement cannot be reached by override (copy the scene folder instead).
-- **Prefabs:** a `Prefabs/*.xml` file in a module redefines a Native prefab by name with no registration (later module
-  wins; root `<prefabs>`, top-level `<game_entity name=...>`). Instances in scenes are baked at load and are NOT
-  `GameEntity` objects at runtime (one town: 9,030 top-level entities in the file, 1,978 at runtime), so runtime code can
-  only reach hand-placed ones. Redefine the prefab: keep the root's physics shape, drop its meta mesh and occlusion body
-  (a dropped occlusion body also stops people being culled behind lower replacement pieces), add your pieces as
-  children. 159 buildings were dressed this way and verified in game. Children transform with Euler order Rz Rx Ry.
-- **Settlement scenes:** 173 outdoor settlement scenes (53 town centres, 22 castles, 86 villages, 12 hideouts) carry about
-  447,000 top-level entities and 419,340 prefab instances of 3,609 prefabs. Overriding the metamesh by name was applied to
-  3,518 building meshes (95 percent of instances, 3.83 GB, 171 `bl2w_*` materials that are Native records with texture
-  guids swapped). Collision stays Native, so the baked navmesh still fits.
-- **Campaign-map scene:** a module `SceneObj/Main_map/scene.xscene` is the one the game loads (proved by scaling a town
-  3x). Settlement entities carry tagged children (gate, wall, siege, banner); untagged mesh and decal components can be
-  stripped and replaced by NEW top-level entities. Extra children under settlement entities crash the campaign load;
-  multi-material Z-up icon FBXs crash the map too; single-material meshes rotated +90 degrees about X work.
-- **Banners:** a banner key is groups of 10 numbers per layer (mesh, colour, colour2, w, h, x, y, stroke, mirror, rotation);
-  group 1 is the background. Icons come from the merged `BannerIcons` XML (ids 7000+); each icon is a quad of a material
-  whose texture is a 4x4 grid of 512 px cells (`texture_index` 0 top-left, row-major, 2048x2048 BC7). Shader
-  `gui_color_and_stroke`: G = fill, R = outline ring, A = coverage. Clans inside a kingdom are recoloured to the kingdom's
-  colours only if those hexes are palette entries. Banners are saved with the clan: a new campaign is needed.
-- **Main-menu video:** every active module's `Videos/initial_menu/<name>/` with a `*_pc.ivf` AND an `.ogg` is a
-  candidate; one is picked at random per screen. Native ships 8 (VP8 in IVF, 2560x1440, 24 fps, about 32 s, Ogg Vorbis
-  48 kHz). Ours: 1920x1080, VP8 two-pass, key frame every 48 frames, audio length equal to video length exactly.
-- **Shaders:** sources ship in `Shaders/Sources` (`.rs` shader with `main_vs`/`main_ps`/`main_cs`, flags as `#define`s; `.rsh`
-  include), compiled with the shipped `d3dcompiler_47.dll`; but variants are taken from `Shaders/D3D11/compressed_shader_cache.sack`
-  (about 1.5 GB) by a key of shader name + flag words with no source hash, so editing sources alone changes nothing.
-  Misses log `Missing shader from sack` and `compile_shader:` and are cached in a ProgramData folder. The console command
-  `resource.shader.recompile_single_shader <substring>` (call it through `Utilities.ExecuteCommandLineCommand`) evicts a
-  shader's keys. Modules cannot override core shaders or the Native default post-effect graph (first definition wins,
-  Native loads first). GPU skinning is compute-only and its palette is 64 bones.
-- **Post-effect inputs:** `postfx_graphs.xml` `<input index=N type=provided|node source=...>` becomes `texture<N>`; provided
-  sources include `gbuffer_depth`, `gbuffer_depth_with_water`, `gbuffer_normals`, `gbuffer_stencil`, `gbuffer_motion_vectors`,
-  `screen_rt`; index 4 is last frame, 5 the cube map. `gbuffer_stencil.g` low 4 bits are a material id (1 standard: bark,
-  characters, props; 3 terrain; 6 flora leaves; 7 and 9 far-tree billboards; 8 grass); 0x10 decals, 0x20 stationary, 0x40
-  not season-affected.
-
 ## Credits
 - **TaleWorlds Entertainment** for Bannerlord and the Modding Kit. Every format here was reverse-engineered from
   files and binaries the user's own install holds; nothing from the game is included.
-- **TpacTool** (szszss, MIT) showed that `.tpac` is a readable container and had no writer; our own reader and writer
-  were written from the editor's output.
+- **TpacTool** (szszss, MIT) showed that `.tpac` is a readable container (its writer is unfinished and zeroes the
+  record hash); our own reader and writer were written from the editor's output.
 - **The Old Realms (TOR)** and **Shokuho** were decompiled locally to see how large total conversions register
   action sets, usage sets and mounts: that is where the canonical-id finding and the rider-rows-by-XSLT pattern
   came from. Nothing from them is copied.
@@ -676,7 +639,8 @@ Added from the Borderlands 2 total conversion ([`../games/mount-and-blade-ii-ban
 ## Seen in
 - A Borderlands 2 total conversion for Bannerlord (races, creatures, bosses on their own skeletons): Loader,
   Goliath, Nomad, Marauder, Psycho, Handsome Jack, Claptrap, Skag, Varkid, Stalker, Spiderant, Bullymong and
-  flying bosses. Not published.
+  flying bosses. Not published; written up in the
+  [game note](../games/mount-and-blade-ii-bannerlord/bannerlord-borderlands-2-total-conversion.md).
 
 ## Open questions
 - Does the shield-block partner fix hold in a long campaign fight with many shield users? What does a 50 percent
@@ -685,6 +649,8 @@ Added from the Borderlands 2 total conversion ([`../games/mount-and-blade-ii-ban
 - Can the engine's hit-IK helper be disabled or given a safe default for bones without IK joints (a data flag),
   instead of remapping the bone in managed code?
 - Which engine function computes the missile start point (measured to be the eye position, not traced)?
+- Gotcha 15: did the `+0x616dab` boss-death crash confirm the `ragdoll_*` monster bones, the root's missing ragdoll
+  body, or both?
 - Is the side-channel design for more than 64 bones (frame pool reservation plus mesh windows) workable, and
   would an agent with an attached part skeleton animate it in step from C#?
 - Packing: what is the cold-cache start-up time now, and do smaller groups than 256 MB load faster?

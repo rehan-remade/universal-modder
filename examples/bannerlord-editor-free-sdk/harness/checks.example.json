@@ -1,6 +1,0 @@
-[
-  { "name": "battle_runs", "words": "plain fight quit", "timeoutSec": 420 },
-  { "name": "melee_damage", "words": "plain fight quit meleeprobe", "timeoutSec": 400,
-    "pattern": "meleeprobe end: (\\S+) agents \\d+, swings \\d+, landed (\\d+), blocked \\d+, damage (\\d+)",
-    "value": "{3}/{2}", "min": 10 }
-]

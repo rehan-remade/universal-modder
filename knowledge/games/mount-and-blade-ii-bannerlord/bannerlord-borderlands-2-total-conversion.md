@@ -13,7 +13,7 @@ status: in-progress
 agents: ["Claude Code (Opus 5.5)", "Claude Code subagents (Sonnet 5.5)"]
 humans: ["@theartur2000"]
 date: 2026-10-07
-links: ["https://github.com/rehan-remade/universal-modder/tree/main/examples/bannerlord-editor-free-sdk"]
+links: []
 tags: [bannerlord, borderlands-2, total-conversion, mashup, csharp-submodule, harmony, moduledata, xslt, project-mbproj, custom-race, creatures, guns, siege, campaign, gauntlet, fmod, psai, cel-shading, umodel, ghidra, minidump, test-harness]
 ---
 
@@ -75,8 +75,8 @@ code) redone on every update. Data stays inside the limits and managed code guar
 ## How the game works (what we had to learn)
 Learned from game files, managed assemblies (decompiled locally, never published), the native DLL and many crashes. Names
 are managed TaleWorlds names unless marked "native". Companion notes:
-- Asset and scene facts (axes, materials, LUTs, scene folders, battle-scene rows, prefabs, banners, shaders): "More facts from
-  a total conversion" in the asset note.
+- Asset facts (axes, materials, inventory icons, colour-grade LUTs): "Axes, materials, icons and colour grades" in the asset
+  note. Scene folders, battle-scene rows, prefabs, banners, menu video and shaders are below.
 - Races, skeletons, animation, creatures: [`../../techniques/bannerlord-custom-races-and-creatures.md`](../../techniques/bannerlord-custom-races-and-creatures.md).
 - Combat, damage models, own blows, guns on the crossbow class: [`../../techniques/bannerlord-combat-damage-and-guns.md`](../../techniques/bannerlord-combat-damage-and-guns.md).
 - Native crashes, hangs, dump analysis: [`../../techniques/bannerlord-native-crashes-and-hangs.md`](../../techniques/bannerlord-native-crashes-and-hangs.md).
@@ -161,6 +161,56 @@ are managed TaleWorlds names unless marked "native". Companion notes:
 - Runtime WAV: `SoundEvent.CreateEventFromExternalFile("event:/Extra/voiceover", path, scene, is3D, false)`, `Play()`, then
   `Stop()` + `Release()`. Mono 16-bit; rate-limit on real-time clocks. Music is psai and keyed by hard-coded `MusicTheme` ids.
 
+**Scenes, prefabs, banners, menu video and shaders**
+- **Scene folders** hold `scene.xscene` (XML: entities, terrain layers, atmosphere), `terrain.bin` (chunks MIDX, HGHT, NRML, WGHT, PHYM;
+  HGHT is PNG-like blocks with a non-standard header, not decoded), `navmesh.bin`, `flora.bin`, `prt_data.bin` (baked lighting, settlement
+  scenes only, up to 128 MB) and `atmosphere.xml`. `navmesh.bin` vertices are plain float triples about 0.2 m above the terrain, readable
+  by range + neighbour test (15k to 45k clean vertices per scene), so you can read ground height offline. A module scene folder with the
+  SAME name replaces the Native one (last module wins). A renamed COPY of a Native battle scene under a new id works with text edits only
+  (the scene id is not checked against file contents), reusing Native terrain, navmesh and flora; no writer for terrain or navmesh exists.
+- **Scene choice for field battles:** `DefaultSceneModel` + `Campaign.InitializeScenes` read `ModuleData/sp_battle_scenes.xml` of every
+  active module: rows `<Scene id= terrain= forest_density= map_indices=...>`. The root must be the SECOND child of the document
+  (declaration first, no comment before the root). Two scenes sharing a `map_index` trigger a `FailedAssert` ("Multiple battle scenes for
+  map patch", log only in retail) and a random pick. Custom battle lists come from a `CustomBattleScenes` XmlNode that SubModule.xml must
+  name. The campaign map's battle index map is one byte per cell.
+- **Terrain layer textures are looked up BY NAME per season** in `scene.xscene`, so same-name module textures reskin the ground of every
+  scene using them (309 ground textures covered 99 percent of layers over 108 land scenes). The campaign map terrain itself is a 2.1 GB
+  virtual-texture tile set that a module cannot override; named terrain-layer textures and the `mainmap_cliff_*`, `mainmap_decal_*`,
+  `worldmap_*` tree materials can be. Flora kinds name their materials, so same-name material overrides could re-grade flora (unproven at
+  the time). Sky, fog, terrain shape, navmesh and flora placement cannot be reached by override (copy the scene folder instead).
+- **Prefabs:** a `Prefabs/*.xml` file in a module redefines a Native prefab by name with no registration (later module wins; root
+  `<prefabs>`, top-level `<game_entity name=...>`). Instances in scenes are baked at load and are NOT `GameEntity` objects at runtime (one
+  town: 9,030 top-level entities in the file, 1,978 at runtime), so runtime code can only reach hand-placed ones. Redefine the prefab:
+  keep the root's physics shape, drop its meta mesh and occlusion body (a dropped occlusion body also stops people being culled behind
+  lower replacement pieces), add your pieces as children. 159 buildings were dressed this way and verified in game. Children transform
+  with Euler order Rz Rx Ry.
+- **Settlement scenes:** 173 outdoor settlement scenes (53 town centres, 22 castles, 86 villages, 12 hideouts) carry about 447,000
+  top-level entities and 419,340 prefab instances of 3,609 prefabs. Overriding the metamesh by name was applied to 3,518 building meshes
+  (95 percent of instances, 3.83 GB, 171 `bl2w_*` materials that are Native records with texture guids swapped). Collision stays Native,
+  so the baked navmesh still fits.
+- **Campaign-map scene:** a module `SceneObj/Main_map/scene.xscene` is the one the game loads (proved by scaling a town 3x). Settlement
+  entities carry tagged children (gate, wall, siege, banner); untagged mesh and decal components can be stripped and replaced by NEW
+  top-level entities. Extra children under settlement entities crash the campaign load; multi-material Z-up icon FBXs crash the map too;
+  single-material meshes rotated +90 degrees about X work.
+- **Banners:** a banner key is groups of 10 numbers per layer (mesh, colour, colour2, w, h, x, y, stroke, mirror, rotation); group 1 is
+  the background. Icons come from the merged `BannerIcons` XML (ids 7000+); each icon is a quad of a material whose texture is a 4x4 grid
+  of 512 px cells (`texture_index` 0 top-left, row-major, 2048x2048 BC7). Shader `gui_color_and_stroke`: G = fill, R = outline ring, A =
+  coverage. Clans inside a kingdom are recoloured to the kingdom's colours only if those hexes are palette entries. Banners are saved with
+  the clan: a new campaign is needed.
+- **Main-menu video:** every active module's `Videos/initial_menu/<name>/` with a `*_pc.ivf` AND an `.ogg` is a candidate; one is picked
+  at random per screen. Native ships 8 (VP8 in IVF, 2560x1440, 24 fps, about 32 s, Ogg Vorbis 48 kHz). Ours: 1920x1080, VP8 two-pass, key
+  frame every 48 frames, audio length equal to video length exactly.
+- **Shaders:** sources ship in `Shaders/Sources` (`.rs` shader with `main_vs`/`main_ps`/`main_cs`, flags as `#define`s; `.rsh` include),
+  compiled with the shipped `d3dcompiler_47.dll`; but variants are taken from `Shaders/D3D11/compressed_shader_cache.sack` (about 1.5 GB)
+  by a key of shader name + flag words with no source hash, so editing sources alone changes nothing. Misses log `Missing shader from
+  sack` and `compile_shader:` and are cached in a ProgramData folder. The console command `resource.shader.recompile_single_shader
+  <substring>` (call it through `Utilities.ExecuteCommandLineCommand`) evicts a shader's keys. Modules cannot override core shaders or the
+  Native default post-effect graph (first definition wins, Native loads first). GPU skinning is compute-only and its palette is 64 bones.
+- **Post-effect inputs:** `postfx_graphs.xml` `<input index=N type=provided|node source=...>` becomes `texture<N>`; provided sources
+  include `gbuffer_depth`, `gbuffer_depth_with_water`, `gbuffer_normals`, `gbuffer_stencil`, `gbuffer_motion_vectors`, `screen_rt`; index
+  4 is last frame, 5 the cube map. `gbuffer_stencil.g` low 4 bits are a material id (1 standard: bark, characters, props; 3 terrain; 6
+  flora leaves; 7 and 9 far-tree billboards; 8 grass); 0x10 decals, 0x20 stationary, 0x40 not season-affected.
+
 **UI and Gauntlet**
 - Own HUD: a `MissionView` adds `new GauntletLayer(name, order, false)`, `layer.LoadMovie("Prefab", viewModel)`, `MissionScreen.AddLayer`
   on the first tick with a screen. Native views reset `IsVisible` each tick: hide by fading layer alpha.
@@ -171,7 +221,9 @@ are managed TaleWorlds names unless marked "native". Companion notes:
   assign `_videoPlayerView`, PlayVideo, RefreshVideoAspect). Replaying on the existing view stays black.
 
 ## Build steps
-The asset writers, validators, safe installer, test harness and crash-dump tools are published as [`examples/bannerlord-editor-free-sdk`](../../../examples/bannerlord-editor-free-sdk/README.md) (its self-test re-packs your own Native files byte for byte); the Borderlands 2 conversion pipeline itself is not. The order we recommend for a NEW Bannerlord mod:
+The asset writers, validators, safe installer, test harness and crash-dump tools are the author's own SDK, which is not published yet
+(the author may add a link later); the Borderlands 2 conversion pipeline itself is not published either. The order we recommend for a
+NEW Bannerlord mod:
 1. An empty module loading with `Native`, `SandBoxCore`, `Sandbox`, `CustomBattle` and a log you control, plus the compile gate.
 2. A test harness BEFORE content: command-line launch with an explicit module list, muted test config restored byte for byte, kill only
    the PID it started, mod log, first-chance exception logger, a watchdog that dumps a hung game.
@@ -201,6 +253,7 @@ verified each claim (harness, self-test, in game).
 **Not verified:**
 - The converter as a whole. The shield-partner fix (`blends_with` restored on 7,974 clips) and the IK hit-bone guard were compiled
   but never A/B tested in game; refit hit capsules were measured only offline.
+- The body-rotation-reference guard (crash note gotcha 9) was compiled; no in-game run of it is recorded.
 - Riderless creature fighters (still crash at the AI target scorer), Spiderant mounts in full battles, Helios sky at dusk or night.
 - Audio was never heard by the agent (tests are silent); the FMOD bank loads clean (1,628 to 1,634 events).
 - Cold-cache start-up after packing; other Bannerlord versions; multiplayer; saved-game compatibility (new campaign required).
@@ -213,10 +266,7 @@ verified each claim (harness, self-test, in game).
 Evidence: V seen or measured in game, S static analysis only. Race, creature, combat and native-crash gotchas live in the companion notes.
 
 ### Data, registration and XML
-1. **Symptom.** Quadruped mounts crash at the first movement tick (+0x760967, after a usage set +0x636b6e), even an exact copy of
-   `as_horse`. **Cause:** files registered in `project.mbproj` under made-up ids (`soln_<mymod>_action_sets`) are never merged; the
-   pace-1 and `quad_movement` theories were wrong. **Fix:** canonical ids only; refuse to spawn when `MBActionSet.GetActionSet(name).IsValid`
-   is false or `Agent.GetMonsterUsageIndex(name) < 0`. Prove the file loaded before reverse engineering. [TN 8, V]
+1. **Quadruped mounts crash at the first movement tick (+0x760967, +0x636b6e), even as an exact copy of `as_horse`.** See TN 8.
 2. **Symptom.** 2,597 string overrides do nothing, or a language file loads 9 of 794 strings. **Cause:** the "English" id is never read from
    files; a comment between the XML declaration and the root hides everything. **Fix:** a new language id; comments inside the root. [V]
 3. **Symptom.** `The stylesheet is too complex` at launch (about 450 per-troop plus 217 gun templates); an override element for an absent
@@ -269,9 +319,7 @@ Evidence: V seen or measured in game, S static analysis only. Race, creature, co
     private StartGame in tests. [V]
 
 ### Rendering, audio and UI
-20. **Symptom.** Retextured Native buildings do not change (62 material overrides). **Cause:** an item with an existing guid is dropped;
-    packed meshes reference materials by guid in other packages (not fully explained). **Fix:** override the whole METAMESH by name with a new
-    guid, all LODs and inline streams carrying the new material guids. [TN 1 and 2, V]
+20. **Retextured Native buildings do not change (62 material overrides).** See TN 1 and 2.
 21. **Symptom.** Runtime "dressing" of towns reaches almost nothing. **Cause:** prefab instances are baked at load and are not entities.
     **Fix:** redefine the prefab by name in `Prefabs/*.xml`. [V]
 22. **Symptom.** Runtime quads draw black, white or mud; a moon renders as a grey disc over the HUD. **Cause:** pictures on the default
@@ -301,8 +349,7 @@ Evidence: V seen or measured in game, S static analysis only. Race, creature, co
     or `IsAgentStatusAvailable = false` each tick. [V]
 
 ### Pipeline and testing
-31. **Symptom.** Start-up of 26 s warm, 280 s cold. **Cause:** 34,265 one-asset packages. **Fix:** pack into 26 packages + 10 merged caches;
-    never leave a loose copy in `Assets` (it loads beside the packed one). [TN 28, V]
+31. **Start-up of 26 s warm, 280 s cold with 34,265 one-asset packages.** See TN 28.
 32. **Symptom.** Installs take hours, fail with Windows error 5, or are refused. **Cause:** a manifest rewritten per file, identical files
     re-copied; Windows briefly locks a fresh manifest; the running game and `Watchdog.exe` hold the module DLL; `tasklist` truncates image
     names to 25 characters. **Fix:** manifest per 200-file batch, written BEFORE copying; skip identical files; retry; match
