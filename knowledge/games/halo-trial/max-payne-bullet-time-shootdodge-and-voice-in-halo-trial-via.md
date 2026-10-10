@@ -6,9 +6,9 @@ games_also: ["Max Payne (Demo)"]
 game_version: "Halo Trial (Halo PC demo) halo.exe FileVersion 01.00.00.0578, 2,785,280 bytes; Chimera 1.0.0.r1307.1f292fc; Max Payne Demo (2001), x_demodatas.ras 97,939,389 bytes"
 platform: macos
 engine: native
-route: passthrough
+route: loader-api
 tools: ["Chimera r1307 (global Lua scripts)", "GameHub Wine build 10000073", "mtld3d (D3D9 -> Metal)", "x87sidecar", "zig cc via `uvx --from ziglang` (Windows SendInput helper)", "afplay"]
-anti_cheat: "None. Halo Trial is offline/LAN only here; Max Payne Demo is single-player."
+anti_cheat: "None. Campaign only here; keep the script off on servers you don't host (Chimera server_type 'dedicated'). Max Payne Demo is single-player."
 status: working
 agents:
 - Claude Code (Opus 5.5)
@@ -35,7 +35,8 @@ tags: [mashup, bullet-time, chimera, lua, wine, macos, ras, sendinput, sidecar, 
 - Max Payne Demo sits in a separate GameHub container. Only its `x_demodatas.ras` is read.
 
 ## Route and why
-This is a passthrough mashup with no injection beyond Chimera:
+This is a content-and-mechanics port (pattern 1 in the mashup-mods skill) through Chimera's Lua API, with no
+injection beyond Chimera:
 - The guest's content (sounds) is extracted from the user's own install.
 - The guest's mechanics (bullet time, shootdodge) are reimplemented in the host with Lua.
 
@@ -45,6 +46,12 @@ Ruled out:
 - **In-game audio from Lua:** Chimera's Lua has no sound API.
 
 So audio goes through a file-based event channel to a host-side player.
+
+**Campaign and games you host only.** Global scripts also run in multiplayer, and Trial has Blood Gulch over LAN
+and online. Slowing the game and pushing your own biped on someone else's server is a speed hack, so the script
+should return early when Chimera's `server_type` global is `"dedicated"` (you're a client). `"none"` is the
+campaign and `"local"` is a game you host. Chimera's own `chimera_tps`, `chimera_teleport` and
+`chimera_block_damage` refuse on `SERVER_DEDICATED` the same way.
 
 ## How the game works (what we had to learn)
 - **RAS archives (Max Payne 1/2)** ([libras](https://github.com/ernestask/libras) has the details):
@@ -117,10 +124,15 @@ So audio goes through a file-based event channel to a host-side player.
    loaded before scripts start. Don't use either to detect the menu.
 5. **`execute_script("map_name b30")` from the menu crashes Trial,** so you can't skip the menu that way.
    Drive Campaign → Continue with SendInput.
-6. **`chimera_reload_lua` replies "cannot be executed now" in game.** Restart Halo to reload scripts.
-7. **Events go missing.** **Cause:** `write_file` overwrites the file, so two events in one tick (dive `land`
-   plus `slomo_end`) keep only the last. **Fix:** keep the last 8 events with sequence numbers in the file, and
-   have the sidecar replay the new ones and reset when the counter drops (Halo restarted).
+6. **`chimera_reload_lua` replies "cannot be executed now".** **Cause:** there's no such command. Chimera's reload
+   command is `chimera_lua_reload_scripts`, and Halo answers any unregistered command with
+   `Requested function "..." cannot be executed now`. **Fix:** use `chimera_lua_reload_scripts` (not re-tested in
+   this setup; restarting Halo also works).
+7. **Events go missing.** **Cause:** `write_file(path, text)` truncates the file by default, so two events in one
+   tick (dive `land` plus `slomo_end`) keep only the last. **Fix:** this project keeps the last 8 events with
+   sequence numbers in the file, and the sidecar replays the new ones and resets when the counter drops (Halo
+   restarted). `write_file(path, text, true)` appends instead (supported at Chimera 1f292fc), which is simpler
+   for a reader that tails the file.
 8. **The first dive flew about 18 m.** **Cause:** with low gravity, horizontal velocity carries through a long
    airborne arc. **Fix:** a small lift (0.035) and only 2 ticks of push.
 9. **HUD spam.** `hud_message` stacks lines, so only post the meter when it crosses 25% steps.
