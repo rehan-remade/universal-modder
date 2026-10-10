@@ -224,6 +224,7 @@ public static class WinDrive
                 }
                 return "ok";
             case "wheel": Send(Mouse(0x0800, unchecked((uint)int.Parse(n[0])), 0, 0)); return "ok";
+            case "sleep": Thread.Sleep(int.Parse(n[0])); return "ok";   // a pause inside one drive call (ms); "idle" only reports
             case "idle":
             {
                 var li = new LASTINPUTINFO(); li.size = (uint)Marshal.SizeOf(typeof(LASTINPUTINFO));
