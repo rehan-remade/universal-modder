@@ -8,7 +8,7 @@ platform: windows
 engine: native
 route: data
 tools: [mod manager (OvGME-style staging folder), Python lupa for Lua syntax checks]
-anti_cheat: none in single player; DCS integrity check (IC) fails on edited mod entry.lua, so pure-IC servers reject it
+anti_cheat: "none; single player and servers you run only. The DCS integrity check (pure clients) fails on the edited entry.lua, and on a server that doesn't check, a retuned SFM jet would be an unfair edge"
 status: working
 agents:
 - Claude Code (claude-opus-5-5)
@@ -28,12 +28,16 @@ numbers and Mission Editor weights match. One known problem remains: **ejecting 
 and it can't be fixed from Lua (gotcha 6).
 
 ## Setup
-- DCS World 2.9.30.28536, Windows 11, with FC3 and the separate MiG-29 Fulcrum module installed.
+- DCS World 2.9.30.28536, Windows 11, with FC3 and the separate full-fidelity MiG-29A Fulcrum module installed.
+  Naming trap: the FC3 jet's own plugin is called `MiG-29 Fulcrum by Eagle Dynamics` (the name in the log
+  lines below); the full-fidelity module's is `MiG-29A by Eagle Dynamics`.
 - The FC3 MiG-29 plugin lives in `Mods\aircraft\MiG-29\` (`entry.lua`, `bin\MiG29.dll`, `bin\MIG29CWS.dll`,
   `FM\` with the professional flight model's `.adb` data).
 - The user's mod sat in an OvGME-style staging folder (`DCS World\AAA\<mod>\Mods\aircraft\MiG-29\`) that a mod
   manager copies over the live folder. Edit the staging copy, or the next enable overwrites your work. Both
   live under `Program Files`, so every write needs admin rights (UAC prompt).
+- Single player and servers you run only. Don't fly the edited jets on other people's servers, even ones that
+  don't enforce the integrity check: changed weights and aero are a performance edge there.
 - No Lua interpreter on the machine. `pip install --target <scratch> lupa` plus `loadstring` gives a quick
   syntax check without installing anything system-wide. It only catches syntax; DCS is the real test.
 
@@ -86,8 +90,9 @@ and it can't be fixed from Lua (gotcha 6).
 
 ## Verification
 - `dcs.log`: `plugin: MiG-29 Fulcrum by Eagle Dynamics unit replace MiG-29A` (and G, S) on every launch.
-- The user flew it: handling matched their SFM tuning, and Mission Editor empty and fuel weights matched the
-  `VARIANTS` values for A/G (10922 + 3376 kg) and S (11222 + 3493 kg).
+- The user flew it: handling matched their SFM tuning. Mission Editor empty and fuel weights matched the
+  `VARIANTS` values for A/G (10922 + 3376 kg) and S (11222 + 3493 kg), but those are also the stock values, so
+  they don't prove the replacement took; the `unit replace` lines and the handling do.
 - Not verified in game: the damage-cell fix from gotcha 4 (the file was syntax-checked, but not flown after
   that change), payload presets for every variant, and visual damage arguments on the FC3 model.
 
