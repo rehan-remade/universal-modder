@@ -653,6 +653,49 @@
   ]
  },
  {
+  "path": "games/crash-bandicoot-n-sane-trilogy/croc-inside-crash-n-sane-live-two-engine-mashup.md",
+  "kind": "game",
+  "title": "Croc inside Crash N. Sane: live two-engine mashup",
+  "game": "Crash Bandicoot N. Sane Trilogy",
+  "games_also": [
+   "Croc Legend of the Gobbos (2025 remaster)"
+  ],
+  "game_version": "Steam 731490, exe PE timestamp 2018-07-19 (sha256 170c61d3...6af3); Croc remaster GOG 1152820153 build 58936832420733913",
+  "platform": "windows",
+  "engine": "native",
+  "route": "passthrough",
+  "tools": [
+   "ReShade 6.8.0 add-on build",
+   "Ultimate ASI Loader v9.7.4 (version.dll",
+   "Croc)",
+   "MSVC 14.44",
+   "capstone",
+   "pefile"
+  ],
+  "anti_cheat": "none (Crash exe is SteamStub-wrapped; only the running process was hooked)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-09",
+  "links": [],
+  "tags": [
+   "alchemy-engine",
+   "mashup",
+   "passthrough",
+   "frame-compositing",
+   "reshade-addon",
+   "d3d11",
+   "d3d12",
+   "depth-compositing",
+   "render-hijack",
+   "input-forwarding",
+   "character-controller",
+   "hardware-breakpoint"
+  ]
+ },
+ {
   "path": "games/cult-of-the-lamb/cult-of-the-lamb.md",
   "kind": "game",
   "title": "Cult of the Lamb recon: Unity Mono, and Doorstop files without a BepInEx folder (likely r2modman)",
