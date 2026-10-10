@@ -653,6 +653,46 @@
   ]
  },
  {
+  "path": "games/cult-of-the-lamb/cult-of-the-lamb.md",
+  "kind": "game",
+  "title": "Cult of the Lamb recon: Unity Mono, and Doorstop files without a BepInEx folder (likely r2modman)",
+  "game": "Cult of the Lamb",
+  "games_also": [],
+  "game_version": "Steam; Unity 2022.3.62f2 (per um scan); game build not read",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "loader-api",
+  "tools": [
+   "BepInEx 5 (Thunderstore BepInExPack_CultOfTheLamb)",
+   "r2modman / Thunderstore Mod Manager",
+   "HarmonyX",
+   "ILSpy"
+  ],
+  "anti_cheat": "none detected",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (Muse Spark)"
+  ],
+  "humans": [
+   "PatrickJnr"
+  ],
+  "date": "2026-10-08",
+  "links": [
+   "https://docs.bepinex.dev",
+   "https://thunderstore.io/c/cult-of-the-lamb/"
+  ],
+  "tags": [
+   "cult-of-the-lamb",
+   "unity",
+   "mono",
+   "bepinex",
+   "doorstop",
+   "r2modman",
+   "thunderstore",
+   "recon"
+  ]
+ },
+ {
   "path": "games/dark-souls-remastered/portal-gun-prototype-via-dinput8-proxy-dll-player-camera-and.md",
   "kind": "game",
   "title": "Portal gun prototype via dinput8 proxy DLL: player, camera and angle offsets",
@@ -955,6 +995,87 @@
    "skins",
    "case-opening",
    "3d-inspect"
+  ]
+ },
+ {
+  "path": "games/factorio/factorio.md",
+  "kind": "game",
+  "title": "Factorio 2.0 recon: official Lua mod API, info.json, mods under %APPDATA%",
+  "game": "Factorio",
+  "games_also": [],
+  "game_version": "2.0.x win64 Steam + Space Age; 2.0.72 at last launch (log dated 2026-01-05); installed version not read",
+  "platform": "windows",
+  "engine": "native",
+  "route": "loader-api",
+  "tools": [
+   "official Lua modding API",
+   "Mod Portal (mods.factorio.com)"
+  ],
+  "anti_cheat": "none detected",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (Muse Spark)"
+  ],
+  "humans": [
+   "PatrickJnr"
+  ],
+  "date": "2026-10-08",
+  "links": [
+   "https://lua-api.factorio.com",
+   "https://lua-api.factorio.com/latest/auxiliary/mod-structure.html",
+   "https://mods.factorio.com",
+   "https://wiki.factorio.com",
+   "https://forums.factorio.com"
+  ],
+  "tags": [
+   "factorio",
+   "lua",
+   "mod-api",
+   "info-json",
+   "space-age",
+   "recon"
+  ]
+ },
+ {
+  "path": "games/fallout-4/fallout-4.md",
+  "kind": "game",
+  "title": "Fallout 4 recon: F4SE for runtime 1.11.221 next to Address Library databases for 1.10.x only",
+  "game": "Fallout 4",
+  "games_also": [],
+  "game_version": "Steam; F4SE build for runtime 1.11.221 installed; Fallout4.exe FileVersion not read (unverified)",
+  "platform": "windows",
+  "engine": "creation",
+  "route": "data",
+  "tools": [
+   "F4SE (build for runtime 1.11.221)",
+   "Address Library for F4SE Plugins",
+   "Creation Kit",
+   "FO4Edit (xEdit)",
+   "Vortex"
+  ],
+  "anti_cheat": "none detected",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (Muse Spark)"
+  ],
+  "humans": [
+   "PatrickJnr"
+  ],
+  "date": "2026-10-08",
+  "links": [
+   "https://f4se.silverlock.org",
+   "https://www.nexusmods.com/fallout4/mods/42147"
+  ],
+  "tags": [
+   "fallout-4",
+   "creation",
+   "f4se",
+   "address-library",
+   "commonlibf4",
+   "esp",
+   "esl",
+   "vortex",
+   "recon"
   ]
  },
  {
