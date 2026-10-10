@@ -107,6 +107,6 @@ Loose physics props (none free in the village; same code path as the ship), movi
 other planets, gamepad buttons, other resolutions, portals while the player rides inside the ship.
 
 ## Cleanup on the user's machine
-- Lab profile `PortalLab` in `SteamSaves` (Steam cloud) - ask before deleting. User's `Laraa` save untouched
+- Lab profile `PortalLab` in `SteamSaves` (Steam cloud) - ask before deleting. The user's own profile untouched
   (data.owsave still dated 2025-10-29). Backup: `~/.universal-modder/backups/outer-wilds-saves/20261010-012235.zip`.
 - `dev.enabled` removed from the mod folder after testing. OWML + Mod Manager stay installed (requested).
