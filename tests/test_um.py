@@ -102,9 +102,35 @@ def test_nested_exe_fingerprinted(tmp_path):
 
 
 def test_redist_exes_skipped(tmp_path):
-    make(tmp_path, {"Game.exe": _pe(False), "_CommonRedist/vcredist/vc_redist.exe": _pe(False)})
+    # installer/runtime folders (Steam _CommonRedist, GOG __redist/__support, EA __installer) and
+    # uninstallers at any depth are not the game
+    make(tmp_path, {"Game.exe": _pe(False), "_CommonRedist/vcredist/vc_redist.exe": _pe(False),
+                    "__redist/dotnet/setup.exe": _pe(), "__support/app/helper.exe": _pe(),
+                    "__installer/Touchup.exe": _pe(), "system/unins000.exe": _pe(),
+                    "system/Gothic2.exe": _pe(False)})
     _, facts = scan.detect(scan.Index(tmp_path))
-    assert list(facts["executables"]) == ["game.exe"]
+    assert list(facts["executables"]) == ["game.exe", "system/gothic2.exe"]
+    assert scan._in_skip_dir("__redist/x.jar") and scan._in_skip_dir("a/_commonredist/b/x.exe")
+    assert not scan._in_skip_dir("supporters/x.exe") and not scan._in_skip_dir("__redist.exe")
+
+
+def _named_game(tmp_path, name, files):
+    d = tmp_path / name
+    make(d, dict({f"f{i}.txt": "x" for i in range(6)}, **files))
+    return scan.scan(str(d))
+
+
+def test_zengin_route_only_for_classic_gothic(tmp_path):
+    # classic Gothic 1/2 get the ZenGin playbook from detection, with the exe-build check in the route
+    r = _named_game(tmp_path, "Gothic II", {"system/Gothic2.exe": _pe(False), "Data/Worlds.vdf": b"x"})
+    assert r["engine"]["key"] == "zengin" and r["playbook"].endswith("zengin.md")
+    assert "exe build" in r["routes"][0]["route"]
+    # Gothic 1 Remake (UE5) and Gothic III (Genome) contain "gothic 1"/"gothic ii" but aren't ZenGin
+    for name, files in (("Gothic 1 Remake", {"Gothic1Remake/Content/Paks/a.pak": b"x"}),
+                        ("Gothic III", {"Gothic3.exe": _pe(False), "Data/a.pak": b"x"})):
+        r = _named_game(tmp_path, name, files)
+        assert all(rt["playbook"] != "zengin.md" for rt in r["routes"]), name
+        assert not r["playbook"].endswith("zengin.md"), name
 
 
 def test_deep_tooling_jars_not_java_engine(tmp_path):

@@ -351,6 +351,15 @@ LOADERS = [
     ("Hollow Knight Modding API", ("*modding api*", "*/managed/mods/*")),
 ]
 
+# folders whose exes/jars belong to installers and runtimes, not the game (matched with leading "_" stripped,
+# so GOG's __redist/__support, EA's __installer and Steam's _CommonRedist count)
+SKIP_DIRS = {"redist", "commonredist", "vcredist", "directx", "installer", "installers", "support"}
+
+
+def _in_skip_dir(rel: str) -> bool:
+    return any(part.lstrip("_") in SKIP_DIRS for part in rel.split("/")[:-1])
+
+
 MOD_DIRS = ["mods", "mod", "addons", "plugins", "custom", "workshop", "usermods", "~mods", "content/paks/~mods", "data/scripts", "bepinex/plugins"]
 
 # known games: better routes than the engine default
@@ -365,9 +374,6 @@ KNOWN = {
     "starfield": ("Creation Kit plugins, SFSE", "bethesda.md"),
     "elden ring": ("ModEngine2 (offline, EAC disabled) + Smithbox/DSMapStudio param/map edits; never online", "big-frameworks.md"),
     "grand theft auto v": ("Story mode only: ScriptHookV + ASI loader, OpenIV/CodeWalker; BattlEye guards GTA Online - never mod online", "big-frameworks.md"),
-    "gothic ii": ("Union plugin SDK (x86 DLL in system/autorun, gothic-api __G2A) + GD3D11; the GOG/Steam 2.7 exe must be swapped for 2.6.0.0-rev2 first; assets via ZenKit VDF", "zengin.md"),
-    "gothic 2": ("Union plugin SDK (x86 DLL in system/autorun, gothic-api __G2A) + GD3D11; the GOG/Steam 2.7 exe must be swapped for 2.6.0.0-rev2 first; assets via ZenKit VDF", "zengin.md"),
-    "gothic 1": ("Union plugin SDK (x86 DLL in system/autorun, gothic-api __G1) needs the 1.08k report build; assets via ZenKit VDF", "zengin.md"),
     "grand theft auto v enhanced": ("Story mode only: ScriptHookV (enhanced build) + ASI loader; BattlEye guards GTA Online - never mod online", "big-frameworks.md"),
     "cyberpunk 2077": ("REDmod / Cyber Engine Tweaks (Lua) / RED4ext / ArchiveXL, WolvenKit for assets", "big-frameworks.md"),
     "baldur's gate 3": ("Script Extender (Lua) + LSLib/Multitool for .pak, official mod.io toolkit", "big-frameworks.md"),
@@ -446,7 +452,7 @@ ENGINES = {
     "frostbite": ("Frostbite", "native.md", "Frosty Tool Suite for supported titles, offline only; most titles have kernel anti-cheat"),
     "electron": ("Electron / NW.js / HTML5", "misc-engines.md", "extract resources/app.asar (or package.nw), patch JS, open devtools"),
     "love2d": ("LÖVE (Lua)", "misc-engines.md", "the .love/exe is a zip of Lua; patch or inject with lovely"),
-    "zengin": ("ZenGin (Gothic 1/2)", "zengin.md", "Union plugin SDK (x86 C++ DLL in system/autorun, gothic-api headers for engine internals); GD3D11 swaps the DX7 renderer for real D3D11; assets in Data/*.vdf via ZenKit"),
+    "zengin": ("ZenGin (Gothic 1/2)", "zengin.md", "Daedalus script mods first (MDK scripts -> .DAT in a .mod volume; Ikarus/LeGo, Ninja); Union plugin SDK (x86 C++ DLL in system/autorun, gothic-api headers) for engine code; GD3D11 renderer; assets in Data/*.vdf via ZenKit. Union/GD3D11 need G1 1.08k_mod or G2 NotR 2.6.0.0-rev2: check the exe build first (on Steam use the Workshop beta, don't swap the exe), see zengin.md"),
     "java": ("Java", "misc-engines.md", "decompile jars (Vineflower/CFR), patch with a mod loader or bytecode (Mixin/ASM)"),
     "defold": ("Defold", "misc-engines.md", "unpack game.arcd; Lua scripts"),
     "cocos": ("Cocos2d-x", "native.md", "Lua/JS scripts if bundled; else native hooks"),
@@ -550,9 +556,8 @@ def detect(ix: Index) -> tuple[list[tuple[str, int, list[str], dict]], dict]:
     # XNA / FNA / MonoGame / .NET
     xna = ix.find("fna.dll", "monogame.framework.dll", "microsoft.xna.framework*.dll", "*/fna.dll")
     # shallowest first: the main exe often sits one level down (Gothic's system/, UE's binaries/)
-    skip_dirs = ("redist", "_commonredist", "vcredist", "directx", "installer", "installers", "support")
-    exes = sorted((f for f in ix.files if f.endswith(".exe") and not f.startswith("unins")
-                   and not any(part in skip_dirs for part in f.split("/")[:-1])),
+    exes = sorted((f for f in ix.files if f.endswith(".exe") and not f.rsplit("/", 1)[-1].startswith("unins")
+                   and not _in_skip_dir(f)),
                   key=lambda f: (f.count("/"), f))[:12]
     managed = []
     for e in exes:
@@ -621,8 +626,7 @@ def detect(ix: Index) -> tuple[list[tuple[str, int, list[str], dict]], dict]:
     if ix.has("love.dll", "*.love", "lovec.exe"):
         add("love2d", 95, ix.find("love.dll", "*.love")[:1])
     # shallow jars only: a bundled Ghidra/SDK in a dev subfolder isn't the game's engine
-    jars = [j for j in ix.find("*.jar") if j.count("/") <= 1
-            and not any(part in skip_dirs for part in j.split("/")[:-1])]
+    jars = [j for j in ix.find("*.jar") if j.count("/") <= 1 and not _in_skip_dir(j)]
     if jars and (ix.has_dir("jre", "jre/*", "jdk*", "java*") or len(jars) <= 5):
         add("java", 60, jars[:2])
     if ix.has("game.dmanifest", "game.arcd"):
