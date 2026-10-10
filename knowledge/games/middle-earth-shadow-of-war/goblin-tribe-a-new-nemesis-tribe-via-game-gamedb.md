@@ -3,17 +3,21 @@ kind: game
 title: "Goblins of War: a new Nemesis tribe added by rebuilding game.gamedb (format, hashes, sort rule, role-to-tribe)"
 game: "Middle-earth: Shadow of War"
 games_also: []
-game_version: "Steam build 3095001 (exe and Patch_13.arch06 dated 2026-10-07), Windows 10 22H2"
+game_version: "Steam build 3095001 (public branch, unchanged since 2018-09-05), Windows 10 22H2"
 platform: windows
 engine: unknown
 route: data
 tools: ["QuickBMS + aluigi shadow_of_mordor.bms 0.4", "custom C# gamedb/strdb reader-writer (PowerShell Add-Type)", "Ghidra 12.1.4 (headless, analysis only)", "Shadow of War Dll Loader (Nexus 99)", "Vortex"]
-anti_cheat: "none (single player; online vendettas/market are gone). Nothing protected was modified: the mod is loose data files."
+anti_cheat: "none; Denuvo/SteamStub on the exe is untouched (loose data files only). Online Conquest/Vendettas still exist: play the modded game offline."
 status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: []
 date: 2026-10-09
-links: []
+links:
+  - "https://aluigi.altervista.org/quickbms.htm"
+  - "https://aluigi.altervista.org/bms/shadow_of_mordor.bms"
+  - "https://www.nexusmods.com/middleearthshadowofwar/mods/99"
+  - "https://www.nexusmods.com/middleearthshadowofwar/mods/49"
 tags: [nemesis, tribe, gamedb, lithtech, firebird, data-mod, string-table, archcfg, loose-files, reverse-engineering]
 ---
 
@@ -26,10 +30,15 @@ tags: [nemesis, tribe, gamedb, lithtech, firebird, data-mod, string-table, archc
 > user over about 20 sessions. Making them smaller than orcs is **not** solved (two data routes failed; notes below).
 
 ## Setup
-- Steam build 3095001. The 2026-10-07 update rewrote `x64\bink2w64.dll` (killing the Dll Loader proxy) and
-  `x64\default.archcfg` (dropping every `..\Mods\*.arch06` line). Re-copy the loader's patched `bink2w64.dll`
-  (same Bink 2.6e build, +512 bytes) from its Vortex staging folder and re-append the archcfg lines; Vortex
-  "Deploy" does not restore the bink proxy because it never tracked it.
+- Play the modded game offline. Don't use Online Conquest, Online Vendettas or Friend Vendettas while
+  `..\Goblins of War` is in `default.archcfg`. The July 2018 update removed only the Market, Gold and bought War
+  Chests; the online modes are still there, and a Goblin overlord defending an Online Conquest fortress, or a
+  Goblin captain in someone's vendetta, would reference records their unmodded database doesn't have.
+- Steam build 3095001; the public branch has not changed since 2018-09-05. A Steam verify/repair or a reinstall on
+  2026-10-07 (not a game update; which of the two isn't recorded) rewrote `x64\bink2w64.dll` (killing the Dll
+  Loader proxy) and `x64\default.archcfg` (dropping every `..\Mods\*.arch06` line). Re-copy the loader's patched
+  `bink2w64.dll` (same Bink 2.6e build, +512 bytes) from its Vortex staging folder and re-append the archcfg
+  lines; Vortex "Deploy" does not restore the bink proxy because it never tracked it.
 - QuickBMS + aluigi's `shadow_of_mordor.bms` (v0.4) extracts LTAR v4 archives (Oodle-chunked). `hotchunk.arch06`
   holds the only `game.gamedb` (56.7 MB) and all `database\string\<lang>\string.strdb`; no `Patch_*` archive
   overrides them on this build. `quickbms -o script.bms <arch06> <outdir>`; the `-f "*"` filter form fails.
@@ -60,7 +69,10 @@ Considered and parked: a native plugin through the Dll Loader for size (see Open
   `hdr = u16 valueCount | u8 attrCount << 16 | u8 layoutLo << 24`; layout index = `(type & 0xFFFFFF) << 8 | layoutLo`.
 - **Links** are `categoryIndex << 20 | recordIndex` (category index = order in file; FFFFFFFF = null).
 - **Attribute-name hash** (the exe's field registration routine): `h = h * 0x397 + (signed char)map[c]` over the
-  ASCII name, with a 256-byte case-folding table in the exe. The **same hash keys `string.strdb`**
+  ASCII name, starting from h = 0, 32-bit wrap-around, with a 256-byte case-folding table in the exe. The table
+  maps letters case-insensitively to 1-26 (`a`/`A` = 1 ... `z`/`Z` = 26) and `_` to 38; values for digits and
+  other characters aren't pinned down here. Check an implementation against Gotcha 1: `TribeDef_Goblin` must give
+  0xE2D0F0F6 and `TribeDef_Machine` 0xEBB642C8. The **same hash keys `string.strdb`**
   (`Fort_Title_Regal` -> "Marauder"), so you can add new localisation keys. Most attribute names resolve by
   hashing strings found in the exe.
 - **Named records in every category are sorted by that hash of their name**, and the game binary-searches them
@@ -103,16 +115,21 @@ that hold the originals (unique DLC3_/NemesisForge_ roles skipped), Goblin appen
 5. Fix header counts (heapLen, named, unnamed, valueWords, layoutCount) and the categoryCount after the layouts.
 6. Add the strdb key to every language's `string.strdb` (insert sorted by id).
 7. Put `database\game\game.gamedb` and `database\string\...` in `<game>\Goblins of War\` and append
-   `..\Goblins of War` as the last line of `x64\default.archcfg`. Verify-integrity or a patch removes that line.
+   `..\Goblins of War` as the last line of `x64\default.archcfg`. Steam's verify/repair removes that line;
+   re-append it afterwards.
 
 ## Verification
 The oracle was the real game, played by the user, plus Windows' Application log for crashes:
 - boot to title (database accepted); intel reveals of goblin captains show the white-skinned portrait with
   "Goblin" on the tribe line; a role-spawned goblin assassin got its own hunt mission and encounter cutscene;
-- persistence: quit-to-menu reload, full restart, and installing a later build all keep goblins as Goblin;
+- persistence: quit-to-menu reload, full restart, and installing a later build of the mod all keep goblins as
+  Goblin;
 - natural mix: with goblin roles weighted 5x for testing, new captains came out goblin and Terror side by side.
 Not verified: goblins as warchiefs/overlords, fortress assaults with a goblin overlord, Online/Vendetta, every
-language's text (only English seen), long-term save stability beyond a few days of play.
+language's text (only English seen), long-term save stability beyond a few days of play. Also unknown: where the
+War Chests opened in the Gotcha 3 test came from. Since July 2018 new chests come from Online Conquests and Online
+Vendettas (apart from old unopened ones in the Garrison), so they may have been online rewards, which would make
+that test an online one.
 
 ## Gotchas
 1. **Saved goblins came back as Machine, or vanished, after reload.** **Cause:** new named records were appended
@@ -125,15 +142,17 @@ language's text (only English seen), long-term save stability beyond a few days 
 3. **Goblin cards blank, nothing created from war chests.** **Cause:** goblin gear never streamed in because bundle,
    UI and banner predicates test TribeList `Regal`; forcing `Store_*` builders to goblin-only also mismatched the
    market's tribe pick. **Fix:** add Goblin to `Regal`; for testing point `Marketplace/Builders/FactionMember/Tribe`
-   at Goblin instead of the builders.
+   at Goblin instead of the builders. Where the chests used for this test came from is unknown (possibly online
+   rewards; see Verification and Open questions).
 4. **New goblins said "Play Quests to interact with this character" and could not be tracked.** **Cause:**
    setting a builder's `Tribe` field marks members as presets (`UI_TargetDialog_PresetBlocked`); early in the
    story most fresh captains also land in bodyguard slots of locked warchiefs. **Fix:** never set `Tribe` on
    builders; use roles. Test in the second region, where captains are reachable.
 5. **About half of launches closed instantly after the Packet Loader window.** **Cause:** Packet Loader G2 v3.1
-   (`ShadowOfWarPacketLoader.dll`) access violation at +0xF15B / +0x127D7 on build 3095001 (Application log
-   event 1000). It also matched a hang on an intel-triggered encounter load. **Fix:** rename the DLL out of
-   `x64\plugins` while testing; the game then starts first try.
+   (`ShadowOfWarPacketLoader.dll`) access violation at +0xF15B / +0x127D7 (Application log event 1000). It is
+   intermittent on the current build (3095001, the only build since 2018, so not a regression). It also matched a
+   hang on an intel-triggered encounter load. **Fix:** rename the DLL out of `x64\plugins` while testing; the game
+   then starts first try.
 6. **A `Float_CharacterScale` mod of -0.3 gave black portraits and +0.7 seemed to hang.** **Cause:** the
    variable (engine-filled, InitialValue 0) is read by portrait code but does not size the 3D model; the hang was
    Packet Loader. **Fix:** don't use it for size.
@@ -158,3 +177,7 @@ One long session (about 9 hours wall-clock) including recon, format reverse-engi
   can add one, but item `CombatActionsOnAdd` is only used by player items and did not fire for goblin captains.
   The `Modifier.CharacterScale` behaviour-graph modifier's apply method is in the protected region.
 - Unique goblin gear, icon, fortress title text and voice are untouched.
+- Where the War Chests in the Gotcha 3 test came from (old unopened Garrison chests or Online Conquest/Vendetta
+  rewards), and so whether that test was online.
+- Whether the Goblin mod needs the Dll Loader or Packet Loader at all. The route reads as `default.archcfg`-only;
+  if so, the next agent can skip both.
