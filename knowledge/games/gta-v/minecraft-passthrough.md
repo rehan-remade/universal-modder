@@ -14,7 +14,7 @@ agents: ["Claude Code (Opus 5.5)"]
 humans: ["@rehan_shei"]
 date: 2026-09-30
 links: ["https://github.com/rehan-remade/universal-modder/tree/main/examples/minecraft-gta5-passthrough"]
-tags: [mashup, passthrough, shared-memory, websocket, depth-compositing, reshade-addon, scripthookv, fabric, mixin, reprojection, camera-sync, director]
+tags: [mashup, passthrough, shared-memory, websocket, depth-compositing, reshade-addon, scripthookv, fabric, mixin, reprojection, camera-sync, director, prism-launcher, amd]
 ---
 
 # Minecraft inside GTA V (passthrough mod)
@@ -119,8 +119,21 @@ GTA V story mode                                   Minecraft 26.3 + Fabric
   the fix.
 - **Real game:** every feature was checked in story mode with the director's scripted shots, recorded, and
   reviewed frame by frame.
-- **Not verified:** other GTA builds (Enhanced), non-NVIDIA GPUs, ultrawide aspect ratios other than the
-  ones used.
+- **Not verified:** other GTA builds (Enhanced), ultrawide aspect ratios other than the ones used, Intel GPUs,
+  and on AMD the in-game features one by one (see the second-PC run below).
+- **Reproduced on a second PC (2026-10-09, Claude Code (Opus 5.5) with a different human):**
+  - Setup: Windows 11 Pro 26200, **AMD Radeon RX 9060 XT**, GTA V Legacy `GTA5.exe` 1.0.3889.0 (Steam buildid
+    24129523), ScriptHookV 3889.0.1158.13, ReShade 6.8.0.2155 add-on build, Minecraft 26.3 in **Prism
+    Launcher** (Fabric Loader 0.19.5, Fabric API 0.161.0+26.3), portable Temurin JDK 25.0.4.1, VS 2022 Build
+    Tools, Gradle 9.7.1 / Loom 1.18.3. The example code built unchanged on the first try.
+  - `fakehost.py` (20 s orbit): 2354 frames over shared memory, one host frame behind; blocks land on the
+    synthetic ground and occlude / are occluded by the host-only pillar correctly. So Minecraft's GL readback
+    path works on AMD.
+  - Real game: logs show the ASI loader loading both ASIs, ScriptHookV starting the script, ReShade compiling
+    `MCPassthrough.fx` and the add-on reporting "connected to Minecraft's frame export", and Minecraft logging
+    "host connected". The human played in story mode and reported it working; a window capture
+    (`um win shot`) showed Minecraft's hand and hotbar composited over GTA. Not checked feature by feature
+    (TNT, projectiles, mobs vs police, elytra, Nether), and no recording was made.
 
 ## Gotchas
 1. **Colour readback returns garbage after a depth readback (Minecraft 26.3).**
@@ -184,6 +197,8 @@ GTA V story mode                                   Minecraft 26.3 + Fabric
     - **Cause:** GTA's pause menu stops ScriptHookV scripts, so nothing clears the overlay.
     - **Fix used:** cut around it in the edit. Detecting the pause from outside the script and clearing the
       overlay would be the real fix; not built yet.
+    - 2026-10-09, second PC: reproduced; a capture of GTA's pause-menu map still showed Minecraft's hand and
+      hotbar on top.
 17. **Hidden frozen "double" peds still take cop bullets.** `SetEntityVisible(false)` doesn't make them
     immune. Keep invisible stand-ins out of the line of fire.
 18. **Walking off the Maze Bank Tower slides instead of dropping.** The tower's sides are sloped glass.
@@ -199,6 +214,32 @@ GTA V story mode                                   Minecraft 26.3 + Fabric
 21. **Guns held by Steve look bad.**
     - **Cause:** GTA's aim camera, hands and animations don't fit a blocky model.
     - **Fix:** use Minecraft weapons with GTA-side effects (see above).
+22. **Prism Launcher: a hand-made instance folder is never listed (2026-10-09).**
+    - **Cause:** Prism rescans `instances/` when the folder changes. If the instance folder (or its `mods/`)
+      appears before `instance.cfg` is written, the rescan finds no instance and doesn't look again.
+      `--launch "<name>"` then fails with "resolves to nothing" in Prism's log.
+    - **Fix:** write `instance.cfg` and `mmc-pack.json` first, or rename the folder afterwards to trigger a
+      rescan. Use a folder name without spaces as the instance ID (`--launch gta-passthrough`). Fabric adds two
+      components to `mmc-pack.json`, after `net.minecraft` 26.3: `net.fabricmc.intermediary` 26.3 and
+      `net.fabricmc.fabric-loader` 0.19.5.
+      Prism's per-instance `JavaPath` can point at a portable JDK 25.
+23. **PowerShell 5.1 writes a BOM.** `Set-Content -Encoding utf8` / `ConvertTo-Json | Set-Content` puts a BOM
+    in `mmc-pack.json`. Write it with `[IO.File]::WriteAllText(..., UTF8Encoding($false))`.
+24. **Prism can hang on "logging in with Microsoft account" during a scripted launch.** The token refresh
+    needs the human (Accounts > Refresh, or sign in again). The agent must not handle the sign-in.
+25. **The example's shell scripts fail in WSL with CRLF line endings.** A Windows checkout (or the plugin
+    cache) can give `gradle.sh`, `gta/*.sh` and `mc/gradlew` CRLF endings, which WSL bash can't run. Convert
+    them to LF (`sed -i 's/\r$//'`) and pin it with `.gitattributes` (`*.sh text eol=lf` and
+    `gradlew text eol=lf`: `mc/gradlew` has no `.sh` extension).
+26. **No WSL.** `fetch_deps.sh` runs as-is in Git Bash (curl + unzip); `build.bat` and `mc\gradlew.bat` run
+    natively. `install.sh` needs `wslpath`: under Git Bash use `cygpath -u` and `/c/...` instead of
+    `/mnt/c/...`, and point `BUILD` at `gta/build`. With WSL, a `PASSTHROUGH_WIN_DIR` inside the project
+    (for example its `tools\`) keeps the build mirrors, JDK and venv in one place.
+27. **Piping a script into `wsl.exe bash -s` stops after the first `cmd.exe` call.** `cmd.exe` (gradlew) reads
+    the rest of the script from the shared stdin. Run the script from a file with `< /dev/null`.
+28. **winget installs the C++ Build Tools unattended:**
+    `winget install Microsoft.VisualStudio.2022.BuildTools --override "--quiet --wait --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"`
+    (one UAC prompt). `build.bat` then finds vcvars through vswhere.
 
 ## Assets
 None generated. Steve uses the classic skin while a host is attached. Titles in the demo use the Minecraft
@@ -213,3 +254,19 @@ game finished installing.
 - **Enhanced edition:** GTA V Enhanced (DX12) needs a different ReShade/compositor path.
 - **Multiplayer Minecraft:** it works in principle, since it's just another client. It's untested.
 - **Latency:** Minecraft could render at the predicted pose, so re-projection is only a fallback.
+- **Check these with a real install before relying on the example.** See also
+  `knowledge/techniques/frame-compositing-depth-and-pose-sync.md`.
+  - **Pose lag:** the gotcha above says a lag of 1 frame, but the compositor defaults to 0 (a code comment
+    says 0 measured best) and only the director's `poselag` op changes it. Record the value used per capture.
+  - **`install.sh --remove`** deletes `ReShade.ini` unconditionally, including one the user had before
+    installing (install itself preserves it). 2026-10-09, second PC: a local patch (not in the example yet)
+    writes a marker file when install creates `ReShade.ini`, and `--remove` deletes `ReShade.ini` only when
+    the marker is there.
+  - **Save helper:** it copies its two saves into every discovered profile.
+  - **Cleanup scope:** detach forgets barrier tracking without removing the barriers; fighter cleanup removes
+    every matching hostile or proxy in the Overworld, and hot-block cleanup can remove player-placed fire or
+    lava; any invisible villager counts as a proxy.
+  - **Frame reader:** it validates the magic but not every header size/capacity or the capture timestamps,
+    and checks the slot sequence after the GPU upload, which can't undo a partly overwritten image.
+  - **`ws_test.cpp`** passes when any received message contains `explosion`; it doesn't assert camera, depth,
+    ground columns or reconnects.
