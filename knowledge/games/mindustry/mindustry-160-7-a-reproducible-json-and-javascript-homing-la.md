@@ -49,13 +49,20 @@ and source supplied the route. Scan output is a hypothesis to check, not proof t
 
 ## How the game works
 
+- The loader reads `mod.json` or `mod.hjson` at the mod root (it steps into a single top-level folder),
+  content from `content/<type>/*.json` or `.hjson`, sprites from `sprites/`, and scripts from `scripts/`:
+  a lone `.js` file there runs as the main script, otherwise `scripts/main.js`.
 - `content/blocks/baseline.json` and `homing.json` define two `ItemTurret` blocks with a copper-ammo
-  `BasicBulletType`. The mod name prefixes content identifiers: `modlab-homing-baseline` and
+  `MissileBulletType`. That type's constructor sets `homingPower = 0.08`, so the straight lane has to set
+  `homingPower: 0` explicitly. The mod name prefixes content identifiers: `modlab-homing-baseline` and
   `modlab-homing-homing`.
 - Keep bullet speed **2.7**, damage **12**, lifetime **105 ticks**, reload **70 ticks** and no splash
   identical. `homingPower` changes from **0** to **0.08**; colours are labels.
-- `homingRange: 200` is in world units, equivalent to 25 tiles in this game. `homingDelay: 8` is simulation
-  ticks. Do not label either value as seconds or tiles without conversion.
+- `homingRange: 200` is in world units (8 per tile, so 25 tiles). It is measured from the bullet's aim point,
+  not from the bullet: a turret passes its target position as the bullet's `aimX`/`aimY`, and
+  `BulletType.updateHoming` steers toward the closest target within `homingRange` of that point. Here the
+  fixed aim point is the centre of the target's path, so the target is always in range. `homingDelay: 8` is
+  simulation ticks. Do not label either value as seconds or tiles without conversion.
 - The original helper script makes a temporary local world, supplies ammunition and gives both lanes
   identical scripted moving targets and a fixed aim point. It reads actual turret `totalShots` and counts
   `UnitDamageEvent` events for the corresponding target and bullet owner. It does not invent successful hits.
@@ -104,8 +111,10 @@ encoded at 24 fps and no audio; it is not a native 24-fps gameplay capture.
 2. **Mods → Import Mod → Import File does not open a file picker on the tested Mac.** **Cause:** unresolved
    in this session; do not claim a diagnosed OS cause. **Fix:** the verified alternative is Open Folder,
    quit, copy the ZIP, then restart. The Import File route remains unverified.
-3. **A repackaged mod has no recognised metadata.** **Cause:** an extra parent folder puts `mod.json`
-   below the archive root. **Fix:** ZIP the files inside the project folder and inspect the ZIP entries.
+3. **A repackaged mod has no recognised metadata.** **Cause:** `mod.json` is not at the archive root.
+   Mindustry (`Mods.resolveRoot`) steps into a single top-level folder, so one wrapper folder alone still
+   loads; it fails when anything else sits next to that folder, such as a `__MACOSX/` folder. **Fix:** ZIP
+   the files inside the project folder and inspect the ZIP entries.
 4. **A test is described as “homing is 24 times better”.** **Cause:** treating scripted fixed-aim steering
    as ordinary gameplay. **Fix:** publish the controlled setup and both denominators; re-test separate
    sandbox/automatic-targeting behaviour before making game-balance claims.
