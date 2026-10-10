@@ -1719,6 +1719,39 @@
   ]
  },
  {
+  "path": "games/melon-sandbox/android-38-2-package-recon-and-a-lua-chip-ability-idea.md",
+  "kind": "game",
+  "title": "Android 38.2 package recon and a Lua Chip ability idea",
+  "game": "Melon Sandbox",
+  "games_also": [],
+  "game_version": "38.2 (versionCode 445; armeabi-v7a split; inspected as an APKPure XAPK, never installed)",
+  "platform": "other",
+  "engine": "unity-il2cpp",
+  "route": "other",
+  "tools": [
+   "melon-lua 5.2.5 (third-party simulator only)",
+   "Python 3.12",
+   "Android SDK command-line tools"
+  ],
+  "anti_cheat": "Not assessed; the package was not installed or run",
+  "status": "idea",
+  "agents": [
+   "GitHub Copilot (model not recorded)"
+  ],
+  "humans": [],
+  "date": "2026-10-10",
+  "links": [
+   "https://www.gamedeveloper.com/press-release/code-your-way-to-chaos-with-the-lua-chip-in-ragdoll-sandbox-game-melon-sandbox-"
+  ],
+  "tags": [
+   "android",
+   "il2cpp",
+   "lua-chip",
+   "melsave",
+   "unverified"
+  ]
+ },
+ {
   "path": "games/mewgenics/combat-roster-panel.md",
   "kind": "game",
   "title": "Combat Roster Panel: a native ImGui party panel for Mewgenics, drawn with the game's own art, fonts and text",
