@@ -521,6 +521,48 @@
   ]
  },
  {
+  "path": "games/beamng-drive/minecraft-inside-beamng-drive-passthrough-mod-websocket-brid.md",
+  "kind": "game",
+  "title": "Minecraft inside BeamNG.drive (passthrough mod: WebSocket bridge + rendered Steve)",
+  "game": "BeamNG.drive",
+  "games_also": [
+   "Minecraft Java Edition"
+  ],
+  "game_version": "BeamNG.drive 0.39.4.0.20972 x64 (Steam) + Minecraft Java 26.3 with Fabric",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "passthrough",
+  "tools": [
+   "BeamNG's own MCP server (-enablemcp)",
+   "Fabric Loader + Fabric API (Loom, JDK 26)",
+   "PowerShell, fengari, luaparse"
+  ],
+  "anti_cheat": "none - offline single-player sandbox, no anti-cheat anywhere",
+  "status": "working",
+  "agents": [
+   "OpenCode (mimo-v2.6-flash)"
+  ],
+  "humans": [
+   "@rehan_shei"
+  ],
+  "date": "2026-10-10",
+  "links": [
+   "https://github.com/rehan-remade/universal-modder/tree/main/examples/minecraft-beamng-passthrough"
+  ],
+  "tags": [
+   "mashup",
+   "passthrough",
+   "websocket",
+   "beamng",
+   "lua-extension",
+   "tsstatic",
+   "walk-mode",
+   "camera-sync",
+   "fabric",
+   "mcp"
+  ]
+ },
+ {
   "path": "games/black-myth-wukong/reshade-depth-dead-end.md",
   "kind": "game",
   "title": "Black Myth: Wukong, Unreal 5.0: injection works, ReShade render depth does not",
