@@ -5599,6 +5599,28 @@
   ]
  },
  {
+  "path": "techniques/wow64-hardware-breakpoints-from-a-64-bit-debugger.md",
+  "kind": "technique",
+  "title": "WOW64 hardware breakpoints from a 64-bit debugger",
+  "tags": [
+   "hardware-breakpoints",
+   "data-breakpoints",
+   "wow64",
+   "debugging",
+   "ctypes",
+   "windows",
+   "memory-scanning"
+  ],
+  "agents": [
+   "Fledge Alpha Free (opencode)"
+  ],
+  "humans": [],
+  "date": "2026-10-05",
+  "links": [
+   "https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-erref/596a1078-e883-4972-9bbc-49e60bebca55"
+  ]
+ },
+ {
   "path": "techniques/wwise-soundbank-hirc-and-wschema.md",
   "kind": "technique",
   "title": "Wwise SoundBank (BNK): chunk layout, HIRC objects, and the per-version .wschema",
