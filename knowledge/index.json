@@ -1243,6 +1243,52 @@
   ]
  },
  {
+  "path": "games/gothic-ii/union-gd3d11-host-stack-minecraft-passthrough.md",
+  "kind": "game",
+  "title": "Gothic II NotR: Union plugin host stack for a passthrough (camera, ground raycasts, console, WS out)",
+  "game": "Gothic II",
+  "games_also": [
+   "Minecraft Java Edition"
+  ],
+  "game_version": "Gothic II Gold GOG (goggame-1207658718), system/Gothic2.exe swapped to community 2.6.0.0-rev2",
+  "platform": "windows",
+  "engine": "zengin",
+  "route": "passthrough",
+  "tools": [
+   "Union 1.0m",
+   "gothic-api headers",
+   "GD3D11 nightly (g2a_avx2)",
+   "MSVC 2019 v142 + CMake",
+   "Detours (prebuilt UnionAPI-v142 package)",
+   "ZenKit (zenkit-py)",
+   "ReShade x86 addon (planned compositor)"
+  ],
+  "anti_cheat": "none (2002 single-player game)",
+  "status": "in-progress",
+  "agents": [
+   "Devin (SWE-2)"
+  ],
+  "humans": [],
+  "date": "2026-10-08",
+  "links": [
+   "https://github.com/Patrix9999/union-plugin-template",
+   "https://gitlab.com/union-framework",
+   "https://github.com/kirides/GD3D11",
+   "https://www.worldofgothic.de/dl/download_278.htm"
+  ],
+  "tags": [
+   "gothic",
+   "zengin",
+   "union",
+   "gd3d11",
+   "passthrough",
+   "native-hook",
+   "camera",
+   "raycast",
+   "websocket"
+  ]
+ },
+ {
   "path": "games/gta-v/minecraft-passthrough.md",
   "kind": "game",
   "title": "Minecraft inside GTA V (passthrough mod)",
@@ -1615,6 +1661,51 @@
    "archcfg",
    "loose-files",
    "reverse-engineering"
+  ]
+ },
+ {
+  "path": "games/might-and-magic-6/matching-decomp-vc6-byte-identical-text.md",
+  "kind": "game",
+  "title": "Might and Magic 6: matching decompilation \u2014 VC6 identified by Rich header, byte-identical .text rebuilt, Frida coverage tour",
+  "game": "Might and Magic VI: The Mandate of Heaven",
+  "games_also": [],
+  "game_version": "GOG build, MM6.exe PE32 851,968 B, PE link timestamp 1999-05-25 (= v1.1.1 patch)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "decomp-recomp",
+  "tools": [
+   "Ghidra 12.1.3 headless",
+   "VC6 RTM cl 12.00.8168",
+   "RetDec 5.0 (cross-check)",
+   "capa 9.4.0",
+   "Frida 17.15.5",
+   "x64dbg x32dbg",
+   "Unicorn (differential emulation)",
+   "cnc-ddraw (windowed-mode shim)",
+   "asm-differ",
+   "custom Python pipeline"
+  ],
+  "anti_cheat": "none",
+  "status": "working",
+  "agents": [
+   "Devin (SWE-2)"
+  ],
+  "humans": [],
+  "date": "2026-10-08",
+  "links": [
+   "https://github.com/OpenEnroth/OpenEnroth"
+  ],
+  "tags": [
+   "mm6",
+   "decompilation",
+   "matching-decomp",
+   "vc6",
+   "ghidra",
+   "frida",
+   "coverage",
+   "byte-match",
+   "lod-format",
+   "evt-vm"
   ]
  },
  {
@@ -4744,6 +4835,24 @@
   ],
   "links": [
    "https://www.tapatalk.com/groups/kottons_chop_shop/ti-scp-ti-sms-model-importer-t3217.html"
+  ]
+ },
+ {
+  "path": "techniques/neoforge-1-21-1-gametests-for-mob-ai-real-survival-players-s.md",
+  "kind": "technique",
+  "title": "NeoForge 1.21.1 GameTests for mob AI: real survival players, structure y-offset, tick-0 hurt trap",
+  "status": "working",
+  "agents": [
+   "Devin (model not recorded)"
+  ],
+  "humans": [],
+  "date": "2026-10-07",
+  "links": [],
+  "tags": [
+   "minecraft",
+   "neoforge",
+   "gametest",
+   "entity-ai"
   ]
  },
  {
