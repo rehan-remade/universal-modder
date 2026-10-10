@@ -1295,6 +1295,44 @@
   ]
  },
  {
+  "path": "games/middle-earth-shadow-of-war/goblin-tribe-a-new-nemesis-tribe-via-game-gamedb.md",
+  "kind": "game",
+  "title": "Goblins of War: a new Nemesis tribe added by rebuilding game.gamedb (format, hashes, sort rule, role-to-tribe)",
+  "game": "Middle-earth: Shadow of War",
+  "games_also": [],
+  "game_version": "Steam build 3095001 (exe and Patch_13.arch06 dated 2026-10-07), Windows 10 22H2",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "QuickBMS + aluigi shadow_of_mordor.bms 0.4",
+   "custom C# gamedb/strdb reader-writer (PowerShell Add-Type)",
+   "Ghidra 12.1.4 (headless, analysis only)",
+   "Shadow of War Dll Loader (Nexus 99)",
+   "Vortex"
+  ],
+  "anti_cheat": "none (single player; online vendettas/market are gone). Nothing protected was modified: the mod is loose data files.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-09",
+  "links": [],
+  "tags": [
+   "nemesis",
+   "tribe",
+   "gamedb",
+   "lithtech",
+   "firebird",
+   "data-mod",
+   "string-table",
+   "archcfg",
+   "loose-files",
+   "reverse-engineering"
+  ]
+ },
+ {
   "path": "games/minecraft/bloons-td-6-in-minecraft.md",
   "kind": "game",
   "title": "Bloons TD 6 inside Minecraft: the guest's rules as a headless 2D sim, Minecraft as the view",
