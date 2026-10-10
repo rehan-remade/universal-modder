@@ -9,6 +9,7 @@
 </p>
 
 <p align="center">
+  <a href="https://discord.com/invite/sEZWaf7vV"><img alt="community: join us on discord" src="docs/media/badges/discord.png" height="26"></a>
   <a href="#install"><img alt="works with Claude Code, Codex, Cursor, Gemini CLI, GitHub Copilot and OpenCode" src="docs/media/badges/agents.png" height="26"></a>
   <a href="knowledge/INDEX.md"><img alt="knowledge base: field notes by agents, for agents" src="docs/media/badges/knowledge.png" height="26"></a>
   <a href="https://fal.ai"><img alt="assets: fal" src="docs/media/badges/fal.png" height="26"></a>
@@ -19,7 +20,8 @@
   <img src="docs/media/mods-teaser.gif" alt="Six mods made by AI coding agents, with the universal-modder tile in the corner: Steve gliding an elytra through Los Santos, the Nether spreading over Los Santos, Minecraft mobs fighting the LSPD, the Halo Warthog in Minecraft, a World at War flamethrower in Minecraft, and World at War zombies in Minecraft. It ends on the universal-modder logo and &quot;mod any game.&quot;" width="560">
 </p>
 
-<p align="center"><b>Coming next: the mod hub.</b> Publish your mods, remix other people's, and make new ones.</p>
+<p align="center"><b>Coming next: the mod hub.</b> Publish your mods, remix other people's, and make new ones.<br>
+  <b><a href="https://discord.com/invite/sEZWaf7vV">Join the Discord</a></b> to share what you make, get help, and follow along.</p>
 
 ## Install
 
@@ -182,7 +184,7 @@ Each has a field note with every non-obvious lesson: [knowledge/INDEX.md](knowle
 Full reasoning: [`skills/mod-any-game/references/safety.md`](skills/mod-any-game/references/safety.md).
 
 ## Made a mod with it?
-Put the badge on your mod's page:
+Show it off in the [Discord](https://discord.com/invite/sEZWaf7vV), and put the badge on your mod's page:
 
 <p>
   <a href="https://github.com/rehan-remade/universal-modder"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/media/made-with-dark.svg"><img src="docs/media/made-with-light.svg" height="32" alt="made with universal-modder"></picture></a>

@@ -1725,6 +1725,77 @@
   ]
  },
  {
+  "path": "games/limbo/pngatlas-a8l8-format.md",
+  "kind": "game",
+  "title": "Limbo A8L8 texture format, standalone sprites, and a live-verified menu-title mod",
+  "game": "Limbo",
+  "games_also": [],
+  "game_version": "Steam (appid 48000), limbo.exe 5,453,312 bytes; Steam build ID not recorded",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "python+struct",
+   "numpy",
+   "pillow",
+   "hgrep on limbo.exe",
+   "um win"
+  ],
+  "anti_cheat": "none (single-player; SteamStub DRM wrapper on the exe, which this route never touches)",
+  "status": "working",
+  "agents": [
+   "OpenCode (big-pickle)"
+  ],
+  "humans": [],
+  "date": "2026-10-07",
+  "links": [
+   "https://github.com/gibbed/Gibbed.Limbo",
+   "https://github.com/theberrigan/apps/blob/master/projects/21_game-tools/tools_Limbo.py"
+  ],
+  "tags": [
+   "textures",
+   "atlases",
+   "pngatlas",
+   "a8l8",
+   "d3d9",
+   "asset-only",
+   "live-verified"
+  ]
+ },
+ {
+  "path": "games/melon-sandbox/android-38-2-package-recon-and-a-lua-chip-ability-idea.md",
+  "kind": "game",
+  "title": "Android 38.2 package recon and a Lua Chip ability idea",
+  "game": "Melon Sandbox",
+  "games_also": [],
+  "game_version": "38.2 (versionCode 445; armeabi-v7a split; inspected as an APKPure XAPK, never installed)",
+  "platform": "other",
+  "engine": "unity-il2cpp",
+  "route": "other",
+  "tools": [
+   "melon-lua 5.2.5 (third-party simulator only)",
+   "Python 3.12",
+   "Android SDK command-line tools"
+  ],
+  "anti_cheat": "Not assessed; the package was not installed or run",
+  "status": "idea",
+  "agents": [
+   "GitHub Copilot (model not recorded)"
+  ],
+  "humans": [],
+  "date": "2026-10-10",
+  "links": [
+   "https://www.gamedeveloper.com/press-release/code-your-way-to-chaos-with-the-lua-chip-in-ragdoll-sandbox-game-melon-sandbox-"
+  ],
+  "tags": [
+   "android",
+   "il2cpp",
+   "lua-chip",
+   "melsave",
+   "unverified"
+  ]
+ },
+ {
   "path": "games/mewgenics/combat-roster-panel.md",
   "kind": "game",
   "title": "Combat Roster Panel: a native ImGui party panel for Mewgenics, drawn with the game's own art, fonts and text",
@@ -2138,6 +2209,68 @@
    "vein-mining",
    "icons",
    "bytecode"
+  ]
+ },
+ {
+  "path": "games/mount-and-blade-ii-bannerlord/bannerlord-borderlands-2-total-conversion.md",
+  "kind": "game",
+  "title": "Borderlands 2 as a Bannerlord total conversion: own skeletons, guns, creatures and BL2 rules in a C# module",
+  "game": "Mount & Blade II: Bannerlord",
+  "games_also": [
+   "Borderlands 2"
+  ],
+  "game_version": "v1.4.8.119303 (Steam, Windows 11); client TaleWorlds.Native.dll 14,185,944 bytes, PE timestamp 0x6a732505 (all crash offsets in these notes are for this build); Modding Kit (Steam app 1393600) build 24575232; Bannerlord.Harmony 2.4.2. Guest: Borderlands 2 on Steam (UE3 packages, version 832)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "loader-api",
+  "tools": [
+   "Bannerlord module system (SubModule.xml, ModuleData XML + XSLT, C# net472 SubModule built with the .NET 8 SDK)",
+   "Bannerlord.Harmony 2.4.2 (optional, never shipped)",
+   "Python 3.10 + numpy (own LZ4, xxHash64, DXT/BC encoders, .tpac/.rdc writers)",
+   "Blender 4.2 headless",
+   "umodel (UE Viewer)",
+   "Ghidra 12.1.4 headless + JDK 21",
+   "ilspycmd 9.1",
+   "python minidump package",
+   "FMOD Studio 2.02.27 CLI",
+   "wwiser + vgmstream",
+   "ffmpeg",
+   "PowerShell 5.1 test harness"
+  ],
+  "anti_cheat": "none. Single player only. Borderlands 2 is never launched, patched or hooked: its package files are read offline, read-only. Bannerlord tests start the normal client with its own command-line module list; no injection, no bypass. One optional feature (comic shading) edits three of the game's own shader/post-effect files with hash-checked backups and a revert script",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)",
+   "Claude Code subagents (Sonnet 5.5)"
+  ],
+  "humans": [
+   "@theartur2000"
+  ],
+  "date": "2026-10-07",
+  "links": [],
+  "tags": [
+   "bannerlord",
+   "borderlands-2",
+   "total-conversion",
+   "mashup",
+   "csharp-submodule",
+   "harmony",
+   "moduledata",
+   "xslt",
+   "project-mbproj",
+   "custom-race",
+   "creatures",
+   "guns",
+   "siege",
+   "campaign",
+   "gauntlet",
+   "fmod",
+   "psai",
+   "cel-shading",
+   "umodel",
+   "ghidra",
+   "minidump",
+   "test-harness"
   ]
  },
  {
@@ -4094,6 +4227,137 @@
   ]
  },
  {
+  "path": "techniques/bannerlord-combat-damage-and-guns.md",
+  "kind": "technique",
+  "title": "Combat in Bannerlord mods: damage models, scripted blows, AI combat properties and guns on the crossbow class",
+  "status": "in-progress",
+  "game": "Mount & Blade II: Bannerlord",
+  "games_also": [
+   "Borderlands 2"
+  ],
+  "game_version": "v1.4.8.119303 (Steam, Windows 11); client TaleWorlds.Native.dll 14,185,944 bytes, PE timestamp 0x6a732505; Bannerlord.Harmony 2.4.2",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "loader-api",
+  "tools": [
+   "Bannerlord module system (ModuleData XML + XSLT, C# net472 SubModule)",
+   "Bannerlord.Harmony 2.4.2",
+   "ilspycmd 9.1",
+   "Ghidra 12.1.4 headless on a copy of TaleWorlds.Native.dll"
+  ],
+  "agents": [
+   "Claude Code (Opus 5.5)",
+   "Claude Code subagents (Sonnet 5.5)"
+  ],
+  "humans": [
+   "@theartur2000"
+  ],
+  "date": "2026-10-07",
+  "links": [],
+  "tags": [
+   "bannerlord",
+   "combat",
+   "damage-model",
+   "blow",
+   "registerblow",
+   "morale",
+   "ai",
+   "guns",
+   "crossbow-class",
+   "missiles",
+   "friendly-fire",
+   "auto-resolve"
+  ]
+ },
+ {
+  "path": "techniques/bannerlord-custom-races-and-creatures.md",
+  "kind": "technique",
+  "title": "Custom races and creatures in Bannerlord at runtime: the humanoid path, quadruped mounts and hidden-rider creatures",
+  "status": "in-progress",
+  "game": "Mount & Blade II: Bannerlord",
+  "games_also": [
+   "Borderlands 2"
+  ],
+  "game_version": "v1.4.8.119303 (Steam, Windows 11); client TaleWorlds.Native.dll 14,185,944 bytes, PE timestamp 0x6a732505 (all crash offsets here are for this build); Bannerlord.Harmony 2.4.2",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "loader-api",
+  "tools": [
+   "Bannerlord module system (ModuleData XML + XSLT, C# net472 SubModule)",
+   "Bannerlord.Harmony 2.4.2",
+   "Python 3.10 + numpy (own .tpac/.rdc writers)",
+   "Blender 4.2 headless",
+   "Ghidra 12.1.4 headless",
+   "ilspycmd 9.1"
+  ],
+  "agents": [
+   "Claude Code (Opus 5.5)",
+   "Claude Code subagents (Sonnet 5.5)"
+  ],
+  "humans": [
+   "@theartur2000"
+  ],
+  "date": "2026-10-07",
+  "links": [],
+  "tags": [
+   "bannerlord",
+   "custom-race",
+   "custom-skeleton",
+   "animation",
+   "action-sets",
+   "monsters",
+   "quadruped",
+   "mounts",
+   "creatures",
+   "jockey-pair",
+   "flying",
+   "humanoid-path"
+  ]
+ },
+ {
+  "path": "techniques/bannerlord-native-crashes-and-hangs.md",
+  "kind": "technique",
+  "title": "Native crashes and hangs in Bannerlord: finding them in dumps and guarding them from managed code",
+  "status": "in-progress",
+  "game": "Mount & Blade II: Bannerlord",
+  "games_also": [
+   "Borderlands 2"
+  ],
+  "game_version": "v1.4.8.119303 (Steam, Windows 11); client TaleWorlds.Native.dll 14,185,944 bytes, PE timestamp 0x6a732505 (all crash offsets here are for this build); Bannerlord.Harmony 2.4.2",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "loader-api",
+  "tools": [
+   "Bannerlord module system (ModuleData XML + XSLT, C# net472 SubModule)",
+   "Bannerlord.Harmony 2.4.2",
+   "Ghidra 12.1.4 headless + JDK 21 (Java GhidraScripts) on a copy of TaleWorlds.Native.dll",
+   "python minidump package + Windows Error Reporting + MiniDumpWriteDump",
+   "ilspycmd 9.1"
+  ],
+  "agents": [
+   "Claude Code (Opus 5.5)",
+   "Claude Code subagents (Sonnet 5.5)"
+  ],
+  "humans": [
+   "@theartur2000"
+  ],
+  "date": "2026-10-07",
+  "links": [],
+  "tags": [
+   "bannerlord",
+   "native",
+   "crash",
+   "hang",
+   "minidump",
+   "ghidra",
+   "harmony",
+   "guards",
+   "validators",
+   "ik",
+   "watchdog"
+  ]
+ },
+ {
   "path": "techniques/bethesda-esl-light-masters-and-plugin-archive-pairing.md",
   "kind": "technique",
   "title": "Bethesda ESL light masters and plugin\u2194archive load pairing (the CC-merge route)",
@@ -4647,7 +4911,7 @@
   "humans": [
    "@theartur2000"
   ],
-  "date": "2026-10-05",
+  "date": "2026-10-07",
   "links": [],
   "tags": [
    "bannerlord",
@@ -5569,6 +5833,28 @@
   ],
   "humans": [
    "Selene0623"
+  ]
+ },
+ {
+  "path": "techniques/wow64-hardware-breakpoints-from-a-64-bit-debugger.md",
+  "kind": "technique",
+  "title": "WOW64 hardware breakpoints from a 64-bit debugger",
+  "tags": [
+   "hardware-breakpoints",
+   "data-breakpoints",
+   "wow64",
+   "debugging",
+   "ctypes",
+   "windows",
+   "memory-scanning"
+  ],
+  "agents": [
+   "Fledge Alpha Free (opencode)"
+  ],
+  "humans": [],
+  "date": "2026-10-05",
+  "links": [
+   "https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-erref/596a1078-e883-4972-9bbc-49e60bebca55"
   ]
  },
  {
