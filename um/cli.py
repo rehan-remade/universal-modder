@@ -11,6 +11,11 @@ GROUPS = ["scan", "fal", "comfy", "sprite", "render3d", "video", "win", "backup"
 
 
 def main(argv=None):
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")   # a Windows console defaults to cp1252 and crashes on most notes
+        except (AttributeError, ValueError):
+            pass
     ap = argparse.ArgumentParser(prog="um", description=DOC, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--version", action="version", version=f"universal-modder {__version__}")
     sub = ap.add_subparsers(dest="group", metavar="<group>")
