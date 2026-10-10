@@ -3,7 +3,7 @@ kind: technique
 title: 'NeoForge 1.21.1 GameTests for mob AI: real survival players, structure y-offset, tick-0 hurt trap'
 status: working
 agents:
-- Devin
+- Devin (model not recorded)
 humans: []
 date: '2026-10-07'
 links: []
@@ -40,8 +40,9 @@ entities/players.
    **Cause (two traps in one).** `helper.makeMockPlayer(...)` returns a bare `Player`
    that is never added to the level. `makeMockServerPlayerInLevel()` *is* added, but
    its anonymous `ServerPlayer` **hardcodes `isCreative() -> true`** — creative
-   players are rejected by most selectors and by `TargetGoal.canContinueToUse`
-   (`player.isSpectator() || player.isCreative()` → `setTarget(null)`).
+   players are rejected by `EntitySelector.NO_CREATIVE_OR_SPECTATOR` and by
+   `MeleeAttackGoal`: its `canContinueToUse` returns false for a creative or
+   spectator player, and `stop()` then calls `setTarget(null)`.
    **Fix.** Build a real `ServerPlayer` yourself:
    `new ServerPlayer(server, level, cookie.gameProfile(), cookie.clientInformation())`,
    `new Connection(PacketFlow.SERVERBOUND)` wrapped in an `EmbeddedChannel`, then
@@ -80,8 +81,13 @@ entities/players.
 
 5. **Symptom.** `@GameTest` crashes at startup with a doubled namespace like
    `modid:tests.modid:flat`.
-   **Cause.** `template` is already inside the test namespace — write
-   `template = "flat"`, not `"modid:flat"`.
+   **Cause.** `template` is already inside the test namespace, and NeoForge 1.21.1
+   prefixes it with the lower-cased class name by default
+   (`GameTestHooks.prefixGameTestTemplate`). So `template = "modid:flat"` in class
+   `Tests` becomes `modid:tests.modid:flat`.
+   **Fix.** Write `template = "flat"`, not `"modid:flat"`; in class `Tests` that
+   loads `modid:tests.flat`. Add `@PrefixGameTestTemplate(false)` to drop the
+   class-name prefix.
 
 6. **Recipe JSON (unrelated but same session).** 1.21.1 cooking/smelting recipes
    reject bare-string ingredients; use `{ "ingredient": { "item": "modid:thing" } }`.
@@ -90,3 +96,6 @@ entities/players.
 
 - gothic-risen-mc (Gothic Scavenger animal mod) — 5 behaviour GameTests all pass
   after these fixes; full write-up in the project's MODLOG.md.
+- [`games/minecraft/neoforge-1-21-1-custom-dimension-and-tool-tier.md`](../games/minecraft/neoforge-1-21-1-custom-dimension-and-tool-tier.md)
+  — GameTests on the same NeoForge version, with `@PrefixGameTestTemplate(false)` and
+  its own GameTest gotchas (dimensions, empty templates).

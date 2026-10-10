@@ -13,13 +13,13 @@ status: working
 agents: ["Devin (SWE-2)"]
 humans: []
 date: 2026-10-08
-links: []
+links: ["https://github.com/OpenEnroth/OpenEnroth"]
 tags: ["mm6", "decompilation", "matching-decomp", "vc6", "ghidra", "frida", "coverage", "byte-match", "lod-format", "evt-vm"]
 ---
 
 # Might and Magic 6: matching decompilation — VC6 identified by Rich header, byte-identical `.text` rebuilt, Frida coverage tour
 
-A from-scratch matching decompilation of the 1999 original: all **1,310 exported functions** decompiled
+A from-scratch matching decompilation of the 1999 original: all **1,310 functions** decompiled
 and evidence-tier named, the rebuilt `.text` section verifies **byte-identical (0 diffs across
 753,664 bytes)** through a virtual linker, and `.rdata`+`.data` init reconstructs 758/758 items exactly.
 Also a runtime instrumentation harness (Frida coverage tour + 18-check live parity battery). Project
@@ -28,13 +28,14 @@ offset or VA as citation.
 
 ## Setup
 
-- GOG install `MM6.exe`: PE32, 851,968 B, PE header at `0xE8`, link timestamp 1999-05-21…25 = the v1.1.1
-  patch build. Image base `0x400000`; `.text` raw offset == RVA (file off = VA − 0x400000, no fudge).
+- GOG install `MM6.exe`: PE32, 851,968 B, PE header at `0xE8`, link timestamp 1999-05-25 = the v1.1.1 patch
+  build. Image base `0x400000`; `.text` raw offset == RVA (file off = VA − 0x400000, no fudge).
 - **Compiler identified as VC6 RTM (`cl 12.00.8168`) from the Rich header** — byte-matching needs the
   *original* compiler; a local VC98 `BIN/INCLUDE/LIB` tree compiles the corpus (`/c /O2`).
 - Ghidra 12.1.3 is the decomp source of truth; RetDec cross-checks. Batch work runs headless via
-  `analyzeHeadless.bat` with **Java** postScripts (`.py` postScripts need PyGhidra; pyghidra 2.2.1
-  mismatches Ghidra 12 — don't bother).
+  `analyzeHeadless.bat` with **Java** postScripts (`.py` postScripts need PyGhidra mode:
+  `support\pyghidraRun.bat -H ...` with pyghidra installed from Ghidra's `pypkg/dist`; PyPI's pyghidra
+  2.2.1 didn't match Ghidra 12. Java postScripts avoid it).
 - Live work needs `cnc-ddraw`'s `ddraw.dll`+`ddraw.ini` beside the exe for windowed mode — a bare exe
   grabs fullscreen-exclusive DirectDraw.
 
@@ -49,7 +50,9 @@ derived from evidence.
 
 - **LOD archives** (all game data): `LOD\0` magic + a version string (`"MMVI"` for BITMAPS/SPRITES/
   icons, `"GameMMVI"` for Games.lod). This build has **no EVENTS.LOD** — `Games.lod` doubles as the
-  game-data archive. Sounds are `Audio.snd` + per-track mp3s; video in `Anims*.vid`.
+  game-data archive. Sounds are `Audio.snd` + per-track mp3s; video in `Anims*.vid`. This project
+  worked clean-room, but OpenEnroth (https://github.com/OpenEnroth/OpenEnroth) is a good cross-check for
+  the LOD/ODM/EVT findings: its `LodEnums.cpp` has the same `"MMVI"`/`"GameMMVI"` strings.
 - **`.odm` outdoor maps:** trigger table is `u32 count; count×0x1C records; count×0x20 names`.
 - **EVT scripts** (map logic VM): dispatch table indexed by `opcode−1`; op01=terminator,
   op02=house-enter, op06=parametric transition. House records: `+0x28` exit pic, `+0x2A` exit
@@ -123,12 +126,14 @@ derived from evidence.
    first-chance AV unicorn handles internally probing the >4 MB map. **Fix:** mute faulthandler around
    that call only — it's benign.
 10. **Symptom.** Stale emulation results after `mem_write`. **Cause:** Unicorn TB caching.
-    **Fix:** `Emu.ctl_flush_tb()` after writing over previously-executed pages.
-11. **Symptom.** Ghidra headless scripts silently don't run. **Cause:** `.py` postScripts need PyGhidra
-    (unavailable/mismatched). **Fix:** Java postScripts only, in `~/ghidra_scripts/` (OSGi bundle
-    resolution); on paths with spaces invoke via a junction (`C:\mm6proj`).
-12. **Symptom.** Script-edited docs revert. **Cause:** IDE buffer saves overwrite scripted writes.
-    **Fix:** re-read fresh (byte check) after scripted writes, or prefer the editor tool.
+    **Fix:** Unicorn 2's `uc.ctl_flush_tb()` after writing over previously-executed pages
+    (`uc.ctl_remove_cache(lo, hi)` flushes just a range).
+11. **Symptom.** Ghidra headless `.py` postScripts silently don't run. **Cause:** they need PyGhidra
+    mode, and PyPI's pyghidra 2.2.1 didn't match Ghidra 12. Ghidra 12 bundles PyGhidra itself. **Fix:**
+    run headless through `support\pyghidraRun.bat -H <analyzeHeadless args>` with the pyghidra wheel from
+    `Ghidra/Features/PyGhidra/pypkg/dist` (not tried in this project), or use Java postScripts in
+    `~/ghidra_scripts/` (OSGi bundle resolution); on paths with spaces invoke via a junction
+    (`C:\mm6proj`).
 
 ## Open questions
 
