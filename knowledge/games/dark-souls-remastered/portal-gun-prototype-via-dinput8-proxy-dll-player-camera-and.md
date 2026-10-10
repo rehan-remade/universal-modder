@@ -5,15 +5,16 @@ game: 'DARK SOULS: REMASTERED'
 games_also: []
 game_version: 'Steam build 10943698; DarkSoulsRemastered.exe 50,286,344 bytes, SizeOfImage 0x319B000'
 platform: windows
-engine: native
-route: other
+engine: fromsoft
+route: native-hook
 tools:
 - Zig 0.17.0 (zig cc, x86_64-windows-gnu)
 - Ghidra 12.1.4
 - Python 3 ctypes (ReadProcessMemory) and capstone
 - DSR-Gadget source (reference only)
 - Paramdex DS1R defs and names (soulsmods/Paramdex, reference)
-anti_cheat: none found by um scan (play offline only)
+anti_cheat: 'no client anti-cheat found by um scan; servers are live, so offline only (proxy removed before going
+  online)'
 status: in-progress
 agents:
 - Claude Code (Sonnet 5.5)
@@ -48,18 +49,22 @@ point places an upright portal flat on a wall. This note is mostly a verified me
 ## Setup
 - Game: Steam app 570940, build id 10943698, `DarkSoulsRemastered.exe` 50,286,344 bytes (SHA-256
   `a45aaa36dd2f6cc151670a639ea5547043cf38ea79ff4178b963c6ed71f98d7b`), PE `SizeOfImage` 0x319B000. This size is
-  not in DSR-Gadget's version table, so its offsets and "boosts" do not apply directly.
+  not in DSR-Gadget's version table; DSR-Gadget treats unknown sizes as newer than 1.03 and applies all its boosts.
 - Windows 10, no MSVC. Built with portable Zig: `zig cc -target x86_64-windows-gnu -shared -O2 -o dinput8.dll
   proxy.c dinput8.def -lgdi32 -luser32`.
 - The game folder already had a ReShade `dxgi.dll`; `dinput8.dll` was free, so the proxy uses that name.
-- Play with Steam in Offline Mode. The image base is fixed at 0x140000000 (no ASLR relocation was observed).
+- Offline only. DSR's PC servers are live again (since November 2022), and teleports or in-memory param edits in an
+  online session would reach other players and can get the account soft-banned. The proxy loads on every launch, so
+  keep Steam in Offline Mode (or block `DarkSoulsRemastered.exe` in the firewall) while `dinput8.dll` is in the game
+  folder, and remove it before playing online.
+- The image base is fixed at 0x140000000 (no ASLR relocation was observed).
 
 ## Route and why
 A dinput8 proxy DLL (forwards `DirectInput8Create`, starts a thread) plus direct memory access. Params alone
-cannot express portals, ModEngine2 supports DSR but is archived and not needed for this, and DSR-Gadget is a
-separate external process (and GPL-3.0). Item and projectile work (params via Soulstruct, Smithbox or
-DSMapStudio with Paramdex) is the planned item side; the projectile system itself has been located and a
-spawn from our own code verified (see below).
+cannot express portals; ModEngine2 never supported DSR (its README lists it as unsupported, and it's discontinued
+in favour of me3, which doesn't list DSR either); and DSR-Gadget is a separate external process (and GPL-3.0). Item
+and projectile work (params via Soulstruct, Smithbox or DSMapStudio with Paramdex) is the planned item side; the
+projectile system itself has been located and a spawn from our own code verified (see below).
 
 ## How the game works (what we had to learn)
 The executable on disk is protected: there is an extra large, high-entropy `.text` section after `.idata` and the
@@ -121,7 +126,8 @@ Found by RTTI plus Ghidra headless on the runtime dump. All addresses are relati
 - **BulletMan** singleton: global at exe+0x1c7a488 (constructor 0x140429440). Pools: 0x80 x 0x360-byte entries at `+0x00`
   (an emitter-like object), 0x40 x 800-byte `BulletIns` at `+0x20`, and 4 x 0x318 bytes at `+0x40`. In-use `BulletIns`
   objects hang on a list: head `[BulletMan + 0x28]`, next `[obj + 0x308]`; `obj + 0` is the bullet handle. Handles look
-  like 0xff02ff00.
+  like 0xff02ff00. Unresolved: the aimed-shot section below polls a different list (head `[BulletMan + 0x08]`, next at
+  +0x348, 0x360-byte objects), and this note does not say which one the current code uses (see Open questions).
 - **BulletIns** (vtable 0x141342a70, 0x320 bytes): position vec4 at +0x10, orientation at +0x20, velocity at +0x30,
   state at +0x88 (1 wait, 2 fly, 3 explosion, 4 none; classes BulletWaitState, BulletFlyState, BulletExplosionState),
   timer at +0x1f4, BulletParam id at +0x94, owner at +0x9c. The update function is exe+0x1404246a0. Movement is
@@ -144,10 +150,13 @@ Found by RTTI plus Ghidra headless on the runtime dump. All addresses are relati
   queued spawn requests on the game's own thread. A key press that queued a replay of the captured create-info with
   bullet 130 and a new transform 3 units ahead produced a real Prism Stone that fell to the floor (seen by the user), with
   no crash. With owner = 0xffffffff the call also returned a valid handle, but nothing visible appeared where expected;
-  where an ownerless bullet's position comes from is not yet known.
+  where an ownerless bullet's position comes from is not yet known. Unresolved: the aimed shot below fires ownerless
+  bullets and reads their impact (verified), and the collision-probe section says ownerless bullets simulate and collide
+  normally with no visual effect, so this "unknown position" may be out of date (see Open questions).
 - **Why this matters for portals:** a spawned projectile is a real object the game simulates and removes; its impact
-  (state goes to 3) gives a world position, and a bullet that carries an attack param with a marker SpEffect could act as
-  a collision trigger. Not done yet.
+  gives a world position (used by the aimed shot below), and a bullet that carries an attack param with a marker SpEffect
+  could act as a collision trigger. The trigger is not done yet. Unresolved: this section and Gotcha 7 take the impact
+  when the state turns 3, while the aimed-shot section and Gotcha 14 take it when the state turns 4 (see Open questions).
 
 ## Param access at runtime and the Prism Stone rows
 - Param manager global at exe+0x1c7e000: `file(type) = [man + 0x18 + (type * 9) * 8]`, row table `t = [file + 0x38]`, id
@@ -178,16 +187,20 @@ Found by RTTI plus Ghidra headless on the runtime dump. All addresses are relati
 Instead of writing a collision query, fire a bullet along the camera ray and read where it stops. Verified in the real game
 (offline), repeatable (same aim gave identical numbers), no crashes.
 - Spawn an ownerless Prism Stone bullet (id 130) with the replayed create-info, using the camera position + 1 m and the camera
-  forward as direction. The bullet's BulletParam row is edited in memory only for the shot and restored afterwards: life 1.5 s,
-  gravity in and out of range 0, distance 500, initial/max/min velocity 40, accelerations 0. Rows are heap memory, so a crash
-  or restart reverts them.
+  forward as direction. (The projectile section, Verification and Gotcha 10 still call an ownerless bullet's position
+  unknown; unresolved, see Open questions.) The bullet's BulletParam row is edited in memory only for the shot and
+  restored afterwards: life 1.5 s, gravity in and out of range 0, distance 500, initial/max/min velocity 40,
+  accelerations 0. Rows are heap memory, so a crash or restart reverts them.
 - Spawn-transform convention (found because the first replays flew backwards): a bullet's velocity is `M * (0, 0, -1)` where
   M is the row-major 3x4 at create-info +0x40. To fire along direction d use columns `[right, up, -d | t]` with
   `right = normalize(cross(worldUp, -d))` and `up = cross(-d, right)`.
 - Detect the hit: poll the in-use `BulletIns` list (`[BulletMan + 0x08]`, next at +0x348, 0x360-byte objects; param id +0x94 and
   owner +0x9c identify yours). State 2 is flying, state 4 means finished. The position at +0x10 when it turns 4 is the impact.
   Do this once per frame inside the player's `ChrCtrl::Update` hook, because 30 ms polling from another thread can miss the
-  single frame the bullet sits in state 4.
+  single frame the bullet sits in state 4. Unresolved: the projectile section above (and Gotcha 9) puts live `BulletIns`
+  (0x320 bytes) on a list at `[BulletMan + 0x28]` with next at +0x308, and calls the 0x360-byte pool "emitter-like"; it
+  also takes the impact at state 3, not 4. This note does not say which list and state the working code uses (see Open
+  questions).
 - Accuracy: at 40 m/s a frame moves about 0.67 m, so the impact can overshoot the surface by up to that (measured 0.60 m and
   0.10 m). Two stages fix it: after the fast scouting hit, fire a slow shot (6 m/s, about 0.1 m per frame) from 1.2 m before
   the scouting impact along the same ray and use its impact. The user judged portals placed this way as nearly flush with
@@ -221,18 +234,21 @@ coordinates. Results so far, from logs:
 - Ownerless wait-state bullet with an NPC-table attack (3146) ended in 16 to 30 ms, with its position jumping 20 m down;
   with a PC-table attack (222) it stayed alive (at the origin). Which AtkParam table an ownerless bullet reads is still open.
 - Ownerless bullets are simulated and collide with the world exactly like owned ones, but show no visual effect (the owned stone
-  shows its effect). An overlay marker is a workable stand-in for testing.
+  shows its effect). An overlay marker is a workable stand-in for testing. (This conflicts with the "position unknown" reading
+  in the projectile section, Verification and Gotcha 10; unresolved, see Open questions.)
 - Untested at the time of writing: the fly-state zero-speed probe walking into the player.
 
 
 ## Build steps
-1. Back up your saves, put Steam in Offline Mode, and find the module base (fixed 0x140000000).
+1. Back up your saves, put Steam in Offline Mode (or block `DarkSoulsRemastered.exe` in the firewall) and keep it
+   offline for as long as the proxy is in the game folder, and find the module base (fixed 0x140000000).
 2. Build the proxy (forward `DirectInput8Create` from the system `dinput8.dll`, start a thread in `DllMain`),
    and copy it into the game folder. Close the game before replacing it (a loaded DLL cannot be overwritten).
 3. In the thread, read the chains above with `VirtualQuery` guards and do the camera projection and teleport.
 4. For analysis, add a hotkey that dumps the module image, then import it into Ghidra as a raw binary at base
    0x140000000 (x86:LE:64:default, windows cspec).
-5. Undo: delete the proxy DLL from the game folder.
+5. Undo: delete `dinput8.dll` from the game folder. Do this before playing online again: the proxy loads on every
+   launch, online ones included.
 
 ## Verification
 - Position chain: read on two launches; the 2-unit "pop up" write was confirmed visually by the user, and a
@@ -244,7 +260,8 @@ coordinates. Results so far, from logs:
   on open floor.
 - Projectile spawn: hooked BulletMan::Spawn while the user threw a Prism Stone and cast spells (create-info bytes logged),
   then replayed it from our own hook on the player's ChrCtrl::Update; the user saw the stone appear and fall, the log shows
-  a valid handle each time. The ownerless variant returned a valid handle but its position is unverified.
+  a valid handle each time. The ownerless variant returned a valid handle but its position is unverified (this conflicts
+  with the verified aimed shot below, which fires ownerless bullets; unresolved, see Open questions).
 - Aimed shot: F3 and Ctrl+F6 at the same aim gave identical impacts; the two-stage refine measured the fast shot overshooting the
   surface by 0.60 m and 0.10 m in two shots; the user confirmed the rings sit nearly flush on the wall (log: SHOT HIT / SHOT refine).
 - Havok capsule: the two triples equal the player position exactly during normal play; per-tick traces with and without
@@ -261,9 +278,13 @@ coordinates. Results so far, from logs:
    sticks. **Cause:** the game's own per-frame move writes back over a single mid-frame write. **Fix:** hold the
    destination and angle for about 0.3 s (re-write every tick) after the crossing.
 3. **Symptom.** The game exits about one second after writing DSR-Gadget's Warp fields (ChrMapData + 0x108, 0x110
-   to 0x124) and setting the warp flag. **Cause:** DSR-Gadget's offsets are for older builds; this build's size is
-   not in its table, so the layout differs. **Fix:** do not use them on an unknown build. Direct position and
-   angle writes are safe.
+   to 0x124) and setting the warp flag. **Cause:** not known. This build's size is not in DSR-Gadget's version
+   table, but DSR-Gadget does not skip unknown builds: it treats them as newer than 1.03 and applies all its boosts
+   (including `ChrData1Boost1 = 0x20`), so on this build it reads ChrMapData from `[PlayerIns + 0x68]` (0x48 + 0x20)
+   and writes the warp fields at that object + 0x108 to 0x124. This note does not record which base the crashing
+   test wrote to. Worth checking: if it was `[PlayerIns + 0x48]` or ChrCtrl (`[PlayerIns + 0x18]`), retry with
+   `[PlayerIns + 0x68]`; that is not confirmed as the cause. **Fix:** until that is checked, use direct position and
+   angle writes, which are safe.
 4. **Symptom.** Hotkeys do nothing in a proxy DLL. **Cause:** F12 is Steam's screenshot key and is swallowed, and
    an exact-HWND foreground check plus the `GetAsyncKeyState & 1` edge flag were unreliable. **Fix:** avoid F12 if Steam's
    screenshot hotkey is bound (on the author's PC F12 reached the game and worked in a later session, so check your Steam
@@ -277,25 +298,29 @@ coordinates. Results so far, from logs:
    near the start, not stopping at a wall). **Fix (partial):** also write the two capsule triples (see "Why the teleport
    lags"); all teleports then landed, with a delay. The game's real teleport function is still unknown.
 7. **Symptom.** A blind "N units ahead" portal placement lands in walls. **Cause:** no collision query.
-   **Fix:** planned: use the game's own projectile impact position (BulletIns state 3, position at +0x10); the surface
-   normal is not stored there (approximate it from the flight direction).
-8. **Symptom.** `um` crashes printing the game name on a Windows console. **Cause:** cp932 console encoding.
-   **Fix:** set `PYTHONUTF8=1`. Also `um kb search` needs PyYAML.
-9. **Symptom.** A test write landed in unrelated memory. **Cause:** a scan result went stale after the player object
+   **Fix:** use the game's own projectile impact position (done: see "Aimed shot"); the surface normal is not stored
+   there (approximate it from the flight direction). Unresolved: this gotcha reads the impact at BulletIns state 3
+   (position at +0x10), while the aimed-shot section and Gotcha 14 read it at state 4 (see Open questions).
+8. **Symptom.** A test write landed in unrelated memory. **Cause:** a scan result went stale after the player object
    was reallocated. **Fix:** re-resolve the chain from the global each time and only write to addresses that
    currently match the expected values.
-10. **Symptom.** A watcher for a spawned bullet logged "not in pool" forever. **Cause:** it scanned the 0x80 x 0x360 pool at
-    BulletMan+0; spawned bullets are 0x320-byte objects on the in-use list at BulletMan+0x28. **Fix:** walk that list.
-11. **Symptom.** A bullet spawned with no owner appeared nowhere visible. **Cause:** unknown (the position probably comes from
-    the owner's dummy poly, with a default when there is none). **Fix:** not found yet.
-12. **Symptom.** Replayed spawn fires the projectile backwards. **Cause:** velocity is the spawn matrix times (0, 0, -1), not +z.
+9. **Symptom.** A watcher for a spawned bullet logged "not in pool" forever. **Cause:** it scanned the 0x80 x 0x360 pool at
+   BulletMan+0; spawned bullets are 0x320-byte objects on the in-use list at BulletMan+0x28. **Fix:** walk that list.
+   Unresolved: the aimed-shot section polls `[BulletMan + 0x08]` (next at +0x348, 0x360-byte objects) instead (see Open
+   questions).
+10. **Symptom.** A bullet spawned with no owner appeared nowhere visible. **Cause:** unknown (the position probably comes from
+    the owner's dummy poly, with a default when there is none). **Fix:** not found yet. Unresolved: the aimed shot fires
+    ownerless bullets and reads their impact, and the collision-probe section says they simulate normally with no visual
+    effect, so this may be out of date (see Open questions).
+11. **Symptom.** Replayed spawn fires the projectile backwards. **Cause:** velocity is the spawn matrix times (0, 0, -1), not +z.
     **Fix:** build the 3x4 with the third column equal to the negated direction.
-13. **Symptom.** A shot-placed wall portal can never be entered. **Cause:** a wall stops the player before the plane is crossed.
+12. **Symptom.** A shot-placed wall portal can never be entered. **Cause:** a wall stops the player before the plane is crossed.
     **Fix:** a touch trigger within about 0.6 m in front of the plane (see "Wall portals need a touch trigger").
-14. **Symptom.** A wait-state (FollowType 1 or 2) bullet teleports to (0, 0, 0) or hugs the player. **Cause:** it follows its
+13. **Symptom.** A wait-state (FollowType 1 or 2) bullet teleports to (0, 0, 0) or hugs the player. **Cause:** it follows its
     owner's dummy-poly transform. **Fix:** use FollowType 0 with zero velocity for a fixed volume.
-15. **Symptom.** The impact reading is 0.6 m inside the wall. **Cause:** a 40 m/s bullet moves 0.67 m per frame and state 4 is
-    seen after the step. **Fix:** refine with a slow shot (6 m/s) fired from just before the first impact.
+14. **Symptom.** The impact reading is 0.6 m inside the wall. **Cause:** a 40 m/s bullet moves 0.67 m per frame and state 4 is
+    seen after the step. **Fix:** refine with a slow shot (6 m/s) fired from just before the first impact. Unresolved:
+    the projectile section and Gotcha 7 say the impact state is 3, not 4 (see Open questions).
 
 ## Assets
 None generated. The portals are GDI-drawn rings.
@@ -305,6 +330,14 @@ One long session (about a day of wall-clock with many launch cycles, each needin
 
 ## Open questions
 - The game's own position-teleport function (or the correct warp-field offsets for this build), to remove the acceptance delay.
+  Worth checking first: DSR-Gadget's warp fields with ChrMapData at `[PlayerIns + 0x68]` (see Gotcha 3).
+- The bullet section contradicts itself in three places, and this note cannot say which reading the current code uses:
+  - the in-use `BulletIns` list: head `[BulletMan + 0x28]`, next at +0x308, 0x320-byte objects, with the 0x360-byte pool at
+    +0x00 "emitter-like" (projectile section, Gotcha 9), or head `[BulletMan + 0x08]`, next at +0x348, 0x360-byte objects
+    (aimed shot);
+  - the state that marks the impact: 3 (projectile section, Gotcha 7) or 4 (aimed shot, Gotcha 14);
+  - whether an ownerless bullet's position is known: unknown or unverified (projectile section, Verification, Gotcha 10),
+    or simulated normally with no visual and used by the verified aimed shot (aimed shot, collision-probe section).
 - Does a fly-state, zero-speed, zero-damage bullet with an attack param react to the player (state 3 or 4 near the player)? If yes it
   is a true collision trigger; if not, the hit manager's overlap and team test (exe+0x1c7a050, candidates 0x1403b8400, 0x1403b7290,
   0x1403e6450) has to be read or hooked, or a Havok phantom with a contact listener used instead.
