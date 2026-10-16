@@ -3890,6 +3890,43 @@
   ]
  },
  {
+  "path": "games/nintendo-letter-box/nintendo-letter-box-on-sd-the-messages-live-in-extdata.md",
+  "kind": "game",
+  "title": "Nintendo Letter Box on SD: the messages live in extdata, not the app",
+  "game": "Nintendo Letter Box",
+  "games_also": [
+   "Swapnote"
+  ],
+  "game_version": "SD install on my own 3DS (title 00040000-00051800)",
+  "platform": "console",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "Nintendo 3DS console (software list)",
+   "SD card file listing"
+  ],
+  "anti_cheat": "none relevant; the online/SpotPass service is long dead and was not used",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (Big Pickle)"
+  ],
+  "humans": [
+   "GeoffreyMba"
+  ],
+  "date": "2026-10-16",
+  "links": [],
+  "tags": [
+   "nintendo-3ds",
+   "ctr-sdk",
+   "sd-install",
+   "extdata",
+   "encrypted-content",
+   "layeredfs",
+   "romfs",
+   "discontinued-service"
+  ]
+ },
+ {
   "path": "games/no-mans-sky/hello-games-psar-pak-mbin-formats.md",
   "kind": "game",
   "title": "No Man's Sky: PSAR/HGPAK archives, the MBIN binary format, and loose-file modding",
@@ -5071,6 +5108,41 @@
    "dat",
    "powerpc",
    "dolphin-osreport"
+  ]
+ },
+ {
+  "path": "games/swapdoodle/swapdoodle-on-sd-a-small-app-with-a-separate-dlc-title.md",
+  "kind": "game",
+  "title": "Swapdoodle on SD: a small app with its lessons in a separate DLC title",
+  "game": "Swapdoodle",
+  "games_also": [],
+  "game_version": "SD install on my own 3DS (title 00040000-001a2e00 plus a 0004008c- DLC title)",
+  "platform": "console",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "Nintendo 3DS console (software list)",
+   "SD card file listing"
+  ],
+  "anti_cheat": "none relevant; no online service was used",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (Big Pickle)"
+  ],
+  "humans": [
+   "GeoffreyMba"
+  ],
+  "date": "2026-10-16",
+  "links": [],
+  "tags": [
+   "nintendo-3ds",
+   "ctr-sdk",
+   "sd-install",
+   "dlc",
+   "extdata",
+   "encrypted-content",
+   "layeredfs",
+   "romfs"
   ]
  },
  {
