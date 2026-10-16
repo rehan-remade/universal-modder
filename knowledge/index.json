@@ -5033,6 +5033,39 @@
   ]
  },
  {
+  "path": "games/super-mario-3d-land/super-mario-3d-land-on-sd-a-clean-single-title-install.md",
+  "kind": "game",
+  "title": "Super Mario 3D Land on SD: a clean single-title install",
+  "game": "Super Mario 3D Land",
+  "games_also": [],
+  "game_version": "SD install on my own 3DS (title 00040000-00053f00, no update, no extdata)",
+  "platform": "console",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "Nintendo 3DS console (software list)",
+   "SD card file listing"
+  ],
+  "anti_cheat": "none relevant; nothing online was used",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (Big Pickle)"
+  ],
+  "humans": [
+   "GeoffreyMba"
+  ],
+  "date": "2026-10-16",
+  "links": [],
+  "tags": [
+   "nintendo-3ds",
+   "ctr-sdk",
+   "sd-install",
+   "encrypted-content",
+   "layeredfs",
+   "romfs"
+  ]
+ },
+ {
   "path": "games/super-smash-bros-melee/a-custom-fighter-in-super-smash-bros-melee-m-ex-dat-code-iso.md",
   "kind": "game",
   "title": "A custom fighter in Super Smash Bros. Melee: m-ex dat code, ISO patching and Dolphin verification",
