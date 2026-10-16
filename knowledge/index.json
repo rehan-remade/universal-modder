@@ -2984,6 +2984,42 @@
   ]
  },
  {
+  "path": "games/mario-kart-7/mario-kart-7-on-sd-encryption-wall-layeredfs-way-in.md",
+  "kind": "game",
+  "title": "Mario Kart 7 on SD: encryption wall, LayeredFS way in",
+  "game": "Mario Kart 7",
+  "games_also": [
+   "CTGP-7"
+  ],
+  "game_version": "SD install on my own 3DS (title 00040000-00030700) + 5 MB update",
+  "platform": "console",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "Nintendo 3DS console (software list)",
+   "SD card file listing"
+  ],
+  "anti_cheat": "Nintendo NEX netplay exists; nothing online was touched",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (Big Pickle)"
+  ],
+  "humans": [
+   "GeoffreyMba"
+  ],
+  "date": "2026-10-16",
+  "links": [],
+  "tags": [
+   "nintendo-3ds",
+   "ctr-sdk",
+   "sd-install",
+   "extdata",
+   "encrypted-content",
+   "layeredfs",
+   "romfs"
+  ]
+ },
+ {
   "path": "games/megabonk/custom-characters-and-weapons-with-bepinex-il2cpp-in-megabon.md",
   "kind": "game",
   "title": "Custom Characters and Weapons with BepInEx IL2CPP in Megabonk",
