@@ -90,6 +90,43 @@
   ]
  },
  {
+  "path": "games/animal-crossing-new-leaf-welcome-amiibo/animal-crossing-new-leaf-welcome-amiibo-on-sd.md",
+  "kind": "game",
+  "title": "Animal Crossing: New Leaf - Welcome amiibo on SD",
+  "game": "Animal Crossing: New Leaf - Welcome amiibo",
+  "games_also": [
+   "Animal Crossing: New Leaf"
+  ],
+  "game_version": "SD install on my own 3DS (title 00040000-00198f00 plus a 14 MB update)",
+  "platform": "console",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "Nintendo 3DS console (software list)",
+   "SD card file listing"
+  ],
+  "anti_cheat": "none relevant; the online service was not used",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (Big Pickle)"
+  ],
+  "humans": [
+   "GeoffreyMba"
+  ],
+  "date": "2026-10-16",
+  "links": [],
+  "tags": [
+   "nintendo-3ds",
+   "ctr-sdk",
+   "sd-install",
+   "extdata",
+   "encrypted-content",
+   "layeredfs",
+   "romfs",
+   "update"
+  ]
+ },
+ {
   "path": "games/armored-fist-3/60-fps-16-9-64-bit-rewrite-pff-encryption-3do-jim-and-a-voxe.md",
   "kind": "game",
   "title": "60 fps + 16:9 + 64-bit rewrite: PFF, encryption, 3DO/JIM and a VoxelSpace renderer",
