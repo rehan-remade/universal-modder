@@ -7,9 +7,11 @@ versions from the field notes and the per-game reports below, not from here.
 
 ## 1. Compare both sides
 **Host:** OS and build, CPU architecture, GPU, driver and graphics API. An unchecked host is the usual reason a
-note's result doesn't repeat.
-- macOS: `sw_vers`, `uname -m`, `system_profiler SPDisplaysDataType` (chip and Metal support).
-- Linux: `cat /etc/os-release`, `uname -m`, `vulkaninfo --summary` (GPU, driver, Vulkan version).
+note's result doesn't repeat. `um scan` starts its report with `host:` (OS and version, CPU named like the exes'
+`[x64]`, WSL noted; `host` in `--json`), which covers the first two. The GPU, driver and graphics API are still by
+hand:
+- macOS: `system_profiler SPDisplaysDataType` (chip and Metal support); `sw_vers` and `uname -m` for the rest.
+- Linux: `vulkaninfo --summary` (GPU, driver, Vulkan version); `cat /etc/os-release` and `uname -m` for the rest.
 - Windows: `dxdiag /t dxdiag.txt`; its "Feature Levels" line lists the Direct3D levels the GPU supports.
 
 **Game:**

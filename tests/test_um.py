@@ -564,6 +564,85 @@ def test_scan_warns_only_for_online_games(tmp_path):
         assert any("online competitive" in w for w in scan.scan(str(d))["warnings"]) == warned, name
 
 
+def _fake_host(monkeypatch, os_name, machine, wsl=False):
+    import platform
+    monkeypatch.setattr(scan, "is_mac", lambda: os_name == "macos")
+    monkeypatch.setattr(scan, "is_windows", lambda: os_name == "windows")
+    monkeypatch.setattr(scan, "is_wsl", lambda: wsl)
+    monkeypatch.setattr(platform, "machine", lambda: machine)
+
+
+def test_host_info_names_the_cpu_like_the_exes(monkeypatch):
+    # the host's `arch` must compare directly with an exe's `arch` in the report (x86, x64, arm64)
+    for machine, arch in [("x86_64", "x64"), ("AMD64", "x64"), ("arm64", "arm64"), ("aarch64", "arm64"),
+                          ("i386", "x86"), ("i686", "x86"), ("riscv64", "riscv64")]:
+        _fake_host(monkeypatch, "linux", machine)
+        assert scan.host_info()["arch"] == arch, machine
+
+
+def test_host_info_per_os_and_wsl(monkeypatch):
+    import platform
+    _fake_host(monkeypatch, "macos", "arm64")
+    monkeypatch.setattr(platform, "mac_ver", lambda: ("26.5.1", ("", "", ""), "arm64"))
+    h = scan.host_info()
+    assert h == dict(os="macos", os_version="26.5.1", arch="arm64", wsl=False)
+    assert scan.host_line(h) == "macOS 26.5.1, arm64"
+
+    _fake_host(monkeypatch, "windows", "AMD64")
+    monkeypatch.setattr(platform, "version", lambda: "10.0.26100")
+    h = scan.host_info()
+    assert (h["os"], h["arch"], h["wsl"]) == ("windows", "x64", False)
+    assert scan.host_line(h) == "Windows 10.0.26100, x64"
+
+    _fake_host(monkeypatch, "linux", "x86_64")
+    monkeypatch.setattr(platform, "freedesktop_os_release", lambda: {"PRETTY_NAME": "Ubuntu 24.04.1 LTS"})
+    assert scan.host_line(scan.host_info()) == "Ubuntu 24.04.1 LTS, x64"
+    monkeypatch.setattr(platform, "freedesktop_os_release", lambda: (_ for _ in ()).throw(OSError("no os-release")))
+    monkeypatch.setattr(platform, "release", lambda: "6.8.0")
+    assert scan.host_line(scan.host_info()) == "Linux 6.8.0, x64"
+
+    # WSL is Linux to Python but a Windows host for games: the line must say so, and never suggest Proton territory
+    _fake_host(monkeypatch, "linux", "x86_64", wsl=True)
+    monkeypatch.setattr(platform, "freedesktop_os_release", lambda: {"PRETTY_NAME": "Ubuntu 22.04.5 LTS"})
+    h = scan.host_info()
+    assert h["wsl"] is True and scan.host_line(h) == "Windows via WSL (Ubuntu 22.04.5 LTS), x64"
+
+
+def test_host_info_sees_through_rosetta(monkeypatch):
+    import platform
+    import subprocess
+    monkeypatch.setattr(platform, "mac_ver", lambda: ("26.5.1", ("", "", ""), "x86_64"))
+
+    def sysctl(out=None, error=None):
+        def run(*a, **k):
+            if error:
+                raise error
+            return subprocess.CompletedProcess(a, 0, stdout=out, stderr="")
+        return run
+
+    _fake_host(monkeypatch, "macos", "x86_64")
+    monkeypatch.setattr(scan.subprocess, "run", sysctl("1\n"))
+    h = scan.host_info()                      # x86_64 Python translated on an Apple Silicon Mac
+    assert h["arch"] == "arm64" and h["translated"] is True
+    assert scan.host_line(h) == "macOS 26.5.1, arm64 (Python runs under Rosetta)"
+    for out, error in [("0\n", None), ("", None), (None, OSError("no sysctl"))]:   # a real Intel Mac, or no answer
+        monkeypatch.setattr(scan.subprocess, "run", sysctl(out, error))
+        h = scan.host_info()
+        assert h["arch"] == "x64" and "translated" not in h
+
+
+def test_scan_report_starts_with_the_host(tmp_path):
+    d = tmp_path / "Some Game"
+    d.mkdir()
+    for i in range(6):
+        (d / f"f{i}.txt").write_text("x")
+    r = scan.scan(str(d))
+    assert set(r["host"]) >= {"os", "os_version", "arch", "wsl"}
+    assert json.loads(json.dumps(r))["host"] == r["host"]           # machine-readable for agents
+    lines = scan.format_report(r).splitlines()
+    assert lines[1].startswith("  path:") and lines[2].startswith("  host:      ")
+
+
 def test_ffmpeg_download_is_checksummed(tmp_path, monkeypatch):
     import hashlib, io
     from um import win

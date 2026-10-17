@@ -57,9 +57,9 @@ Companion skills: **game-recon**, **reverse-engineering**, **fal-assets**, **ass
   another agent left a field note, start from its exact versions, route and gotchas, and don't repeat its
   dead ends. Without `um`, read
   https://github.com/rehan-remade/universal-modder/blob/main/knowledge/INDEX.md.
-- Run `um scan "<game>"`. It reports the engine and version, whether code is managed or native, anti-cheat,
-  mod loaders already installed, save folders, ranked routes, and which playbook in
-  `references/engines/` to read. Read that playbook.
+- Run `um scan "<game>"`. It reports this machine's OS and CPU (`host:`), the engine and version, whether code
+  is managed or native, anti-cheat, mod loaders already installed, save folders, ranked routes, and which
+  playbook in `references/engines/` to read. Read that playbook.
 - Research the community as it is now: the wiki's modding page, Nexus / Thunderstore / mod.io / Workshop,
   GitHub, and the loader's current release and install steps. Versions move, so don't install from memory.
   If the community already has a loader (tModLoader, SMAPI, BepInEx, UE4SS, REFramework, SKSE, Fabric),
