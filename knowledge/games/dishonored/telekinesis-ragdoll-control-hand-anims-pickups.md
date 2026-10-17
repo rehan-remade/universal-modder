@@ -12,7 +12,7 @@ anti_cheat: "none (single-player); offline only"
 status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["depa00"]
-date: 2026-10-16
+date: 2026-10-17
 links: []
 tags: [telekinesis, ragdoll, physx, impact-damage, first-person-animation, anim-tree, pickups, particles, sound, wwise, bend-time, hot-reload, ue3, reflection]
 ---
@@ -59,7 +59,8 @@ takes `_bLoop, _fInRate, _fStartTime`; `DishonoredNPCPawn.SetPushesRigidBodies(_
 functions of the actual object, not the base class.
 
 **What fails from PostRender.** `Actor.Trace`/`FastTrace` always report nothing/blocked (even 10 uu in empty
-space). `PC.Use()` does nothing. `SetPhysics(PHYS_RigidBody)` is ignored on resting pickups.
+space). Not a render-time problem: they fail the same way from inside `GameInfo.Timer` (world tick, see Open
+questions), while `Actor.TraceComponent` against one given component works. `PC.Use()` does nothing. `SetPhysics(PHYS_RigidBody)` is ignored on resting pickups.
 `ForceUpdateComponents(bCollisionUpdate=true)`, `SetRBCollisionChannels(Channels)` and
 `SpawnEmitterMeshAttachment` on a ragdoll bone hit a fatal assert. (The ghost co-op note calls
 `ForceUpdateComponents` from PostRender to move its puppet without trouble; UE3's default is
@@ -189,7 +190,8 @@ weapon wheel. Patching the vtables of `IDirectInput8::CreateDevice` and, for `GU
 ## Gotchas
 1. **Symptom:** F6 slow motion changes nothing. **Cause:** `WorldInfo.TimeDilation` is ignored.
    **Fix:** write a `m_BendTimeInfo` channel (9 is not saved).
-2. **Symptom:** traces never hit anything. **Cause:** collision queries fail from PostRender.
+2. **Symptom:** traces never hit anything. **Cause:** world line checks fail for script-called traces in any
+   context tried (PostRender and `GameInfo.Timer`); the call path itself is fine (`TraceComponent` hits).
    **Fix:** cone targeting over `PawnList` / KActors.
 3. **Symptom:** native call "returns nothing". **Cause:** a subclass override with renamed parameters; unknown
    names are silently ignored. **Fix:** dump the object's own functions and fill both names.
@@ -252,8 +254,13 @@ One long working day (about 9 hours), roughly 60 hot reloads and 8 game crashes 
 - The real cause of the ~10 m freeze of script-created ragdolls (a native system tied to living NPCs or to
   ragdolls not started by the death path?). Finding it would remove the unstick workaround.
 - A natural get-up animation instead of `TermRagdoll`.
-- A per-tick hook for physics work (traces would then work). A lead, not tried: `GameInfo.Timer`, which the
-  Gotcha 4 probe saw firing, is a looping `SetTimer` callback (in UDK, `GameInfo.SetGameSpeed` starts it at the
-  time-dilation rate, about once a second), so it likely runs during the world tick. Swapping its `Func` would
-  be a cheap test of whether traces and `SetLocation` work from there.
+- A per-tick hook for physics work. `GameInfo.Timer` was tried (2026-10-17, same build): it fires exactly
+  once a second (15 calls in 15 s), and with its `Func` swapped, `Actor.Trace` from inside it still returns
+  None with HitLocation (0,0,0), the same as from PostRender. So traces do not fail because of render time.
+  The call path is fine: `Actor.TraceComponent` against the player's CollisionCylinder hits (z 4099.5, normal
+  0,0,1) and returns `true`. World line checks fail for every variant tried: `Trace` returns None with
+  `ExtraTraceFlags` 0-15, with a box extent, with bTraceActors 0 and 1, and called on the pawn, the PC or
+  WorldInfo, and `FastTrace` returns false ("blocked") even for 50 uu of empty air 5 km above the map.
+  Dishonored seems to route world queries some other way; finding that path is the real open question.
+  `SetLocation` from the Timer was not tested.
 - Other NPC skeletons, rats (crowd agents), other gadgets.
