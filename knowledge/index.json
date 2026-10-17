@@ -3498,6 +3498,52 @@
   ]
  },
  {
+  "path": "games/microtopia/per-object-tweaks-piles-fruit-speed-delete.md",
+  "kind": "game",
+  "title": "Microtopia: per-object tweaks - infinite piles, fruit speed, stockpile capacity, hunger stages, delete button",
+  "game": "Microtopia",
+  "games_also": [],
+  "game_version": "v1.2.2 (Steam 2750000), October 2026",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "managed-patch",
+  "tools": [
+   "BepInEx 5.4.23.3",
+   "HarmonyX",
+   "Mono.Cecil (shipped in BepInEx/core)",
+   "csc.exe (.NET Framework, no SDK)",
+   "um scan",
+   "um win shot/drive",
+   "um backup",
+   "um publish"
+  ],
+  "anti_cheat": "none",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5)"
+  ],
+  "humans": [],
+  "date": "2026-10-17",
+  "links": [],
+  "tags": [
+   "unity",
+   "mono",
+   "bepinex",
+   "harmony",
+   "resources",
+   "plants",
+   "buildings",
+   "storage",
+   "imgui",
+   "input-blocking",
+   "ui-injection",
+   "fods",
+   "data-sheets",
+   "save-compatibility",
+   "mod-compatibility"
+  ]
+ },
+ {
   "path": "games/middle-earth-shadow-of-war/falmer-tribe-a-skyrim-creature-as-a-nemesis-tribe.md",
   "kind": "game",
   "title": "Falmer tribe: a Skyrim creature imported as a Nemesis tribe (mesh conform, MMSH/texture/bundle format, body-replacement items, corpse + Garrison fix)",
