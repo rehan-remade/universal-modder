@@ -2474,6 +2474,60 @@
   ]
  },
  {
+  "path": "games/grand-theft-auto-san-andreas/crysis-nanosuit-in-gta-sa-1-0-us-native-asi.md",
+  "kind": "game",
+  "title": "Crysis Remastered nanosuit in GTA San Andreas 1.0 US (native ASI on plugin-sdk)",
+  "game": "Grand Theft Auto: San Andreas",
+  "games_also": [
+   "Crysis Remastered"
+  ],
+  "game_version": "Steam NewSteam R2 (build 459558) downgraded to 1.0 US HoodLum exe (14,383,616 bytes); Crysis Remastered Steam (appid 1715130) as asset source",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "plugin-sdk (DK22Pac) commit 15f15b60",
+   "Visual Studio 2026 (MSVC 14.51, Win32)",
+   "Ultimate ASI Loader 9.7.4 (dinput8.dll)",
+   "SilentPatch SA 1.1 build 34.1",
+   "gtasa-open-downgrader v0.2.3 (logic re-implemented headless)",
+   "Ghidra 12",
+   "Blender 5.1 + DragonFF b3bd7aa",
+   "Python 3.12 (uv)"
+  ],
+  "anti_cheat": "none; single-player only. The Crysis Remastered exe is Steam-DRM encrypted and was not touched: values came from its shipped cfg/Lua",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "ovROG"
+  ],
+  "date": "2026-10-17",
+  "links": [
+   "https://github.com/ovROG/gtasananosute"
+  ],
+  "tags": [
+   "gta-sa",
+   "renderware",
+   "plugin-sdk",
+   "asi",
+   "call-site-redirect",
+   "hoodlum",
+   "silentpatch",
+   "first-person",
+   "cloak",
+   "ped-model",
+   "skinning",
+   "facial-rig",
+   "cryengine2",
+   "crysis",
+   "pak",
+   "dff",
+   "txd"
+  ]
+ },
+ {
   "path": "games/gta-v/minecraft-passthrough.md",
   "kind": "game",
   "title": "Minecraft inside GTA V (passthrough mod)",
