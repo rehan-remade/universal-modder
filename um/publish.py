@@ -23,6 +23,7 @@ SECRET_PATTERNS = [
     ("fal key", re.compile(r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:[0-9a-f]{32}\b")),
     ("FAL_KEY assignment", re.compile(r"FAL_KEY\s*[=:]\s*['\"]?[A-Za-z0-9:_\-]{20,}")),
     ("Anthropic key", re.compile(r"sk-ant-[A-Za-z0-9_\-]{20,}")),
+    ("Sprixen key", re.compile(r"\bspx_live_[A-Za-z0-9_\-]{30,}")),
     # project, service-account and admin keys carry - and _ in their body; legacy keys are plain alphanumerics
     ("OpenAI key", re.compile(r"\bsk-(?:(?:proj|svcacct|admin)-[A-Za-z0-9_\-]{32,}|[A-Za-z0-9]{32,})")),
     # classic tokens (ghp_, gho_, ...) and fine-grained personal access tokens (github_pat_)

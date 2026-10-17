@@ -41,6 +41,12 @@ boss music, a voiced line.
   `submit_job`/`check_job`/`get_job_result`, `upload_file`, `search_docs`.
 - **No fal key?** For images, `um comfy` uses a local ComfyUI server instead (`um comfy status`, then
   `um comfy image "..." --sprite`). It has no audio, 3D or video recipes.
+- **A sprite set that must share one style, or animation sheets?** `um sprixen` (a Sprixen key in
+  `SPRIXEN_API_KEY`, or `um sprixen key set`): every sprite in a project keeps one art style, resolution and
+  view, with a real transparent background (`um sprixen sprite "..." --style pixel_art --size 32x32`), and
+  `um sprixen animate <sprite_id> --type walk` returns a one-row sheet of 2-12 frames that keeps the
+  sprite's facing.
+  Sprites, animation sheets and terrain tiles only; no audio, 3D or video.
 - **CLI alternatives:** `pip install fal` gives `fal api <endpoint> key=value key:=json`; the genmedia CLI
   (`genmedia run ... --json --download`) is agent-friendly too.
 
