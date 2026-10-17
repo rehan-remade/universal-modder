@@ -2055,6 +2055,58 @@
   ]
  },
  {
+  "path": "games/elden-ring/elden-ball-z-xenoverse-2-fighters-and-skills.md",
+  "kind": "game",
+  "title": "Elden Ball Z: Dragon Ball Xenoverse 2 fighters, animations and skills in Elden Ring (native Rust DLL via ModEngine2)",
+  "game": "Elden Ring",
+  "games_also": [
+   "Dragon Ball Xenoverse 2",
+   "Dragon Ball Z: Kakarot"
+  ],
+  "game_version": "Elden Ring 1.17.1 (exe 2.7.1.0, Steam build 25080141), Dragon Ball Xenoverse 2 (Steam, 2026-10 install with DLC CPKs), Dragon Ball Z: Kakarot (Steam, UE 4.21, pak v7), Windows 10 22H2",
+  "platform": "windows",
+  "engine": "fromsoft",
+  "route": "passthrough",
+  "tools": [
+   "ModEngine2 2.1.0 (external_dlls)",
+   "fromsoftware-rs (rev 6933967b, Ww2710 RVA table)",
+   "hudhook (DX12 ImGui overlay, MinHook)",
+   "glam",
+   "Rust stable x86_64-pc-windows-msvc, crt-static",
+   "XV2-Tools / Xv2CoreLib (LazyBone152, MIT) on .NET 10",
+   "CUE4Parse + CUE4Parse-Conversion 1.2.2.202610 (Apache-2.0, EGame.GAME_UE4_21)"
+  ],
+  "anti_cheat": "EasyAntiCheat: never touched. ModEngine2 launches the game offline without EAC; online play only through the plain Steam launch",
+  "status": "released",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "Grolli"
+  ],
+  "date": "2026-10-17",
+  "links": [],
+  "tags": [
+   "mashup",
+   "passthrough",
+   "d3d12-overlay",
+   "imgui",
+   "cpu-skinning",
+   "retarget",
+   "animation-sampling",
+   "skills",
+   "bac",
+   "bsa",
+   "eepk",
+   "flight",
+   "hud",
+   "xinput-hook",
+   "unreal",
+   "cue4parse",
+   "cascade-particles"
+  ]
+ },
+ {
   "path": "games/elden-ring/porting-dark-souls-remastered-enemies-into-elden-ring.md",
   "kind": "game",
   "title": "Porting a Dark Souls Remastered enemy into Elden Ring as a new character (Hollow c2500 -> c7250): skeleton, animations, ragdoll, params, AI and sounds",
