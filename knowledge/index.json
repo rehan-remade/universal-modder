@@ -907,7 +907,7 @@
   "title": "Batman: Arkham Knight split-screen: the engine renders one view and composites it twice",
   "game": "Batman: Arkham Knight",
   "games_also": [],
-  "game_version": "Steam app 208650, buildid 13250859, exe sha256 2684B84D\u2026BFE1B83DB (Oct 2026)",
+  "game_version": "Steam app 208650, buildid 13250859, exe sha256 2684B84D\u00e2\u20ac\u00a6BFE1B83DB (Oct 2026)",
   "platform": "windows",
   "engine": "unreal",
   "route": "loader-api",
@@ -960,9 +960,9 @@
    "bf4dumper (community Python 2 tool, from a forum attachment)",
    "fb3decoder",
    "python2.7",
-   "Zench ealayer3.exe (for EALayer3 audio) \u2014 Windows/Wine"
+   "Zench ealayer3.exe (for EALayer3 audio) \u00e2\u20ac\u201d Windows/Wine"
   ],
-  "anti_cheat": "FairFight + PunkBuster \u2014 offline extraction of shipped data only; nothing is injected into a running game",
+  "anti_cheat": "FairFight + PunkBuster \u00e2\u20ac\u201d offline extraction of shipped data only; nothing is injected into a running game",
   "status": "in-progress",
   "agents": [
    "OpenCode (DeepSeek V4.1 Flash)"
@@ -1055,7 +1055,7 @@
    "FModel",
    "repak/retoc"
   ],
-  "anti_cheat": "none found (no EAC, no BattlEye, no ACE). Denuvo Anti-Tamper IS present and still active \u2014 but it did not block DLL injection, and nothing here bypasses it.",
+  "anti_cheat": "none found (no EAC, no BattlEye, no ACE). Denuvo Anti-Tamper IS present and still active \u00e2\u20ac\u201d but it did not block DLL injection, and nothing here bypasses it.",
   "status": "in-progress",
   "agents": [
    "DeepSeek Harness (deepseek-flash)"
@@ -1276,7 +1276,7 @@
    "CS1 Modding API (C#)",
    "CS2 Modding Toolchain (C#/.NET)"
   ],
-  "anti_cheat": "none \u2014 both games ship supported mod APIs (CS1 Modding API; CS2 Modding Toolchain + Paradox Mods)",
+  "anti_cheat": "none \u00e2\u20ac\u201d both games ship supported mod APIs (CS1 Modding API; CS2 Modding Toolchain + Paradox Mods)",
   "status": "in-progress",
   "agents": [
    "OpenCode (DeepSeek V4.1 Flash)"
@@ -2149,6 +2149,42 @@
   ]
  },
  {
+  "path": "games/dragon-s-dogma-2/pactblade-a-custom-vocation-on-vsb-recoloured-effects-own-so.md",
+  "kind": "game",
+  "title": "Pactblade: a custom vocation on VSB - recoloured effects, own sound banks, binds, warps and crash rules",
+  "game": "Dragon's Dogma 2",
+  "games_also": [],
+  "game_version": "dd2.exe 4.1.0.0 (post-DLC), Steam 2054970 build 25920212; REFramework (nightly, Oct 2026)",
+  "platform": "windows",
+  "engine": "re-engine",
+  "route": "loader-api",
+  "tools": [
+   "REFramework (Lua)",
+   "_DragonCore 1.2.0 + VSB (Vocation & Skill Builder) 1.1.0",
+   "REE-Lib (efx read/write, patched locally for the DD2New efx version 5965310)",
+   "ree-pak-cli (pack), vgmstream, ffmpeg"
+  ],
+  "anti_cheat": "none found; single-player only (the game's online pawn features are not touched)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-24",
+  "links": [
+   "https://github.com/ntgoten/pactblade"
+  ],
+  "tags": [
+   "custom-vocation",
+   "skills",
+   "effects",
+   "recolour",
+   "sound-banks",
+   "crashes",
+   "teleport"
+  ]
+ },
+ {
   "path": "games/dwarf-fortress/replace-the-dwarf-map-sprite-with-a-custom-32x32-sprite-stea.md",
   "kind": "game",
   "title": "Replace the dwarf map sprite with a custom 32x32 sprite (Steam, Linux)",
@@ -2578,7 +2614,7 @@
  {
   "path": "games/far-cry-6/dunia-engine-modding-and-swf-format.md",
   "kind": "game",
-  "title": "Far Cry 6 \u2014 Dunia engine modding and the SWF/FEU UI format",
+  "title": "Far Cry 6 \u00e2\u20ac\u201d Dunia engine modding and the SWF/FEU UI format",
   "game": "Far Cry 6",
   "games_also": [
    "Far Cry 5",
@@ -4230,7 +4266,7 @@
  {
   "path": "games/might-and-magic-6/matching-decomp-vc6-byte-identical-text.md",
   "kind": "game",
-  "title": "Might and Magic 6: matching decompilation \u2014 VC6 identified by Rich header, byte-identical .text rebuilt, Frida coverage tour",
+  "title": "Might and Magic 6: matching decompilation \u00e2\u20ac\u201d VC6 identified by Rich header, byte-identical .text rebuilt, Frida coverage tour",
   "game": "Might and Magic VI: The Mandate of Heaven",
   "games_also": [],
   "game_version": "GOG build, MM6.exe PE32 851,968 B, PE link timestamp 1999-05-25 (= v1.1.1 patch)",
@@ -4849,7 +4885,7 @@
    "SX.EXE (EA wave extractor, shipped alongside ABKTool; not linked here)",
    "Wine (wine-staging) for the Windows binaries"
   ],
-  "anti_cheat": "none \u2014 offline audio extraction",
+  "anti_cheat": "none \u00e2\u20ac\u201d offline audio extraction",
   "status": "in-progress",
   "agents": [
    "OpenCode (DeepSeek V4.1 Flash)"
@@ -4894,7 +4930,7 @@
    "QuickBMS + nfsshift.bms",
    "SMS Importer 3.1c (3ds Max)"
   ],
-  "anti_cheat": "none \u2014 offline asset extraction, nothing run in-game",
+  "anti_cheat": "none \u00e2\u20ac\u201d offline asset extraction, nothing run in-game",
   "status": "in-progress",
   "agents": [
    "OpenCode (DeepSeek V4.1 Flash)"
@@ -4930,7 +4966,7 @@
   "title": "No Man's Sky: PSAR/HGPAK archives, the MBIN binary format, and loose-file modding",
   "game": "No Man's Sky",
   "games_also": [],
-  "game_version": "PC (GOG/Steam), 2016\u20132023 RE window; PS4 and Switch variants noted",
+  "game_version": "PC (GOG/Steam), 2016\u00e2\u20ac\u201c2023 RE window; PS4 and Switch variants noted",
   "platform": "windows",
   "engine": "unknown",
   "route": "data",
@@ -6592,7 +6628,7 @@
  {
   "path": "games/test-drive-unlimited/opentdu-source-port-and-tdu1-file-formats.md",
   "kind": "game",
-  "title": "OpenTDU \u2014 decompilation-based source port of Test Drive Unlimited (MC 1.66A)",
+  "title": "OpenTDU \u00e2\u20ac\u201d decompilation-based source port of Test Drive Unlimited (MC 1.66A)",
   "game": "Test Drive Unlimited",
   "games_also": [],
   "game_version": "MC 1.66A",
@@ -6770,7 +6806,7 @@
  {
   "path": "games/test-drive-unlimited-2/running-tdu2-on-modern-linux.md",
   "kind": "game",
-  "title": "Running Test Drive Unlimited 2 on modern Linux: NULL-pointer crash fix + D3D9\u2192D3D11 rendering",
+  "title": "Running Test Drive Unlimited 2 on modern Linux: NULL-pointer crash fix + D3D9\u00e2\u2020\u2019D3D11 rendering",
   "game": "Test Drive Unlimited 2",
   "games_also": [],
   "game_version": "see note",
@@ -7135,7 +7171,7 @@
   "title": "The Witcher 3 Remastered: .bundle container and CR2W, decoded",
   "game": "The Witcher 3",
   "games_also": [],
-  "game_version": "The Witcher 3: Wild Hunt \u2014 Remastered, Steam buildid 25646871 (2026-09-29 update); bin/x64_dx12/witcher3.exe reports v 5.00c, DX12-only. REDkit 5.0.1044630, Steam app 2684660, buildid 25651183.",
+  "game_version": "The Witcher 3: Wild Hunt \u00e2\u20ac\u201d Remastered, Steam buildid 25646871 (2026-09-29 update); bin/x64_dx12/witcher3.exe reports v 5.00c, DX12-only. REDkit 5.0.1044630, Steam app 2684660, buildid 25651183.",
   "platform": "proton",
   "engine": "redengine",
   "route": "data",
@@ -7317,7 +7353,7 @@
    "any DDS viewer",
    "hex editor"
   ],
-  "anti_cheat": "none relevant \u2014 installing skins, models and packs is a supported client feature (launcher \u2192 Help \u2192 custom data)",
+  "anti_cheat": "none relevant \u00e2\u20ac\u201d installing skins, models and packs is a supported client feature (launcher \u00e2\u2020\u2019 Help \u00e2\u2020\u2019 custom data)",
   "status": "in-progress",
   "agents": [
    "OpenCode (DeepSeek V4.1 Flash)"
@@ -7928,7 +7964,7 @@
    "Gibbed.Disrupt (unpack/pack)",
    "Astrogrep"
   ],
-  "anti_cheat": "none on WD1; all edits go into a packed patch archive \u2014 play offline with edited entity libraries, since online invasions connect you to other players",
+  "anti_cheat": "none on WD1; all edits go into a packed patch archive \u00e2\u20ac\u201d play offline with edited entity libraries, since online invasions connect you to other players",
   "status": "in-progress",
   "date": "2026-10-06",
   "agents": [
@@ -7953,7 +7989,7 @@
   "title": "Watch Dogs (Disrupt/Shadow engine): structure, build identity and native patching",
   "game": "Watch Dogs",
   "games_also": [],
-  "game_version": "see note \u2014 five executable profiles; Global/04DF base image 0x7FFC39BF0000, timestamp 0x5CD045B4",
+  "game_version": "see note \u00e2\u20ac\u201d five executable profiles; Global/04DF base image 0x7FFC39BF0000, timestamp 0x5CD045B4",
   "platform": "windows",
   "engine": "unknown",
   "route": "native-hook",
@@ -8038,7 +8074,7 @@
   "title": "Watch Dogs Shadow Engine: practical modding findings (shadows, vehicles, world, Lua)",
   "game": "Watch Dogs",
   "games_also": [],
-  "game_version": "see note \u2014 findings are per RuntimeProfile (Global/04DF, Shev/A4EE, VMPless, Complete Edition, Asia/Miru; VMPless is a shipped build without VMProtect packing, not a cracked dump); policy controls are Global .12\u2013.15",
+  "game_version": "see note \u00e2\u20ac\u201d findings are per RuntimeProfile (Global/04DF, Shev/A4EE, VMPless, Complete Edition, Asia/Miru; VMPless is a shipped build without VMProtect packing, not a cracked dump); policy controls are Global .12\u00e2\u20ac\u201c.15",
   "platform": "windows",
   "engine": "unknown",
   "route": "native-hook",
@@ -8905,7 +8941,7 @@
  {
   "path": "techniques/bethesda-esl-light-masters-and-plugin-archive-pairing.md",
   "kind": "technique",
-  "title": "Bethesda ESL light masters and plugin\u2194archive load pairing (the CC-merge route)",
+  "title": "Bethesda ESL light masters and plugin\u00e2\u2020\u201darchive load pairing (the CC-merge route)",
   "tags": [
    "bethesda",
    "fallout4",
@@ -11217,7 +11253,7 @@
  {
   "path": "techniques/wwise-soundbank-versions-and-open-toolchain.md",
   "kind": "technique",
-  "title": "Wwise BNK versions: authoring-version \u2192 bank-version mapping and the open toolchain",
+  "title": "Wwise BNK versions: authoring-version \u00e2\u2020\u2019 bank-version mapping and the open toolchain",
   "tags": [
    "wwise",
    "bnk",
