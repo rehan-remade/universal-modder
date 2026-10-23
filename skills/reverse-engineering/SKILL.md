@@ -30,6 +30,9 @@ with anti-cheat (see `skills/mod-any-game/references/safety.md`).
 **Java** (Minecraft, Slay the Spire...)
 Vineflower / CFR / Recaf. For Minecraft, use Loom `genSources` with Mojang mappings.
 
+**Blitz3D** (SCP: Containment Breach and its forks, other `.bb` games): the game is a module inside the exe
+that Ghidra can't see. Use the **blitz3d-decomp** skill (B3DDecomp, hashed-name recovery, porting notes).
+
 **Native C/C++** (custom engines, Unreal game code, console recomps)
 - Ghidra (free) or IDA, driven through MCP so the agent can decompile, rename, retype and follow
   cross-references:

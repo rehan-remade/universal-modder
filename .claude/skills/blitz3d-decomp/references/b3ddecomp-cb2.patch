@@ -1,0 +1,98 @@
+diff --git a/Blitz3DDecomp/Basics/Function/BuiltIns/Blitz3dBuiltIns.cs b/Blitz3DDecomp/Basics/Function/BuiltIns/Blitz3dBuiltIns.cs
+index 00bbb6c..94a499f 100644
+--- a/Blitz3DDecomp/Basics/Function/BuiltIns/Blitz3dBuiltIns.cs
++++ b/Blitz3DDecomp/Basics/Function/BuiltIns/Blitz3dBuiltIns.cs
+@@ -1223,6 +1223,11 @@ static class Blitz3dBuiltIns
+         _ = new Function("_builtIn__bbObjEachNext2", 1);
+         _ = new Function("_builtIn__bbObjFromHandle", DeclType.Int, DeclType.Unknown);
+         _ = new Function("_builtIn__bbObjToHandle", 1) { ReturnType = DeclType.Int };
++        // SCP: Containment Breach 2's runtime additions
++        _ = new Function("_builtIn__bbObjFromInt", DeclType.Int);
++        _ = new Function("_builtIn__bbDynamicVecPush", 2);
++        _ = new Function("_builtIn__bbDynamicVecErase", 2);
++        _ = new Function("_builtIn__bbDynamicVecSize", 1) { ReturnType = DeclType.Int };
+         _ = new Function("_builtIn__bbObjNew", 1);
+         _ = new Function("_builtIn__bbObjFirst", 1);
+         _ = new Function("_builtIn__bbObjLast", 1);
+diff --git a/Blitz3DDecomp/Basics/Variables/FieldVariable.cs b/Blitz3DDecomp/Basics/Variables/FieldVariable.cs
+index 4563e23..a20ed53 100644
+--- a/Blitz3DDecomp/Basics/Variables/FieldVariable.cs
++++ b/Blitz3DDecomp/Basics/Variables/FieldVariable.cs
+@@ -14,7 +14,7 @@ sealed class FieldVariable : Variable
+     public override DeclType DeclType
+     {
+         get => TypeField.DeclType;
+-        set => throw new InvalidOperationException("Cannot set field decltype!");
++        set => throw new InvalidOperationException($"Cannot set field decltype! {Name} field {TypeField} to {value}");
+     }
+ 
+     public override string ToInstructionArg()
+diff --git a/Blitz3DDecomp/DecompilerSteps/Step5/ConvertConstantsToFinalRepresentation.cs b/Blitz3DDecomp/DecompilerSteps/Step5/ConvertConstantsToFinalRepresentation.cs
+index f9bbc3e..2dfbe76 100644
+--- a/Blitz3DDecomp/DecompilerSteps/Step5/ConvertConstantsToFinalRepresentation.cs
++++ b/Blitz3DDecomp/DecompilerSteps/Step5/ConvertConstantsToFinalRepresentation.cs
+@@ -383,7 +383,8 @@ static class ConvertConstantsToFinalRepresentation
+     {
+         for (var i = 0; i < function.HighLevelStatements.Count; i++)
+         {
+-            ProcessStatement(function, i);
++            try { ProcessStatement(function, i); }
++            catch (Exception) { /* CB2: leave this statement's constants raw */ }
+         }
+     }
+ }
+diff --git a/Blitz3DDecomp/DecompilerSteps/Step5/GenerateLibDecls.cs b/Blitz3DDecomp/DecompilerSteps/Step5/GenerateLibDecls.cs
+index 5c2b408..44aa25a 100644
+--- a/Blitz3DDecomp/DecompilerSteps/Step5/GenerateLibDecls.cs
++++ b/Blitz3DDecomp/DecompilerSteps/Step5/GenerateLibDecls.cs
+@@ -1,4 +1,4 @@
+-﻿using B3DDecompUtils;
++using B3DDecompUtils;
+ 
+ namespace Blitz3DDecomp.DecompilerSteps.Step5;
+ 
+@@ -18,7 +18,8 @@ static class GenerateLibDecls
+ 
+             foreach (var entry in dll.Entries)
+             {
+-                var function = Function.GetFunctionByName(entry.DecompName);
++                var function = Function.TryGetFunctionByName(entry.DecompName);
++                if (function is null) { continue; } // CB2: declared but never called
+ 
+                 string extractSuffixForBlitzSignature(DeclType declType)
+                 {
+diff --git a/Blitz3DDecomp/Program.cs b/Blitz3DDecomp/Program.cs
+index dc766ba..e01b0a5 100644
+--- a/Blitz3DDecomp/Program.cs
++++ b/Blitz3DDecomp/Program.cs
+@@ -1,4 +1,4 @@
+-﻿using System.Diagnostics;
++using System.Diagnostics;
+ using System.Text;
+ using B3DDecompUtils;
+ using Blitz3DDecomp;
+@@ -355,6 +355,7 @@ internal static class Program
+         var functionsWithAssemblySections = referencedFunctions.Where(f => f.AssemblySections.Any()).ToArray();
+         foreach (var function in functionsWithAssemblySections)
+         {
++            try {
+             BasicLowToHighLevelConversion.Process(function);
+             function.RemoveUnreferencedHighLevelSections();
+             RemoveTrivialNoops.Process(function);
+@@ -398,6 +399,7 @@ internal static class Program
+             function.RemoveUnreferencedHighLevelSections();
+             CleanupElseIf.Process(function);
+             function.RemoveUnreferencedHighLevelSections();
++            } catch (Exception e) { Console.Error.WriteLine($"CB2 step5 failed {function.Name}: {e.GetType().Name} {e.Message}"); }
+         }
+     }
+ 
+@@ -440,7 +442,7 @@ internal static class Program
+                 }
+                 foreach (var statement in section.Statements)
+                 {
+-                    for (int i=0;i<statement.IndentationToSubtract;i++) { indentation = indentation[..^4]; }
++                    for (int i=0;i<statement.IndentationToSubtract;i++) { indentation = indentation.Length >= 4 ? indentation[..^4] : ""; }
+                     writeLineToFile(indentation, statement.StringRepresentation);
+                     if (statement is RestoreStatement restoreStatement) { restoreStatements.Add(restoreStatement); }
+                     for (int i=0;i<statement.IndentationToAdd;i++) { indentation = indentation + "    "; }
