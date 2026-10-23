@@ -2522,6 +2522,46 @@
   ]
  },
  {
+  "path": "games/the-binding-of-isaac-repentance/a-lua-character-mod-for-repentance-without-repentogon-costum.md",
+  "kind": "game",
+  "title": "A Lua character mod for Repentance+ without REPENTOGON: costumes, custom NPC and familiar AI, sounds, Birthright",
+  "game": "The Binding of Isaac: Repentance+",
+  "games_also": [],
+  "game_version": "Steam, Repentance+ (save/log folder \"Binding of Isaac Repentance+\"); changelog.txt top entry still reads v1.7.9b, so check the in-game version string",
+  "platform": "windows",
+  "engine": "native",
+  "route": "loader-api",
+  "tools": [
+   "built-in Lua mod API (no REPENTOGON)",
+   "Python + Pillow/numpy (sprites, WAV conversion, spectrograms)",
+   "faster-whisper small (transcribing Japanese and Russian voice lines, word timestamps)",
+   "demucs htdemucs_ft (separating voice from music in anime clips)",
+   "imageio-ffmpeg (an ffmpeg binary from PyPI when none is installed)"
+  ],
+  "anti_cheat": "none (single-player; online co-op not touched)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-24",
+  "links": [
+   "https://wofsauge.github.io/IsaacDocs/rep/"
+  ],
+  "tags": [
+   "isaac",
+   "lua",
+   "custom-character",
+   "familiar",
+   "custom-npc",
+   "sounds",
+   "anm2",
+   "subtitles",
+   "voice-lines",
+   "mod-config-menu"
+  ]
+ },
+ {
   "path": "games/the-witcher-3/the-witcher-3-remastered-bundle-container-and-cr2w-decoded.md",
   "kind": "game",
   "title": "The Witcher 3 Remastered: .bundle container and CR2W, decoded",
