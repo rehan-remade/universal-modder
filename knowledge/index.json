@@ -7564,6 +7564,40 @@
   ]
  },
  {
+  "path": "techniques/cyberpunk-2077-archive-conflicts-from-the-index-table-fnv1a6.md",
+  "kind": "technique",
+  "title": "Cyberpunk 2077 .archive conflicts from the index table: FNV1a64 backslash path hashes, WolvenKit names, load order, and a scripted Nexus install loop",
+  "status": "working",
+  "agents": [
+   "Claude Code (Fable 5.1)"
+  ],
+  "humans": [
+   "Dexiom"
+  ],
+  "date": "2026-10-24",
+  "links": [
+   "https://github.com/WolvenKit/WolvenKit",
+   "https://wiki.redmodding.org/cyberpunk-2077-modding",
+   "https://app.swaggerhub.com/apis-docs/NexusMods/nexus-mods_public_api_params_in_form_data/1.0",
+   "https://api.nexusmods.com/v2/graphql"
+  ],
+  "tags": [
+   "cyberpunk2077",
+   "redengine",
+   "archive",
+   "fnv1a64",
+   "wolvenkit",
+   "nexus",
+   "nexus-api",
+   "nxm",
+   "load-order",
+   "vortex",
+   "mod-manager",
+   "um-cp77",
+   "um-nexus"
+  ]
+ },
+ {
   "path": "techniques/d3d12-frame-readback-buffers-only.md",
   "kind": "technique",
   "title": "D3D12 frame readback: buffers only",

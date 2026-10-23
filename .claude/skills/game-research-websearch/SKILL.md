@@ -69,10 +69,11 @@ Dead-forum recovery is the highest-value move in game modding research.
 
 ## Nexus, Steam Workshop, Thunderstore
 
-- **Nexus**: public mod data needs no key: `POST https://api.nexusmods.com/v2/graphql`. The v1 REST API
-  (`https://api.nexusmods.com/v1/...`) needs the user's personal key. If they want that, they set it in
-  their own shell, and it never goes into the chat or a file. One page at a time; Nexus forbids bulk
-  scraping.
+- **Nexus**: public mod data needs no key: `POST https://api.nexusmods.com/v2/graphql` (`um nexus search`
+  wraps it: name substring, sorted by endorsements). The v1 REST API (`https://api.nexusmods.com/v1/...`,
+  `um nexus mod/files/download`) needs the user's personal key: they run `um nexus key set` themselves, and
+  it never goes into the chat. Direct download links are Premium-only; a free account clicks "Mod manager
+  download" and `um nexus nxm <link>` finishes it. One page at a time; Nexus forbids bulk scraping.
 - **Steam Workshop**: keyless `GetPublishedFileDetails` API (see
   `knowledge/techniques/checking-steam-workshop-mods-against-a-game-version.md`).
 - **Thunderstore**: per-package endpoint

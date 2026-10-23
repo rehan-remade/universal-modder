@@ -32,6 +32,7 @@ Otherwise install it once for any agent: `uv tool install git+https://github.com
 | Snapshot saves before touching them; undo | `um backup create/diff/restore` |
 | Cut a showcase video | `um video contact/compile/mux` |
 | Lint a mod before sharing (game files, decompiled code, secrets) | `um publish check` |
+| Find, download and install Nexus mods (Cyberpunk 2077: tracked files and archive conflicts) | `um nexus search/files/download`, `um cp77 install/conflicts/uninstall` |
 
 Companion skills: **game-recon**, **reverse-engineering**, **fal-assets**, **asset-pipeline**,
 **game-automation**, **showcase-video**, **mashup-mods**, **port-a-mod**, **publish-mod**,

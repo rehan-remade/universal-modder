@@ -53,6 +53,8 @@ const GROUPS = [
   { name: "backup", blurb: "snapshot and restore a game's save files before a modded launch" },
   { name: "publish", blurb: "pre-release lint for a mod: no game files, no decompiled code, no leaked keys" },
   { name: "kb", blurb: "search, scaffold, check and index the field-note knowledge base (search / new / check / index)" },
+  { name: "nexus", blurb: "Nexus Mods: search without a key, list a mod's files, download with the user's API key, nxm:// links" },
+  { name: "cp77", blurb: "Cyberpunk 2077 mod manager: install from Nexus or a download, track files, .archive conflicts, uninstall" },
 ]
 
 const GROUP_NAMES = new Set(GROUPS.map((group) => group.name))

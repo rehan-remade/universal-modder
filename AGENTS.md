@@ -27,6 +27,9 @@ repo, they almost always want to **mod a game**, or to learn how a game was modd
     - `backup`: snapshot and restore saves
     - `publish`: pre-release lint
     - `kb`: the knowledge base
+    - `nexus`: Nexus Mods search (no key), mod files, downloads with the user's API key, `nxm://` handler
+    - `cp77`: Cyberpunk 2077 mod manager: install from Nexus or a download, track every file, `.archive`
+      conflicts by path hash (names via WolvenKit), uninstall, updates
 - **fal MCP server:** `https://mcp.fal.ai/mcp` with header `Authorization: Bearer $FAL_KEY`.
   - It's pre-configured per agent: `.mcp.json` (Claude Code), `.codex/config.toml` (Codex),
     `.cursor/mcp.json` (Cursor), `.vscode/mcp.json` (VS Code / Copilot), `gemini-extension.json`
