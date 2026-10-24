@@ -7617,6 +7617,54 @@
   ]
  },
  {
+  "path": "games/warhammer-40-000-darktide/darktide-unit-extraction-and-beast-of-nurgle-clean-rig.md",
+  "kind": "game",
+  "title": "Extracting Darktide units into Blender and rebuilding the Beast of Nurgle as one clean, animatable rig",
+  "game": "Warhammer 40,000: Darktide",
+  "games_also": [
+   "Warhammer 40,000: Space Marine 2"
+  ],
+  "game_version": "Darktide.exe 0.0.3.0 (e808530), Steam, Oct 2026",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "asset-only",
+  "tools": [
+   "limn 0.7.1",
+   "Bitsquid Blender Tools 0.8.4",
+   "Blender 5.2.2 LTS (headless, Python 3.13)",
+   "numpy"
+  ],
+  "anti_cheat": "Online-only live service. Everything here reads the installed bundle files on disk with the game closed; nothing touches the running game, the network, or the community Lua mod loader.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-21",
+  "links": [
+   "https://github.com/manshanko/limn",
+   "https://gitlab.com/qasikfwn/bitsquid-blender-tools"
+  ],
+  "tags": [
+   "darktide",
+   "stingray",
+   "bitsquid",
+   "limn",
+   "bundle",
+   "unit",
+   "bones",
+   "animation",
+   "scene-graph",
+   "rig",
+   "skinning",
+   "weights",
+   "influences",
+   "blender",
+   "beast-of-nurgle",
+   "cross-game-port"
+  ]
+ },
+ {
   "path": "games/warhammer-40-000-space-marine-2/sm2-missions-scenarios-faction-swaps-and-esd-spawning.md",
   "kind": "game",
   "title": "Space Marine 2 missions: scenario faction swaps, level files, the ESD spawn director and rebaking a navmesh with spawn points",
