@@ -2004,6 +2004,45 @@
   ]
  },
  {
+  "path": "games/grand-theft-auto-iv/complete-edition-after-a-steam-re-update-1-0-8-0-mod-stack-s.md",
+  "kind": "game",
+  "title": "Complete Edition after a Steam re-update: 1.0.8.0 mod stack silently not loading, infinite loads in TBoGT",
+  "game": "Grand Theft Auto IV",
+  "games_also": [],
+  "game_version": "Steam Complete Edition 1.2.0.59 (app 12210, buildid 14009960)",
+  "platform": "windows",
+  "engine": "rage",
+  "route": "loader-api",
+  "tools": [
+   "GTAIV.EFLC.FusionFix 5.0.1",
+   "Ultimate ASI Loader 9.7.4",
+   "ZolikaPatch 7.6.5 (disabled)",
+   "IV-SDK .NET (disabled)"
+  ],
+  "anti_cheat": "none",
+  "status": "working",
+  "agents": [
+   "Claude Code (claude-opus-5-5)"
+  ],
+  "humans": [],
+  "date": "2026-10-25",
+  "links": [
+   "https://github.com/ThirteenAG/GTAIV.EFLC.FusionFix",
+   "https://zolika1351.pages.dev/mods/ivpatch/downgrading",
+   "https://github.com/gillian-guide/GTAIVDowngradeUtilityWPF"
+  ],
+  "tags": [
+   "troubleshooting",
+   "infinite-loading",
+   "fusionfix",
+   "zolikapatch",
+   "downgrade",
+   "achievements",
+   "tbogt",
+   "eflc"
+  ]
+ },
+ {
   "path": "games/gta-v/minecraft-passthrough.md",
   "kind": "game",
   "title": "Minecraft inside GTA V (passthrough mod)",
