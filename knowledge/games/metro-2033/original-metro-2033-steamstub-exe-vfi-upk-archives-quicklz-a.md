@@ -7,7 +7,7 @@ game_version: 'Original 2010 Steam build (app 43110), metro2033.exe 1.0.0.1, PE 
 platform: windows
 engine: 4A Engine
 route: native-hook
-tools: ["Python 3 + pefile (static PE/RTTI/strings)", "own VFI/UPK lister + pure-Python QuickLZ 1.5 L3 decoder", "MetroTools source (format reference)", "MetroDeveloper 1.2.2 (hangs this build)", "Ghidra 12.1.4 on a read-only memory image", "Frida 17.24.3", "capstone + minidump (Python)", "Zig 0.17.0 (x86-windows-gnu, no CRT)", "PresentMon 2.6 (console)", "GOG 1.01 v5 build (DRM-free reference)"]
+tools: ["Python 3 + pefile (static PE/RTTI/strings)", "own VFI/UPK lister + pure-Python QuickLZ 1.5 L3 decoder", "MetroTools source (format reference)", "MetroDeveloper 1.2.2 (hangs this build)", "Ghidra 12.1.4 on a read-only memory image", "Frida 17.24.3", "capstone + minidump (Python)", "Zig 0.17.0 (x86-windows-gnu, no CRT)", "PresentMon 2.6 (console)", "GOG 1.01 v5 build (DRM-free reference)", "Application Verifier + cdb (Windows SDK 10.0.26100)"]
 anti_cheat: "none (single-player). The exe is SteamStub-wrapped; it was not unpacked or patched."
 status: working
 agents:
@@ -30,14 +30,20 @@ fully, patch packs included.
   recovered.
 - A dynamic pass then read the running process, read-only. It recovered the cvar table and the config
   loader, and found that the installed MetroDeveloper hangs this build (Gotchas 8–11).
-- A 13 KB `dinput8.dll` proxy (m2033fix 0.2, kernel32 only) patches three things in memory after
-  SteamStub has decrypted the code, and nothing else:
+- A 26 KB `dinput8.dll` proxy (m2033fix, kernel32 only) patches the game in memory after SteamStub has
+  decrypted the code, and nothing else. Verified in the game (0.1–0.3):
   - a vanilla race that crashed half of all starts on an RTX laptop (P1, verified with an A/B soak,
     Gotcha 14);
   - the display-mode buffer, 512 → 1024 modes, byte for byte as the GOG build (P4, Gotcha 17);
-  - `Present`'s SyncInterval, which now follows `r_vsync` (P5, Gotcha 18).
-  - 0.1 also set the save flag of `mouse_inertion` (Gotcha 13). 0.2 dropped that, along with an unproven
-    exit-time patch.
+  - `Present`'s SyncInterval, which now follows `r_vsync` (P5, Gotcha 18);
+  - an exact frame limiter driven by `target_fps`, and `target_fps` saved (P8, Gotcha 23).
+- 0.4 (2026-10-25; 21 Steam starts, a 37-minute play session and 5 starts under Application Verifier on the
+  desktop, all clean) adds fixes for Gotchas 20–22 (fullscreen without focus,
+  empty display-mode list, 1024+ character `user.cfg` line), GOG's "press any key" and driver-popup changes,
+  and a log of the engine's `!!! STOP` reason (Gotcha 24). 0.4.1 dropped 0.4's optional mouse values (Gotcha 13).
+  The full list with addresses and bytes is in the example's README.
+- 0.1 also set the save flag of `mouse_inertion` (Gotcha 13). 0.2 dropped that, along with an unproven
+  exit-time patch.
 
 ## Setup
 - **Install:** Steam app 43110 (a secondary Steam library), Windows 11.
@@ -51,7 +57,8 @@ fully, patch packs included.
   - dynamic part: Ghidra 12.1.4 on a read-only memory image (raw blob at `0x400000`), Frida, capstone,
     minidump;
   - the fix: Zig 0.17.0.
-- **Hardware:** RTX 3050 Ti laptop with an AMD iGPU; the game was forced to the dGPU.
+- **Hardware:** RTX 3050 Ti laptop with an AMD iGPU (the game forced to the dGPU), then a desktop with a
+  Ryzen 7 7800X3D, RTX 4060 and a 3840×2160 @ 240 Hz monitor (same Steam build and Steam Cloud config).
 - **Benchmark exe:** the separate `metro2033benchmark.exe` is a .NET app. Ignore it when choosing a
   route.
 
@@ -149,8 +156,13 @@ most option changes need only `user.cfg` (Gotchas 9–13).
   `level.environment`); the files are byte-identical. Every unpacked size matches the TOC.
 - **`scripts.bin`:** the record walk ends exactly at EOF. Name matches are crc32 hits, so they are
   certain once found.
+- **m2033fix in the game (0.1–0.3):** A/B soaks (Gotcha 14), Frida/PresentMon checks of P4/P5 (17, 18) and P8
+  (23), long play sessions (2 h, 15 levels; 49 save loads; resolution changes up to 4K, Alt+Tab, sleep), race
+  amplifiers (game on 2 cores, 20/20 clean) and Application Verifier (light PageHeap + Handles, 0 entries).
+  Tables in `examples/metro2033-m2033fix/README.md`. 0.4 passed the same kind of runs on the desktop; P10
+  turned the borderless window into real fullscreen on the first try once the window was clicked.
 - **Not verified:**
-  - anything at runtime: loose-file override, cvars, launch arguments;
+  - loose-file override and most launch arguments (`-logflush` writes nothing in retail, Gotcha 24);
   - the upk priority order;
   - the record body schema.
 
@@ -198,7 +210,8 @@ most option changes need only `user.cfg` (Gotchas 9–13).
     - The game keeps it across a menu exit (verified).
     - It travels with Steam Cloud, so every PC on the account gets the same FOV.
     - 60 felt too wide on a 16:9 laptop panel.
-13. **`mouse_inertion 0.01` works (players reported crisp aiming) but is gone after a menu exit.**
+13. **`mouse_inertion` is not saved, and 0.01 does not mean less smoothing.** Players advise `0.01` for crisp
+    aiming; the line is also gone after a menu exit.
     **Cause:** on exit the game rewrites user.cfg with only flagged cvars, and `mouse_inertion` has no
     flag.
     - The mouse code (`0x726260`) uses `k = sick_mouse + (1 - sick_mouse) * mouse_inertion` (defaults 0
@@ -209,20 +222,32 @@ most option changes need only `user.cfg` (Gotchas 9–13).
         `0x9f3710`), so the game saves it itself. m2033fix 0.1 did this (byte `0x9F371B`, `00` → `01`).
         It worked, but 0.2 dropped it: `mouse_inertion` is in none of the original configs, so it is a
         preference, not a fix.
+      - **Direction:** `k` (times a 0..1 ramp at `+0x850`) is passed as the blend factor to the camera's virtual
+        turn functions (`0x7266dc`..`0x726747`, targets `+0xAB8`/`+0xABC`), i.e. the share of the way to the
+        target covered per frame. So 0.9 (default) is nearly direct and 0.01 is maximum smoothing. Confirmed in
+        play: with 0.01 held in memory all session (read-only watcher) the mouse floated for a long time. The
+        callee's body was not read (virtual, resolved at run time).
+      - m2033fix 0.4 P15 wrote the value from its ini at each start; P15 and P16 (a lower `mouse_sens`
+        minimum) were removed in 0.4.1. The GOG build changes nothing in the mouse code either.
 
 14. **Random access violation about 25–35 s after start, or at exit (`c0000005` reading `0xC` at
     `0x84F72A`), then "Previous launch was unsuccessful. Start in safe mode?" on the next start.**
     **Cause:** a race in the text-language switch.
     - `FUN_0085B090` nulls the charmap global `DAT_00A14F88` and frees it before installing the new one.
-    - Meanwhile another thread converts text with `FUN_0084F6E0`, which re-reads that global for every
-      character.
+    - Meanwhile another thread converts text with `FUN_0084F6E0`. It loads the global once, into `edi` at
+      `0x84F6F5`, and faults at `0x84F72A` (`mov eax,[edi+0xC]`) when that load saw NULL. The 46 callers of
+      `0x84F510` load it into `edi` the same way; that is the write-to-0 site at `0x84F53C`.
+    - Only five instructions write the global: `0x85B0A8` (NULL, the switch), `0x85B0C2` (the new table),
+      `0x84F6CB` (NULL + free at exit), and `0x84F8D5` / `0x84F8E3` in the loader `0x84F830` (called once,
+      from `0x85A359`; `0x84F8E3` stores NULL only when loading fails).
     - The switch happens on **every** start at about 24–27 s, even when the Steam game language matches
       `lang_text`. An earlier guess that matching the languages avoids it was wrong: the charmap pointer
       still changed once per start in all 20 soak runs.
     - The crashing thread is always a late worker thread. A call-validated stack scan of 5 dumps shows
       `0x85EDA2 → 0x7A40C3 → FUN_00846E10 → FUN_00846010 → FUN_008456E0 → FUN_0084F6E0`.
     - One dump hit the same race at `0x84F53C` instead (a write to 0 via `FUN_00846E10 → 0x84F510`).
-    - A faster dGPU makes it more frequent, and the delay Frida adds hides it.
+    - How often it hits depends on the machine: 5/10 starts on the RTX 3050 Ti laptop, 4/41 on a
+      Ryzen 7 7800X3D + RTX 4060 desktop with the same Steam Cloud config. The delay Frida adds hides it.
     - **Fix (in-memory patch, exe untouched):** NOP the 15 bytes `C7 05 88 4F A1 00 00 00 00 00 E8 A9 0F
       BB FF` at `0x85B0A8`.
       - The global is then replaced by one aligned store at `0x85B0C2` and is never NULL.
@@ -230,6 +255,11 @@ most option changes need only `user.cfg` (Gotchas 9–13).
     - **Measured:** 10×130 s Steam launches with the patch gave 0 crashes; without it, 5/10 crashed at
       26–28 s (Fisher p = 0.016). Menu exits with the patch were clean, and the next start showed no
       safe-mode prompt.
+    - **Desktop, without the patch:** smoke 1/2 (2026-10-22), then 0/9 and 3/30 (2026-10-23), all at 26–27 s
+      at `0x84F72A` or `0x84F53C`. In all three new dumps the global already held the new table: the worker
+      had loaded it inside the `0x85B0A8`..`0x85B0C2` window.
+    - **Desktop, P1 only (m2033fix 0.2 with P4/P5 off):** 0/30. Against 4/41 that is p = 0.10, consistent
+      with the fix but not significant alone at this machine's crash rate.
 15. **Where the saves are.** `user.cfg` is in Steam Cloud (`remote\`). The campaign saves (`lNN_*.player`,
     `auto_save`) are Steam Auto-Cloud files under `Documents\4A Games\Metro 2033`. If OneDrive redirects
     Documents, they are under the OneDrive copy.
@@ -254,7 +284,7 @@ most option changes need only `user.cfg` (Gotchas 9–13).
       | `0x7A1733`, `0x7A1D71` (stubs) | `swapchain->Present(0, 0)` | `Present(1, 0)`: vsync forced on |
       | `0x7A1F1B`, `0x7A1F41`, `0x7A1F53`, `0x7A1F79` | `GetDisplayModeList(fmt, DXGI_ENUM_MODES_SCALING)` into a 512-mode stack buffer (`0x3840` B) | 1024 modes (`0x7080` B) |
       | `0x85370C` (109 B in place) | FPS above `target_fps` → `Sleep(ms)` | QPC busy-wait to 8.333 ms after the frame start (`[0xA13BD8]` = ticks per ms): a fixed 120 FPS cap |
-      | `0x8543D7`, `0x8543E2` | loader event handler (`cengine::loader`) waits about 1 s and only accepts codes `0x105`/`0x10B` | both checks removed (probably "press any key" for gamepads; not fully traced) |
+      | `0x8543D7`, `0x8543E2` | the "press any key" screen after a load: waits about 1 s, and with a gamepad (Steam Input too) present accepts only gamepad codes `0x105`/`0x10B` | both checks removed; m2033fix 0.4 P13 takes only the `0x8543E2` byte (`74 0B` → `EB 0B`), not tested with a gamepad |
       | `0x938F2C`, `0x938F71` | "Unsupported graphics card" and "video driver needs to be upgraded" popups | both popups disabled |
 
     - The charmap race (14) is **not** patched in GOG: the bytes at `0x85B0A8` are the same.
@@ -285,6 +315,47 @@ most option changes need only `user.cfg` (Gotchas 9–13).
       - a killed run leaves a session behind (`logman stop <name> -ets`);
       - a non-ASCII output path passed from Python failed.
 
+20. **The game starts in "fullscreen" but shows a borderless window (Composed: Flip, +4–5 ms) when launched
+    with Steam's "Play" button and not clicked.** **Cause:** without focus, `CreateSwapChain(Windowed = 0)`
+    returns `DXGI_STATUS_OCCLUDED` (`0x087A0001`), a success code. The game never checks it and never calls
+    `SetFullscreenState` again; Alt+Enter does nothing either. Started from a shortcut, it gets real fullscreen.
+    Skipping the intro looked like the trigger, but focus is.
+    - **Fix (m2033fix 0.4 P10; a Frida prototype worked):** note the result after `0x7A1EE1`; from a per-frame
+      point on the main thread (`0x85B523`), once the game window is in front, call
+      `SetFullscreenState(TRUE)` under the renderer lock `0xA2E5B0`.
+    - A safe-mode dialog at start takes the focus the same way.
+21. **Access violation about 8 s after start, reading `0xFFFFFFF8` at `0x7B379E`.** **Cause:** `0x7A1F17`
+    ignores the HRESULT and count of `GetDisplayModeList`, and `0x7B3740` takes the last entry of the sorted
+    list without checking it has one. Seen once under Application Verifier; the conditions for an empty list
+    in normal use are unknown. **Fix (0.4 P11):** on an empty list, return with the desktop's aspect ratio.
+22. **A `user.cfg` line of 1024+ characters ends the game at start** (a plausible cause of "it won't start
+    until I delete `user.cfg`"). **Cause:** `config_load` (`0x422580`) copies each line with
+    `strncpy_s(buf[1024], len)`, and MSVCR80's invalid-parameter handler exits.
+    - The first `user.cfg` read is at about 1.95 s, before the game's first `DirectInput8Create` (about 2.2 s),
+      so a fix there is too late. m2033fix 0.4 P12 polls from a thread started in `DllMain` and writes its
+      jump as soon as SteamStub has decrypted the bytes (decryption takes about 0.24 s).
+    - Not fixed: after the copy, `buf[line_length] = 0` is written unchecked, so a file without line breaks
+      (e.g. zeros after a failed write) writes past the stack buffer.
+23. **`target_fps` does not cap the frame rate and is not saved.** **Cause:** the vanilla limiter
+    (the code GOG replaces at `0x85370C`) sleeps whole milliseconds and does nothing when the GPU is the
+    bottleneck: 129 FPS average at `target_fps 120`. The cvar has no save flag. High FPS is reported to
+    break collisions.
+    - **Fix (m2033fix P8):** a jump at `0x8536FB` to a deadline wait on QPC (sleep, then spin for the last
+      600 µs). 120.0 / 60.0 FPS exactly, input-to-photon latency 7.9 / 8.9 ms, like uncapped and better than
+      the NVIDIA driver cap (11.0 / 12.1 ms). Setting the save flag (byte `0xA1BE03` `00` → `01`) keeps
+      `target_fps` in `user.cfg`, and so in Steam Cloud.
+    - PresentMon's `DisplayLatency` misleads here: it starts at the previous `Present`, so a wait before
+      `Present` counts and a driver wait inside it does not. Compare `AllInputToPhotonLatency`.
+24. **The retail game log exists only in memory, and `!!! STOP` crashes on purpose.** `-logflush` writes no
+    file. Log lines go through `0x85E0F0` into a buffer at `0xA456E0`; a Frida hook there gives the full
+    engine log. The STOP handler `0x9316BB` (cdecl: reason, file, function, line) keeps its text in that
+    buffer and then writes to address 0, so the dump shows only an access violation. m2033fix 0.4 P17 writes
+    the reason to its own log first.
+    - Steam's `GameOverlayRenderer.dll` is injected and hooks about 75 functions (input, message loop, DXGI
+      `Present`, DLL loading, the proxy's `DirectInput8Create`) even with the overlay disabled. Early Frida
+      hooks on `dxgi.dll` get overwritten by it; hook the game's own call sites after `DirectInput8Create`
+      instead (read-only).
+
 ## Open questions
 - Does `unlock_content_folder` let a loose `content\scripts\<name>.bin` override the record inside
   `scripts.bin`, or only loose files that exist as real archive entries?
@@ -292,10 +363,9 @@ most option changes need only `user.cfg` (Gotchas 9–13).
   running process (read-only debugger) via xrefs to the `content\scripts.bin` string.
 - 187 unnamed `scripts.bin` records remain, mostly visual-script sequences and hand/weapon setups.
 - What is the 4-byte UPK chunk 2? Is the upk order really numeric?
-- Why does the GOG build survive the charmap race (17)? Is it the text language (`us` vs `ru`), timing, or
-  heap layout?
-- Is a 512-mode list ever exceeded in practice (4K/high-refresh/DSR setups), and what does the Steam build
-  do then? m2033fix P4 raises it to 1024 as GOG does, but the test laptop has only 62 modes.
-- Does GOG's 120 FPS busy-wait limiter give smoother frame pacing in gameplay than the Steam `Sleep`
-  limiter? In the window measured (70–110 s after start) both builds ran at exactly 30 FPS, so the
-  limiters were not compared.
+- Why does the GOG build survive the charmap race (17)? GOG 0/50 against Steam vanilla 9/51 across both
+  PCs, with the same race code, so the environment differs (Steam overlay/steamclient, GOG's busy-wait
+  limiter or its config); not resolved.
+- Answered: a 512-mode list is exceeded in practice (553 modes on a 3840×2160 @ 240 Hz monitor; vanilla
+  then loses every 4K mode). The limiters were compared in gameplay (Gotcha 23).
+- P13 (gamepad present) and P11/P12/P14/P17 on the failures they handle were not reproduced in the game.
