@@ -68,14 +68,6 @@ from dinput8, is forwarded unchanged to the system DLL.
 - **P3** set the save flag of the `mouse_inertion` cvar. It was a convenience, not a fix, and the option
   isn't in the original config at all.
 
-**Dropped in 0.4.1:**
-- **P15** wrote `mouse_inertion` (mouse smoothing, game value 0.9) from the ini at each start, and **P16** lowered
-  the minimum of `mouse_sens`. With `mouse_inertion 0.01` held in memory for the whole session (read back from
-  `0x9F372C`), the test player found the mouse floating for a long time. The mouse code (`0x726260`) passes
-  `k = sick_mouse + (1 - sick_mouse) * mouse_inertion` as the per-frame blend factor of the camera turn, so a small
-  value means more smoothing, not less: 0.9 (the game default) is already close to direct. Old `mouse_inertion` /
-  `mouse_sens_min` ini keys are ignored.
-
 **Deliberately not ported from GOG:**
 - GOG's 120 FPS busy-wait limiter: P8 does the same job driven by `target_fps`, mostly sleeping.
 - GOG's removal of the 1 s guard on the "press any key" screen.
@@ -119,7 +111,7 @@ powershell -ExecutionPolicy Bypass -File build.ps1      # -> build\dinput8.dll
    enabled patch (`P12 … OK at … ms` with a time below ~1900).
 
 **Upgrading from 0.2/0.3:** `install.ps1` keeps your `m2033fix.ini`. Its `[fix]` keys still work; the 0.4
-fixes (P10–P17) stay off until you add their keys, e.g. by taking the new `m2033fix.ini.txt`.
+fixes (P10–P14, P17) stay off until you add their keys, e.g. by taking the new `m2033fix.ini.txt`.
 
 **Upgrading from 0.1:**
 - `install.ps1` replaces the DLL but keeps your `m2033fix.ini`.
@@ -211,8 +203,8 @@ reaches the menu list.
   (median 8.33 / 16.67 ms) with input-to-photon latency like uncapped (7.9 ms at 120, 8.9 ms at 60), against 11.0 /
   12.1 ms for the NVIDIA driver cap. With the save flag (formerly P9) `target_fps` survives a restart.
 
-**Desktop, 0.4 (P15/P16 off), template ini, same config.** 0.4.1 is the same code minus P15/P16; its control
-start (130 s) logged every patch `OK`.
+**Desktop, this version (the tests ran on a pre-release build with the same patches), template ini, same
+config.** The final build's control start (130 s) logged every patch `OK`.
 
 | Test | Result |
 |---|---|

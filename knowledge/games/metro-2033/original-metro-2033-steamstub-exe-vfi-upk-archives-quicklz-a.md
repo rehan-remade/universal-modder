@@ -40,7 +40,7 @@ fully, patch packs included.
 - 0.4 (2026-10-25; 21 Steam starts, a 37-minute play session and 5 starts under Application Verifier on the
   desktop, all clean) adds fixes for Gotchas 20–22 (fullscreen without focus,
   empty display-mode list, 1024+ character `user.cfg` line), GOG's "press any key" and driver-popup changes,
-  and a log of the engine's `!!! STOP` reason (Gotcha 24). 0.4.1 dropped 0.4's optional mouse values (Gotcha 13).
+  and a log of the engine's `!!! STOP` reason (Gotcha 24).
   The full list with addresses and bytes is in the example's README.
 - 0.1 also set the save flag of `mouse_inertion` (Gotcha 13). 0.2 dropped that, along with an unproven
   exit-time patch.
@@ -215,20 +215,19 @@ most option changes need only `user.cfg` (Gotchas 9–13).
     **Cause:** on exit the game rewrites user.cfg with only flagged cvars, and `mouse_inertion` has no
     flag.
     - The mouse code (`0x726260`) uses `k = sick_mouse + (1 - sick_mouse) * mouse_inertion` (defaults 0
-      and 0.9). So the saved `sick_mouse` can only add smoothing and is no substitute.
-    - **Fix options:**
+      and 0.9). The saved `sick_mouse` only moves `k` towards 1.
+    - **Direction:** `k` (times a 0..1 ramp at `+0x850`) is passed as the blend factor to the camera's virtual
+      turn functions (`0x7266dc`..`0x726747`, targets `+0xAB8`/`+0xABC`), i.e. the share of the way to the
+      target covered per frame. So 0.9 (default) is nearly direct and 0.01 is maximum smoothing. Confirmed in
+      play: with 0.01 held in memory all session (read-only watcher) the mouse floated for a long time. The
+      callee's body was not read (virtual, resolved at run time). The GOG build changes nothing in the mouse
+      code either.
+    - **Fix options** (for a value above the default, if wanted):
       - re-apply the line before each launch, e.g. a Steam launch-option wrapper;
       - from a runtime patch, set the cvar's save flag (`flags |= 0x01000000` on the object at
         `0x9f3710`), so the game saves it itself. m2033fix 0.1 did this (byte `0x9F371B`, `00` → `01`).
         It worked, but 0.2 dropped it: `mouse_inertion` is in none of the original configs, so it is a
         preference, not a fix.
-      - **Direction:** `k` (times a 0..1 ramp at `+0x850`) is passed as the blend factor to the camera's virtual
-        turn functions (`0x7266dc`..`0x726747`, targets `+0xAB8`/`+0xABC`), i.e. the share of the way to the
-        target covered per frame. So 0.9 (default) is nearly direct and 0.01 is maximum smoothing. Confirmed in
-        play: with 0.01 held in memory all session (read-only watcher) the mouse floated for a long time. The
-        callee's body was not read (virtual, resolved at run time).
-      - m2033fix 0.4 P15 wrote the value from its ini at each start; P15 and P16 (a lower `mouse_sens`
-        minimum) were removed in 0.4.1. The GOG build changes nothing in the mouse code either.
 
 14. **Random access violation about 25–35 s after start, or at exit (`c0000005` reading `0xC` at
     `0x84F72A`), then "Previous launch was unsuccessful. Start in safe mode?" on the next start.**

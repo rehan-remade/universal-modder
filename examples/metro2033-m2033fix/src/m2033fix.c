@@ -7,7 +7,6 @@
  * soon as SteamStub has decrypted its bytes.
  * Mechanism, patch list, verification and rollback: README.md.
  * Groups (ini sections): [core] P1 P11 P12, [compat] P4 P5 P10 P13 P14, [perf] P8 (+P9), [research] P17.
- * 0.4.1 drops P15/P16 (mouse_inertion, mouse_sens_min): they did not help on the test PC.
  * A key is looked up in its section, then in the old [fix] section, so 0.2/0.3 ini files keep working; keys that
  * are new in 0.4 default to off when an old ini does not have them.
  * Build: build.ps1 (zig cc, x86-windows-gnu, kernel32 only, no CRT; user32 is resolved at run time).
