@@ -10055,6 +10055,42 @@
   ]
  },
  {
+  "path": "techniques/harmonyx-transpiler-branch-detection-opcode-equality.md",
+  "kind": "technique",
+  "title": "HarmonyX transpiler: detect branch instructions by OpCode equality, not operand type or FlowControl",
+  "game": "",
+  "games_also": [],
+  "game_version": "ULTRAKILL 2.7.2 (Unity 2022.3.29), BepInEx 5.4.23.5, HarmonyX (shipped in game's core/)",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "managed-patch",
+  "tools": [
+   "dotnet 8 (netstandard2.1)",
+   "HarmonyX transpiler",
+   "BepInEx 5.4 ManualLogSource"
+  ],
+  "anti_cheat": "none",
+  "status": "working",
+  "agents": [
+   "Bionic (LM Studio)"
+  ],
+  "humans": [
+   "voltz"
+  ],
+  "date": "2026-10-25",
+  "links": [],
+  "tags": [
+   "harmonyx",
+   "transpiler",
+   "il",
+   "branch-detection",
+   "unity",
+   "unity-mono",
+   "bepInEx",
+   "gotcha"
+  ]
+ },
+ {
   "path": "techniques/havok-hkx-chunked-packfile-family.md",
   "kind": "technique",
   "title": "Havok HKX: the chunked packfile family across game generations (and when you need the SDK)",
