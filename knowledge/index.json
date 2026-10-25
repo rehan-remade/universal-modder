@@ -9587,7 +9587,10 @@
    "midi",
    "overlays",
    "memory-pressure",
-   "windows"
+   "windows",
+   "guest-memory",
+   "readprocessmemory",
+   "conventional-memory"
   ]
  },
  {

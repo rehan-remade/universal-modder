@@ -7,7 +7,7 @@ agents:
 humans: []
 date: '2026-10-25'
 links: []
-tags: [dosbox, dos, automation, testing, background-input, postmessage, parallel, sandbox, screenshots, midi, overlays, memory-pressure, windows]
+tags: [dosbox, dos, automation, testing, background-input, postmessage, parallel, sandbox, screenshots, midi, overlays, memory-pressure, windows, guest-memory, readprocessmemory, conventional-memory]
 ---
 # Driving DOSBox games from tests: background input, parallel sandboxed instances and screen-state checks
 
@@ -81,6 +81,29 @@ Fixed sleeps followed by blind clicks are the main source of flaky and slow test
   advanced and holds the game state to assert on.
 - Original vs patched (or several cases) run as parallel processes, not one after another.
 
+### Read the game's state from guest RAM
+When a run hangs, the screen alone rarely says why. DOSBox keeps the guest's conventional memory in one private
+block of its own process, so a host-side script can read it without touching the game:
+- `OpenProcess(PROCESS_VM_READ | PROCESS_QUERY_INFORMATION)`, walk the regions with `VirtualQueryEx`, and find
+  the guest RAM block by a signature string from the game's data segment (or by its size); read the first
+  1 MB + 64 KB with `ReadProcessMemory`. Read-only: no input, no focus, the game keeps running.
+- Decode the DOS memory picture from there: the MCB chain (DOSBox's List of Lists sits at 0080:0026, the first
+  MCB segment two bytes before it), the game's blocks and the largest free block.
+- Then read the game's own variables at their DGROUP addresses (turn phase, active unit, mode flags). In this
+  project a "hang" turned out to be the game's view mode, waiting correctly for a key (gotcha 16).
+
+### Measure free conventional memory before adding code
+If you patch code or tables into the executable, every paragraph you add is 16 bytes less free DOS memory at
+run time. Measure the worst case instead of guessing:
+- read the game's allocator state from guest RAM (many DOS games record the largest free block after each
+  allocation, or keep a low-water mark), across the heaviest scenarios (big late games, every report screen,
+  save/load) and with EMS/XMS on and off;
+- build test EXEs with a deliberately bigger block to see what fails first (here: large optional buffers were
+  refused and the game fell back to smaller ones; nothing crashed until far past the budget);
+- remember the store launcher: GOG starts this game through a front-end EXE that loads it into its own process
+  and costs about 5 KB more than starting the game directly;
+- turn the result into a budget with a margin and an automated test that fails when a build exceeds it.
+
 ### Silence
 `[mixer] nosound=true` silences DOSBox's mixer (Sound Blaster, OPL, PC speaker, CD audio). MIDI bypasses it
 (gotcha 4): also set `[midi] mididevice=none`, and keep `mpu401=intelligent` if the game is configured for
@@ -143,6 +166,25 @@ then fails every time (gotcha 3). Run the tests that touch your patched code und
 15. **Saves rebuilt by parallel tests could be read half-written.** (2026-10-24.) **Cause:** several tests
     rebuild the same scenario save before running. **Fix:** skip the write when the bytes are identical, else
     write a temp file and `os.replace` it, retrying while another process has it open.
+
+16. **A game run "hung" with a unit waiting but no prompt, rarely and only under load.** (2026-10-25.) **Cause:**
+    the test clicked "End of Turn" a second time; the click was made while the game was busy ending the turn,
+    so the mouse driver's latched button state was read at the next turn's first input poll, where it put the
+    game into view mode, waiting for a key. The unpatched game did the same. **Fix:** only act on *live* UI:
+    click the end-turn text only while it blinks (stale text left on screen doesn't), and after a key wait for
+    the screen to change before acting again. Clicks are latched, never just lost.
+17. **Keys and clicks were lost under load (a menu didn't open).** (2026-10-25, 6-10 parallel instances.)
+    **Cause:** the emulated game missed a posted key or click while busy. **Fix:** retry an action only if
+    nothing at all happened (the screen is still the same, or still the plain map), and never retry a move,
+    whose popup may just be slow; restart a menu sequence from the map if the menu closed without the item.
+18. **Alt+G was ignored for a minute at the start of a turn.** (2026-10-25.) **Cause:** this game ignores
+    keys while units make their automatic (goto/route) moves. **Fix:** keep retrying menu keys until the moves
+    are over (bounded), instead of failing after a few seconds.
+19. **A message box popped up just as the test opened a menu.** (2026-10-25.) **Cause:** the result of the
+    last action arrived late. **Fix:** if a menu step finds a message box instead, answer it and redo the step.
+20. **A full-screen "is the screen still?" check never finished.** (2026-10-25.) **Cause:** the selected unit
+    and the end-turn text blink, so the frame never stays the same. **Fix:** compare screen *states* (what the
+    screen shows) or masked regions, not whole frames.
 
 ## Seen in
 - Sid Meier's Colonization 3.0 (DOS, GOG release; VICEROY.EXE, an RTLink-overlaid executable) binary-patching
