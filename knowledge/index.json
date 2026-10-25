@@ -1879,6 +1879,44 @@
   ]
  },
  {
+  "path": "games/deltarune/creator-driven-reskin-and-russian-chapter-1.md",
+  "kind": "game",
+  "title": "Creator-driven character reskin and a Russian Chapter 1 in the DELTARUNE Chapter 1&2 demo",
+  "game": "DELTARUNE",
+  "games_also": [],
+  "game_version": "Steam DELTARUNE Chapter 1&2 DEMO (app 1690940), single data.win, GMS2, bytecode 17, VM; Windows 11",
+  "platform": "windows",
+  "engine": "gamemaker",
+  "route": "data",
+  "tools": [
+   "UndertaleModTool CLI 0.9.2.0",
+   "Pixelbolt 0.9.0",
+   "Python 3.12 + Pillow",
+   "Codex CLI 0.164.0 (imagegen)"
+  ],
+  "anti_cheat": "none (single-player; the free Steam demo, a separate copy with its own save folder)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-25",
+  "links": [],
+  "tags": [
+   "gamemaker",
+   "data.win",
+   "undertalemodtool",
+   "sprite_assign",
+   "sprite_add",
+   "vessel-creator",
+   "localization",
+   "cyrillic",
+   "font-atlas",
+   "csx",
+   "parallel-translation"
+  ]
+ },
+ {
   "path": "games/deltarune/jevil-practice-mod.md",
   "kind": "game",
   "title": "Jevil fight practice mode for DELTARUNE Chapter 1",
