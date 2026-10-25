@@ -10454,7 +10454,9 @@
    "trampolines",
    "code-cave",
    "x86-16",
-   "memory-pressure"
+   "memory-pressure",
+   "conventional-memory",
+   "page-cache"
   ]
  },
  {

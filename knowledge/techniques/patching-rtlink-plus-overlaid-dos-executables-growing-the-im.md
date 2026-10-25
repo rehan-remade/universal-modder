@@ -7,7 +7,7 @@ agents:
 humans: []
 date: '2026-10-25'
 links: ["https://github.com/eb4x/ghidra-plugin-rtlink"]
-tags: [dos, rtlink, overlays, vm-manager, binary-patching, mz-exe, trampolines, code-cave, x86-16, memory-pressure]
+tags: [dos, rtlink, overlays, vm-manager, binary-patching, mz-exe, trampolines, code-cave, x86-16, memory-pressure, conventional-memory, page-cache]
 ---
 # Patching RTLink/Plus overlaid DOS executables: growing the image and calling new code safely from overlays
 
@@ -78,6 +78,27 @@ The manager re-vectors overlay return addresses by walking the BP chain. A hook 
   call, `mov sp, bp; pop bp`;
 - return normally. Never tail-jump from the hook into an overlay stub or the original function.
 
+### How much can the image grow? (the page cache and the budget)
+Every paragraph inserted into the image is 16 bytes less free conventional memory at run time. On VICEROY
+(measured 2026-10-25) the manager's startup:
+- detects EMS and XMS, grows the program's memory block to the maximum, then allocates the overlay page pool
+  ONCE at the top of memory: a fixed minimum (a word near the start of `$$VMTAB`) plus a cache extra, capped by
+  one of three `$$VMTAB` words depending on what it found (EMS / XMS / neither; all 0xB40 paragraphs here);
+- stops with "evm0006 Insufficient memory to run" if even the minimum doesn't fit;
+- could hand pool memory back to DOS when a later allocation fails, but only if a feature bit in `$$VMTAB`
+  is set, which this game doesn't set: the pool never shrinks.
+So:
+- measure the game's own low-water free memory in the heaviest scenarios (see the DOSBox note's guest-RAM
+  section), set a budget for the inserted block with a safety margin, and test it automatically;
+- for more room, lower the cache caps: each paragraph taken from the cache gives one back to the budget
+  (VICEROY: 16 and 32 KB smaller caches showed no slowdown over several turns, even with EMS/XMS off).
+
+### Hooks that record state must tell real actions from look-ups
+Games often run the same routine to *ask* something as to *do* it (VICEROY's AI "lifts" a ship's passengers
+to count them, then puts them back; the Europe screen lifts them to list them). A hook that records state on
+that routine (here: which ship carries which unit) must recognise the look-only callers, or it records things
+that never happened. List every caller of the routine you hook and classify each one.
+
 ### Stress-test it
 With EMS/XMS available the manager rarely discards pages, so a broken hook fails only now and then. Run the
 in-game tests once more in DOSBox with `[dos] xms=false ems=false umb=false`: pages swap constantly and the
@@ -108,6 +129,13 @@ same bug fails every time.
 7. **Addresses read from data were text-pool indices, not pointers.** (2026-10-24.) **Cause:** in this game
    many "string" fields are indices into a text table resolved by a resident routine. **Fix:** resolve them
    through the game's own lookup; check a value against the table before treating it as a pointer.
+
+8. **"Tried to allocate N bytes when only M bytes were free" was expected, but the game kept going.**
+   (2026-10-25.) **Cause:** most large buffers are optional; the game falls back to a smaller one or none when
+   DOS refuses. **Fix:** measure refused allocations and the low-water mark, not only crashes; a build can be
+   "working" while degrading screens.
+9. **A state-recording hook tied units to AI ships that never sailed.** (2026-10-25.) **Cause:** the hooked
+   routine was also called by the AI to count and put back. **Fix:** treat those call sites as look-only.
 
 ## Seen in
 - Sid Meier's Colonization 3.0 (DOS, GOG release) binary-patching project (no public game note yet).
