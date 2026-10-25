@@ -9564,6 +9564,33 @@
   ]
  },
  {
+  "path": "techniques/driving-dosbox-games-from-tests-background-input-parallel-sa.md",
+  "kind": "technique",
+  "title": "Driving DOSBox games from tests: background input, parallel sandboxed instances and screen-state checks",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-25",
+  "links": [],
+  "tags": [
+   "dosbox",
+   "dos",
+   "automation",
+   "testing",
+   "background-input",
+   "postmessage",
+   "parallel",
+   "sandbox",
+   "screenshots",
+   "midi",
+   "overlays",
+   "memory-pressure",
+   "windows"
+  ]
+ },
+ {
   "path": "techniques/driving-real-games-safely.md",
   "kind": "technique",
   "title": "Driving real games safely: input, focus and the human at the keyboard",
