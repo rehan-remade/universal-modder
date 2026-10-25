@@ -7,7 +7,7 @@ agents:
 humans: []
 date: '2026-10-25'
 links: []
-tags: [dosbox, dos, automation, testing, background-input, postmessage, parallel, sandbox, screenshots, midi, overlays, memory-pressure, windows, guest-memory, readprocessmemory, conventional-memory]
+tags: [dosbox, dos, automation, testing, background-input, postmessage, parallel, sandbox, screenshots, midi, overlays, memory-pressure, windows, guest-memory, readprocessmemory, conventional-memory, focus-stealing, wmi]
 ---
 # Driving DOSBox games from tests: background input, parallel sandboxed instances and screen-state checks
 
@@ -35,7 +35,32 @@ tags: [dosbox, dos, automation, testing, background-input, postmessage, parallel
   it thinks it is inactive, and the real focus never moves.
 - Mouse: `autolock=false` in `[sdl]`. Post `WM_MOUSEMOVE` in a few small steps (DOSBox only sees relative
   motion between events), then button down/up at the target, in client coordinates scaled from 320x200.
-- Launch minimised without activation (`STARTUPINFO.wShowWindow = SW_SHOWMINNOACTIVE`), then
+- **Start DOSBox outside the terminal's process tree**, or each new DOSBox window can take the foreground from
+  the human (gotcha 21). On Windows, create it through WMI (`Win32_Process.Create`): the new process's parent is
+  `WmiPrvSE.exe`, not your test runner. A plain child process (`subprocess.Popen`, `Start-Process`,
+  `CreateProcess`) of a test started from the active console is not enough, even with a "don't activate" show
+  flag. From Python, through PowerShell's CIM cmdlets:
+
+  ```python
+  q = lambda t: "'" + str(t).replace("'", "''") + "'"
+  env = dict(os.environ, SDL_VIDEODRIVER="windib")      # WMI does NOT inherit your environment: pass it
+  envlist = ",".join(q(k + "=" + v) for k, v in env.items() if "\n" not in v and "\0" not in v)
+  ps = ("$si = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property "
+        "@{ShowWindow=[uint16]7; EnvironmentVariables=[string[]]@(" + envlist + ")}; "
+        "$r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments "
+        "@{CommandLine=" + q(subprocess.list2cmdline([dosbox, "-conf", conf, "-noconsole"])) + "; "
+        "CurrentDirectory=" + q(dosbox_dir) + "; ProcessStartupInformation=$si}; "
+        "Write-Output $r.ReturnValue $r.ProcessId")
+  out = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps],
+                       capture_output=True, text=True, timeout=60).stdout.split()
+  pid = int(out[1]) if len(out) >= 2 and out[0] == "0" else None   # ReturnValue 0 = started
+  ```
+
+  `ShowWindow=7` is `SW_SHOWMINNOACTIVE`. Set `CurrentDirectory` explicitly (otherwise it is the WMI host's, not yours) and pass
+  every environment variable DOSBox needs explicitly. The process isn't your child, so track it by the returned
+  PID: find its window by PID, and kill it by PID. A job object or "kill my children" won't reach it. Keep a
+  plain child-process launch only as a fallback for when WMI fails, and log when you use it.
+- Launch minimised without activation (`SW_SHOWMINNOACTIVE`, above), then
   `ShowWindow(hwnd, SW_SHOWNOACTIVATE)` once the window exists: screenshots need it restored, not minimised.
 - `EnableWindow(hwnd, FALSE)` once it is shown: the human's stray clicks and keys no longer reach the game,
   while posted messages still do. Re-enable it (or skip this) when you want to play along.
@@ -185,6 +210,18 @@ then fails every time (gotcha 3). Run the tests that touch your patched code und
 20. **A full-screen "is the screen still?" check never finished.** (2026-10-25.) **Cause:** the selected unit
     and the end-turn text blink, so the frame never stays the same. **Fix:** compare screen *states* (what the
     screen shows) or masked regions, not whole frames.
+21. **New DOSBox windows stole the focus from the human's terminal.** (2026-10-25.) A foreground watcher logged
+    17 takeovers in about 3 minutes of a parallel suite run, each when a new DOSBox window appeared. **Cause:**
+    the tests ran as descendants of the console program the human was typing into, and Windows lets processes
+    started from the foreground process bring their first window to the front. The DOSBoxes were started with
+    `SW_SHOWMINNOACTIVE`, which didn't stop it: SDL creates and shows its own window. It only happened while the
+    human was using that console, so a test made while they weren't typing showed no steal. **Fix:** create
+    DOSBox through WMI so it has no link to the console (see "Input without focus"). Afterwards a 15-minute
+    watch across a full parallel suite logged none. **Check it:** poll `GetForegroundWindow()` every 100 ms
+    during a suite run and log when the foreground window's process is a DOSBox. Two more traps: a test process
+    that was already running (for example, one waiting for a free slot) keeps the launch code it imported, so
+    restart runs before you measure. And when you swap the launch code, test the whole launch function, not
+    just the new helper: a leftover `return p.pid` after the change failed every in-game test.
 
 ## Seen in
 - Sid Meier's Colonization 3.0 (DOS, GOG release; VICEROY.EXE, an RTLink-overlaid executable) binary-patching

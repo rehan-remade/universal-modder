@@ -9590,7 +9590,9 @@
    "windows",
    "guest-memory",
    "readprocessmemory",
-   "conventional-memory"
+   "conventional-memory",
+   "focus-stealing",
+   "wmi"
   ]
  },
  {
