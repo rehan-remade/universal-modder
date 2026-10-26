@@ -7212,6 +7212,129 @@
   ]
  },
  {
+  "path": "games/total-war-shogun-2/shogun-2-napoleon-france-faction-port.md",
+  "kind": "game",
+  "title": "Napoleon's France as a playable faction in Shogun 2, replacing Otomo",
+  "game": "Total War: SHOGUN 2",
+  "games_also": [
+   "Napoleon: Total War"
+  ],
+  "game_version": "Shogun 2 build 6262 (v1.1.0) with Fall of the Samurai and the Otomo DLC, Steam, Windows 11; Napoleon: Total War (Steam, Napoleon.exe of 2026-10-15)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "Python 3.14 (own PFH3 pack, DB, loc and ESF codecs on RPFM's schemas)",
+   "capstone",
+   "Frida 17",
+   "um win",
+   "um backup",
+   "Runcher (the owner's launcher, by Frodo45127)"
+  ],
+  "anti_cheat": "none (single player); Frida hooks only in offline single-player sessions",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-26",
+  "links": [
+   "https://github.com/Frodo45127/rpfm",
+   "https://github.com/Frodo45127/runcher"
+  ],
+  "tags": [
+   "total-war",
+   "warscape",
+   "faction-port",
+   "db-tables",
+   "loc",
+   "startpos",
+   "esf",
+   "voices",
+   "sound",
+   "naval",
+   "runcher"
+  ]
+ },
+ {
+  "path": "games/total-war-shogun-2/shogun-2-ship-mortars-rockets-mount-names.md",
+  "kind": "game",
+  "title": "Making ported Napoleon ship weapons work in Shogun 2 (mount names, batteries, gun placement, detonators)",
+  "game": "Total War: SHOGUN 2",
+  "games_also": [
+   "Napoleon: Total War"
+  ],
+  "game_version": "Shogun 2 build 6262 (v1.1.0) with Fall of the Samurai, Steam, Windows 11",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "capstone",
+   "Frida 17",
+   "Python (own pack/DB tools)",
+   "um win",
+   "um backup"
+  ],
+  "anti_cheat": "none in single player; Frida only in offline single-player custom battles",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-26",
+  "links": [
+   "https://github.com/Frodo45127/rpfm"
+  ],
+  "tags": [
+   "naval",
+   "ships",
+   "mortar",
+   "rocket",
+   "torpedo",
+   "bow-chasers",
+   "warscape",
+   "total-war",
+   "models_naval",
+   "projectiles",
+   "effects"
+  ]
+ },
+ {
+  "path": "games/total-war-shogun-2/shogun-2-sound-bank-row-numbers.md",
+  "kind": "game",
+  "title": "Fixing silent and wrong unit sounds after adding units to Shogun 2",
+  "game": "Total War: SHOGUN 2",
+  "games_also": [
+   "Napoleon: Total War"
+  ],
+  "game_version": "Shogun 2 build 6262 (v1.1.0), Steam, Windows 11",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "capstone",
+   "Frida 17",
+   "Python (own pack/DB tools)"
+  ],
+  "anti_cheat": "none in single player; Frida only on offline single-player sessions",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-24",
+  "links": [
+   "https://github.com/Frodo45127/rpfm"
+  ],
+  "tags": [
+   "sound",
+   "db-tables",
+   "warscape",
+   "total-war",
+   "data-order"
+  ]
+ },
+ {
   "path": "games/total-war-warhammer-iii/valkia-khorne-subjugation-reusing-archaon-dilemmas.md",
   "kind": "game",
   "title": "Archaon-style subjugation for Valkia the Bloody: a script-only Warscape mod that reuses CA's own dilemmas",
