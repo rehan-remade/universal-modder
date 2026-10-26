@@ -305,6 +305,19 @@ here, so the UI side of a perk is untested.
     `spawnPool = Perk.PerkPool.never` and `spawnInEndless = false`, or your debug perk can roll in a
     player's actual game.
 
+14. **Probing this game means *playing* it, and it autosaves.** To reach a player you must start a
+    real run, and the game then writes `wk_save.json`, `gameData.dat`, `Run Records/` and a Steam
+    autocloud entry; `GAMEMANAGER - Pulling 20 roaches from global bank` moves the player's
+    currency. **Fix:** `um backup create "<compatdata>/.../LocalLow/Dark Machine/White Knuckle"`
+    *before* the first launch, not after. (Checked here afterwards: no probe perk persisted into
+    either save and the bank was unchanged, but that was luck rather than design, because
+    `AddPerk` on a perk whose `canStack`/save data you got wrong would have.) This cuts deeper than
+    tidiness: perks are saved by `id` through `Perk.PerkSaveData`, and the load path does
+    `Instantiate(CL_AssetManager.GetPerkAsset(savedId))` **with no null check**. A save written while
+    your mod was active therefore references an id that no longer resolves once the mod is removed,
+    and loading it instantiates null. Ship a mod that grants perks and you have made your users'
+    saves depend on your mod staying installed.
+
 ## Cost and time
 
 One session, no API spend. The decompile is ~10s; the probe build-install-launch-read loop is about
