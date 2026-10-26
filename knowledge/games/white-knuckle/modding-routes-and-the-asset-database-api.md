@@ -222,9 +222,17 @@ WKPROBE2: RESULT PASS - a mod-authored perk is live and changed gripResist 0 -> 
 ```
 
 So the whole chain works with no Harmony and no asset bundle: **author → register → the game's own
-`GetPerkAsset` finds it → `ENT_Player.AddPerk` grants it → it changes live gameplay state.** Set
-`spawnPool = PerkPool.never` and `spawnInEndless = false` while testing so your perk cannot appear in
-real runs. Both throwaway profiles were deleted and the `doorstop_config.ini` edits reverted.
+`GetPerkAsset` finds it → `ENT_Player.AddPerk` grants it → it changes live gameplay state.**
+
+The causation is worth pinning down, because `gripResist` also exists in shipped data and a trinket
+could have supplied it. It did not: the run's only other perk, `Perk_Trinket_ClimbingShoes`, was
+already initialised long before the measurement, and `gripResist` still read **0** at that point.
+Between the two readings the log shows **no** other `Initializing Perk` line, `playerPerks` went
+3 → 4 (exactly one perk added), and `AddPerk` returned the object titled `Iron Grip (probe)`.
+
+Set `spawnPool = PerkPool.never` and `spawnInEndless = false` while testing so your perk cannot
+appear in real runs. Both throwaway profiles were deleted and the `doorstop_config.ini` edits
+reverted.
 
 **Not verified:** custom Addressables bundles; whether a mod-added *gamemode* reaches the main menu
 (registration works, menu population was not checked); icons and perk cards, which were left null
