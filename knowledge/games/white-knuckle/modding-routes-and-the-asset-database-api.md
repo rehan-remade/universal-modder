@@ -24,9 +24,10 @@ tags: [white-knuckle, unity, unity-6, bepinex, r2modman, proton, asset-database,
 > The headline finding is that the game ships its own content-registration API:
 > `CL_AssetManager.AddNewDatabase(string id, WKAssetDatabase db)` is public and static, and a plugin
 > can merge whole lists of items, perks, trinkets, gamemodes, levels, regions and cosmetics into the
-> live game with no Harmony patch at all. That was verified at runtime with a throwaway probe plugin
-> in the running game, not just read off a decompile: registering a database round-tripped and the
-> combined perk count moved from 95 to 96.
+> live game with no Harmony patch at all. That was verified at runtime in the running game, not just
+> read off a decompile: a perk **authored from nothing by the mod** was registered, found by the
+> game's own `GetPerkAsset`, granted to the player mid-run, and measurably changed a live stat
+> (`gripResist` 0 → 0.5).
 >
 > Also documented: the exact Proton + r2modman launch chain (and why the `BepInEx/` folder in the
 > game directory is a decoy), and three no-compiler routes.
@@ -154,14 +155,36 @@ cp bin/Release/netstandard2.1/YourMod.dll \
 ```
 
 Registering content is then, in `Awake` (after waiting for `CL_AssetManager.baseDatabase` to become
-non-null, see gotcha 5):
+non-null, see gotcha 5). A complete, verified new perk:
 
 ```csharp
-var db = ScriptableObject.CreateInstance<WKAssetDatabase>();  // NOT new WKAssetDatabase()
+var p = ScriptableObject.CreateInstance<Perk>();   // NOT new Perk()
+p.id = "yourmod_irongrip";
+p.title = "Iron Grip";
+p.perkType = Perk.PerkType.standard;
+p.tags = new List<string> { "basic" };
+p.modules = new List<PerkModule>();
+p.multiplierCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
+p.spawnPool = Perk.PerkPool.never;     // while testing: keep it out of real runs
+p.spawnInEndless = false;
+p.useBuff = true;
+p.buff = new BuffContainer {
+    id = "yourmod_irongrip_buff", loseOverTime = false, buffTime = 1f, multiplier = 1f,
+    buffs = new List<BuffContainer.Buff> {
+        new BuffContainer.Buff { id = "gripResist", amount = 0.5f, maxAmount = 0.5f } } };
+
+var db = ScriptableObject.CreateInstance<WKAssetDatabase>();
 db.id = "yourmod_db";
-db.perkAssets.Add(yourPerk);
+db.perkAssets.Add(p);
 CL_AssetManager.AddNewDatabase(db.id, db);
+
+// the game can now find it by id, and granting it changes live stats:
+ENT_Player.GetPlayer().AddPerk(CL_AssetManager.GetPerkAsset("yourmod_irongrip"));
 ```
+
+Buff ids are plain strings hashed at runtime, so the set of useful ones is discoverable by grepping
+the decompile for `GetBuff("` and `GetStatBuff("`: `gripResist`, `addStrike`, `addHammer`,
+`addThrow`, `addCapacity`, `addPocketCapacity`, `drainLight`, `addPitonSecure` and others.
 
 ## Verification
 
@@ -179,12 +202,33 @@ WKPROBE: RemoveDatabase done, probe complete
 ```
 
 `GetFullCombinedAssetDatabase()` reporting **96** perks against a base of **95** is the actual proof
-that a mod's content lands in the set the game reads from. The throwaway profile was deleted and the
-`doorstop_config.ini` edit reverted afterwards.
+that a mod's content lands in the set the game reads from.
 
-**Not verified:** that a *newly authored* perk or item (rather than a re-registered existing one)
-behaves correctly in play; that custom Addressables bundles load; WKMapLoader and ResourcefulHands
-were read and their formats documented, but no map or pack was authored here.
+A second probe then settled the question that matters more: **can a brand-new perk, authored at
+runtime by a mod rather than loaded from a bundle or cloned from a shipped one, be registered and
+actually played?** It built a `Perk` with `ScriptableObject.CreateInstance`, gave it an id, title,
+description and a `BuffContainer` granting `gripResist` 0.5 (a stat `ENT_Player` divides grip damage
+by), registered it, and waited for a real run. In an Endless Superstructure run, with the player
+climbing and carrying a hammer:
+
+```
+WKPROBE2: registered new perk id=wkprobe_irongrip (base had 95 perks)
+WKPROBE2: GetPerkAsset("wkprobe_irongrip") -> OK title='Iron Grip (probe)' type=standard
+WKPROBE2: combined perks=96 containsMine=True
+WKPROBE2: player found
+WKPROBE2: before AddPerk: gripResist=0 playerPerks=3
+WKPROBE2: after AddPerk:  gripResist=0.5 playerPerks=4 grantedTitle='Iron Grip (probe)'
+WKPROBE2: RESULT PASS - a mod-authored perk is live and changed gripResist 0 -> 0.5
+```
+
+So the whole chain works with no Harmony and no asset bundle: **author → register → the game's own
+`GetPerkAsset` finds it → `ENT_Player.AddPerk` grants it → it changes live gameplay state.** Set
+`spawnPool = PerkPool.never` and `spawnInEndless = false` while testing so your perk cannot appear in
+real runs. Both throwaway profiles were deleted and the `doorstop_config.ini` edits reverted.
+
+**Not verified:** custom Addressables bundles; whether a mod-added *gamemode* reaches the main menu
+(registration works, menu population was not checked); icons and perk cards, which were left null
+here, so the UI side of a perk is untested.
 
 ## Gotchas
 
@@ -247,6 +291,20 @@ were read and their formats documented, but no map or pack was authored here.
     (it takes ten seconds) rather than trusting a checked-in decomp, and diff it against the old one
     to see what moved.
 
+11. **Touching `ENT_Player` drags in ALINE.** **Symptom:**
+    `CS0012: The type 'MonoBehaviourGizmos' is defined in an assembly that is not referenced ... 'ALINE'`.
+    **Cause:** the player class inherits from a base type in the shipped ALINE drawing library.
+    **Fix:** add `Managed/ALINE.dll` as a reference (and often `UnityEngine.PhysicsModule`). The game
+    is a *shipped* build, so its inheritance chains reach third-party DLLs you would not expect.
+
+12. **`GetPerkAsset(id)` matches on `Contains`, not equality**, and lowercases both sides. A short or
+    generic id will collide with a shipped perk and silently return the wrong one. **Fix:** prefix
+    your ids with your mod name.
+
+13. **A registered perk is live content, so keep it out of real runs while testing.** Set
+    `spawnPool = Perk.PerkPool.never` and `spawnInEndless = false`, or your debug perk can roll in a
+    player's actual game.
+
 ## Cost and time
 
 One session, no API spend. The decompile is ~10s; the probe build-install-launch-read loop is about
@@ -254,9 +312,11 @@ two minutes per iteration, dominated by Proton startup.
 
 ## Open questions
 
-- Can a fully new perk/item `ScriptableObject`, built at runtime rather than loaded from a bundle, be
-  registered and played? The registration path is proven; the content-authoring path is not.
-- Does `AddNewDatabase` need to be called before a specific point in startup for gamemodes to appear
-  in the main menu, or will a late registration show up?
-- WKLib lists custom items as unimplemented. Registering a database looks like the missing piece, so
-  it may be worth contributing upstream rather than reimplementing per mod.
+- Does a mod-added **gamemode** reach the main menu? Registration works, but menu population was not
+  checked, and `MenuManager` may read a list captured at startup.
+- Icons, perk cards and frames were left null here, so the **UI side** of custom content is untested.
+  A perk with no `icon`/`perkCard` may throw where the game draws it.
+- Custom **Addressables** bundles for new levels: WKMapLoader and WKLib both wrap this, but shipping
+  your own catalog was not attempted.
+- WKLib lists custom items as unimplemented. Registering a database is clearly the missing piece, so
+  it is probably worth contributing upstream rather than reimplementing this in each mod.
