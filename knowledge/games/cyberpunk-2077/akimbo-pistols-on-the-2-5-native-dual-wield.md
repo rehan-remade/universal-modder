@@ -207,7 +207,7 @@ For address lookups in crash dumps this note uses the game's own symbol table; s
 - **Logs:** RED4ext loaded ArchiveXL 1.28.0, Audioware, Codeware 1.21.1, TweakXL 1.12.0 (1,032,136 game addresses);
   redscript "Compilation complete"; TweakXL "Import completed"; ArchiveXL loaded the factory and merged the
   localisation; Audioware "74 in-memory static audio ids, no error reported".
-- **Sound oracle:** `um win record --exe Cyberpunk2077.exe --seconds 40` (process-loopback audio, f32le stereo
+- **Sound oracle:** `um win record --exe Cyberpunk2077.exe --out croft_fire --seconds 40` (process-loopback audio, f32le stereo
   48 kHz) while a script clicked fire and held R. A Python script took the first 120 ms of each reference sound
   (mono, z-normalised), FFT cross-correlated it against the recording, normalised by the recording's local energy,
   and printed the best score per file. Croft shots scored 0.70-0.94; the vanilla Liberty shots 0.50 at most.
@@ -297,8 +297,10 @@ For address lookups in crash dumps this note uses the game's own symbol table; s
   `empty_reload*` 1.500 s (46 frames); flourishes `idle_break_01/02`, `equip`, `first_equip`, `unequip`. Events use
   the vanilla Liberty sound event names (`mag_out` / `mag_in` / `slide_release` frames, `mag_new_grab` at seat-6,
   `mag_rattle` at seat-3). WolvenKit.Console 9.1 can't import animations; the animation track used its own
-  unpublished importer that writes `.anims` from WolvenKit json (details not recorded), with kraken.dll
-  compression because WolvenKit couldn't load Oodle. All 16 files round-tripped with 0 mismatches.
+  unpublished importer that writes `.anims` from WolvenKit json, with kraken.dll compression because
+  WolvenKit couldn't load Oodle. Its encoding, event writing and compression settings were not recorded, so this
+  step can't be reproduced from this note yet: it is the one gap (see Open questions). All 16 files round-tripped
+  with 0 mismatches.
 - **Sound:** 74 sounds, from ElevenLabs Sound Effects v2 (~120 takes) and Mirelo SFX 2.0 on fal (~$0.49 total;
   ElevenLabs returned near-silent takes for requests under 0.8 s, so every take was screened), then designed in
   Python (layering, EQ, compression, synthetic reverb, true-peak limit at -1 dBTP; shots ~-10 to -12 LUFS),
@@ -313,3 +315,5 @@ parallel helper agents (one heavy process at a time through a lock file). fal sp
   shipping patched player entities.
 - What in the old modded saves trips the resource loader under RED4ext.
 - Whether the per-state reloads, the reload foley and the male-V animations look right in game.
+- The `.anims` writer: its key encoding, event block and kraken compression settings need writing down (or the
+  importer publishing) before the animation step is reproducible.

@@ -93,6 +93,8 @@ sections are spliced back.
 6. Release: copy the deployed set into a folder laid out like the game folder (below), lint it, test it in a clean room.
 
 ### The release folder (drag and drop into the folder that holds trl.exe)
+This is a **private, local package** for the user's own install: its DRMs keep vanilla sections (see Assets), so
+it must not be uploaded as is. A public release needs a patcher that rebuilds the DRMs from the player's install.
 - The loader pair unmodified, `trl_croft.asi`, its ini (logging and test switches off), `mods\`, a README (requirements,
   install, features, controls, settings, uninstall, troubleshooting, credits and licenses, AI-use disclosure), and a
   `Croft2001\` folder with `Verify.bat`, `Uninstall.bat`, a PowerShell 5.1 script, a sha256 manifest and the licence texts
@@ -154,8 +156,11 @@ sections are spliced back.
     idle priority, half the cores, Blender `-t 8`), and only one workflow at a time on the human's own machine.
 
 ## Assets
-Garments, gear and textures are the mod's own (Blender bakes; garment pieces cut from the film-style body). No game
-files are shipped; the release contains only the mod's DRMs, which are built from the user's own install.
+Garments, gear and textures are the mod's own (Blender bakes; garment pieces cut from the film-style body). The
+rebuilt DRMs are whole files: besides the mod's meshes and textures they keep unchanged sections from the vanilla
+templates (including original animation clips). So the user's local package is **not** a redistributable release.
+To publish, ship only the mod's own data as a patch/installer that rebuilds each DRM from the recipient's own
+install (the splice tools already work section by section), and run `um publish check --game <install>` on it.
 
 ## Cost and time
 Sessions on 2026-10-11 to 2026-10-13 (pass 0.9.0 to the 0.9.7 release), several running unattended overnight.

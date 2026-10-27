@@ -42,7 +42,9 @@ these sessions. The ASI, reload and DRM animation basics are in
 Native hook plus data. The engine's own strand cloth (the `ClothSetup` rules that drive Lara's braid and the two face
 strands) only knows fixed distance/plane rules on a handful of points, and a vanilla rig has no spare bones. So the
 hair became new bones inside the model, posed by an ASI solver that runs right after the engine's own cloth pass.
-Without the ASI the hair hangs rigidly in its rest pose, which is a safe fallback.
+With the ASI loaded but the simulation switched off, the hair hangs rigidly in its rest pose. Removing the ASI
+entirely is **not** safe: it also removes the 256-segment buffer patch, and the 240/237-segment hair rigs then
+overflow the engine's 180-segment arrays (Gotcha 1). Uninstall the hair DRMs together with the ASI.
 
 ## How the game works (what we had to learn)
 - **Legacy segment records** are 0x40 bytes. A real record holds its parent (i32) at +0x38 and an HInfo pointer at

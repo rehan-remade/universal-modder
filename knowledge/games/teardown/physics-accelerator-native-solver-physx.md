@@ -22,8 +22,10 @@ tags: ["physics", "performance", "physx", "cuda", "gpu", "multithreading", "solv
 The goal was to make Teardown's physics use more of the PC: an i9-14900K (8P+16E, 32 threads) and an RTX 5090. The
 mod is a `dsound.dll` proxy that hooks the engine with MinHook through AOB signatures, plus a small Lua mod. Five
 designs were tried over three nights. A CUDA debris co-processor was rejected for feel. A full PhysX 5.9 remap (v1)
-ran 10x slower than stock. A **multi-core replay of Teardown's own island solver** came out bit-exact against the
-engine and doubled fps on a debris pile (36 -> 71). A GPU PhysX remap (v2) reached 83 fps on the pile, but in an
+ran 10x slower than stock. A **multi-core replay of Teardown's own island solver** replays the engine's job
+bit-exactly when run serially (12/12 islands identical); its parallel graph-coloured pass doubled fps on a debris
+pile (36 -> 71) but is **not** bit-exact (velocities differ by 0.01-0.08 m/s on average, up to ~4 m/s on single
+bodies during impacts). A GPU PhysX remap (v2) reached 83 fps on the pile, but in an
 explosion it **froze the whole PC and forced a hard restart**. The current 0.2 restarts from measurement: a flight
 recorder, plus exact speed-ups that check themselves against the engine in game. In the user's first 0.2 session
 both speed-ups switched themselves off and the game ran no faster. 0.2.1 is committed as WIP, untested and not
@@ -209,7 +211,7 @@ The project is local-only; this is the order that reproduces it.
    - Generate them with `sigmake` from the code-section dump. Keep a self-test exe (`tpa_selftest <dump>`) that
      asserts each one matches once at the expected RVA, and run it after every change. A Steam update to the game
      breaks it first.
-3. **solver_mt (keep: exact).** Hook `TSolverJob` run 0x5f7ae0.
+3. **solver_mt (keep: serial replay exact, parallel pass approximate).** Hook `TSolverJob` run 0x5f7ae0.
    - For a normal island, replay the same per-island sequence by calling the engine's own functions: setup →
      prepare by type → gravity (gravity vector rotated by 0x30d40, v += gscale·dt·g) → copy v/w into the compact
      array → 8 × {pass, clamp} → copy back → integrate.
@@ -258,8 +260,10 @@ The project is local-only; this is the order that reproduces it.
      few seconds. The cost measured offline was 1.4-1.5 % of the main thread.
 7. **Install and uninstall** (PowerShell, Teardown closed):
    - `deploy.ps1` refuses to run if Teardown is running, snapshots `%LOCALAPPDATA%\Teardown` with `um backup`, and
-     copies `dsound.dll`, `tpa.ini` (an existing one is kept as `tpa.ini.old`) and the Lua mod into
-     `Documents\Teardown\mods\PhysicsAccelerator`.
+     copies the native files and the Lua mod to two different places:
+     - `dsound.dll` and `tpa.ini` (an existing one is kept as `tpa.ini.old`) go **next to `teardown.exe`** in the
+       game folder; the proxy only loads from there, and `tpa.ini`/`tpa.log` live there too;
+     - the Lua mod goes into `Documents\Teardown\mods\PhysicsAccelerator`.
    - `remove.ps1` moves every installed file, logs included, into a timestamped folder in the repo rather than
      deleting it.
    - Deleting `dsound.dll` alone uninstalls the native part.
@@ -298,8 +302,9 @@ approximations, and 1818 takeovers against 1331 hand-backs. The user rejected it
   files with nothing re-downloaded.
 
 **solver_mt (Lee sandbox, the user's 36 mods):**
-- 12/12 islands bit-identical in verify mode.
-- storm2000: step 9.9 → 5.7 ms, solve 6.8 → 3.1 ms, **fps 36.5 → 70.8**.
+- Serial replay: 12/12 islands bit-identical in verify mode.
+- Parallel pass (approximate, see Build step 3): storm2000 step 9.9 → 5.7 ms, solve 6.8 → 3.1 ms, **fps 36.5 →
+  70.8**.
 - Five size-4 explosions on buildings ("demo"): step 30.9 → 22.5 ms in one A/B, but 16.9 → 18.4 ms (slower) in a
   later run. It's unproven on destruction.
 
