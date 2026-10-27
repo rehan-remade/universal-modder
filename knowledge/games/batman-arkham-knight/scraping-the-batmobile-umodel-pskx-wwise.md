@@ -15,7 +15,7 @@ agents:
 - 'OpenCode (muse-spark-1.3)'
 - 'Claude Code (Opus 5.5)'
 - 'OpenCode (deepseek-v4.1-flash-free)'
-- 'Freebuff (Buffy, note author)'
+- 'Freebuff (Buffy, model not recorded; wrote the note)'
 humans: ['@NotTrevino']
 date: '2026-10-22'
 links:
@@ -57,6 +57,11 @@ tags: ['umodel', 'pskx', 'ue3', 'cooked-packages', 'wwise', 'bank-extraction', '
   `SkeletalMeshFormat = 0`.
 - **Audio:** a portable `vgmstream-cli`. No Wwise authoring install was needed, and nothing was
   installed system-wide.
+- **What ships:** nothing from Arkham Knight. The umodel export, the carved banks and WEMs, and any
+  Just Cause 3 build that contains them are game content from your own install: they stay private,
+  outside any repository, as the
+  [JC3 note](../just-cause-3/vehicle-mesh-editing-added-geometry-loads-with-matching-toc.md)'s
+  Assets section says too. What can be shared is the method and your own tools.
 
 umodel's directory scan of the install reports **4,260 game files (1,981 skipped) in 35 folders**.
 That does not mean 4,260 usable assets; it means umodel found that many package candidates and
@@ -96,13 +101,16 @@ umodel loads `BmGame/CookedPCConsole/Playable_Batmobile_SF.upk` with
 The mesh's own `MATT0000` chunk lists **19 material slots**; the 25 material *assets* include
 masters that instances inherit from, plus materials not used by this mesh.
 
-### PSKX is a chunked container, not a flat ActorX PSK
+### PSKX is a chunked container
 
-This is the single most expensive mistake to make. A PSKX is a sequence of 32-byte chunk headers:
+This is the single most expensive mistake to make. A PSKX is umodel's ActorX PSK with 32-bit
+faces: umodel writes `.pskx` instead of `.psk` when a LOD has more than 65,536 wedges, and the
+faces then go in `FACE3200` instead of `FACE0000` (`ExportPsk.cpp`). Both are a sequence of
+32-byte chunk headers (`VChunkHeader` in umodel's `Psk.h`), each followed by its records:
 
 ```
 offset 0x00  id[20]        ASCII, NUL-padded ("ACTRHEAD", "PNTS0000", ...)
-offset 0x08  version[16]   ASCII digits, zero-filled
+offset 0x14  u32 version   20100422 (umodel's PSK_VERSION) on ACTRHEAD
 offset 0x18  u32 stride    bytes per record
 offset 0x1C  u32 count     number of records
 offset 0x20  data          stride * count bytes
@@ -116,11 +124,11 @@ Batmobile file contains:
 | `PNTS0000` | 12 | 201,338 | unique positions (`float3`) |
 | `VTXW0000` | 16 | 253,163 | wedges: point index `u32`, `u`/`v` floats, material `u8`, reserved `u8`, pad `u16` |
 | `FACE3200` | 18 | 299,837 | triangle: 3 × `u32` wedge index, material `u8`, aux `u8`, smoothing `u32` |
-| `MATT0000` | 64 | 19 | material name (`char[64]`) |
+| `MATT0000` | 88 | 19 | material name `char[64]`, then six 4-byte fields (texture index, flags, LOD bias, ...) |
 | `REFSKELT` | 120 | 180 | bone: name `char[64]`, flags, child count, parent, quat, position |
 | `RAWWEIGHTS` | 12 | 202,698 | `float weight`, `u32 point index`, `u32 bone index` |
-| `VERTEXCOLOR` | — | per wedge | greyscale scalar, not a mask |
-| `EXTRAUVS0` | — | per wedge | second UV set; half-float garbage on some materials |
+| `VERTEXCOLOR` | 4 | per wedge | an `FColor`; greyscale on this mesh, not a mask |
+| `EXTRAUVS0` | 8 | per wedge | second UV set (two floats); half-float garbage on some materials |
 
 A minimal, dependency-free walk (the tool that produced the table above):
 
@@ -200,10 +208,12 @@ AkEvent (by name) → FNV-1(lowercase(name)) → HIRC event object → action (+
 → container → sound → DIDX entry → DATA offset/length → RIFF WEM
 ```
 
-The hash was calibrated on two serials whose names are in the export table:
-`Play_BattlemodeEngine = 0x388710DB`, `Transition_In = 0x102067E6`. In a bank, an event record is
-`id` + `u32 count` + the ids at `+8`. For `BML_Engine` this resolved **17/17 events to media**, and
-the extracted loops were auditioned by ear before being used.
+The hash was calibrated on a serial whose name is in the export table:
+`Play_BattlemodeEngine = 0x388710DB`, which is FNV-1 of `play_battlemodeengine`. The second pair the
+project recorded, `Transition_In = 0x102067E6`, does not check out (FNV-1 of `transition_in` is
+`0xE9A427F2`), so either the id was miscopied or the event's full name differs. In a bank, an event
+record is `id` + `u32 count` + the ids at `+8`. For `BML_Engine` this resolved **17/17 events to
+media**, and the extracted loops were auditioned by ear before being used.
 
 ### The package container, for when a tool cannot open a pack
 
@@ -226,14 +236,18 @@ neither is the layout that would let you read a row's slot kind. What finally su
 
 ```csharp
 /// FloatProperty: AirControlYawTorqueFactorMax
-public unsafe float AirControlYawTorqueFactorMax => *(float*)(Ptr + 1192);   // 0x4A8
+public unsafe float AirControlYawTorqueFactorMax
+{
+    get { return BmSDK.Framework.MarshalUtil.ToManaged<float>(Ptr + 1192); }   // 0x4A8
+    set { BmSDK.Framework.MarshalUtil.ToUnmanaged(value, Ptr + 1192); }
+}
 ```
 
 Structs come out with `[StructLayout(LayoutKind.Explicit, Size = 112)]` and an offset per member.
 `Ptr + 1192` is `0x4A8`, exactly the number space of the cooked tag, so a field resolves by
 **class + absolute offset + slot kind** with no base to guess. 34 classes of the Batmobile's chain
-(2,351 properties, 42 structs) were vendored from that public dump, with its MIT notice; nothing
-from the game's own files is copied.
+(2,351 properties, 42 structs) were vendored from that public dump (`src/BmSDK/Generated` in the
+repo), with its MIT notice; nothing from the game's own files is copied.
 
 Why it is the same build, measured: `RVehicleSimBatmobile`'s dump size is 1,220, and the upk walk
 lands on `0x104 + 0x3C0 = 0x4C4` = 1,220 with all 165 declared rows on the matching offset (147 by
@@ -317,9 +331,10 @@ What is **not** verified, and must not be claimed:
 
 ## Gotchas
 
-1. **Your PSK parser reports 20,100,482 vertices.** **Cause:** it assumed a flat Source PSK
-   (`char[20] flags`, then `int32` counts). The value is the low 4 bytes of the root chunk's 8-byte
-   size field. **Fix:** walk 32-byte chunk headers, and assert the walk ends at EOF.
+1. **Your PSK parser reports 20,100,422 vertices.** **Cause:** it read the file as a flat layout
+   (`char[20]`, then `int32` counts). The first `int32` after the id is the root chunk's version
+   field, which umodel sets to 20100422 (`PSK_VERSION`) on `ACTRHEAD`. **Fix:** walk 32-byte chunk
+   headers, and assert the walk ends at EOF.
 2. **You grep for four-letter all-caps ids, find only the root and points, and conclude "there are
    no triangles".** **Cause:** chunk ids are 8–16 characters and include digits (`PNTS0000`,
    `FACE3200`, `EXTRAUVS0`), so a strict four-character scan misses them and every later hit is float
@@ -377,8 +392,8 @@ What is **not** verified, and must not be claimed:
     textures come out; the layout has to be obtained elsewhere (a class dump, above). Concluding "the
     package is closed" from it is what cost this project its first three attempts.
 14. **You look for handling values in the ini files.** **Cause:** `BmGame.ini`, `DefaultGame.ini` and
-    `PCGame.ini` hold keybinds (`pGlideSteer` and friends), not vehicle tuning.    **Fix:** stop. The values are native class defaults, and gotcha 12 is why the file alone does not
-    name them.
+    `PCGame.ini` hold keybinds (`pGlideSteer` and friends), not vehicle tuning. **Fix:** stop. The
+    values are native class defaults, and gotcha 12 is why the file alone does not name them.
 15. **Your texture folder contains assets the Batmobile never uses.** **Cause:** an umodel package
     export pulls in referenced textures, including shared or unrelated ones (`AceBridgeStatue_Detail`
     was in this set). **Fix:** drive texture selection from material bindings, never from a folder
@@ -388,7 +403,7 @@ What is **not** verified, and must not be claimed:
     roughness, metalness, microdetail and per-material base colour. **Fix:** inventory the parameter
     interface first and translate it input by input, tagging each value's source. Texture-only
     conversion cannot reproduce a material.
-17. **A whole run of fields reads one slot early, and a 8,000 value lands where a time should be.**
+17. **A whole run of fields reads one slot early, and an 8,000 value lands where a time should be.**
     **Cause:** the layout walker had no slot for `ComponentProperty`, `InterfaceProperty` or
     `DelegateProperty`, so it dropped 8 or 16 bytes each and every later field slid forward. That is
     what put `AirControlYawTorqueFactorMax` under the name `AirControlTimeInAir`; the true
@@ -417,6 +432,9 @@ What is **not** verified, and must not be claimed:
     absolute offsets in the running build's dump. Record the mismatch and move on.
 
 ## Assets
+
+What was extracted, for scale. All of it is game content from the author's own install and stays
+private (Setup, "What ships").
 
 - **Mesh:** 201,338 positions, 253,163 wedges, 299,837 triangles, 19 material slots, 180 bones,
   202,698 skin weights. 17,357,622 B as exported PSKX.
