@@ -149,6 +149,21 @@ to count them, then puts them back; the Europe screen lifts them to list them). 
 that routine (here: which ship carries which unit) must recognise the look-only callers, or it records things
 that never happened. List every caller of the routine you hook and classify each one.
 
+### Several patchers at once: hand out space from one ledger
+With several people or agents patching in parallel (one git branch each), "find a free gap and use it"
+breaks: on VICEROY (2026-10-27) three branches put hooks in the same unused 96 bytes, a fourth placed its
+new block on top of another branch's, and two used the same save-chunk number. Each branch passed its
+own tests; the clash only shows at merge, or worse, after it.
+- Once the original free code area is full, give each feature its own block appended to the inserted
+  image, and compute every block's base from the previous block's end (never a literal address), so a
+  block that grows shifts the later ones instead of overlapping them.
+- Keep ONE record of every claim: code ranges, block order and size, data-segment holes, save-chunk ids
+  and page-cache cuts, with an owner and a merged/reserved status. Hand space out with a small script that
+  takes a lock file (`O_EXCL`), picks the lowest free range and appends the reservation; refuse requests
+  for the full fixed area.
+- Check it at build time: fail if the tree uses a range not reserved for that owner, overlaps another
+  owner, or gives a block a literal base. Compare each branch with its merge base, not current master.
+
 ### Stress-test it
 With EMS/XMS available the manager rarely discards pages, so a broken hook fails only now and then. Run the
 in-game tests once more in DOSBox with `[dos] xms=false ems=false umb=false`: pages swap constantly and the
@@ -284,6 +299,16 @@ cover them.
     **Fix (planned):** pause silences every music channel and remembers each channel's last volume, resuming
     resends them; volume is done by scaling every channel-volume (CC 7) message as the player sends it and
     resending all channels on a change. The GM master-volume SysEx is ignored by some synths.
+
+10. **evm0012 "unvectored call" the second time a hook called a resident routine.** (2026-10-27.)
+    **Cause:** the hook made the far call as `push seg; push off; retf` into the resident routine; the
+    manager couldn't vector it. **Fix:** `call far cs:[ptr]` with the far pointer stored in the block.
+11. **The game jumped into garbage after the first menu choice through a new dialog hook.** (2026-10-27.)
+    **Cause:** two of the game's menu routines remove their own arguments (`retf N`), and the hook also
+    did `add sp` after the call, as for a C-style routine. **Fix:** read the callee's return instruction
+    before calling it; test the hook in an emulator that checks SP after the call.
+12. **Three branches' hooks in the same 96 free bytes.** (2026-10-27.) **Cause:** each agent picked "free"
+    space by reading the code in its own branch. **Fix:** the ledger above; nobody picks space by hand.
 
 ## Seen in
 - Sid Meier's Colonization 3.0 (DOS, GOG release) binary-patching project (no public game note yet).
