@@ -10,10 +10,10 @@ route: data
 tools: ["UndertaleModTool CLI 0.9.2.0", "Pixelbolt 0.9.0", "Python 3.12 + Pillow", "Codex CLI 0.164.0 (imagegen)"]
 anti_cheat: "none (single-player; the free Steam demo, a separate copy with its own save folder)"
 status: in-progress
-agents: ["Claude Code (Opus 5.5)"]
+agents: ["Claude Code (Opus 5.5)", "Claude Code subagents for the translation (model not recorded)"]
 humans: []
 date: 2026-10-25
-links: []
+links: ["https://github.com/UnderminersTeam/UndertaleModTool", "https://github.com/skulitom/Pixelbolt"]
 tags: [gamemaker, data.win, undertalemodtool, sprite_assign, sprite_add, vessel-creator, localization, cyrillic, font-atlas, csx, parallel-translation]
 ---
 
@@ -26,7 +26,8 @@ tags: [gamemaker, data.win, undertalemodtool, sprite_assign, sprite_add, vessel-
 > the creator option, translation, fonts and quick save were verified offline only.
 
 ## Setup
-- DELTARUNE Chapter 1&2 DEMO from Steam (free), Windows 11. Not the paid full game: the layout differs (below).
+- DELTARUNE Chapter 1&2 DEMO from Steam (free), Windows 11. Not the paid full game: the layout differs (below; the
+  full release's per-chapter layout is in [the Jevil practice note](jevil-practice-mod.md)).
 - UndertaleModTool CLI 0.9.2.0 (official release `UTMT_CLI_v0.9.2.0-Windows.zip`), Python 3.12 + Pillow,
   Pixelbolt 0.9.0 for the pixel art.
 - Work on a copy of the install; keep `data.win.orig` and always patch from it.
@@ -34,9 +35,10 @@ tags: [gamemaker, data.win, undertalemodtool, sprite_assign, sprite_add, vessel-
 ## Route and why
 Data route: `UndertaleModCli load data.win.orig -s install.csx -o data.win` with `CodeImportGroup`
 (`QueueReplace` a new global script, `QueueAppend`/`QueuePrepend`/`QueueFindReplace` hooks). The demo is VM (UTMT
-`info`: `Is YYC - False`, 9,715 code entries), so decompile/recompile is safe. New art is loaded at runtime from
-loose PNGs instead of packed into texture pages, which keeps the patch small and the art editable without
-re-patching.
+`info`: `Is YYC - False`, 9,715 code entries; see
+[the YYC-vs-VM technique note](../../techniques/gamemaker-yyc-vs-vm-check-the-code-chunks-before-trusting-th.md)),
+so decompile/recompile is safe. New art is loaded at runtime from loose PNGs instead of packed into texture pages,
+which keeps the patch small and the art editable without re-patching.
 
 ## How the game works (what we had to learn)
 - **Demo layout:** one `data.win` holds both chapters; Chapter 1 copies of assets carry a `_ch1` suffix (most
@@ -91,7 +93,9 @@ re-patching.
 ## Verification
 - In the real game (human's screen recording, 1 min 39 s): the reskinned walk sprites in the hero's room, the
   supply closet and the first Dark World rooms (light and dark variants), confirming `sprite_add` +
-  `sprite_assign` on resource sprites works in this runtime.
+  `sprite_assign` on resource sprites works in this runtime. The current GameMaker manual says `sprite_assign`
+  can't copy to a game resource (the target must come from `sprite_add`/`sprite_duplicate`), so re-check it on
+  any other runner, such as the full release's.
 - Offline, every build: decompiled the patched entries back out of the new `data.win`; re-exported swapped
   sprites; checked every strip is frames x width by height of its target; JSON validity; per-chunk translation
   checker (all keys, control-code counts, glyph coverage, simulated 3-line wrap, label lengths); merge rejected 0.
@@ -102,8 +106,11 @@ re-patching.
 1. **Macro compiled as a variable.** A `#macro` defined in the mod's global script was used in a `QueueAppend` to
    an object event; the decompile showed the macro name as an instance variable (it would crash at runtime).
    **Cause:** macros are not visible when CodeImportGroup compiles another entry. **Fix:** literals in hooks.
-2. **CLI hangs.** `UndertaleModCli load file -s script.csx` with no `-o` drops into interactive mode and waits on
-   stdin. **Fix:** always pass `-o` (and `--overwrite`), or feed empty stdin.
+2. **CLI hangs.** `UndertaleModCli load file -s script.csx` sat waiting on stdin. **Cause:** when stdin is
+   redirected, the 0.9.2.0 CLI reads all of it, up to end of file, before it does anything (`Program.Main`), so a
+   shell whose stdin pipe never closes hangs it. It doesn't go interactive without `-i`, but without `-o` it runs
+   the scripts and saves nothing. **Fix:** always pass `-o` (and `--overwrite`), and feed it empty stdin (`< NUL`
+   in cmd, `< /dev/null` in a POSIX shell).
 3. **`vk_tab` not found in decompiled code.** **Cause:** constants decompile as numbers (9). **Fix:** search for
    your own function names when verifying hooks.
 4. **"Missing" sprites in cutscenes.** Swapping walk sprites leaves dozens of special poses (falls, kneeling,
@@ -129,6 +136,10 @@ re-patching.
   silhouette).
 - 66 Cyrillic glyphs drawn on the `fnt_main` grid, reused for mainbig (2x), dotumche (+1 row) and comicsans
   (+2 rows); separate hand-drawn sets for the 4x5 and 4x8 fonts.
+- **What ships:** nothing is published yet. The art drawn for the mod (hero, robot, creator parts, the Cyrillic
+  glyphs) is the mod's own. The recoloured Chapter 1 poses are Kris's own sprites, and the redrawn text sprites and
+  extended font atlases are built from the game's sprites and fonts, so a release builds those at install time
+  from the player's own `data.win` and never ships them, like the modified `data.win` itself.
 
 ## Cost and time
 One long session (about two days of wall-clock with breaks). Translation: 10 parallel subagents, about
