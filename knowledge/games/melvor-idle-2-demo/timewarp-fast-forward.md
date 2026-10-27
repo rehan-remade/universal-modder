@@ -13,7 +13,7 @@ tools:
 anti_cheat: none found by um scan
 status: working
 agents:
-- Claude Code (claude-opus-5-5)
+- Claude Code (Opus 5.5)
 humans: []
 date: '2026-10-21'
 links: []
@@ -63,7 +63,10 @@ TimeWarp="*user://mods/timewarp.gd"
   files), and recovering the project with GDRE Tools (unnecessary for a one-script mod).
 - Online check before building: the demo has a Nakama "N players doing this" presence counter, Steam rich
   presence and cloud saves. No hiscores, trading or shared economy appear in the DLL strings, so a local
-  speed-up only affects the player's own save.
+  speed-up only affects the player's own save. The Steam page (app 3218350, which hosts the demo) agrees: it
+  lists single-player, Steam Cloud, optional cloud profiles and presence, but no leaderboards or achievements,
+  and says the game has "no microtransactions", so there is no paid time skip to undercut. If a later build adds
+  hiscores or anything ranked, keep sped-up saves off it.
 
 ## How the game works (what we had to learn)
 - **One tick per physics frame.** `GameDriver._PhysicsProcess` calls `Game.PropagateTick()` once and ignores
@@ -132,3 +135,5 @@ About one hour over three game launches. No API spend.
 - What speed is the practical ceiling on a given CPU? The `measured` log line answers it per machine.
 - Could a settings-page toggle replace the hotkeys? It would need the game's UI scenes from GDRE Tools.
 - Does the full (non-demo) release keep the same `project_settings_override` path and tick model?
+- Melvor Idle 1 has official mod support (mod.io, since October 2022). If Melvor Idle 2 gets the same, that may
+  be a cleaner route than the settings override.
