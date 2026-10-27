@@ -8,7 +8,7 @@ import sys
 from um import __doc__ as DOC, __version__
 
 GROUPS = ["scan", "fal", "comfy", "sprixen", "voidless", "sprite", "render3d", "video", "win", "backup",
-          "publish", "kb"]
+          "publish", "kb", "fastfile", "iwi", "weapon"]
 
 
 def main(argv=None):

@@ -1,0 +1,41 @@
+; Template shipped with examples/metro2033-m2033fix. install.ps1 copies it next to metro2033.exe as m2033fix.ini.
+; m2033fix 0.4.1 settings (next to dinput8.dll in the game folder). Missing file or key = default.
+; Set a fix to 0 to roll it back on the next start. Delete dinput8.dll to remove the patch entirely.
+; Keys are read from their section, then from the old [fix] section, so a 0.2/0.3 ini still works
+; (keys new in 0.4 are off when an old ini does not have them).
+
+[core]
+; P1: crash 25-35 s after start (charmap freed during the text-language switch while a worker thread reads it)
+lang_switch_race = 1
+; P11: crash at start when the display-mode list comes back empty; uses the desktop aspect ratio instead
+empty_mode_list_guard = 1
+; P12: a user.cfg line of 1024+ characters no longer ends the game; it is cut to 1023
+config_line_clamp = 1
+
+[compat]
+; P4: display-mode list for 1024 modes instead of 512 (as in the GOG build); matters with many modes (4K, high refresh, DSR)
+display_modes_1024 = 1
+; P5: the V-Sync setting (r_vsync in user.cfg) works under DX11; vanilla always presents with SyncInterval 0
+vsync_follow_cvar = 1
+; P10: real fullscreen once the game window is in front, when it started without focus (Steam "Play")
+fullscreen_retry = 1
+; P13: mouse and keyboard can leave the "press any key" screen even when a gamepad / Steam Input is present.
+; NOT VERIFIED in game (no gamepad on the test machine); the change is the same byte as in GOG 1.01 v5
+press_key_any_input = 1
+; P14: "unsupported graphics card" / "driver needs to be upgraded" warnings go to the log instead of a window
+no_driver_popup = 1
+
+[perf]
+; P8: exact frame limiter driven by target_fps (default 120; target_fps 0 = no cap); also lets the game save
+; target_fps in user.cfg (it goes to Steam Cloud too). 0 = vanilla
+fps_limiter_deadline = 1
+; P8: how long before the deadline it stops sleeping and spins (microseconds, 100..3000)
+fps_limiter_spin_us = 600
+
+[research]
+; P17: when the game stops on purpose (!!! STOP), write the reason to m2033fix.log first
+log_stop = 1
+
+[log]
+; m2033fix.log next to the dll: written at startup, then one line per P10/P11/P14/P17 event
+enabled = 1
