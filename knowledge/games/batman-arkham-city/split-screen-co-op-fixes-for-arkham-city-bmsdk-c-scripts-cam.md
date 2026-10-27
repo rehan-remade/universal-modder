@@ -14,8 +14,8 @@ status: released
 agents:
 - Claude Code (Opus 5.5)
 humans: []
-date: '2026-10-17'
-links: ["https://github.com/etkramer/SplitScreenMod", "https://github.com/etkramer/SplitScreenMod/pull/21", "https://github.com/etkramer/SplitScreenMod/pull/22", "https://github.com/etkramer/SplitScreenMod/pull/23", "https://github.com/Kendoismebutmaybenot/SplitScreenMod-fixes", "https://github.com/Team-BmSDK/BmSDK-AC"]
+date: '2026-10-25'
+links: ["https://github.com/etkramer/SplitScreenMod", "https://github.com/etkramer/SplitScreenMod/pull/21", "https://github.com/etkramer/SplitScreenMod/pull/22", "https://github.com/etkramer/SplitScreenMod/pull/23", "https://github.com/etkramer/SplitScreenMod/pull/25", "https://github.com/etkramer/SplitScreenMod/pull/26", "https://github.com/Kendoismebutmaybenot/SplitScreenMod-fixes", "https://github.com/Team-BmSDK/BmSDK-AC"]
 tags: [split-screen, co-op, unreal-engine-3, bmsdk, wwise, audio, camera, possession, redirect, detour]
 ---
 # Split-screen co-op fixes for Arkham City (BmSDK C# scripts: cameras, P2 gadgets and suits, final boss, per-player Wwise listeners)
@@ -23,9 +23,10 @@ tags: [split-screen, co-op, unreal-engine-3, bmsdk, wwise, audio, camera, posses
 > About 20 fixes to etkramer's local split-screen co-op mod for Batman: Arkham City, written as BmSDK C# scripts
 > (UnrealScript function redirects, plus two native detours for sound). They cover unstretched per-player cameras,
 > P2 gadgets, suits and characters, playing the story through to the final boss in co-op, and per-player sound.
-> Every fix except the Clayface one was played and confirmed by the human in the real game (Steam build). PRs #21
-> and #22 were merged upstream. #23 (finding the sound range check by its bytes, so it can work on Epic) is still
-> open there, so that part is only in the author's fork for now.
+> Every fix except the Clayface one was played and confirmed by the human in the real game (Steam build). PRs #21,
+> #22, #25 (no teleport when sliding under gaps; solo kept like the normal game) and #26 (the extra player ragdolls
+> on death instead of P1; no teleport to P1 after a fight) were merged upstream. #23 (finding the sound range check
+> by its bytes, so it can work on Epic) is still open there, so that part is only in the author's fork for now.
 
 ## Setup
 - Batman: Arkham City GOTY, Steam, Windows 11. The game runs as 32-bit DX11.
@@ -91,7 +92,8 @@ step ignores `ThrowSpeed` and `Velocity`, so it flew about 3x too fast; scale it
 instead. Extra players don't load P1's options, so copy `RPlayerInput.bInvertBatarang` from P1 each tick.
 
 **Cutscenes** only unlock P1's controls when they end. Afterwards, release any other player still flagged
-cinematic, forced or ignoring move/look, and teleport them to P1 if they're over 5000 uu away.
+cinematic, forced or ignoring move/look, and teleport them to P1 if they're over 5000 uu away. Only teleport players
+that were locked during the cutscene too: the slow-motion finish of a fight locks only P1 (Gotcha 11).
 
 **Final boss (Monarch Theatre).** The checkpoint possesses `RPawnPlayerBatmanWithSword` **for every player in
 turn**, so P2 steals it and P1 is left pawnless, which is an instant game over.
@@ -100,8 +102,29 @@ turn**, so P2 steals it and P1 is left pawnless, which is an instant game over.
 - Also block player-vs-player `EncroachedBy` and `CrushedBy`.
 - Rescue an extra player on `FellOutOfWorld`, `OutsideWorldBounds`, or a death during P1's cutscene.
 
-**Game over only runs for P1.** An extra player's real death left a permanent black screen. Make it a normal game
-over by killing P1's pawn (`Health = 0; Died(...)`) and keeping the extra player alive.
+**Game over only runs for P1.** An extra player's real death left a permanent black screen: their controller goes
+to its `Dead` state, but nothing calls `TriggerGameOver` for it.
+- Fix: let the extra player's `Died` run (they ragdoll), then call `PawnDied(p1Pawn)` on **P1's controller**
+  without killing P1's pawn. P1's controller enters `Dead` and runs the normal fade, `TriggerGameOver`, game over
+  movie and checkpoint reload, while P1's pawn just stands there.
+- Keep a fallback: if `TriggerGameOver` hasn't fired 10 s later, re-possess P1's pawn and kill it.
+- An earlier version killed P1's pawn (`Health = 0; Died(...)`) and kept the extra player alive. That works, but P1
+  ragdolls and P2 stays standing, so players can't tell who died (Gotcha 5).
+
+**Level transitions.** `RLevelTransition.SetPlayerLocation(PC, Pos, Rot, TellPlayerHesMoved, bForSavingOnly)` moves
+the player through a transition, and the original mod's redirect then moved every other player there too. The game
+also calls it with `bForSavingOnly = true` just to record a spot (e.g. when Batman slides under a gap), and the
+redirect moved everyone anyway, P1 included, even in solo. Return early when `bForSavingOnly` is set or in solo,
+and skip the player the game already moved (Gotcha 12).
+
+**Keep solo exactly like the normal game.** Several split-screen workarounds ran with one player too:
+- investigation scenes: AI X-ray sprites turned off and `StartInvestigateMovie` rewritten;
+- the cryptographic sequencer drawn as a flat overlay (`bWorldRendered = false`) instead of the in-world hologram;
+- Nightwing's wrist darts refilling without their timer (`RegenWristDart`).
+
+Gate each on `GamePlayers.Count > 1` and call the original otherwise. Don't use `RGameRI.IsMultiplayer()` for this:
+the mod forces it to false (see Cameras), so it's false in co-op too. The ghost debug key was left working in solo
+on purpose.
 
 **Clayface's mud men** (`RBMBehaviour_ClayfaceDrone(Small)`) hard-target P1 through their `Batman` field. Set it to
 the nearest player in `OnActivate`/`Tick`, with an 800 uu switch margin, and call `SetTargetPlayer`. (Not verified
@@ -148,7 +171,9 @@ They are cdecl, game object IDs are 32-bit, and there are 8 listeners. The mangl
 - For audio, temporary every-2-seconds logging compared player and camera positions with the game's listener
   records, and read back Wwise's own listener positions and an object's active-listener mask. That showed the
   listener ends on P2, and that the mask fix worked but sounds were still dropped before reaching Wwise.
-- Solo was checked by reading a solo session's log: no player-added line and none of the fixes' log lines.
+- Solo was checked by reading a solo session's log: no player-added line and none of the fixes' log lines. That
+  only covers the fixes: the original mod's workarounds don't log, and some of them did run in solo (see "Keep solo
+  exactly like the normal game" and Gotcha 12).
 - **Not verified:** the Clayface mud men (no save there); the Epic Games Store build (other scripts list a separate
   Epic RVA for each hook, but the audio range check is untested on Epic); 3–4 player audio.
 
@@ -166,8 +191,10 @@ They are cdecl, game object IDs are 32-bit, and there are 8 listeners. The mangl
 4. **Instant game over at the Monarch Theatre.** **Cause:** the checkpoint possesses the sword-Batman pawn for every
    player, and P2 takes it from P1. **Fix:** block an extra player from possessing a pawn another player holds.
 5. **Black screen with no retry after a co-op death.** **Cause:** calling `Respawn()` inside a
-   `TriggerGameOver`/`GameOver` redirect cancels a real game over. **Fix:** only log in those redirects. Turn an
-   extra player's death into P1's death so the normal game over runs.
+   `TriggerGameOver`/`GameOver` redirect cancels a real game over. **Fix:** only log in those redirects. Let the
+   extra player die, then put P1's controller into its dead state with `PawnDied` so the normal game over runs.
+   Killing P1's pawn instead also gives a game over, but the wrong player ragdolls (fixed 2026-10-25 in
+   SplitScreenMod #26).
 6. **P2 teleported to P1 with full health instead of dying.** **Cause:** a "far from P1 = left behind, rescue" rule
    also caught real combat deaths. **Fix:** rescue only during cutscenes, out-of-world falls and crushing.
 7. **Sounds silent once the players split up, including P1's own punches.** **Cause:** the single Wwise listener
@@ -181,12 +208,20 @@ They are cdecl, game object IDs are 32-bit, and there are 8 listeners. The mangl
 10. **Swapping who is P1 mid-game.** Pairwise `LocalPlayer.SetControllerId` calls worked, but were roundabout.
     **Simpler:** rotate `ControllerId` directly, the way UE3's debug-only `SSSwapControllers` does (it's compiled
     out of shipping builds). The human confirmed it works.
+11. **P2 teleported to P1 from across the city whenever P1 finished a fight.** **Cause:** the after-cutscene rescue
+    (teleport extra players more than 5000 uu from P1) treated the slow-motion fight finish as a cutscene, because
+    it locks P1's controls. **Fix:** while P1 is locked, record which other players are locked too, and only
+    teleport those. Story cutscenes lock every player; a fight finish locks only P1. Confirmed in game.
+12. **Every player, P1 too, snapped to a spot when Batman slid under a gap, even in solo.** **Cause:** the
+    `SetPlayerLocation` redirect moved all players without checking `bForSavingOnly`, which the game sets when it
+    only records the spot. **Fix:** do nothing when `bForSavingOnly` is set or with one player, and move only the
+    players the game didn't. Confirmed in game.
 
 ## Assets
 None.
 
 ## Cost and time
-Several long sessions over 2026-10-12 to 10-17. Each test needs a game restart, because scripts compile only at
+Several long sessions over 2026-10-12 to 10-25. Each test needs a game restart, because scripts compile only at
 start.
 
 ## Open questions
