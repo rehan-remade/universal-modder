@@ -20,9 +20,10 @@ tags: [white-knuckle, unity, unity-6, bepinex, library-survey, modding-api, thun
 > it internally**, and each library is worth taking only for the specific thing it wraps: UI,
 > trinkets/bindings, resource packs, or `.glb` maps.
 >
-> 11 of 13 asserted claims passed in-game. The two failures corrected a wrong assumption in this
-> note's own first draft: `TrinketRegistry.RegisterTrinket` is *lazy* and creates nothing until a
-> gamemode screen opens. Reading the code had not surfaced that.
+> 12 of 14 asserted claims passed in-game (one of those 12 is weak: see the Verification section).
+> The two failures corrected a wrong assumption in this note's own first draft:
+> `TrinketRegistry.RegisterTrinket` is *lazy* and creates nothing until a gamemode screen opens.
+> Reading the code had not surfaced that.
 >
 > Versions read: WKLib 0.3.0/0.3.1, CiCi's Trinket & Binding Framework 2.2.6, ImuiBepInEx 1.0.1,
 > ResourcefulHands 1.0.0/1.0.1, WKMapLoader 1.3.1.
@@ -179,7 +180,7 @@ plugin was built **against the shipped library DLLs** (`WKLib.dll`, `TrinketAndB
 live and enabled. Compiling at all is itself a check: the API signatures below are the ones the real
 assemblies expose, not ones read off a decompile.
 
-Each claim was asserted at runtime and logged PASS/FAIL. Result: **11 PASS, 2 FAIL**.
+Each claim was asserted at runtime and logged PASS/FAIL. Result: **12 PASS, 2 FAIL** out of 14.
 
 ```
 [PASS] WKLibAPI.Create returns a usable handle  :: DisplayName='WKLibProbe' AssetService=True
@@ -193,10 +194,18 @@ Each claim was asserted at runtime and logged PASS/FAIL. Result: **11 PASS, 2 FA
 [PASS] GetTrinketAsset matches unity .name, not .title
 [PASS] GetPerkAsset uses Contains  :: substring('probe_perki')=True
 [PASS] GetRegionAsset uses exact == :: exact('Region_Abyss_Breakroom')=True substring=False
-[PASS] WKLib creates its database lazily, inside LoadAllLevelsFromBundle
+[weak] WKLib creates its database lazily :: GetDatabase("WKLibProbe")==null before any bundle load
 [FAIL] TrinketRegistry.GetRuntimeTrinket round-trip :: null runtime
 [FAIL] framework trinket reachable via GetTrinketAsset :: null
 ```
+
+**Honest caveat on the "lazily" line.** That assertion was written with a hardcoded `true`, so it
+could not fail and is *not* real evidence. What it does show is the observation that
+`CL_AssetManager.GetDatabase("WKLibProbe")` returned null after `WKLibAPI.Create` but before any
+bundle was loaded, which is consistent with the lazy-creation reading of `AssetService`. The
+positive half (that a database *does* appear once `LoadAllLevelsFromBundle` runs) was **not** tested,
+because no custom bundle was built. Treat it as a code-reading claim with one corroborating
+negative observation, not as a verified round-trip.
 
 The two failures were the valuable part: they are not bugs in the framework but a **wrong assumption
 in the first draft of this note**, which assumed `RegisterTrinket` creates something immediately. It
