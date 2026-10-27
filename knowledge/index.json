@@ -2286,6 +2286,57 @@
   ]
  },
  {
+  "path": "games/elden-ring/khvostov-7g-0x-from-destiny-2-export-and-offline-loader-smok.md",
+  "kind": "game",
+  "title": "Khvostov 7G-0X from Destiny 2 as a textured weapon model in Elden Ring (Crepus crossbow replacement, no new MATBIN)",
+  "game": "Elden Ring",
+  "games_also": [
+   "Destiny 2"
+  ],
+  "game_version": "Elden Ring 1.17.2.0 Worldwide (exe ProductVersion 2.7.2.0), Steam; Destiny 2 245114.26.10.13.2000.v500_live.main, Steam",
+  "platform": "windows",
+  "engine": "fromsoft",
+  "route": "data",
+  "tools": [
+   "me3 0.13.0",
+   "Charm 3.3.8",
+   "FbxImporter 1.11.0",
+   "WitchyBND 3.0.1.0",
+   "Smithbox 2.2.6 (Andre.SoulsFormats, Andre.Formats, DirectXTexNet used as libraries)",
+   ".NET SDK 10.0.400",
+   "Blender 4.5.3 LTS",
+   "Rust 1.99.1 MSVC"
+  ],
+  "anti_cheat": "Destiny 2 BattlEye: only read installed files with Charm, never launched or hooked its client. Elden Ring EAC: me3-launched offline only; isolated savefile and start_online=false. Game archives read-only.",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (GPT-6 Sol)",
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-27",
+  "links": [
+   "https://github.com/MontagueM/Charm/releases/tag/v3.3.8",
+   "https://github.com/garyttierney/me3/releases/tag/v0.13.0",
+   "https://github.com/vswarte/fromsoftware-rs",
+   "https://github.com/ividyon/WitchyBND"
+  ],
+  "tags": [
+   "destiny-2",
+   "khvostov",
+   "charm",
+   "me3",
+   "offline",
+   "asset-export",
+   "flver",
+   "tpf",
+   "matbin",
+   "texture-atlas",
+   "weapon-model",
+   "lod"
+  ]
+ },
+ {
   "path": "games/elden-ring/porting-dark-souls-remastered-enemies-into-elden-ring.md",
   "kind": "game",
   "title": "Porting a Dark Souls Remastered enemy into Elden Ring as a new character (Hollow c2500 -> c7250): skeleton, animations, ragdoll, params, AI and sounds",
