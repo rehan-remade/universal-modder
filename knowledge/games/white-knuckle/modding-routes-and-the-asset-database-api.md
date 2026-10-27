@@ -316,10 +316,10 @@ here, so the UI side of a perk is untested.
 12. **`GetPerkAsset(id)` matches on `Contains`, not equality**, and lowercases both sides. A short or
     generic id will collide with a shipped perk and silently return the wrong one. **Fix:** prefix
     your ids with your mod name. Note the sibling lookups are *not* consistent with each other:
-    `GetTrinketAsset` keys on the object's `.name` rather than `.id`, and `GetSpriteAsset`,
-    `GetRegionAsset`, `GetSessionEvent`, `GetDiskDataAsset` and `GetCosmeticItemAsset` use exact
-    `==` instead of `Contains`. Full table in
-    [the library survey](../../techniques/white-knuckle-library-mods-what-each-offers.md).
+    `GetTrinketAsset` keys on the object's `.name` (`Trinket` has **no `id` field at all**), and
+    `GetSpriteAsset`, `GetRegionAsset`, `GetSessionEvent`, `GetDiskDataAsset` and
+    `GetCosmeticItemAsset` use exact `==` instead of `Contains`. All verified at runtime; full table
+    in [the library survey](../../techniques/white-knuckle-library-mods-what-each-offers.md).
 
 13. **A registered perk is live content, so keep it out of real runs while testing.** Set
     `spawnPool = Perk.PerkPool.never` and `spawnInEndless = false`, or your debug perk can roll in a
@@ -354,14 +354,18 @@ two minutes per iteration, dominated by Proton startup.
 
 ### Resolved: registering a gamemode does NOT put it in the menu
 
-This was listed as open; reading the code settles it. `WKAssetDatabase.gamemodeAssets` is referenced
-**only** by `CL_AssetManager` itself: no UI class reads it. The menu is built from prefab
-`MonoBehaviour`s that each hold one `M_Gamemode` (`UI_Gamemode_Button`, `UI_GamemodeScreen` and
-`UI_GamemodeScreen_Panel` all implement the `GamemodeHolder` interface), laid out in the scene.
+This was listed as open; it is now settled, and confirmed in-game rather than inferred. A gamemode
+registered through `AddNewDatabase` *was* findable via `CL_AssetManager.GetGamemodeAsset`, but of the
+**61** `UI_Gamemode_Button` instances live in the scene, none held it.
 
-So `AddNewDatabase` makes a mode *findable by id* through `GetGamemodeAsset`, but cannot make it
-appear in the Play menu. Every library that shows custom content in a menu patches the UI to do it:
-WKMapLoader postfixes `UI_TabGroup.Start` to inject its CUSTOM tab, and CiCi's framework prefixes
+The reason is structural: `WKAssetDatabase.gamemodeAssets` is referenced **only** by
+`CL_AssetManager`, and the menu is built from prefab `MonoBehaviour`s that each hold one
+`M_Gamemode` (`UI_Gamemode_Button`, `UI_GamemodeScreen` and `UI_GamemodeScreen_Panel` all implement
+the `GamemodeHolder` interface), laid out in the scene.
+
+So `AddNewDatabase` makes a mode *findable by id*, but cannot make it appear in the Play menu. Every
+library that shows custom content in a menu patches the UI to do it: WKMapLoader postfixes
+`UI_TabGroup.Start` to inject its CUSTOM tab, and CiCi's framework prefixes
 `UI_GamemodeScreen.Initialize`. **Registration is necessary but not sufficient for anything
 menu-facing.** Content that the *game* looks up by id (perks, items, trinkets) works from
 registration alone; anything a *player* must click needs a UI patch too.

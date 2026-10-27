@@ -13,11 +13,16 @@ tags: [white-knuckle, unity, unity-6, bepinex, library-survey, modding-api, thun
 
 # White Knuckle's library mods: what each actually offers, and when to skip them for the game's own registry
 
-> Five White Knuckle community libraries decompiled and read, to answer a practical question: for a
-> new mod, what should you build on? The short answer is that the game's own
+> Five White Knuckle community libraries decompiled, read, and then **exercised at runtime** by a
+> probe plugin compiled against their shipped DLLs and run in the real game. The question is
+> practical: for a new mod, what should you build on? The short answer is that the game's own
 > `CL_AssetManager.AddNewDatabase` registry covers more than the libraries do, **WKLib itself calls
 > it internally**, and each library is worth taking only for the specific thing it wraps: UI,
 > trinkets/bindings, resource packs, or `.glb` maps.
+>
+> 11 of 13 asserted claims passed in-game. The two failures corrected a wrong assumption in this
+> note's own first draft: `TrinketRegistry.RegisterTrinket` is *lazy* and creates nothing until a
+> gamemode screen opens. Reading the code had not surfaced that.
 >
 > Versions read: WKLib 0.3.0/0.3.1, CiCi's Trinket & Binding Framework 2.2.6, ImuiBepInEx 1.0.1,
 > ResourcefulHands 1.0.0/1.0.1, WKMapLoader 1.3.1.
@@ -98,6 +103,19 @@ The grant hooks being `Func<List<Item_Object>>` and `Func<List<Perk>>` **factori
 lists is deliberate: they are evaluated at grant time, so they can resolve assets that do not exist
 when your plugin loads.
 
+**`RegisterTrinket` is lazy, and this surprised the probe.** Calling it does *not* create anything:
+the registry only stores a description. The actual `Trinket` ScriptableObject is built in
+`TrinketInjectionPatch.BuildRegistryRuntimes`, which runs off the
+`UI_GamemodeScreen.Initialize` prefix. Measured at runtime: after `RegisterTrinket(...)` at the main
+menu, both `TrinketRegistry.GetRuntimeTrinket(id)` and `CL_AssetManager.GetTrinketAsset(title)`
+returned **null**, because no gamemode screen had opened yet. So:
+
+- register in `Awake`, but do not expect `GetRuntimeTrinket` to return anything until the player has
+  opened a gamemode screen at least once;
+- do not treat a null from `GetRuntimeTrinket` as a registration failure;
+- the `GetTrinketAsset` postfix can only find your trinket after that same point, since it matches on
+  `entry.runtime.name`.
+
 The cost: **54 of its ~90 files contain Harmony patches**, mostly driving the trinket picker and
 gamemode-panel UI. It builds trinkets with `ScriptableObject.CreateInstance<Trinket>()` and then
 makes them findable by **postfixing `CL_AssetManager.GetTrinketAsset`** rather than registering a
@@ -153,6 +171,46 @@ game's own registry is not just an alternative, it is the only route. See the co
 `games/white-knuckle/modding-routes-and-the-asset-database-api.md`, where a perk authored from
 nothing was registered and verified in a live run.
 
+## Verification
+
+The survey started as code reading, which is not enough to publish behavioural claims, so a probe
+plugin was built **against the shipped library DLLs** (`WKLib.dll`, `TrinketAndBindingFramework.dll`,
+`ImuiBepInEx.dll`) and run in the real game on a throwaway copy of a profile that had all libraries
+live and enabled. Compiling at all is itself a check: the API signatures below are the ones the real
+assemblies expose, not ones read off a decompile.
+
+Each claim was asserted at runtime and logged PASS/FAIL. Result: **11 PASS, 2 FAIL**.
+
+```
+[PASS] WKLibAPI.Create returns a usable handle  :: DisplayName='WKLibProbe' AssetService=True
+[PASS] WKLibAPI.Create throws on duplicate GUID :: "...collides with WKLibProbe, they both have the same guid"
+[PASS] GamemodeBuilder.Build returns M_Gamemode :: name='WKLibProbe Mode' type=endlessPlaylist
+[PASS] GamemodeBuilder sets roachBankID         :: 'custom-WKLibProbe Mode'
+[PASS] GamemodeBuilder sets allowAchievements=false
+[PASS] registered gamemode IS findable via GetGamemodeAsset
+[PASS] registered gamemode does NOT appear in the menu :: UI_Gamemode_Button count=61, containsMine=False
+[PASS] GetPerkAsset matches .id, not unity .name :: byId=True byUnityName=False
+[PASS] GetTrinketAsset matches unity .name, not .title
+[PASS] GetPerkAsset uses Contains  :: substring('probe_perki')=True
+[PASS] GetRegionAsset uses exact == :: exact('Region_Abyss_Breakroom')=True substring=False
+[PASS] WKLib creates its database lazily, inside LoadAllLevelsFromBundle
+[FAIL] TrinketRegistry.GetRuntimeTrinket round-trip :: null runtime
+[FAIL] framework trinket reachable via GetTrinketAsset :: null
+```
+
+The two failures were the valuable part: they are not bugs in the framework but a **wrong assumption
+in the first draft of this note**, which assumed `RegisterTrinket` creates something immediately. It
+does not (see above). The probe ran at the main menu, so no `UI_GamemodeScreen.Initialize` had fired
+and no runtime objects existed yet. Reading the code alone had not surfaced that ordering constraint.
+
+The `.id` vs `.name` table was also confirmed empirically rather than by inspection: a perk whose
+unity `name` and `id` were deliberately *different* was found by `id` and not by `name`, and the
+reverse for a trinket.
+
+**Not verified:** WKLib's `AssetService` bundle-loading path (no custom bundle was built), the
+trinket picker UI actually showing a framework trinket (needs a gamemode screen and a visual check),
+ResourcefulHands pack loading, and WKMapLoader's `MapApi` tag registration.
+
 ## Gotchas
 
 1. **WKLib constructs its database with `new WKAssetDatabase()`.** Unity logs
@@ -170,10 +228,12 @@ nothing was registered and verified in a live run.
    | `GetCosmeticItemAsset` | `.cosmeticInfo.id` | exact `==` |
    | `GetSpriteAsset`, `GetRegionAsset`, `GetSessionEvent` | `.name` | exact `==` |
 
-   So for a trinket you must set the ScriptableObject's **`name`**, for a perk its **`id`**, and for a
-   region or sprite an exactly-matching `name`. This is the single most likely reason for "I
-   registered it but nothing can find it". The loose `Contains` ones carry the opposite risk: a short
-   id collides with shipped content.
+   All confirmed at runtime, not just read. For a trinket you must set the ScriptableObject's
+   **`name`**; `Trinket` has **no `id` field at all** (it has `title`, which is *not* what the lookup
+   uses), which is why the inconsistency exists. For a perk set its **`id`**. For a region or sprite
+   the `name` must match exactly. This is the most likely cause of "I registered it but nothing can
+   find it". The loose `Contains` ones carry the opposite risk: a short id collides with shipped
+   content.
 
    (Also visible while reading these: `GetSessionEvent`'s condition is
    `sessionEvent.name == name || sessionEvent.name == name`, the same test twice, so one branch is
@@ -215,11 +275,14 @@ nothing was registered and verified in a live run.
 
 ### Settled while doing this survey
 
-**Registration alone cannot put a gamemode in the menu.** `WKAssetDatabase.gamemodeAssets` is read
-only by `CL_AssetManager`; no UI class touches it. Menu entries are prefab `MonoBehaviour`s
-implementing `GamemodeHolder` (`UI_Gamemode_Button`, `UI_GamemodeScreen`,
-`UI_GamemodeScreen_Panel`), laid out in the scene. That is why **every** library showing custom
-content in a menu patches UI: WKMapLoader postfixes `UI_TabGroup.Start` for its CUSTOM tab, CiCi's
-prefixes `UI_GamemodeScreen.Initialize`. The rule of thumb: content the *game* looks up by id works
-from registration alone; anything a *player* clicks needs a UI patch too, and that is precisely the
-work these libraries are worth taking for.
+**Registration alone cannot put a gamemode in the menu.** Confirmed at runtime: a gamemode built by
+`GamemodeBuilder` and registered via `AddNewDatabase` *was* findable through
+`CL_AssetManager.GetGamemodeAsset`, but of the **61** `UI_Gamemode_Button` instances in the scene,
+none held it. The reason is structural: `WKAssetDatabase.gamemodeAssets` is read only by
+`CL_AssetManager`, and menu entries are prefab `MonoBehaviour`s implementing `GamemodeHolder`
+(`UI_Gamemode_Button`, `UI_GamemodeScreen`, `UI_GamemodeScreen_Panel`), laid out in the scene.
+
+That is why **every** library showing custom content in a menu patches UI: WKMapLoader postfixes
+`UI_TabGroup.Start` for its CUSTOM tab, CiCi's prefixes `UI_GamemodeScreen.Initialize`. The rule of
+thumb: content the *game* looks up by id works from registration alone; anything a *player* clicks
+needs a UI patch too, and that is precisely the work these libraries are worth taking for.
