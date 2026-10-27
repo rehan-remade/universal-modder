@@ -104,20 +104,19 @@ stages, objectives and spell checks, vanilla packages, vanilla dialogue lines. R
 
 ## Verification
 Oracle: the real game, a new character per build, console reads (`getstage MG01`, `getglobalvalue …`,
-`prid 50785` + `sv`), and a numbered checklist the human ticked per build. Later, a dev-only **test power**:
-a lesser power the quest gives only while a debug global is 1. One key opens message-box menus that set up
-each test (put the gatekeeper on watch, give the note, count the spell as cast, Speech 100, let me in, the
-stage-30 check, status, and a Dragonborn set-up). The Dragonborn button sets Elder Knowledge (MQ205) to
-stage 50 and teaches and equips Unrelenting Force. MQ205 has no start-up stage, so `SetStage(50)` on a new
-game only starts MGMainQuestBridge and completes two objectives. Message-box buttons are laid out side by side, so keep labels short and split them
-into small menus. A Papyrus user log names every line as it's said (begin fragments log the INFO, and a
-table written by the build maps IDs to text). Skyrim rotates user logs on every load, so do at most four
-runs between reads. Verified: every behaviour in the
-summary, including voice and lip sync on copied lines, and both gatekeepers staying put mid-exam across a
-shift change (Nirya's note at night then waiting into day; Faralda's test by day then waiting into night).
-Less certain: Faralda's behaviour when her takeover starts at a spell stage (it worked, but was tried only a
-few times). Nirya's force-greets: every run since gotchas 13 and 22 were fixed worked, but that's a
-handful of runs.
+`prid 50785` + `sv`), and a numbered checklist the human ticked per build. Later, a dev-only **test power**: a
+lesser power the quest gives only while a debug global is 1. One key opens message-box menus that set up each
+test (put the gatekeeper on watch, give the note, count the spell as cast, Speech 100, let me in, the stage-30
+check, status, and a Dragonborn set-up). The Dragonborn button sets Elder Knowledge (MQ205) to stage 50 and
+teaches and equips Unrelenting Force. MQ205 has no start-up stage, so `SetStage(50)` on a new game only starts
+MGMainQuestBridge and completes two objectives. Message-box buttons are laid out side by side, so keep labels
+short and split them into small menus. A Papyrus user log names every line as it's said (begin fragments log the
+INFO, and a table written by the build maps IDs to text). Skyrim rotates user logs on every load, so do at most
+four runs between reads. Verified: every behaviour in the summary, including voice and lip sync on copied lines,
+and both gatekeepers staying put mid-exam across a shift change (Nirya's note at night then waiting into day;
+Faralda's test by day then waiting into night). Less certain: Faralda's behaviour when her takeover starts at a
+spell stage (it worked, but was tried only a few times). Nirya's force-greets: every run since gotchas 13 and 22
+were fixed worked, but that's a handful of runs.
 
 ## Gotchas
 1. **NPCs got stuck at the College gate at a shift change.** **Cause:** the gate is "requires key" with no
@@ -156,7 +155,7 @@ handful of runs.
 13. **Pass force-greet: she said her line, but no conversation opened (no camera lock; the player could
     walk off).** **Cause:** her greeting was a single Goodbye INFO, and a Goodbye greeting is spoken like a
     hello and never opens the dialogue. (Earlier, a plain line with no links stayed open with "...".)
-    **Fix:** vanilla Faralda's structure (1F811 → B8119). The first line is a plain one with Invisible
+    **Fix:** vanilla Faralda's structure (0001F811 → 000B8119). The first line is a plain one with Invisible
     Continue (ENAM 0x40), linking a promptless topic whose one line is the Goodbye, and the let-in goes in
     that line's end fragment. A two-response vanilla line becomes two own-voice copies, one per response.
 14. **"End fragments on Goodbye lines don't fire" was wrong, and we believed it for weeks.** They fire:
