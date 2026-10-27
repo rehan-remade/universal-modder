@@ -6,7 +6,7 @@ agents:
 - Claude Code (Opus 5.5)
 humans: []
 date: '2026-10-25'
-links: []
+links: ["https://www.dosbox.com/"]
 tags: [dosbox, dos, automation, testing, background-input, postmessage, parallel, sandbox, screenshots, midi, overlays, memory-pressure, windows, guest-memory, readprocessmemory, conventional-memory, focus-stealing, wmi]
 ---
 # Driving DOSBox games from tests: background input, parallel sandboxed instances and screen-state checks
@@ -23,18 +23,27 @@ tags: [dosbox, dos, automation, testing, background-input, postmessage, parallel
   time is too slow.
 - Setup used: DOSBox 0.74-2 (the build GOG bundles), SDL 1.2, Windows 11, Python 3 with `ctypes`, Pillow,
   numpy, psutil.
+- Ask the human before the first long run: a suite puts up to 10 DOSBox windows on their desktop and takes most
+  of the CPU. Posted messages never move the real mouse or keyboard, but a DOSBox started as an ordinary child
+  process can still take the foreground while they type (gotcha 21). Launch it through WMI (below); if you have
+  to fall back, check `um win drive --proc dosbox idle` first and don't launch while they're typing. The general
+  rules are in [Driving real games safely](driving-real-games-safely.md).
 
 ## How
 
 ### Input without focus
-- Launch DOSBox with `SDL_VIDEODRIVER=windib` in its environment. SDL 1.2's default DirectX backend reads input
-  through DirectInput, which only feeds the foreground window; `windib` reads ordinary window messages.
+- Launch DOSBox with `SDL_VIDEODRIVER=windib` in its environment. When the variable is unset, DOSBox 0.74 on
+  Windows switches SDL 1.2 to its DirectX driver (SDL's own default has been `windib` since 1.2.10), and that
+  driver reads the keyboard and mouse through DirectInput instead of window messages (the keyboard only while the
+  window is in the foreground). `windib` reads ordinary window messages, so posted ones reach the game.
 - Post `WM_KEYDOWN`/`WM_KEYUP` (and `WM_SYSKEYDOWN` with Alt) to DOSBox's window with `PostMessage`, about 80 ms
   between down and up (shorter than a frame and the game misses it), and set the extended-key bit for arrows,
   Ins/Del/Home/End/PgUp/PgDn. Before input, post `WM_ACTIVATE` (wParam 1) to DOSBox only: SDL drops input while
   it thinks it is inactive, and the real focus never moves.
-- Mouse: `autolock=false` in `[sdl]`. Post `WM_MOUSEMOVE` in a few small steps (DOSBox only sees relative
-  motion between events), then button down/up at the target, in client coordinates scaled from 320x200.
+- Mouse: `autolock=false` in `[sdl]` (otherwise DOSBox drops mouse motion until the mouse is locked). Post
+  `WM_MOUSEMOVE` in a few small steps, then button down/up at the target, in client coordinates scaled from
+  320x200. Unlocked, DOSBox 0.74 sets the DOS cursor from the window position in graphics modes, but the mouse
+  driver's motion counters, which some games read instead, only get the moves between events.
 - **Start DOSBox outside the terminal's process tree**, or each new DOSBox window can take the foreground from
   the human (gotcha 21). On Windows, create it through WMI (`Win32_Process.Create`): the new process's parent is
   `WmiPrvSE.exe`, not your test runner. A plain child process (`subprocess.Popen`, `Start-Process`,
@@ -56,10 +65,14 @@ tags: [dosbox, dos, automation, testing, background-input, postmessage, parallel
   pid = int(out[1]) if len(out) >= 2 and out[0] == "0" else None   # ReturnValue 0 = started
   ```
 
-  `ShowWindow=7` is `SW_SHOWMINNOACTIVE`. Set `CurrentDirectory` explicitly (otherwise it is the WMI host's, not yours) and pass
-  every environment variable DOSBox needs explicitly. The process isn't your child, so track it by the returned
-  PID: find its window by PID, and kill it by PID. A job object or "kill my children" won't reach it. Keep a
-  plain child-process launch only as a fallback for when WMI fails, and log when you use it.
+  `ShowWindow=7` is `SW_SHOWMINNOACTIVE`. Set `CurrentDirectory` explicitly (otherwise it is the WMI host's, not
+  yours) and pass every environment variable DOSBox needs explicitly. The process isn't your child, so track it
+  by the returned PID: find its window by PID, and kill it by PID. A job object or "kill my children" won't reach
+  it. Keep a plain child-process launch only as a fallback for when WMI fails, and log when you use it.
+
+  The snippet puts your whole environment on PowerShell's command line, where other programs (process lists,
+  logging and security tools) can read it. If it holds secrets (API keys, tokens), pass a short list instead:
+  `SDL_VIDEODRIVER` plus what DOSBox needs, such as `SystemRoot`, `PATH`, `TEMP` and `TMP` (not tested here).
 - Launch minimised without activation (`SW_SHOWMINNOACTIVE`, above), then
   `ShowWindow(hwnd, SW_SHOWNOACTIVATE)` once the window exists: screenshots need it restored, not minimised.
 - `EnableWindow(hwnd, FALSE)` once it is shown: the human's stray clicks and keys no longer reach the game,
@@ -139,10 +152,15 @@ Many DOS games use an overlay manager that swaps code in and out of conventional
 `[dos] xms=false ems=false umb=false` makes it swap constantly; a bug that showed up once in 10-20 normal runs
 then fails every time (gotcha 3). Run the tests that touch your patched code under both confs.
 
+## Not verified
+Only DOSBox 0.74-2 (SDL 1.2) on Windows 11, driving one game. DOSBox Staging and DOSBox-X's SDL2 builds have no
+`windib` or `directx` video driver (SDL2's is `windows`), so the input section won't carry over to them as written.
+
 ## Gotchas
-1. **Posted keys did nothing; clicks did nothing.** (2026-10-22.) **Cause:** SDL 1.2's DirectX backend reads
-   DirectInput (foreground only), and SDL ignores input while it believes it is inactive. **Fix:**
-   `SDL_VIDEODRIVER=windib` at launch and a posted `WM_ACTIVATE` before input; `autolock=false` for the mouse.
+1. **Posted keys did nothing; clicks did nothing.** (2026-10-22.) **Cause:** DOSBox 0.74 picks SDL 1.2's DirectX
+   driver, which reads DirectInput instead of window messages, and SDL ignores input while it believes it is
+   inactive. **Fix:** `SDL_VIDEODRIVER=windib` at launch and a posted `WM_ACTIVATE` before input;
+   `autolock=false` for the mouse.
 2. **Enter on the map "ended the turn" but sometimes skipped or moved units, and hid a real bug.** (2026-10-24.)
    **Cause:** pressing a default key blindly also answers popups you never looked at; a debug assertion box of
    the game's ("DANGER, WILL ROBINSON") was being dismissed by the test for days. **Fix:** recognise the screen
@@ -191,7 +209,6 @@ then fails every time (gotcha 3). Run the tests that touch your patched code und
 15. **Saves rebuilt by parallel tests could be read half-written.** (2026-10-24.) **Cause:** several tests
     rebuild the same scenario save before running. **Fix:** skip the write when the bytes are identical, else
     write a temp file and `os.replace` it, retrying while another process has it open.
-
 16. **A game run "hung" with a unit waiting but no prompt, rarely and only under load.** (2026-10-25.) **Cause:**
     the test clicked "End of Turn" a second time; the click was made while the game was busy ending the turn,
     so the mouse driver's latched button state was read at the next turn's first input poll, where it put the
@@ -226,4 +243,6 @@ then fails every time (gotcha 3). Run the tests that touch your patched code und
 ## Seen in
 - Sid Meier's Colonization 3.0 (DOS, GOG release; VICEROY.EXE, an RTLink-overlaid executable) binary-patching
   project (no public game note yet).
-- Related: `driving-real-games-safely.md` (input and focus rules for any game).
+- Related: [Driving real games safely](driving-real-games-safely.md) (input and focus rules for any game) and
+  [Running several isolated tModLoader test instances in parallel](running-several-isolated-tmodloader-test-instances-in-parall.md)
+  (the same sandbox-per-instance idea for Terraria).
