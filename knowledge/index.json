@@ -902,6 +902,58 @@
   ]
  },
  {
+  "path": "games/batman-arkham-knight/scraping-the-batmobile-umodel-pskx-wwise.md",
+  "kind": "game",
+  "title": "Scraping the Batmobile: umodel PSKX, native class offsets and Wwise banks",
+  "game": "Batman: Arkham Knight",
+  "games_also": [
+   "Just Cause 3"
+  ],
+  "game_version": "GOG Premium Edition, version.txt 1.999, buildId 57731640734362250, Season Pass + all DLC; cooked packages report UE3 Ver 863/227, Engine 10246, Game 800016",
+  "platform": "windows",
+  "engine": "unreal",
+  "route": "asset-only",
+  "tools": [
+   "UE Viewer (umodel)",
+   "vgmstream-cli",
+   "custom Python UE3 package, WWAD and AkBank parsers",
+   "BmSDK-AK generated class bindings (class dump)",
+   "Blender 5.2"
+  ],
+  "anti_cheat": "none \u2014 single-player, offline extraction from the user's own install",
+  "status": "working",
+  "agents": [
+   "OpenCode (space-bunny-free)",
+   "OpenCode (muse-spark-1.3)",
+   "Claude Code (Opus 5.5)",
+   "OpenCode (deepseek-v4.1-flash-free)",
+   "Freebuff (Buffy, model not recorded; wrote the note)"
+  ],
+  "humans": [
+   "@NotTrevino"
+  ],
+  "date": "2026-10-22",
+  "links": [
+   "https://github.com/gildor2/UEViewer",
+   "https://github.com/vgmstream/vgmstream",
+   "https://github.com/Team-BmSDK/BmSDK-AK"
+  ],
+  "tags": [
+   "umodel",
+   "pskx",
+   "ue3",
+   "cooked-packages",
+   "wwise",
+   "bank-extraction",
+   "materials",
+   "textures",
+   "batmobile",
+   "native-classes",
+   "property-offsets",
+   "class-dump"
+  ]
+ },
+ {
   "path": "games/batman-arkham-knight/splitscreen-one-view-composited-twice.md",
   "kind": "game",
   "title": "Batman: Arkham Knight split-screen: the engine renders one view and composites it twice",
@@ -3474,6 +3526,49 @@
    "galaxy-tab-s11-ultra",
    "outpainting",
    "qwen-image-edit"
+  ]
+ },
+ {
+  "path": "games/just-cause-3/reading-the-vehicle-fleet-archives-rtpc-havok.md",
+  "kind": "game",
+  "title": "Reading the whole vehicle fleet: archive names, RTPC values, mesh payloads and Havok collision",
+  "game": "Just Cause 3",
+  "games_also": [],
+  "game_version": "2016 release build, JustCause3.exe timestamp 0x5787641c; every mesh declares RBMDL 1.16.0, every physics file Havok 2014.1.0-r1",
+  "platform": "windows",
+  "engine": "native",
+  "route": "asset-only",
+  "tools": [
+   "Gibbed.JustCause3.SmallUnpack",
+   "Gibbed.JustCause3.ConvertProperty",
+   "Gibbed.JustCause3.ConvertAdf",
+   "custom Python readers: archive index (Jenkins lookup3), ADF v4, RBMDL blocks, Havok 2014 packfiles"
+  ],
+  "anti_cheat": "none (single-player, offline, read-only)",
+  "status": "working",
+  "agents": [
+   "Freebuff (Buffy, model not recorded; wrote the note)"
+  ],
+  "humans": [
+   "@NotTrevino"
+  ],
+  "date": "2026-10-22",
+  "links": [
+   "https://github.com/aaronkirkham/jc-model-renderer",
+   "https://github.com/aaronkirkham/ava-format-lib",
+   "https://github.com/tim42/gibbed-justcause3-tools-fork"
+  ],
+  "tags": [
+   "archives",
+   "rtpc",
+   "adf",
+   "rbm",
+   "havok",
+   "vehicles",
+   "reverse-engineering",
+   "jenkins-hash",
+   "fleet-data",
+   "read-only"
   ]
  },
  {
@@ -6316,6 +6411,80 @@
    "casc",
    "localization",
    "addon"
+  ]
+ },
+ {
+  "path": "games/star-wars-the-force-unleashed/black-scenery-lighting-groups.md",
+  "kind": "game",
+  "title": "Fixing solid-black scenery in Star Wars: The Force Unleashed (PC): objects in lighting groups no light reaches",
+  "game": "Star Wars: The Force Unleashed",
+  "games_also": [],
+  "game_version": "Ultimate Sith Edition PC 1.2.94564, Steam (SWTFU.exe x86)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "REA 6.7.0 + Ghidra 12.1.4",
+   "MSVC 14.44 (dev-only D3D9 tracer and memory bridge plugin)",
+   "Python 3.12"
+  ],
+  "anti_cheat": "none (single-player)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-24",
+  "links": [
+   "https://github.com/morluto/rea",
+   "https://github.com/NationalSecurityAgency/ghidra"
+  ],
+  "tags": [
+   "lighting",
+   "spherical-harmonics",
+   "level-data",
+   "markerset",
+   "asset-override",
+   "ronin-engine",
+   "d3d9"
+  ]
+ },
+ {
+  "path": "games/star-wars-the-force-unleashed/ronin-engine-modding-surface.md",
+  "kind": "game",
+  "title": "Modding surface of Star Wars: The Force Unleashed (PC): a dinput8 plugin loader, a Lua bridge, and the engine's dormant dev features",
+  "game": "Star Wars: The Force Unleashed",
+  "games_also": [],
+  "game_version": "Ultimate Sith Edition PC 1.2.94564, Steam (SWTFU.exe x86, SteamStub-wrapped)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "REA 6.7.0 + Ghidra 12.1.4",
+   "MSVC 14.44",
+   "Python 3.12"
+  ],
+  "anti_cheat": "none (single-player); SteamStub DRM on SWTFU.exe left in place: exe code read only from private runtime memory dumps kept outside any repository",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-24",
+  "links": [
+   "https://www.nexusmods.com/starwarstheforceunleashed/mods/35",
+   "https://github.com/ThirteenAG/Ultimate-ASI-Loader",
+   "https://github.com/morluto/rea",
+   "https://github.com/NationalSecurityAgency/ghidra"
+  ],
+  "tags": [
+   "lua",
+   "asset-override",
+   "hot-reload",
+   "config",
+   "euphoria",
+   "ronin-engine",
+   "steamstub"
   ]
  },
  {
@@ -9561,6 +9730,40 @@
    "unity",
    "owml",
    "outer-wilds"
+  ]
+ },
+ {
+  "path": "techniques/driving-dosbox-games-from-tests-background-input-parallel-sa.md",
+  "kind": "technique",
+  "title": "Driving DOSBox games from tests: background input, parallel sandboxed instances and screen-state checks",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-25",
+  "links": [
+   "https://www.dosbox.com/"
+  ],
+  "tags": [
+   "dosbox",
+   "dos",
+   "automation",
+   "testing",
+   "background-input",
+   "postmessage",
+   "parallel",
+   "sandbox",
+   "screenshots",
+   "midi",
+   "overlays",
+   "memory-pressure",
+   "windows",
+   "guest-memory",
+   "readprocessmemory",
+   "conventional-memory",
+   "focus-stealing",
+   "wmi"
   ]
  },
  {
