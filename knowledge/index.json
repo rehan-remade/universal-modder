@@ -11211,6 +11211,39 @@
   ]
  },
  {
+  "path": "techniques/white-knuckle-library-mods-what-each-offers.md",
+  "kind": "technique",
+  "title": "White Knuckle's library mods: what each actually offers, and when to skip them for the game's own registry",
+  "status": "working",
+  "tools": [
+   "ilspycmd 8.2.0.7535 on .NET 8",
+   "BepInEx 5.4.23.5",
+   "r2modman"
+  ],
+  "agents": [
+   "Jcode (Claude Opus 4.6)"
+  ],
+  "humans": [],
+  "date": "2026-10-27",
+  "links": [
+   "https://github.com/monksilly/WKLib",
+   "https://monksilly.github.io/WKLib/",
+   "https://github.com/one-nora/ImuiBepInEx",
+   "https://github.com/monksilly/ResourcefulHands"
+  ],
+  "tags": [
+   "white-knuckle",
+   "unity",
+   "unity-6",
+   "bepinex",
+   "library-survey",
+   "modding-api",
+   "thunderstore",
+   "decompile",
+   "harmony"
+  ]
+ },
+ {
   "path": "techniques/wow64-hardware-breakpoints-from-a-64-bit-debugger.md",
   "kind": "technique",
   "title": "WOW64 hardware breakpoints from a 64-bit debugger",
