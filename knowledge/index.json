@@ -1344,6 +1344,66 @@
   ]
  },
  {
+  "path": "games/cities-skylines-ii/president-mod-government-portal-real-ecs-levers.md",
+  "kind": "game",
+  "title": "A President mod for Cities: Skylines II: a government portal over the live city, real ECS levers, a court of real residents",
+  "game": "Cities: Skylines II",
+  "games_also": [],
+  "game_version": "1.6.2f1 (767.21d1), Steam app 949230 build 25127643 (public branch), Unity 2022.3.71f1 Mono, Entities 1.3.10",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "loader-api",
+  "tools": [
+   "CS2 Modding Toolchain (in-game installer: Unity 2022.3.62f2, Burst 1.8.23, csiimod template, create-csii-ui-mod)",
+   ".NET SDK 10 (mod targets net48; offline simulator net8.0)",
+   "Node 24 + webpack 5.97.1",
+   "ilspycmd 11.1.0.9782",
+   "VS Code + C# Dev Kit + Unity extension 1.3.2",
+   "Unity 2022.3.71f1 development Mono player (debugging, staged)",
+   "Lib.Harmony 2.2.2 (toolchain smoke test only)",
+   "Microsoft Edge headless (UI previews)",
+   "fal (images, some SFX)",
+   "um backup",
+   "um kb"
+  ],
+  "anti_cheat": "none: single-player city builder with an official mod API; nothing bypassed",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "@skurtyyskirts"
+  ],
+  "date": "2026-10-18",
+  "links": [
+   "https://cs2.paradoxwikis.com/Modding_Toolchain",
+   "https://cs2.paradoxwikis.com/UI_Modding",
+   "https://cs2.paradoxwikis.com/Debugging",
+   "https://cs2.paradoxwikis.com/Developer_mode",
+   "https://cs2.paradoxwikis.com/Asset_Creation_Guide",
+   "https://github.com/icsharpcode/ILSpy",
+   "https://github.com/krzychu124/Traffic",
+   "https://github.com/AlphaGaming7780/ExtraAssetsImporter"
+  ],
+  "tags": [
+   "ecs",
+   "unity-dots",
+   "gameface",
+   "ui-mod",
+   "city-modifiers",
+   "district-modifiers",
+   "efficiency-factor",
+   "save-safety",
+   "puppets",
+   "culling",
+   "offline-simulator",
+   "headless-preview",
+   "dev-bridge",
+   "paradox-mods",
+   "toolchain-setup"
+  ]
+ },
+ {
   "path": "games/civilization-vi/new-civ-unique-unit-own-icons-2d-leader-headless-cook.md",
   "kind": "game",
   "title": "New civilization with a unique unit, own icons and a 2D leader, cooked headless with the SDK",
@@ -1641,6 +1701,69 @@
    "r2modman",
    "thunderstore",
    "recon"
+  ]
+ },
+ {
+  "path": "games/cyberpunk-2077/akimbo-pistols-on-the-2-5-native-dual-wield.md",
+  "kind": "game",
+  "title": "Custom akimbo pistols on patch 2.5's native dual wield (player animsets, seeded ItemIDs, Audioware sound swap)",
+  "game": "Cyberpunk 2077",
+  "games_also": [],
+  "game_version": "Steam PC, patch 2.5 \"Edgerunners II\": ProductVersion 2.50, FileVersion 3.0.88.46235 (watermark 3.0.5813403, P4CL 13555055), with Phantom Liberty",
+  "platform": "windows",
+  "engine": "redengine",
+  "route": "loader-api",
+  "tools": [
+   "RED4ext 1.31.0",
+   "redscript 0.5.32 (redscript-cli.exe)",
+   "ArchiveXL 1.28.0",
+   "TweakXL 1.12.0",
+   "Codeware 1.21.1",
+   "Audioware 1.10.1",
+   "Cyber Engine Tweaks 1.38.1",
+   "WolvenKit.Console 9.1.0",
+   "Blender 5.2",
+   ".NET SDK 10.0.4xx",
+   "Python minidump",
+   "fal (ElevenLabs Sound Effects v2, Mirelo SFX 2.0)",
+   "um backup/win/video/publish"
+  ],
+  "anti_cheat": "none (single-player)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "@skurtyyskirts"
+  ],
+  "date": "2026-10-27",
+  "links": [
+   "https://github.com/wopss/RED4ext",
+   "https://github.com/jac3km4/redscript",
+   "https://github.com/psiberx/cp2077-archive-xl",
+   "https://github.com/psiberx/cp2077-tweak-xl",
+   "https://github.com/psiberx/cp2077-codeware",
+   "https://github.com/cyb3rpsych0s1s/audioware",
+   "https://github.com/maximegmd/CyberEngineTweaks",
+   "https://github.com/WolvenKit/WolvenKit"
+  ],
+  "tags": [
+   "cyberpunk2077",
+   "dual-wield",
+   "akimbo",
+   "weapons",
+   "animset",
+   "friendlyName",
+   "tweakxl",
+   "archivexl",
+   "audioware",
+   "itemid",
+   "rngseed",
+   "red4ext",
+   "crash",
+   "save",
+   "vortex",
+   "um-win"
   ]
  },
  {
@@ -3227,7 +3350,7 @@
  {
   "path": "games/hitman-world-of-assassination/new-suit-and-replacement-pistol-smf-prim-rebuild.md",
   "kind": "game",
-  "title": "A new selectable suit and a replacement default pistol from custom meshes (SMF, rpkg PRIM rebuild)",
+  "title": "New selectable suits (one with cloth-simulated hair and its head on every disguise) and a replacement default pistol from custom meshes (SMF, rpkg PRIM rebuild, binary PRIM edits)",
   "game": "HITMAN World of Assassination",
   "games_also": [],
   "game_version": "Steam PC, HITMAN3.exe from the 2026-08-27 patch (app 1659040)",
@@ -3238,22 +3361,26 @@
    "Simple Mod Framework 2.33.42",
    "rpkg-cli 2.34.0",
    "HMTextureTools (bundled with SMF)",
+   "HMLanguageTools (bundled with SMF)",
    "GlacierKit 1.12.15",
    "Peacock 8.9.1",
    "Blender 5.2",
    "io_scene_glacier 0.7.2 (reference only)",
    "fal (trellis-2, hi3d multi-view)",
-   "um win"
+   "Python 3 + numpy (own PRIM/cloth editor)",
+   "uv",
+   "um win",
+   "um backup"
   ],
   "anti_cheat": "none in offline play; tested only under Peacock (offline server)",
-  "status": "working",
+  "status": "in-progress",
   "agents": [
    "Claude Code (Opus 5.5)"
   ],
   "humans": [
    "@skurtyyskirts"
   ],
-  "date": "2026-10-10",
+  "date": "2026-10-22",
   "links": [
    "https://github.com/atampy25/simple-mod-framework",
    "https://github.com/glacier-modding/RPKG-Tool",
@@ -3271,7 +3398,15 @@
    "materials",
    "outfit",
    "weapons",
-   "peacock"
+   "peacock",
+   "cloth",
+   "hair",
+   "colliders",
+   "disguise",
+   "head-swap",
+   "retarget",
+   "gpu-hang",
+   "tdr"
   ]
  },
  {
@@ -5753,6 +5888,132 @@
   ]
  },
  {
+  "path": "games/red-faction-guerrilla/control-resonant-dylan-takeover-retargeted-animations.md",
+  "kind": "game",
+  "title": "CONTROL Resonant's Dylan as the player: control takeover, 217 retargeted clips, the Aberrant drawn in D3D11, no-despawn physics",
+  "game": "Red Faction: Guerrilla Re-Mars-tered",
+  "games_also": [
+   "CONTROL Resonant"
+  ],
+  "game_version": "Steam app 667720, rfg.exe build cs:4931 (SHA-256 0d52039e7f2d3f25a4be52a2aba83919456fb3f00e52e75051726247471a2df4, 32-bit, link timestamp 0x5B9B718A)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "MinHook 1.3.4",
+   "Dear ImGui 1.91.9b",
+   "Ghidra 12.1.4 (headless)",
+   "capstone + pefile (via uv)",
+   "Janitor 2026.10.6.1",
+   "vgmstream r2168",
+   "XAudio2 2.9",
+   "MSVC x86 (Visual Studio 18) + CMake + Ninja",
+   "doctest",
+   "numpy, scipy, Pillow",
+   "d3dcompiler_47",
+   "um backup"
+  ],
+  "anti_cheat": "none; single-player only (the mod stays idle in multiplayer, read from the game's multiplayer flag)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "@skurtyyskirts"
+  ],
+  "date": "2026-10-27",
+  "links": [
+   "https://github.com/rfg-modding/RSL",
+   "https://github.com/rfg-modding/RFGR_Types",
+   "https://github.com/LostPhysx/RFG-VR",
+   "https://github.com/rfg-modding/RfgToolsPlusPlus",
+   "https://github.com/rfg-modding/RFGM.Formats",
+   "https://github.com/TsudaKageyu/minhook",
+   "https://github.com/ocornut/imgui",
+   "https://github.com/vgmstream/vgmstream",
+   "https://github.com/dtzxporter/Cast",
+   "rf-gmod-gravity-gun-sandbox-and-armageddon-port.md"
+  ],
+  "tags": [
+   "dinput8-proxy",
+   "control-takeover",
+   "pose-override",
+   "animation-retarget",
+   "d3d11-overlay-draw",
+   "despawn",
+   "havok",
+   "first-person",
+   "god-mode",
+   "wwise",
+   "xaudio2",
+   "cross-game-port",
+   "northlight"
+  ]
+ },
+ {
+  "path": "games/red-faction-guerrilla/rf-gmod-gravity-gun-sandbox-and-armageddon-port.md",
+  "kind": "game",
+  "title": "rf-gmod: a Garry's Mod-style sandbox (gravity gun, physgun, HL2 weapons, noclip) in RFG Re-Mars-tered, with an untested Armageddon port",
+  "game": "Red Faction: Guerrilla Re-Mars-tered",
+  "games_also": [
+   "Red Faction: Armageddon",
+   "Half-Life 2",
+   "Garry's Mod"
+  ],
+  "game_version": "RFG: Steam app 667720, rfg.exe cs:4931 (SHA-256 0d52039e7f2d3f25a4be52a2aba83919456fb3f00e52e75051726247471a2df4); RF:A: Steam app 55110, RedFactionArmageddon_DX11.exe (SHA-256 6a3c42dc...1dea, link timestamp 0x57B0E035)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "MinHook 1.3.4",
+   "Dear ImGui 1.91.9b",
+   "Ghidra 12.1.4 (headless)",
+   "capstone + pefile (via uv)",
+   "XAudio2 2.9",
+   "MSVC x86 (Visual Studio 18) + CMake + Ninja",
+   "doctest",
+   "numpy, scipy, Pillow",
+   "um backup"
+  ],
+  "anti_cheat": "none; single-player only. The DLL refuses any exe whose SHA-256 it doesn't know and stays idle in multiplayer.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "@skurtyyskirts"
+  ],
+  "date": "2026-10-27",
+  "links": [
+   "control-resonant-dylan-takeover-retargeted-animations.md",
+   "https://github.com/rfg-modding/RSL",
+   "https://github.com/rfg-modding/RFGR_Types",
+   "https://github.com/LostPhysx/RFG-VR",
+   "https://github.com/gibbed/Gibbed.Volition",
+   "https://steamcommunity.com/sharedfiles/filedetails/?id=2665902404",
+   "https://www.moddb.com/downloads/half-life-2-mmod-version-11",
+   "https://github.com/TsudaKageyu/minhook",
+   "https://github.com/ocornut/imgui"
+  ],
+  "tags": [
+   "gravity-gun",
+   "physgun",
+   "telekinesis",
+   "source-movement",
+   "noclip",
+   "viewmodels",
+   "d3d11",
+   "havok",
+   "raycast",
+   "despawn",
+   "blood",
+   "draw-distance",
+   "clean-reinstall",
+   "cross-game-port",
+   "dinput8-proxy"
+  ]
+ },
+ {
   "path": "games/resident-evil-2-2019/dlss5-neural-rendering-dlss-frame-generation-in-a-custom-ref.md",
   "kind": "game",
   "title": "DLSS5 neural rendering + DLSS frame generation in a custom REFramework build, with Tobii eye tracking",
@@ -6438,6 +6699,69 @@
    "dat",
    "powerpc",
    "dolphin-osreport"
+  ]
+ },
+ {
+  "path": "games/teardown/physics-accelerator-native-solver-physx.md",
+  "kind": "game",
+  "title": "Physics Accelerator: a multi-core replay of Teardown's island solver, two PhysX 5.9 remaps, and a flight recorder (native dsound.dll)",
+  "game": "Teardown",
+  "games_also": [],
+  "game_version": "2.1.0, Steam app 1167630, buildid 25295735 (teardown.exe 30,555,208 bytes, 2026-09-17), D3D12, Windows 11",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "native-hook",
+  "tools": [
+   "MinHook",
+   "NVIDIA PhysX 5.9.0 (built from source, GPU + CPU)",
+   "CUDA 13.4",
+   "Visual Studio 2026 18.10.4 (MSVC)",
+   "CMake 3.24+",
+   "Ninja",
+   "Python + capstone + pefile + numpy (uv)",
+   "rea-agents 6.5.0 (REA MCP)",
+   "Ghidra 12.1.4",
+   "Eclipse Temurin JDK 21.0.12",
+   "Node.js 24.15.0",
+   "um backup",
+   "um win",
+   "um publish"
+  ],
+  "anti_cheat": "none. Teardown 2.x has multiplayer; the PhysX path switched itself off in multiplayer and every test was a single-player sandbox (Lee, Marina, Mansion, Mall)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "@skurtyyskirts"
+  ],
+  "date": "2026-10-22",
+  "links": [
+   "https://github.com/NVIDIA-Omniverse/PhysX",
+   "https://github.com/TsudaKageyu/minhook",
+   "https://github.com/morluto/rea",
+   "https://www.npmjs.com/package/rea-agents",
+   "https://github.com/NationalSecurityAgency/ghidra/releases",
+   "https://adoptium.net/"
+  ],
+  "tags": [
+   "physics",
+   "performance",
+   "physx",
+   "cuda",
+   "gpu",
+   "multithreading",
+   "solver",
+   "graph-colouring",
+   "particles",
+   "dsound-proxy",
+   "minhook",
+   "aob-signatures",
+   "lua-api",
+   "ghidra",
+   "rea",
+   "flight-recorder",
+   "safety"
   ]
  },
  {
@@ -7165,6 +7489,57 @@
   ]
  },
  {
+  "path": "games/tomb-raider-legend/film-outfit-pack-drm-rebuild-idles-release.md",
+  "kind": "game",
+  "title": "A film-style Lara outfit pack: every player .drm rebuilt, per-outfit idles and walks, and a drag-and-drop release tested in a clean room",
+  "game": "Tomb Raider: Legend",
+  "games_also": [],
+  "game_version": "Steam PC build, trl.exe MD5 bd846c8fb3223e53bee022bb307b21bc (NextGen renderer on), Windows 11",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "native-hook",
+  "tools": [
+   "Ultimate ASI Loader + TR7-Menu-Hook 2.5 (the TRLAU-menu-hook v2.5 release zip)",
+   "MinHook 1.3.4",
+   "MSVC 19.51 x86 + CMake + Ninja",
+   "Blender 5.2.1",
+   "cdcEditor 0.1.1 (Blender add-on)",
+   "Python 3 + numpy",
+   "Ghidra 12.0.1 + GhidrAssistMCP",
+   "capstone + pefile",
+   "Windows PowerShell 5.1",
+   "um backup / um publish check / um win"
+  ],
+  "anti_cheat": "none (single-player; Steam copy, SteamStub left untouched: runtime hooks and mods\\ files only)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Fable 5.1)",
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "@skurtyyskirts"
+  ],
+  "date": "2026-10-27",
+  "links": [
+   "https://github.com/TheIndra55/TRLAU-menu-hook",
+   "https://github.com/ThirteenAG/Ultimate-ASI-Loader",
+   "https://github.com/Raq1/cdcEditor",
+   "https://aka.ms/vs/17/release/vc_redist.x86.exe"
+  ],
+  "tags": [
+   "outfits",
+   "drm",
+   "cdc-engine",
+   "idles",
+   "animation",
+   "rig",
+   "packaging",
+   "clean-room",
+   "uninstall",
+   "native-hook"
+  ]
+ },
+ {
   "path": "games/tomb-raider-legend/film-reloads-qa-bridge-physics-mags-asi.md",
   "kind": "game",
   "title": "Film-style pistol reloads, a JSON QA bridge and physics magazines through a native ASI",
@@ -7209,6 +7584,56 @@
    "weapons",
    "cdc-engine",
    "d3d9"
+  ]
+ },
+ {
+  "path": "games/tomb-raider-legend/physics-strand-hair-appended-bones.md",
+  "kind": "game",
+  "title": "Physics strand hair on appended bones in Legend's player .drm models (an ASI solver and a .hair file)",
+  "game": "Tomb Raider: Legend",
+  "games_also": [],
+  "game_version": "Steam PC build, trl.exe MD5 bd846c8fb3223e53bee022bb307b21bc (NextGen renderer on), Windows 11",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "native-hook",
+  "tools": [
+   "Ultimate ASI Loader + TR7-Menu-Hook 2.5 (the TRLAU-menu-hook release zip)",
+   "MinHook 1.3.4",
+   "MSVC 19.51 x86 + CMake + Ninja",
+   "Blender 5.2.1",
+   "cdcEditor 0.1.1 (Blender add-on)",
+   "Python 3 + numpy (+ scipy for the groom previews)",
+   "Ghidra 12.0.1 + GhidrAssistMCP",
+   "capstone + pefile",
+   "um backup / um publish check"
+  ],
+  "anti_cheat": "none (single-player; Steam copy, SteamStub left untouched: runtime hooks and mods\\ files only)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)",
+   "Claude Code (Fable 5.1)"
+  ],
+  "humans": [
+   "@skurtyyskirts"
+  ],
+  "date": "2026-10-27",
+  "links": [
+   "https://github.com/TheIndra55/TRLAU-menu-hook",
+   "https://github.com/ThirteenAG/Ultimate-ASI-Loader",
+   "https://github.com/TsudaKageyu/minhook",
+   "https://github.com/Raq1/cdcEditor",
+   "https://matthias-research.github.io/pages/publications/FTLHairFur.pdf"
+  ],
+  "tags": [
+   "hair",
+   "physics",
+   "cloth",
+   "rig",
+   "cdc-engine",
+   "drm",
+   "native-hook",
+   "crash",
+   "outfits"
   ]
  },
  {
