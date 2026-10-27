@@ -25,7 +25,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-from um.common import data_dir, die, need
+from um.common import data_dir, die, need, text_utf8
 
 REPO = os.environ.get("UM_KB_REPO", "rehan-remade/universal-modder")
 BRANCH = os.environ.get("UM_KB_BRANCH", "main")
@@ -231,7 +231,9 @@ def check_note(path: Path, root: Path | None = None) -> tuple[list[str], list[st
         for s in GAME_SECTIONS:
             if not any(h.startswith(s) for h in heads):
                 fails.append(f"missing section: ## {s.capitalize()}...")
-        if "gotchas" in " ".join(heads) and not re.search(r"^##\s+Gotchas.*?\n(?:.*\n)*?\s*1\.", body, re.M | re.I):
+        # numbered items count as a list item ("1. ...") or a numbered subheading ("### 1. ...")
+        if "gotchas" in " ".join(heads) and not re.search(
+                r"^##\s+Gotchas.*?\n(?:.*\n)*?(?:\s*1\.|\s*#{2,6}\s+1\.)", body, re.M | re.I):
             warns.append("Gotchas section has no numbered items")
     if meta.get("status") and meta["status"] not in STATUSES:
         fails.append(f"status {meta['status']!r} not one of: {', '.join(STATUSES)}")
@@ -276,7 +278,8 @@ def check_note(path: Path, root: Path | None = None) -> tuple[list[str], list[st
     for m in re.finditer(r"\]\(([^)\s#]+\.md)(?:#[^)\s]*)?\)", body):
         target = m.group(1)
         if not re.match(r"[a-z][a-z0-9+.-]*:|/", target, re.I) and not (path.parent / target).resolve().exists():
-            warns.append(f"link to a note that does not exist: {target} (links are relative to this note's folder)")
+            warns.append(f"link to a note that does not exist: {target} (links are relative to this note's folder; "
+                         f"if the file lives in another repo, link to it on GitHub instead)")
     kroot = root or next((p for p in path.resolve().parents if p.name == "knowledge"), None)
     if kroot is not None:
         for m in re.finditer(r"`(?:knowledge/)?((?:games|techniques)/[a-z0-9_./-]+\.md)`", body):
@@ -384,7 +387,7 @@ def open_pr(path: Path, yes: bool):
     media = [p for p in path.parent.glob("media/*")] if (path.parent / "media").exists() else []
     can_push = False
     if shutil.which("gh"):
-        r = subprocess.run(["gh", "api", f"repos/{REPO}", "--jq", ".permissions.push"], capture_output=True, text=True)
+        r = subprocess.run(["gh", "api", f"repos/{REPO}", "--jq", ".permissions.push"], capture_output=True, **text_utf8())
         can_push = r.stdout.strip() == "true"
     remote = "origin" if can_push else "fork"
     cmds = [["git", "checkout", "-b", branch], ["um", "kb", "index"],
@@ -410,9 +413,9 @@ def open_pr(path: Path, yes: bool):
         if c[:3] == ["gh", "repo", "fork"] and subprocess.run(["git", "remote", "get-url", "fork"], cwd=repo, capture_output=True).returncode == 0:
             continue
         if c[:3] == ["gh", "pr", "create"] and remote == "fork":
-            url = subprocess.run(["git", "remote", "get-url", "fork"], cwd=repo, capture_output=True, text=True).stdout.strip()
+            url = subprocess.run(["git", "remote", "get-url", "fork"], cwd=repo, capture_output=True, **text_utf8()).stdout.strip()
             c[c.index("--head") + 1] = pr_head(branch, url)
-        r = subprocess.run(c, cwd=repo, capture_output=True, text=True)
+        r = subprocess.run(c, cwd=repo, capture_output=True, **text_utf8())
         if r.returncode:
             die(f"{' '.join(c[:4])} failed: {(r.stderr or r.stdout).strip()[-800:]}")
         if c[:3] == ["gh", "pr", "create"]:

@@ -4,11 +4,16 @@
     um scan terraria               # fuzzy name or a path; prints the report
     um scan "C:\\Games\\Foo" --json  # machine-readable, for agents
 
+The report starts with `host:`, the machine `um` runs on: OS and version, CPU (named like the exes' `[x64]`,
+`[x86]`, `[arm64]`) and WSL. Compare them to know whether the game is native here. It warns when the exes are
+Windows builds and the host is neither Windows nor WSL.
+
 The report ends with ranked modding routes and the playbook to read next
 (skills/mod-any-game/references/engines/*.md). Everything here is read-only.
 """
 from __future__ import annotations
 
+import argparse
 import fnmatch
 import json
 import os
@@ -19,7 +24,7 @@ import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from um.common import die, is_mac, is_windows, is_wsl, ps_exe, to_posix
+from um.common import PS_UTF8, die, is_mac, is_windows, is_wsl, ps_exe, text_utf8, to_posix
 
 MAX_ENTRIES = 80_000
 MAX_DEPTH = 6
@@ -53,12 +58,12 @@ def win_folders() -> dict:
         return {}
     cache = win_folders.__dict__
     if "v" not in cache:
-        ps = ("$f=[Environment]; "
+        ps = (PS_UTF8 + "$f=[Environment]; "
               "@($f::GetFolderPath('UserProfile'),$f::GetFolderPath('MyDocuments'),$f::GetFolderPath('ApplicationData'),"
               "$f::GetFolderPath('LocalApplicationData')) -join '|'")
         exe = ps_exe()
         try:
-            out = subprocess.run([exe, "-NoProfile", "-Command", ps], capture_output=True, text=True, timeout=30,
+            out = subprocess.run([exe, "-NoProfile", "-Command", ps], capture_output=True, **text_utf8(), timeout=30,
                                  cwd="/mnt/c" if is_wsl() else None).stdout.strip()
             prof, docs, roaming, local = (out.split("|") + ["", "", "", ""])[:4]
             cache["v"] = {k: to_posix(v) for k, v in dict(profile=prof, documents=docs, appdata=roaming, localappdata=local).items() if v}
@@ -81,7 +86,7 @@ def steam_registry_root() -> Path | None:
     elif is_wsl():
         try:
             out = subprocess.run(["reg.exe", "query", r"HKCU\Software\Valve\Steam", "/v", "SteamPath"], capture_output=True,
-                                 text=True, timeout=15, cwd="/mnt/c").stdout
+                                 **text_utf8(), timeout=15, cwd="/mnt/c").stdout
         except (OSError, subprocess.TimeoutExpired):
             return None
         m = re.search(r"SteamPath\s+REG_SZ\s+(.+)", out)
@@ -254,7 +259,12 @@ def pe_info(path: Path) -> dict | None:
     opt = off + 24
     magic = struct.unpack_from("<H", head, opt)[0]
     dd = opt + (96 if magic == 0x10B else 112)
-    clr_rva = struct.unpack_from("<I", head, dd + 14 * 8)[0] if dd + 15 * 8 <= len(head) else 0
+    # the CLR header is directory 14, so it only exists if NumberOfRvaAndSizes counts it; past the
+    # declared directories comes the section table, and its bytes would read as a CLR RVA (#441)
+    num_dirs = struct.unpack_from("<I", head, opt + (92 if magic == 0x10B else 108))[0]
+    clr_rva = 0
+    if num_dirs > 14 and dd + 15 * 8 <= len(head):
+        clr_rva = struct.unpack_from("<I", head, dd + 14 * 8)[0]
     return dict(arch={0x14C: "x86", 0x8664: "x64", 0xAA64: "arm64"}.get(machine, hex(machine)), managed=clr_rva != 0)
 
 
@@ -407,6 +417,9 @@ KNOWN = {
     "portal 2": ("VScript (Squirrel) + Puzzle Maker/Hammer, Workshop", "source.md"),
     "half-life 2": ("Source SDK 2013 mods (C++), maps with Hammer", "source.md"),
     "doom": ("WAD/PK3 mods with a source port (GZDoom/UZDoom)", "misc-engines.md"),
+    "the binding of isaac: rebirth": ("Lua mod in <install>/mods/<name>/ (main.lua, content/*.xml, resources/ overrides), IsaacDocs API; "
+                                      "EnableMods=1 + EnableDebugConsole=1 in options.ini; vanilla assets via tools/ResourceExtractor",
+                                      "isaac.md"),
     "minecraft": ("Fabric (Mixin) or NeoForge", "minecraft.md"),
 }
 
@@ -414,6 +427,7 @@ KNOWN = {
 KNOWN_FILES = [
     ("dwarf fortress", ("data/vanilla/*/info.txt", "dwarf fortress.exe", "dwarfort")),
     ("mindustry", ("mindustry.exe", "mindustry.json", "mindustry.jar", "mindustry.app/contents/resources/desktop.jar")),
+    ("the binding of isaac: rebirth", ("isaac-ng.exe",)),
 ]
 
 # save/profile folders that don't follow the game's name ({profile}, {documents}, {appdata}, {localappdata})
@@ -779,6 +793,48 @@ def save_hints(name: str, det: dict) -> list[str]:
     return out
 
 
+def host_info() -> dict:
+    """The machine `um` runs on. `arch` uses the names of an exe's `arch` (x86, x64, arm64) so the two compare directly."""
+    import platform
+    # Windows asks WMI for the CPU from Python 3.12 on; before that, an x64 Python emulated on Windows on Arm
+    # reads its own process architecture and reports x64
+    machine = platform.machine().lower()
+    arch = {"x86_64": "x64", "amd64": "x64", "x86": "x86", "i386": "x86", "i686": "x86",
+            "arm64": "arm64", "aarch64": "arm64"}.get(machine, machine)
+    translated = False
+    if is_mac() and arch == "x64":
+        # an x86_64 Python on an Apple Silicon Mac runs under Rosetta; the hardware is arm64
+        try:
+            out = subprocess.run(["sysctl", "-n", "sysctl.proc_translated"], capture_output=True, **text_utf8(),
+                                 timeout=5).stdout.strip()
+        except (OSError, subprocess.TimeoutExpired):
+            out = ""
+        if out == "1":
+            arch, translated = "arm64", True
+    if is_mac():
+        os_name, version = "macos", platform.mac_ver()[0]
+    elif is_windows():
+        os_name, version = "windows", platform.version()
+    else:
+        os_name = "linux"
+        try:
+            version = platform.freedesktop_os_release().get("PRETTY_NAME") or platform.release()
+        except OSError:
+            version = platform.release()
+    # the same keys on every host, so `--json` readers never meet a missing field
+    return dict(os=os_name, os_version=version or "unknown", arch=arch, wsl=is_wsl(), translated=translated)
+
+
+def host_line(h: dict) -> str:
+    if h["wsl"]:
+        base = f"Windows via WSL ({h['os_version']})"
+    elif h["os"] == "linux" and not h["os_version"][:1].isdigit():
+        base = h["os_version"]                      # a distro name, for example "Ubuntu 24.04.1 LTS"
+    else:
+        base = {"macos": "macOS", "windows": "Windows", "linux": "Linux"}.get(h["os"], h["os"]) + " " + h["os_version"]
+    return f"{base}, {h['arch']}" + (" (Python runs under Rosetta)" if h.get("translated") else "")
+
+
 def scan(query: str) -> dict:
     game = resolve_game(query)
     root = Path(game["path"])
@@ -804,8 +860,12 @@ def scan(query: str) -> dict:
     if key not in ("native", "bannerlord"):
         routes.append(dict(route=ENGINES["native"][2], playbook="native.md", why="fallback when no loader reaches what you need"))
     warnings = []
+    host = host_info()
     if len(ix.files) < 5:
         warnings.append("the install folder is (nearly) empty: the game is not fully installed, or lives elsewhere")
+    if facts.get("executables") and host["os"] != "windows" and not host["wsl"]:
+        warnings.append(f"the exes are Windows (PE) builds but this host is {host_line(host)}: not native, so it needs a compatibility "
+                        "layer (unless the folder also holds a build for this OS); read skills/game-recon/references/compatibility.md")
     if anti:
         warnings.append(f"anti-cheat present ({', '.join(anti)}): offline/single-player only, never inject into online play; "
                         "many titles need the anti-cheat disabled via an official offline launch option - do not bypass it")
@@ -821,7 +881,7 @@ def scan(query: str) -> dict:
         workshop=game.get("workshop"), saves=save_hints(name, det),
         executables=facts.get("executables", {}), routes=routes, warnings=warnings,
         playbook=f"skills/mod-any-game/references/engines/{routes[0]['playbook']}",
-        files_indexed=len(ix.files), index_truncated=ix.truncated,
+        files_indexed=len(ix.files), index_truncated=ix.truncated, host=host,
     )
     return report
 
@@ -829,8 +889,10 @@ def scan(query: str) -> dict:
 def format_report(r: dict) -> str:
     e = r["engine"]
     lines = [f"{r['name']}" + (f"  ({r['store']} {r['appid']})" if r.get("store") else ""),
-             f"  path:      {r['path']}",
-             f"  engine:    {e['label']}  [{e['confidence']}%]  evidence: {', '.join(map(str, e['evidence']))}"]
+             f"  path:      {r['path']}"]
+    if r.get("host"):
+        lines.append(f"  host:      {host_line(r['host'])}")
+    lines += [f"  engine:    {e['label']}  [{e['confidence']}%]  evidence: {', '.join(map(str, e['evidence']))}"]
     extra = {k: v for k, v in e.items() if k not in ("key", "label", "confidence", "evidence")}
     if extra:
         lines.append("             " + ", ".join(f"{k}={v}" for k, v in extra.items()))
@@ -875,7 +937,8 @@ def main(args):
 
 
 def register(sub):
-    p = sub.add_parser("scan", help="find installed games; fingerprint engine, anti-cheat, loaders, saves, routes")
+    p = sub.add_parser("scan", help="find installed games; fingerprint engine, anti-cheat, loaders, saves, routes",
+                       description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("game", nargs="?", help="name (fuzzy) or install folder")
     p.add_argument("--list", action="store_true", help="list installed games (Steam, Epic, Xbox)")
     p.add_argument("--json", action="store_true")

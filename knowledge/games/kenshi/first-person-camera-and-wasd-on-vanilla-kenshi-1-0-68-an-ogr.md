@@ -47,7 +47,8 @@ tags:
 - The game (`kenshi_x64.exe`) is native C++ built with MSVC 2010 (`MSVCR100`, `MSVCP100`, `mfc100u`); only
   the editor, `forgotten construction set.exe`, is .NET (older `um scan` builds reported the whole game as
   .NET because of it). For the data/FCS routes, load order and the RE_Kenshi route on 1.0.65, see the
-  companion note [`kenshi-1-0-65-native-ogre-recon.md`](kenshi-1-0-65-native-ogre-recon.md); this note
+  companion note [`kenshi-1-0-65-native-ogre-recon.md`](kenshi-1-0-65-native-ogre-recon.md), and for
+  `.mod` files written from code, the [generated data mods note](kenshi-generated-mods.md); this note
   covers a native plugin on vanilla 1.0.68 without RE_Kenshi.
 - Engine DLLs next to the exe: `OgreMain_x64.dll` (OGRE 2.0.0 "Tindalos", 9333 exports, patched by Lo-Fi),
   `RenderSystem_Direct3D11_x64.dll`, `MyGUIEngine_x64.dll`, `OIS64.dll`, PhysX, Havok.

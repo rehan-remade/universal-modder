@@ -64,7 +64,9 @@ KNAB layout and the repack bug.
 `X M B F`, version `257` = `0x101`) — the same magic and version the audio-config `.xmb`
 files use, so `XMBF` is a general Eden structured-binary/table format, not bigfile-specific.
 
-`.map` header as read by `MapHeader.cs`/`BigUnpack.cs` (all little-endian):
+`.map` header as read by `MapHeader.cs`/`BigUnpack.cs`. Magic and version are little-endian; in Ekey's
+public `BigUnpack.cs` every later field, the hash table included, is read big-endian
+(`ReadInt32(true)`/`ReadInt64(true)`), so check your copy of the tool if it says otherwise:
 
 - `0x00 uint32 magic` = `0x46424D58` (`XMBF`)
 - `0x04 int32  version` = `257`

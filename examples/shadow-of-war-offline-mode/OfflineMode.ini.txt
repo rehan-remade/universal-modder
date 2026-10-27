@@ -1,0 +1,15 @@
+; Shadow of War Offline Mode. Delete winhttp.dll (and this file) to uninstall.
+[Offline]
+; emulate = WB/Agora requests are answered locally on this PC (needed for the local Garrison)
+; block   = WB/Agora requests just fail, like an unreachable server
+Mode=emulate
+; 1 = inert store placeholders so the store (and the Garrison inside it) opens. 0 = Garrison stays locked.
+StorePlaceholders=1
+; How many orcs the local Garrison holds.
+GarrisonSize=50
+; Hosts handled locally, including all subdomains. Steam and everything else pass through.
+BlockedDomains=wbagora.com,agoragames.com,wbgames.com,turbine.com,wbplay.com,wbidams.com
+; 1 = write OfflineMode.log next to this file (stays on this PC).
+Log=1
+; 1 = give new captains unique Nemesis ids offline (needed for the Garrison). 0 = off.
+NpcGuidPrefix=1

@@ -105,7 +105,9 @@ tags: [alchemy-engine, mashup, passthrough, frame-compositing, reshade-addon, d3
 ## Build steps
 1. Install as in Setup. Build both add-ons with MSVC (`/std:c++17 /we4129`, ReShade 6.8.0 headers).
 2. Start Croc into a level, then Crash into a level (scripted with WinDrive; both games' menus need scan
-   codes, and Crash's menus need *held* keys).
+   codes, and Crash's menus need *held* keys). The quick boot in the
+   [uncapped FPS note](uncapped-fps-and-live-boss-powers.md) skips Crash's intros without any input; pressing
+   Enter through them once loaded a save (its gotcha 9).
 3. **Stage A:** Croc's frame plus depth go through 3 seqlocked shared-memory slots at about 30 Hz (D3D12
    readback with a fence, never waiting). The Crash pixel shader shows Croc where his depth is less than 1 and
    0.8·z ≤ Crash depth. Crash's own model draws are skipped while a fresh Croc frame exists.
@@ -235,7 +237,8 @@ feel and attacks.
 - **Player draw detection:** recognise the player's draw by geometry signature too, or it fails
   mid-jump/spin.
 - **Deaths:** play `crocdie1` and draw Croc at any G-buffer draw while dying.
-- **Choice:** F6 switches between Crash and Croc and saves to the add-on's ini.
+- **Choice:** Croc is a third hero on the game's own swap (see "Hero swap" below); the choice is saved in the
+  add-on's ini.
 - **Cache location:** the converter writes the rig into a local cache next to the mod, not
   `%LOCALAPPDATA%`; sandboxed writes there may be virtualised. The cache is converted Croc data: keep it out
   of any repository and don't share it.
@@ -256,22 +259,94 @@ feel and attacks.
     slam then breaks what's below and shows the impact dust.
   - **Edges:** take key edges from `GetAsyncKeyState`. The game's own sources disagree for a few ms and
     create fake re-presses.
+- **Vehicle levels** (Crash 3's biplane and motorbike):
+  - **Detection:** no on-foot capsule or controller body exists, and the level-state flag reads 0 for the whole
+    level. Key vehicle mode on the area archive's name (below): the pilot waits still behind the start line,
+    so "the model keeps moving" never fires there, and his still bones read as a pause.
+  - **What sits at the player:** three groups of draw: Crash's body (4016-byte buffer), his pilot outfit
+    (other buffers, another vertex shader) and the vehicle (one vertex shader with the most draws there).
+  - **What to hide:** everything at the player except the vehicle's shader. Croc then sits in the cockpit, and
+    the pause preview shows it too.
+  - **The vehicle's shader also draws the pilot's outfit** (the motorbike's ears, fur collar and gloves; the
+    biplane's scarf, goggles and cap). Hide it by the index counts of `CrashBiker.igz` / `CrashAviator.igz`;
+    Crash's on-foot body meshes use the same counts in every vehicle.
+  - **Plane deaths:** the parachute pack mesh on the pilot's back is also the canopy once the parachute opens:
+    hide it only while flying. The game keeps the body's World where the plane was hit and moves the body with
+    its skinning matrices, so Croc isn't placed under the canopy yet; the parachute comes down empty.
+- **Which area is loaded:** patch the running exe's `CreateFileW`/`CreateFileA` import entries (the file on
+  disk stays untouched) and note the area archive it opens (`l100_hub.pak`, `l200_hub.pak`, `l300_hub.pak`,
+  `l322_orangeasphalt.pak` ..., in lower case). The `*_hub` archives are the level-select screens. The archives
+  also tell which levels are vehicle levels (`CrashBiker`/`CrashAviator` actors) and which are Coco-only (Crash 3
+  tiger and jet-ski levels). The same hook drives
+  [uncapped FPS and live boss powers](uncapped-fps-and-live-boss-powers.md).
+- **Hero swap (Crash → Coco → Croc):**
+  - The game swaps Crash and Coco with R2 (keyboard Ctrl) on Crash 1's island map and the Crash 2/3 warp rooms,
+    once Coco is unlocked. The hero crouches and spins up in a swirl, and the other one drops in (about 1 s).
+  - **Telling Crash from Coco:** a memory scan across swaps found only per-game heap flags, with no static path
+    shared by the three games. The meshes drawn at the player work instead: their index counts are the same in
+    all three games (Crash 22461, 9528, 5694, 4092; Coco 18288, 10614, 10404, 8256).
+  - **Coco → Croc:** let the game swap back to Crash, hide the Crash who drops in (his meshes by index count,
+    wherever drawn: he falls in from above, away from the player position) and draw Croc in his place.
+  - **Croc → Crash:** Croc stays where he stood while the game swaps to Coco, who stays hidden. The add-on
+    presses the swap again until the game takes it (about 1 s later, once Coco has landed), and Croc spins out
+    upwards as Crash drops in. Press with the device the player used (Ctrl, or R2 in `XInputGetState`).
+  - **No Coco yet** (no hero badge on screen): the press swaps Crash and Croc directly, with the spin effect.
+  - Croc only stands in for Crash: while the game's hero is Coco, she is shown.
+  - The island map draws the hero 1.4× larger (read the scale from the World matrix), and the level node under
+    him uses a 1488-byte buffer: don't hide it.
+- **Croc's face on the HUD:**
+  - The hero icons are standalone BC3 textures:
+    - the swap badge: `ui/Crash/HUD/Crash_Head1`, `Coco_head1` and their `_Glow` (stored upside down);
+    - the lives counter: `ui/Crash/crashtoken` plus its line layer `crashtoken2`, used by
+      `vfx/UI/Crash_Life_GUI`;
+    - Crash 3's level card: a cell of `Boss_Portraits/character_sheet_filmstrip`, drawn in the scene pass;
+    - the biplane health bar: `PilotHUD/Pilot-Crash-Portrait-2`;
+    - Crash 3's pause screen: a Crash & Coco sticker painted on the left panel (`Pause/Crash3/BG_Left`). Its
+      stand-in is that panel with the sticker painted out and a Croc sticker on it.
+  - A script hashes their 16×16 centre blocks from the user's archives. It builds Croc's stand-ins from his own
+    remaster lives icon (`remaster/ui/panel/croclife.tga`), outlined in black and framed like each original,
+    into the local cache.
+  - At runtime each texture bound to pixel-shader slot 0 is recognised once (by size, then a GPU read-back of
+    the same blocks), and the stand-in is bound in its place for that draw. The badge's small face is the next
+    hero: when Croc plays, Coco's head shows Crash.
+- **Crash's props and effects around Croc:**
+  - Crash's idle "timeout" animations (yo-yo, fruit juggling, a spin), his spin (hands swirl, Death Tornado ring)
+    and the super body slam bring their own models and particles. They aren't part of the player draw, so hide
+    them separately.
+  - **Models by index count:** an IGZ model's `igIndexBuffer` objects hold the index count at +0x10, so the
+    counts of every Crash prop can be read from the archives. Hide each group only in its moment and near the
+    player, so scenery sharing a count stays.
+  - **Particles by texture:** their vertex counts change every frame, and they're drawn in later passes. Follow
+    Crash's effect files (`vfx/Characters/Playable/Crash/Crash_Attack_*`, `Crash_Timeout_*`) to their textures,
+    hash those, and hide draws that sample them right after an attack or stomp, or after a long idle.
+  - One idle draws Crash's whole body again in a later pass (a fruit-goo overlay): hide his body meshes near the
+    player in every pass, not only the G-buffer pass.
+  - **Finding them:** learn every draw signature (count, vertex shader, texture) in normal play and log the ones
+    that appear only after an attack, a stomp or a long idle. Read texture info at draw time: a view saved for
+    later may already be freed (that crashed the game once).
+  - **Mount detection** must count only mount meshes (hog, jet-board, polar bear): crates and platforms under
+    the player otherwise switch Croc into his riding pose.
+  - **Death Tornado:** hold back a second attack press within 0.9 s; Crash chains spins into the tornado.
 - **Test tooling:** `um win drive "idle N"` doesn't wait; it reports seconds since the last input. For timed
   combos, put the whole combo in one drive call: separate calls are too slow, because each one starts
   PowerShell. Pauses inside a call need the `sleep <ms>` verb from #206; without it, use `hold <vk> <ms>` or
   drive `um.win.Drive` from Python with `time.sleep` between commands.
-- **Verified with the user's completed saves:** Crash 1's island map, the Cortex boss, Upstream (water) and
-  Hog Wild; Crash 2's warp room and Hang Eight on foot.
+- **Verified with the user's completed saves:**
+  - Crash 1: the island map, the Cortex boss, Upstream (water), Hog Wild and The Great Hall.
+  - Crash 2: the warp room and Hang Eight on foot.
+  - Crash 3: the warp room, Flaming Passion, Orange Asphalt (motorbike) and Mad Bombers (biplane).
+  - The swap: the full cycle in Crash 1's map and Crash 3's warp room; Crash ↔ Croc in Crash 2's warp room
+    (Coco not unlocked in that save).
 
 ## Assets
 None generated. Croc is drawn by his own engine from the user's install; nothing from either game is
 redistributed.
 
 ## Cost and time
-About one day of agent time over three sessions, with the human mostly away.
+About a day and a half of agent time over four sessions, with the human mostly away.
 
 ## Open questions
-- **Native port follow-ups:** a character-select UI (F6 only now), Crash 2/3 vehicles and Coco levels, bonus rounds,
-  gamepad filter verification with a real controller, user rebinding support.
+- **Native port follow-ups:** Crash 2's jet-board and polar rides, Coco-only levels, bonus rounds, plane-level
+  deaths, gamepad verification with a real controller (the R2 swap included), user rebinding support.
 - **Remaining issues (live mashup):**
   - pose lag of 1–3 frames during fast camera moves (reproject).

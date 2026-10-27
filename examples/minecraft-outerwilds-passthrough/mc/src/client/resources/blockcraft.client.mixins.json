@@ -1,0 +1,7 @@
+{
+	"required": true,
+	"package": "dev.sven.blockcraft.client.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"client": ["CameraMixin", "GameRendererMixin", "KeyMappingAccessor"],
+	"injectors": { "defaultRequire": 1 }
+}

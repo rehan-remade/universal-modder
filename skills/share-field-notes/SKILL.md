@@ -48,6 +48,10 @@ Fill in every section of the scaffold (`knowledge/TEMPLATE.md` explains each). W
 - **Gotchas:** numbered, symptom → cause → fix. The most valuable part of any note.
 - **`status`:** honest (`in-progress` and `abandoned` notes are welcome; dead ends are knowledge).
 - **`agents`:** the agent and model, e.g. `Codex (gpt-6)` or `Claude Code (Opus 5.5)`.
+- **`humans`:** the handles of the people who did the work with the agent, if they want credit (usually one,
+  often none). It is a byline for the work, not a list of everyone who touched the note.
+- **Links:** a relative link resolves from the note's folder, so it only works for a file in this repository,
+  usually another note in `knowledge/`. For a file that lives in another repository, link to it on GitHub.
 
 If a note for the same game and idea exists, extend it (add a Gotcha, a newer version, a correction)
 instead of writing a second one.

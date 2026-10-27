@@ -37,6 +37,26 @@ python3 -m zipfile -c /tmp/modlab-homing-lab.zip mod.json content scripts sprite
 5. Exit with F9, disable the mod in Mods and restart to remove the lab menu entry. Restore a pre-install
    backup for any existing world that used the new blocks.
 
+## Read the saved run
+
+The helper writes `modlab-last-run.json` to the game-data folder, the parent of the folder that
+**Mods → Open Folder** opens. It is plain JSON, written when the 30 seconds are up and again when F9 exits the lab:
+
+- `shots` and `hits` have two entries. Index 0 is the straight baseline lane and index 1 is the homing lane.
+  Shots are each turret's `totalShots`; hits are `UnitDamageEvent`s on a lane's target from bullets its own
+  turret fired.
+- `simulationTicks` and `durationSeconds` (ticks / 60) are simulation time, which stops while the game is
+  paused.
+- `finished` is `false` if F9 ended the run before 30 seconds. Those counts are not a finished comparison.
+
+A lane with zero shots has no hit percentage. The counts describe this scripted arena only: they don't prove
+where a log came from, and they are not a normal-play benchmark.
+
+Optional: ModLab's [run log viewer](https://github.com/liubrain39/universal-modder-run-log-viewer) (MIT, by
+this example's author) is a static page that shows both lanes, checks the counts and timing, and previews or
+downloads the selected run as CSV. Served locally with `python3 -m http.server`, it reads the file in the
+browser and sends it nowhere.
+
 ## Recorded verification
 
 The [existing field note](../../knowledge/games/mindustry/mindustry-160-7-a-reproducible-json-and-javascript-homing-la.md)

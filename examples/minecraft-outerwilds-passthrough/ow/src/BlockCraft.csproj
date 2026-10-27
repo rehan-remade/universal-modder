@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>BlockCraft</AssemblyName>
+    <RootNamespace>BlockCraft</RootNamespace>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <NoWarn>MSB3270</NoWarn>
+    <DebugType>portable</DebugType>
+    <!-- Where `dotnet build` drops the mod. Build locally with -p:ModDir=../../build to check
+         compilation without touching the installed mod. Default is the live OWML mods folder. -->
+    <ModDir Condition="'$(ModDir)' == '' and '$(OS)' == 'Windows_NT'">$(AppData)/OuterWildsModManager/OWML/Mods/SvenTheRedPanda.BlockCraft</ModDir>
+    <ModDir Condition="'$(ModDir)' == '' and '$(OS)' != 'Windows_NT'">$(HOME)/.local/share/OuterWildsModManager/OWML/Mods/SvenTheRedPanda.BlockCraft</ModDir>
+    <OutputPath>$(ModDir)</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="OWML" Version="2.16.3" />
+    <PackageReference Include="OuterWildsGameLibs" Version="1.1.16.1372" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="manifest.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="default-config.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

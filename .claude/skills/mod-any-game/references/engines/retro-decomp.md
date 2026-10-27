@@ -55,6 +55,12 @@ decomp can take billions of tokens.
   - existing editors: Lunar Magic (SMW), Wiimm's SZS tools (Mario Kart Wii tracks), Pokémon hacking tools.
 - **Dolphin:** texture packs, Gecko/AR codes, Riivolution patches for GameCube/Wii.
 
+## On the console itself
+Custom firmware loads replacement files over a game's RomFS without touching the game: LayeredFS reads
+`/luma/titles/<title ID>/romfs/` with Luma3DS (3DS) and `/atmosphere/contents/<title ID>/romfs/` with
+Atmosphère (Switch). Install it on the user's own console, by the community guide and only once they agree.
+The rules are in `../safety.md` (Consoles).
+
 ## Pitfalls
 - Some recomp/decomp communities ban AI-generated contributions. Respect each project's rules and disclose
   AI use.

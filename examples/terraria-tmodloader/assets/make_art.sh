@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Rebuilds FalArsenal/Assets/*.png and FalArsenal/icon.png from fal-generated art, with the repo's CLI.
 #
-#   ./make_art.sh                   # build the sprites; raw art missing from gen/ is generated (FAL_KEY)
+#   ./make_art.sh                   # build the sprites; raw art missing from gen/ is generated (fal key)
 #   GEN=~/my-art ./make_art.sh      # raw art somewhere else; OUT=... / ICON=... redirect the results
 #
 # 1. fal flux/dev draws each object on a flat white background -> gen/<name>.png (1024x1024). The art

@@ -112,3 +112,37 @@ Search "<game> modding wiki" before reverse engineering anything.
 ## Frostbite (Battlefield, Mass Effect Andromeda, Dragon Age, FIFA)
 Frosty Tool Suite supports specific single-player titles. Most modern Frostbite games ship EA Javelin
 kernel anti-cheat: offline single-player only, if at all.
+
+## Avalanche engine (Just Cause 3; same archive family: theHunter: Call of the Wild, Just Cause 4, Generation Zero)
+Verified first-hand on Just Cause 3 only: read
+`knowledge/games/just-cause-3/vehicle-mesh-editing-added-geometry-loads-with-matching-toc.md` before touching
+any Avalanche title. The other titles share the texture and archive family per ApexToolset's docs
+(`github.com/PredatorCZ/ApexToolset`, archived), not by test.
+- **Route: the `dropzone/` folder.** Files at their VFS path under `<game>/dropzone/` override the archives;
+  no loader or DLL. An entity (e.g. a vehicle) is one `.ee` archive (AAF-compressed SARC) plus a **`.ee.toc`**
+  index beside it.
+- **Tools:** Gibbed.JustCause3 (`Unpack` for `.tab`/`.arc` archives with `-f <regex>`, `SmallUnpack`/
+  `SmallPack` for `.ee`, `ConvertAdf` for `.vmodc`/ADF modules, `ConvertProperty` for `.epe`/RTPC,
+  `ConvertTexture` for `.ddsc`, `HashName`), Deca (browser), the Gibbed `*.filelist` name lists.
+  Gibbed's public `ConvertTexture` only exports (element 0 to `.dds`); the
+  `tim42/gibbed-justcause3-tools-fork` build also imports `.ddsc` (round-trips byte-identically,
+  one element only; `write-to-hmddsc` import threw in the JC3 test), and ApexToolset's `ddscConvert`
+  converts both ways and writes `.hmddsc`. `jc3-console-thingy` (an `xinput9_1_0.dll` proxy) spawns
+  entities. JC Model Renderer v0.12.3 reads, renders and exports vehicle models but can't import into
+  them (the `develop` rewrite has no vehicle blocks); `Brooen/RBM-Exporter` (Blender) writes plain
+  CarPaint, Window and CarLight blocks.
+- **Rules that cost the most to learn:**
+  - Regenerate the `.ee.toc` for any size-changing build; a stale one makes the game read garbage and crash.
+    A `.toc` offset of 0 means "take the current copy from the archives", so a modified file left at 0 is
+    silently ignored.
+  - The `.ee` often carries **stale pre-patch copies** of files whose live version is in `patch_win64`.
+    Find the newest copy by the path's name hash in the `.tab` indexes before editing.
+  - New mesh (`.rbm`) paths aren't loaded; new texture (`.ddsc`) paths are. At vanilla texture paths, the
+    archives' streamed `.hmddsc` high mips override the `.ee`.
+  - `settings/asset_memory_budgets.bin` caps texture and model memory per asset class. Over the hard cap,
+    a whole vehicle silently disappears.
+  - The property writer zeroes alignment padding that the game fills with `0x50`; diff against the original
+    and restore it before shipping an `.epe`.
+- **Formats worth knowing:** RBMDL models (blocks closed by `0x89ABCDEF`; the vehicle paint block
+  CarPaintMM's constants match its shader cbuffers byte for byte), Havok 2014 `.physicsc` (class names in
+  `__classnames__`), ADF `.vmodc` modules readable by name via `ConvertAdf`.

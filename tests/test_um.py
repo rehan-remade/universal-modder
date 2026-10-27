@@ -67,9 +67,10 @@ def test_gamemaker_and_rpgmaker(tmp_path):
     assert engine_of(tmp_path / "b", {"www/js/rpg_core.js": "//", "Game.exe": b"MZ"})[0] == "rpgmaker-mvmz"
 
 
-def _pe(managed=True, arch=0x14C, pad=0):
+def _pe(managed=True, arch=0x14C, pad=0, dirs=16):
     # minimal PE (x86 PE32 by default, PE32+ for arch=0x8664), optionally with a CLR header
-    # directory entry, padded by `pad` bytes so tests can control file sizes
+    # directory entry, padded by `pad` bytes so tests can control file sizes. `dirs` is the
+    # declared NumberOfRvaAndSizes; the section table begins right after the declared directories.
     pe = bytearray(1024 + pad)
     pe[0:2] = b"MZ"
     struct.pack_into("<I", pe, 0x3C, 0x80)
@@ -77,6 +78,7 @@ def _pe(managed=True, arch=0x14C, pad=0):
     struct.pack_into("<H", pe, 0x84, arch)
     opt = 0x80 + 24
     struct.pack_into("<H", pe, opt, 0x20B if arch == 0x8664 else 0x10B)
+    struct.pack_into("<I", pe, opt + (108 if arch == 0x8664 else 92), dirs)
     if managed:
         struct.pack_into("<I", pe, opt + (112 if arch == 0x8664 else 96) + 14 * 8, 0x2000)
     return bytes(pe)
@@ -86,6 +88,18 @@ def test_managed_pe(tmp_path):
     p = tmp_path / "Game.exe"
     p.write_bytes(_pe())
     assert scan.pe_info(p) == {"arch": "x86", "managed": True}
+
+
+def test_short_data_directory_pe_is_not_managed(tmp_path):
+    # NumberOfRvaAndSizes may be fewer than 16; the section table then follows, and its
+    # bytes must not read as a CLR directory RVA - a native exe took the .NET route (#441).
+    # Bytes where the 15th slot would sit are section-table data, deliberately nonzero.
+    pe = bytearray(_pe(managed=False, arch=0x8664, dirs=6))
+    opt = 0x80 + 24
+    struct.pack_into("<I", pe, opt + 112 + 14 * 8, 0xDEADBEEF)  # section bytes, not a CLR RVA
+    p = tmp_path / "Game.exe"
+    p.write_bytes(bytes(pe))
+    assert scan.pe_info(p) == {"arch": "x64", "managed": False}
 
 
 @pytest.mark.parametrize("bin_dir", ["Win64_Shipping_Client", "Gaming.Desktop.x64_Shipping_Client"])
@@ -437,6 +451,14 @@ def test_mindustry_route(tmp_path, name):
     assert all(rt["route"] != scan.ENGINES["java"][2] for rt in r["routes"])
 
 
+@pytest.mark.parametrize("name", ["The Binding of Isaac Rebirth", "isaac"])
+def test_isaac_route(tmp_path, name):
+    # the Steam folder has no colon, so the Lua route must come from isaac-ng.exe, ahead of the native proxy-DLL one
+    r = _named_game(tmp_path, name, {"isaac-ng.exe": _pe(False), "resources/packed/graphics.a": b"x"})
+    assert r["routes"][0]["route"] == scan.KNOWN["the binding of isaac: rebirth"][0]
+    assert r["routes"][0]["playbook"] == "isaac.md" and r["routes"][0]["why"] == "known game"
+
+
 def test_vdf():
     d = scan._vdf('"AppState" { "appid" "105600" "name" "Terraria" "installdir" "Terraria" }')
     assert d["AppState"]["installdir"] == "Terraria"
@@ -554,6 +576,111 @@ def test_scan_warns_only_for_online_games(tmp_path):
         for i in range(6):
             (d / f"f{i}.txt").write_text("x")
         assert any("online competitive" in w for w in scan.scan(str(d))["warnings"]) == warned, name
+
+
+def _fake_host(monkeypatch, os_name, machine, wsl=False):
+    import platform
+    monkeypatch.setattr(scan, "is_mac", lambda: os_name == "macos")
+    monkeypatch.setattr(scan, "is_windows", lambda: os_name == "windows")
+    monkeypatch.setattr(scan, "is_wsl", lambda: wsl)
+    monkeypatch.setattr(platform, "machine", lambda: machine)
+
+
+def test_host_info_names_the_cpu_like_the_exes(monkeypatch):
+    # the host's `arch` must compare directly with an exe's `arch` in the report (x86, x64, arm64)
+    for machine, arch in [("x86_64", "x64"), ("AMD64", "x64"), ("arm64", "arm64"), ("aarch64", "arm64"),
+                          ("i386", "x86"), ("i686", "x86"), ("riscv64", "riscv64")]:
+        _fake_host(monkeypatch, "linux", machine)
+        assert scan.host_info()["arch"] == arch, machine
+
+
+def test_host_info_per_os_and_wsl(monkeypatch):
+    import platform
+    _fake_host(monkeypatch, "macos", "arm64")
+    monkeypatch.setattr(platform, "mac_ver", lambda: ("26.5.1", ("", "", ""), "arm64"))
+    h = scan.host_info()
+    assert h == dict(os="macos", os_version="26.5.1", arch="arm64", wsl=False, translated=False)
+    assert scan.host_line(h) == "macOS 26.5.1, arm64"
+
+    _fake_host(monkeypatch, "windows", "AMD64")
+    monkeypatch.setattr(platform, "version", lambda: "10.0.26100")
+    h = scan.host_info()
+    assert (h["os"], h["arch"], h["wsl"]) == ("windows", "x64", False)
+    assert scan.host_line(h) == "Windows 10.0.26100, x64"
+
+    _fake_host(monkeypatch, "linux", "x86_64")
+    monkeypatch.setattr(platform, "freedesktop_os_release", lambda: {"PRETTY_NAME": "Ubuntu 24.04.1 LTS"})
+    assert scan.host_line(scan.host_info()) == "Ubuntu 24.04.1 LTS, x64"
+    monkeypatch.setattr(platform, "freedesktop_os_release", lambda: (_ for _ in ()).throw(OSError("no os-release")))
+    monkeypatch.setattr(platform, "release", lambda: "6.8.0")
+    assert scan.host_line(scan.host_info()) == "Linux 6.8.0, x64"
+
+    # WSL is Linux to Python but a Windows host for games: the line must say so, and never suggest Proton territory
+    _fake_host(monkeypatch, "linux", "x86_64", wsl=True)
+    monkeypatch.setattr(platform, "freedesktop_os_release", lambda: {"PRETTY_NAME": "Ubuntu 22.04.5 LTS"})
+    h = scan.host_info()
+    assert h["wsl"] is True and scan.host_line(h) == "Windows via WSL (Ubuntu 22.04.5 LTS), x64"
+
+
+def test_host_info_sees_through_rosetta(monkeypatch):
+    import platform
+    import subprocess
+    monkeypatch.setattr(platform, "mac_ver", lambda: ("26.5.1", ("", "", ""), "x86_64"))
+
+    def sysctl(out=None, error=None):
+        def run(*a, **k):
+            if error:
+                raise error
+            return subprocess.CompletedProcess(a, 0, stdout=out, stderr="")
+        return run
+
+    _fake_host(monkeypatch, "macos", "x86_64")
+    monkeypatch.setattr(scan.subprocess, "run", sysctl("1\n"))
+    h = scan.host_info()                      # x86_64 Python translated on an Apple Silicon Mac
+    assert h["arch"] == "arm64" and h["translated"] is True
+    assert scan.host_line(h) == "macOS 26.5.1, arm64 (Python runs under Rosetta)"
+    for out, error in [("0\n", None), ("", None), (None, OSError("no sysctl"))]:   # a real Intel Mac, or no answer
+        monkeypatch.setattr(scan.subprocess, "run", sysctl(out, error))
+        h = scan.host_info()
+        assert h["arch"] == "x64" and h["translated"] is False
+
+
+def test_scan_report_starts_with_the_host(tmp_path):
+    d = tmp_path / "Some Game"
+    d.mkdir()
+    for i in range(6):
+        (d / f"f{i}.txt").write_text("x")
+    r = scan.scan(str(d))
+    assert set(r["host"]) == {"os", "os_version", "arch", "wsl", "translated"}   # the same keys on every host
+    assert json.loads(json.dumps(r))["host"] == r["host"]           # machine-readable for agents
+    lines = scan.format_report(r).splitlines()
+    assert lines[1].startswith("  path:") and lines[2].startswith("  host:      ")
+
+
+def test_scan_warns_when_windows_exes_meet_a_non_windows_host(tmp_path, monkeypatch):
+    def folder(name, exe):
+        d = tmp_path / name
+        d.mkdir()
+        for i in range(6):
+            (d / f"f{i}.txt").write_text("x")
+        (d / "game.exe" if exe else d / "game.x86_64").write_bytes(_pe(managed=False, arch=0x8664) if exe else b"\x7fELF")
+        return d
+
+    def host(os_name, wsl=False):
+        return dict(os=os_name, os_version="1.2", arch="arm64", wsl=wsl, translated=False)
+
+    def warning(h, d):
+        monkeypatch.setattr(scan, "host_info", lambda: h)
+        return next((w for w in scan.scan(str(d))["warnings"] if "not native" in w), None)
+
+    pe, native = folder("Windows build", True), folder("Native build", False)
+    for h in (host("macos"), host("linux")):
+        w = warning(h, pe)
+        assert w and scan.host_line(h) in w and "compatibility.md" in w, h       # one line, naming the host and where to read
+        assert "\n" not in w
+    assert warning(host("windows"), pe) is None
+    assert warning(host("linux", wsl=True), pe) is None                          # WSL counts as Windows
+    assert warning(host("macos"), native) is None                                # no PE exes: no claim
 
 
 def test_ffmpeg_download_is_checksummed(tmp_path, monkeypatch):
@@ -737,6 +864,46 @@ def test_publish_check_mod_inside_game(tmp_path, capsys):
     assert "copied.bin" in out and "page.png" not in out
 
 
+def test_publish_check_mod_installed_in_loader_folder(tmp_path, capsys):
+    # a UMM mod repo installed to <game>/Mods/<Id>/ (and a BepInEx build in plugins/<dll>/) matched its own copy
+    info = '{"Id": "N7MassEffect", "AssemblyName": "N7MassEffect.dll"}'
+    make(tmp_path / "mod", {"src/N7/Info.json": info + " " * 64, "src/N7/Assets/n7.png": b"i" * 4096,
+                            "src/N7/bin/N7MassEffect.dll": b"d" * 4096, "README.md": "My mod"})
+    make(tmp_path / "game", {"Data/big.bin": b"x" * 4096, "Mods/N7MassEffect/Info.json": info + " " * 64,
+                             "Mods/N7MassEffect/Assets/n7.png": b"i" * 4096,
+                             "BepInEx/plugins/N7MassEffect/N7MassEffect.dll": b"d" * 4096,
+                             "Mods/SomeoneElse/theirs.bin": b"z" * 4096})
+    assert publish.check(str(tmp_path / "mod"), str(tmp_path / "game")) == 0
+    # genuine game files still fail, including another mod's files under Mods/
+    (tmp_path / "mod" / "copied.bin").write_bytes(b"x" * 4096)
+    (tmp_path / "mod" / "theirs.bin").write_bytes(b"z" * 4096)
+    assert publish.check(str(tmp_path / "mod"), str(tmp_path / "game")) == 1
+    out = capsys.readouterr().out.replace("\\", "/")
+    assert "copied.bin" in out and "Mods/SomeoneElse/theirs.bin" in out and "n7.png" not in out and "N7MassEffect.dll" not in out
+    assert "not compared, this mod's own installed copy: BepInEx/plugins/N7MassEffect/, Mods/N7MassEffect/" in out
+
+
+def test_publish_check_own_installed_copy_is_named_by_metadata_only(tmp_path, capsys):
+    # only the mod's own metadata names its installed folder; a DLL it merely bundles doesn't
+    csproj = "<Project><PropertyGroup><AssemblyName>N7</AssemblyName></PropertyGroup></Project>"
+    make(tmp_path / "mod", {"README.md": "My mod", "src/N7Plugin.csproj": csproj, "bin/N7.dll": b"n" * 4096,
+                            "lib/ModMenu.dll": b"m" * 4096, "lib/Foo.dll": b"f" * 4096,
+                            "lib/Assembly-CSharp.dll": b"g" * 4096})
+    make(tmp_path / "game", {"BepInEx/plugins/N7.dll": b"n" * 4096,         # this mod, flat in plugins/
+                             "BepInEx/plugins/N7/N7.dll": b"n" * 4096,      # this mod, in its own folder
+                             "Mods/ModMenu/ModMenu.dll": b"m" * 4096,       # another mod it references
+                             "Mods/Foo/Foo.dll": b"f" * 4096,               # a folder the game ships under Mods/
+                             "Game_Data/Managed/Assembly-CSharp.dll": b"g" * 4096,
+                             "BepInEx/plugins/N7/Assembly-CSharp.dll": b"g" * 4096})   # copied in by the build
+    assert publish.check(str(tmp_path / "mod"), str(tmp_path / "game")) == 1
+    out = capsys.readouterr().out.replace("\\", "/")
+    fails = [ln for ln in out.splitlines() if ln.startswith("FAIL ")]
+    assert len(fails) == 3 and not any("bin/N7.dll" in ln for ln in fails)
+    assert "lib/ModMenu.dll  (== Mods/ModMenu/ModMenu.dll)" in out and "lib/Foo.dll  (== Mods/Foo/Foo.dll)" in out
+    assert "lib/Assembly-CSharp.dll  (== Game_Data/Managed/Assembly-CSharp.dll)" in out
+    assert publish._own_names([tmp_path / "mod" / "src/N7Plugin.csproj"]) == {"n7"}
+
+
 @pytest.mark.parametrize("label,key", [
     # assembled at runtime so this file doesn't trip the toolkit's own publish check
     ("OpenAI key", "sk-" + "proj-" + "Ab3_dE-f" + "Gh1jK2lM3nO4pQ5rS6tU7vW8xY9z0" * 4),
@@ -744,6 +911,8 @@ def test_publish_check_mod_inside_game(tmp_path, capsys):
     ("OpenAI key", "sk-" + "Gh1jK2lM3nO4pQ5rS6tU7vW8xY9z0" * 2),
     ("GitHub token", "github" + "_pat_" + "11ABCDEFG0123456789abc" + "_" + "aB3dE5fG7hJ9kL1mN3pQ5rS7tU9vW1xY3zA5bC7dE9fG1hJ3kL5mN7pQ9rS1t"),
     ("GitHub token", "gh" + "p_" + "aB3dE5fG7hJ9kL1mN3pQ5rS7tU9vW1xY3z"),
+    ("Sprixen key", "spx_" + "live_" + "Gh1jK2lM3nO4pQ5rS6tU7vW8xY9z0" * 2),
+    ("Voidless key", "VOIDLESS_API_KEY=" + "void_" + "Gh1jK2lM3nO4pQ5rS6tU7vW8xY9z0"),
 ])
 def test_secret_patterns_catch_current_key_formats(label, key):
     rx = dict(publish.SECRET_PATTERNS)[label]
@@ -751,7 +920,8 @@ def test_secret_patterns_catch_current_key_formats(label, key):
 
 
 def test_secret_patterns_ignore_ordinary_text():
-    text = "sk-learn-style-kebab-case-identifiers-are-not-keys and github_pat_ alone"
+    text = ("sk-" + "learn-style-kebab-case-identifiers-are-not-keys and github_pat_ alone, "
+            "static void " + "void_" + "callback_handler_with_a_long_descriptive_name(void);")
     assert not [label for label, rx in publish.SECRET_PATTERNS if rx.search(text)]
 
 
@@ -782,6 +952,22 @@ def test_compile_small_edl(tmp_path):
     video.compile_edl(tmp_path / "edl.json", str(tmp_path / "out.mp4"))
     info = video.probe(tmp_path / "out.mp4")
     assert abs(info["duration"] - (2 + 2 + 1.5)) < 0.15 and info["audio"]
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg")
+def test_compile_preview_keeps_size_even(tmp_path):
+    # 4:5 portrait: half of 1080x1350 is 540x675, and libx264 refuses an odd height in yuv420p
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=1080x1350:d=2:r=30", "-f", "lavfi", "-i", "sine=f=440:d=2",
+                    "-shortest", str(tmp_path / "c.mp4")], check=True)
+    edl = {"size": [1080, 1350], "fps": 30, "segments": [{"clip": "c.mp4", "dur": 1.0}, {"card": {"title": "The end"}, "dur": 1.0}]}
+    (tmp_path / "edl.json").write_text(json.dumps(edl))
+    video.compile_edl(tmp_path / "edl.json", str(tmp_path / "out.mp4"), preview=True)
+    info = video.probe(tmp_path / "out.mp4")
+    assert (info["width"], info["height"]) == (540, 674)
+
+    (tmp_path / "edl.json").write_text(json.dumps(dict(edl, size=[1080, 1351])))
+    with pytest.raises(SystemExit):
+        video.compile_edl(tmp_path / "edl.json", str(tmp_path / "odd.mp4"))
 
 
 @pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg")
@@ -879,7 +1065,25 @@ def test_kb_check_warns_on_links_to_missing_notes(tmp_path):
     sib.write_text(head + "Next to [real](real.md) and [gone](./gone.md).\n", encoding="utf-8")
     _, warns = kb.check_note(sib, root)
     assert [w for w in warns if "does not exist" in w] == [
-        "link to a note that does not exist: ./gone.md (links are relative to this note's folder)"]
+        "link to a note that does not exist: ./gone.md (links are relative to this note's folder; "
+        "if the file lives in another repo, link to it on GitHub instead)"]
+
+
+def test_kb_check_counts_numbered_gotchas_written_as_subheadings(tmp_path):
+    note = tmp_path / "n.md"
+    head = ("---\nkind: game\ntitle: t\ngame: X\nengine: unity-mono\nroute: managed-patch\nstatus: working\n"
+            "date: 2026-10-21\nagents: [a]\n---\n# t\n")
+    note.write_text(head + "\n## Gotchas\n\n1. **Symptom.** **Cause:** **Fix:**\n", encoding="utf-8")
+    _, warns = kb.check_note(note)
+    assert not [w for w in warns if "Gotchas" in w]
+    # a numbered subheading is a numbered item too
+    note.write_text(head + "\n## Gotchas\n\n### 1. Symptom\n\nCause and fix.\n", encoding="utf-8")
+    _, warns = kb.check_note(note)
+    assert not [w for w in warns if "Gotchas" in w]
+    # an unnumbered list still warns
+    note.write_text(head + "\n## Gotchas\n\n- Symptom, cause, fix.\n", encoding="utf-8")
+    _, warns = kb.check_note(note)
+    assert [w for w in warns if "Gotchas" in w] == ["Gotchas section has no numbered items"]
 
 
 def test_kb_check_rejects_secrets_and_dumps(tmp_path):

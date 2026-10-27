@@ -7,32 +7,38 @@ game_version: 'Steam release build, JustCause3.exe timestamp 0x5787641c (2016); 
 platform: windows
 engine: native
 route: asset-only
-tools: ["Gibbed.JustCause3.SmallUnpack", "Gibbed.JustCause3.SmallPack", "Gibbed.JustCause3.ConvertAdf", "Gibbed.JustCause3.ConvertProperty", "Gibbed.HashName", "custom Python RBM codec + PSKX importer (see Build steps)"]
+tools: ["Gibbed.JustCause3.SmallUnpack", "Gibbed.JustCause3.SmallPack", "Gibbed.JustCause3.ConvertAdf", "Gibbed.JustCause3.ConvertProperty", "Gibbed.JustCause3.ConvertTexture (tim42 fork)", "Gibbed.HashName", "UE Viewer (umodel)", "Blender 5.2 (headless decimation)", "custom Python RBM codec, PSKX importer, BC1/BC5 encoder, .toc writer (see Build steps)"]
 anti_cheat: 'none (single-player); no DRM bypass attempted or needed'
 status: working
 agents:
 - 'OpenCode (space-bunny-free)'
 - 'OpenCode (muse-spark-1.3)'
+- 'Claude Code (Opus 5.5)'
+- 'OpenCode (deepseek-v4.1-flash-free)'
 humans: ['@NotTrevino']
-date: '2026-10-11'
+date: '2026-10-12'
 links:
 - https://github.com/aaronkirkham/jc-model-renderer
 - https://github.com/aaronkirkham/ava-format-lib
 - https://github.com/aaronkirkham/jc3-console-thingy
 - https://github.com/Brooen/RBM-Exporter
+- https://github.com/PredatorCZ/ApexToolset
+- https://github.com/tim42/gibbed-justcause3-tools-fork
 - https://videogamemods.com/vgm/justcause3/mods/meme-vehicle-pack
 - https://videogamemods.com/u/lukejc3mp-0021
-tags: ['vehicles', 'mesh', 'rbm', 'avalanche-engine', 'havok', 'gibbed', 'reverse-engineering', 'toc', 'palette', 'pskx-pipeline']
+tags: ['vehicles', 'mesh', 'rbm', 'avalanche-engine', 'havok', 'gibbed', 'reverse-engineering', 'toc', 'palette', 'pskx-pipeline', 'textures', 'materials', 'memory-budget', 'physics-stations']
 ---
 
 # Vehicle mesh editing: added geometry loads with a matching .ee.toc
 
 > I reshaped a Just Cause 3 vehicle from a muscle convertible into a low wide wedge by
 > rewriting vertex positions in its model files, repacking the vehicle archive and
-> dropping it in the dropzone. Then I replaced the whole body with a custom mesh —
-> tens of thousands of new triangles across a five-file LOD chain — and that loads
-> and drives too, in black paint on custom wheels. As of this writing a black
-> custom-body car is confirmed in game; the newest full-asset build awaits launch.
+> dropping it in the dropzone. Then I replaced the whole car with a custom one imported
+> from an Unreal skeletal mesh: a true-scale 7 m body with its own four wheels, physics
+> stations moved to match, real tinted glass, and 20 converted textures. That loads,
+> drives quietly and is textured in game (latest confirmed: per-material blocks with
+> budget-fitted textures). The newest build — every material translated input by input
+> from the source engine's material model — is verified offline only.
 >
 > The middle of this story is a retracted verdict worth reading. I concluded the
 > engine rejects *any* vertex- or index-count change and closed off added geometry
@@ -43,6 +49,12 @@ tags: ['vehicles', 'mesh', 'rbm', 'avalanche-engine', 'havok', 'gibbed', 'revers
 > file could not be written at all and closed off a whole route on that basis. It was
 > wrong. The tool was lossy in a specific, repairable way, and after fixing it the file
 > round-trips and the vehicle loads. See Gotcha 1.
+>
+> The last lesson is about method. For a long stretch each in-game problem (white stripes,
+> muddy tyres, wrong gloss) got its own patch. The real cause of all of them was one thing:
+> the new blocks silently inherited a donor vehicle's material constants. The fix was to
+> model both renderers' material interfaces and translate every input by a tagged rule —
+> see "Materials".
 
 ## Setup
 
@@ -94,6 +106,10 @@ and treats an entry at offset 0 as patched, i.e. not stored in this archive.
 - New `.rbm` files at paths the vanilla entity never had are **not loaded**, even with a
   correct `.toc` record. New `.lod` files pointing at already-listed meshes are fine.
   Rule: **ship meshes at vanilla `.rbm` paths** (every Serpente part owns up to 5).
+- New **`.ddsc` texture** files at new paths, by contrast, **do load** (20 of them under
+  `models/.../textures/batmobile/`, appended to the `.toc` before the root `.epe` record).
+  Prefer new texture paths: at vanilla paths the archives' streamed `.hmddsc` high mips
+  override whatever the `.ee` carries (see Textures).
 
 ## How the game works (what we had to learn)
 
@@ -125,13 +141,17 @@ radius 0.38 m. Visual wheel meshes are centered at origin — the engine places 
 hardpoints, which was proven by contradiction (mesh-position rendering would stack all
 four at the car center).
 
-**The physics stays baked — visuals must sit on it.** The body's collision is a Havok
-`hknpExternMeshShape` inside `<entity>.physicsc` (Havok 2014.1 serialised binary), and the
-wheel RAY stations are baked in the same file as plain `(x,y,z,1.0)` float quads. Moving
-visuals off the RAYs splits physics from rendering: a 0.39 m front-axle split shook the
-front wheels from the first frame while the 0.09 m rear split stayed quiet. There is no
-public tool that authors this file, so stance comes from the body side, never from the
-hardpoints.
+**Physics and visuals must come from the same numbers.** The body's collision is a Havok
+`hknpExternMeshShape` inside `<entity>.physicsc` (Havok 2014.1 serialised binary) that
+follows whatever render mesh loads — a 7 m body got 7 m collision with no physics edit.
+The wheel RAY stations are baked in the same file as plain `(x,y,z,1.0)` float quads, and
+visual wheels are drawn at the `land_global.vmodc` hardpoints. Moving one without the other
+splits physics from rendering: a 0.39 m front-axle split shook the front wheels from the
+first frame. Moving **both** works: the four quads (found by their vanilla values, matched
+to corners by the sign of x and z) and the four hardpoints, wheel `radius`, `rim_radius`,
+`width` and `ground_clearance` in `land_global`, all written from one stations file the
+mesh importer also uses — a 5.03 m wheelbase / 2.4–2.6 m track / Ø1.37 m wheel car drives
+with no jitter. Same-size in-place float writes; Havok accepted the edited quads.
 
 **Render block layout (RBMDL).** A header, then N blocks; each block ends with a
 `0x89ABCDEF` checksum. Buffers inside a block are a count followed by count × stride
@@ -175,7 +195,121 @@ loads and drives. There is no unseen count expectation.
 (1,897 B, record internal in the vanilla `.toc`) decodes via `ConvertAdf` into 10 named
 tints, each a ColorRGBA + gloss/metallic/clear-coat. In-place float patching (same size,
 assert every old value) repaints the whole car — all ten tints set to gunmetal black
-loads and drives.
+loads and drives. The palette only reaches blocks flagged `SUPPORT_PALETTE_FILE` (`0x8`);
+a block without that flag uses its **own** tint colours (see Materials), which is how to
+give different materials different fixed colours.
+
+**Memory budgets: why a whole vehicle can vanish.** `settings/asset_memory_budgets.bin`
+(RTPC, read with `ConvertProperty`) gives every asset class a `[soft, hard]` KB pair per
+kind. Vanilla `Vehicle-*HD*`: Model `[4096, 4915]`, Texture `[6144, 7065]`. Go over the
+hard value and the **entire vehicle** — render and the render-mesh-driven collision — never
+appears: invisible, intangible, no crash. A shipped modpack raises only the second number
+(texture 7,065 → 113,040), which identifies it as the hard cap. What counts is what the
+**bound parts load**: full-chain textures resident in the `.ee` count in full (vanilla keeps
+its high mips in streamed `.hmddsc`, so its `.ee` holds ~1.9 MB of low mips); for meshes,
+every LOD of the bound parts. 20 full-chain 1024² textures (~21.7 MB) vanished the car;
+the same set sized to fit loaded. Budget from the game's own file: (hard − vanilla resident)
+× 0.9, then shrink textures greedily by bytes per m² of surface they cover, and refuse to
+build if the meshes exceed the model cap.
+
+**Textures.** A `.ddsc` is an Avalanche texture container (`AVTX`). The `ConvertTexture.exe`
+used here exported `x.ddsc` to `x.xml` + `x0.dds` (one standard DDS of the largest
+element, element 0 here), and **`ConvertTexture.exe x.xml` imported** it back
+(round-trips byte-identically). It is not public Gibbed master — master's `ConvertTexture`
+(unchanged since 2018) only writes element 0 to a `.dds`, and its `TextureFile.Serialize`
+throws `NotImplementedException`. The build that imports is
+**`tim42/gibbed-justcause3-tools-fork`**, a fork of Gibbed's JC3 tools "as of revision 13"
+(changes by Timothée Feuillet) whose README lists "A texture serializer and deserializer
+that supports both `.ddsc` files and their `.hmddsc` counterparts". The README points to
+binaries at `justcause3mods.com/mods/modified-gibbeds-tools/`; that site answered HTTP 410
+Gone on 2026-10-20 (the Wayback Machine has a copy of the page from 2025-08-18), and the
+source is on GitHub. The binary used is `Gibbed.JustCause3.ConvertTexture.exe`, 14,336 B,
+assembly version 1.0.0.0, SHA-256
+`2A5A7A5915016A5B4C733E2F7005F464EA6674069A24BC7AE0FE86EF58065600`; whether it matches the
+binary that site published was not checked. Import is name-driven: it reads
+`<output-base>N.dds`, where N is the largest element (0 for the `.ee` car textures here),
+so the XML and the element DDS must share a base (`ConvertTexture.exe x.xml` with `x0.dds`
+beside it); passing a different output name fails with `FileNotFoundException` on
+`<name>0.dds`. Without a `.hmddsc` the fork's importer reads only that one element, and
+`write-to-hmddsc="True"` import threw here, so high mips stay blocked. PredatorCZ's
+archived `ApexToolset` (`ddscConvert`) converts AVTX and DDS both ways and can write a
+`.hmddsc` for JC3.
+
+Vanilla car textures keep only low mips in the `.ee` (element 0) and stream the high mips
+from `.hmddsc` in the archives — and at a vanilla path the `.hmddsc` wins, so `.ee`-only
+edits show only at distance. A texture that works at
+a new path with no `.hmddsc` (taken from a shipped mod): `write-to-hmddsc="False"`,
+`mip-count` = `hdr-mip-count` = all mips, **one** element at offset 128 holding the whole
+chain. Formats (from vanilla): colour 71 = BC1, normal 83 = BC5 (DDS `DX10` header +20 B).
+Header `flags`: bit `0x8` = sRGB colour (vanilla diffuse 9, masks/property/normal maps 1),
+bit `0x1` = has `.hmddsc`. A BC1 encoder in numpy (bounding-box endpoints) is enough; BC1's
+3-colour punch-through mode gives alpha-tested cut-outs.
+
+## Materials: translate the material model, not the textures
+
+The vehicle shader (CarPaintMM) is fully described by its reflection header, and the block
+bytes match it exactly — decode every field **by name** before changing anything. The
+constant-buffer layouts below match jc-model-renderer v0.12.3's `renderblockcarpaintmm.h`,
+and the flag values match it and RBM-Exporter (which also names `0x8`
+`SUPPORT_PALETTE_FILE`):
+
+- **Per block, static** (`static_params`, 288 B = 18 float4): SpecularGloss, Metallic,
+  ClearCoat, Emissive, DiffuseWrap, DirtParams, DirtBlend, DirtColor, DecalCount, DecalWidth,
+  Decal1–4Color, DecalBlend, Damage, DamageBlend, DamageColor; then `static_support`
+  (28 B = 7 floats): SupportDecals, SupportDmgBlend, SupportLayered, SupportOverlay,
+  SupportRotating, SupportDirt, SupportSoftTint. These floats are **separate from the
+  block's flag bits** — clearing a flag bit leaves its float on.
+- **Per block, dynamic** (`dynamic_params`, 76 B): TintColorR/G/B (+ unused float4) and
+  gloss/metallic/clear-coat overrides. The palette overrides these on palette blocks.
+- **Samplers:** s0 diffuse, s1 normal, s2 PropertyMap (`_mpm`), s3 TintMap (`_msk`),
+  s4 damage normal, s5 damage albedo, s6 dirt, s7–s9 decal albedo/normal/property.
+- **Flags:** decals `0x1`, damage blend `0x2`, dirt `0x4`, palette `0x8`, soft tint `0x10`,
+  layered `0x20`, overlay `0x40`, no backface culling `0x80`, alpha blend `0x100`, alpha test
+  `0x200`, deform `0x1000`, skinned `0x2000`. Only `0x20/0x40/0x1000/0x2000` change the
+  vertex buffers.
+- **Channels (inferred from vanilla data, not shader code):** gloss/metallic/clear-coat are
+  4-vectors, one component per material channel. The PropertyMap's RGB selects channels 1–3
+  (black = channel 0); the TintMap's RGB is the amount of tint colour R/G/B. The stock
+  Serpente: TintMap R only (one-colour paint), PropertyMap R = metallic clear-coated paint,
+  G = plastic, B = chrome.
+
+A source engine with a "separation mask selects material 0–3, each with colour/roughness/
+reflectivity" model (Batman: Arkham Knight, Unreal Engine 3, here) maps onto this almost one to one. Do it
+as a table, not by eye: resolve each source material's named parameters along its parent
+chain, give **every** source factor a disposition (mapped / approximated / no equivalent /
+engine-global / missing on disk) and set **every** CarPaintMM input by a rule with a source
+tag; then decode the written blocks and assert each input equals the spec. Template values
+must not survive unannotated — inherited donor constants were behind every visual bug here.
+
+## Importing a skeletal mesh (Unreal `.pskx`)
+
+- The chunked `ACTRHEAD` file holds far more than points: `PNTS0000`, `VTXW0000` (u32 point
+  index when >65,535 points), `FACE3200` (18-byte faces), `MATT0000`, `REFSKELT` (120-byte
+  bones), `RAWWEIGHTS` (weight, point, bone), `VERTEXCOLOR`, `EXTRAUVS0`. Walk chunk headers
+  by size; a scan for "4-letter ids" misses most of them.
+- **Units:** this asset is real centimetres — its tyres measure Ø1.37 m against a 1.40 m
+  reference. Import at ×0.01 and treat the physics as the thing that moves (see above).
+- **Handedness:** the PSK→JC3 map must be a **proper rotation**,
+  `(x, y, z) → (−y, z, −x)` for X-forward/Y-side/Z-up sources. A determinant −1 map looks
+  fine on a symmetric car and silently mirrors it. Check against the rig's own Left/Right
+  bone labels (56 of 56 agreed after the fix, 0 before), and set triangle winding so the
+  signed volume is **positive**, as on vanilla meshes.
+- **Parts from the skeleton, not name lists:** give each face its dominant bone from the
+  weights, classify bones by shape (round in the axle plane, full angular coverage =
+  spinning), take the `number_of_wheels` largest round parts as wheels, attach smaller
+  round parts only inside a wheel's radius, and move faces outside the tyre's circle back
+  to the body. Wheel meshes are built local to their hardpoint.
+- **Materials:** `umodel`'s `.mat` role map is a guess and was wrong (it labelled a normal
+  map "Diffuse"); read the `.props.txt` dumps. Vertex colours here were greyscale (not a
+  mask) and the second UV set was garbage on the main body.
+
+**Movement units, from the game's own numbers.** `vehicle_misc.official_top_speed` is km/h
+(equals the stat screen); `transmission.top_speed` is the km/h physics cap (just under the
+gearing's top-gear speed at the upshift rpm, given wheel radius and final drive);
+`land_engine.torque_factor_at_optimal_rpm` is peak torque in N·m (490 N·m → ~422 hp with
+the curve's falloff); `custom_land_global.extra_top_speed` tiers are km/h of boost;
+`land_aerodynamics.frontal_area` is m². Bigger wheels change gearing: re-derive the final
+drive or the drivetrain limit moves.
 
 **Registering a genuinely new vehicle** needs no patch to any DLL. The public console mod
 (`jc3-console-thingy`) hooks the game's property-file reader, lifts one property out of
@@ -196,13 +330,14 @@ table already lists it.
    land exactly on its `0x89ABCDEF` checksum, and the decoded float3 positions must
    reproduce the bounding box the engine itself stored in the file header. Validate the
    solver against a *known* layout first and require zero bbox error.
-4. Author meshes with the PSKX importer (`_import_part.py` + JSON specs, never hard-coded
-   per-asset code): select materials by substring, optionally split car corners and filter
-   connected components, fit uniformly against a reference bbox (length, or diameter for
-   axle-along-X wheels), clone a same-class template block, decimate in Blender, verify
-   (byte roundtrip, counts, u16 limit, finite floats). The test is a spec matrix, not
-   launches: regenerating the shipped wheel + five body LODs through the importer
-   reproduces them byte-identically.
+4. Author meshes in one pass with one transform: read the PSKX (geometry, skeleton,
+   weights), derive parts from the skeleton, compute the wheel stations from the asset,
+   translate every material into a block spec, convert the textures within the game's
+   budget, decimate each material separately in Blender (one block per material: CarPaintMM,
+   or Window for glass), and write the physics stations from the same numbers. Verify per
+   block (byte re-encode, counts, indices, positions, normal round trip) and against the
+   spec. Zero-area triangles left by decimation give zero normals that can't be packed —
+   give those vertices any unit normal.
 5. Render orthographic previews offline (side/top/front, z-buffered) and iterate there.
    This is the single highest-leverage thing in the whole workflow: it removes every
    game launch from the loop except the final confirmation.
@@ -253,16 +388,21 @@ Two lessons from this specific sequence:
   importer spec matrix reproducing shipped meshes byte-identically.
 - **In game:** the car spawns, drives, steers and brakes; a full custom body (five-file
   LOD chain, tens of thousands of new triangles) loads and drives in repainted black on
-  custom wheels.
+  custom wheels. True scale with moved physics: wheels sit in their arches, no jitter,
+  steering correct. Glass in a Window block inside the body file renders tinted.
+  Per-material blocks with 20 converted textures at new paths render (once under budget).
+- **Offline, against the spec:** a checker decodes every block of every output mesh and
+  compares each static/support/dynamic input, flag and texture slot with the translation
+  spec (185 blocks, 0 mismatches, 0 donor values inherited).
 - **Attribution:** minidump crashes are read by faulting module + offset (a stdlib-only
   reader is enough: exception stream + module list). Known signatures: repoint-at-stale-
   file `READ 0x8 @ JustCause3.exe+0x2d49e0`; stale-`.toc` garbage `table[garbage] @
   +0x197194a`; repeated single-offset `nvwgf2umx.dll` faults are the GPU driver, not the
   mod (hybrid-graphics laptop; the offset repeats across unrelated builds).
-- **Not verified:** authoring Havok collision (no public tool writes `.physicsc`); an
-  in-place RAY-quad patch (same-size plain floats — Havok validation unknown); real
-  textures (current paint is a flat palette tint); a stance change that keeps visuals on
-  the baked RAYs.
+- **Not verified:** authoring Havok collision from scratch (no public tool writes
+  `.physicsc`; not needed so far); the CarPaintMM channel semantics in game (inferred from
+  vanilla data); the fully translated material build (offline only); lore-derived
+  movement values (no in-game timing run).
 - **Not covered by this note:** JC3MP.
 
 ## Gotchas
@@ -387,26 +527,53 @@ Two lessons from this specific sequence:
 15. **Symptom:** wheels shake (and the nearby flank with them) from the first frame after
     moving hardpoints. **Cause:** the Havok wheel RAY stations are baked into `.physicsc`
     as plain `(x,y,z,1.0)` quads, while visuals follow `land_global`; splitting them
-    (0.39 m at the front axle, 0.09 m at the rear) shakes exactly the split axle.
-    **Fix:** keep visuals on the baked RAYs — do stance on the body side (re-fit the shell
-    over the true stations). An in-place RAY-quad patch is the same size and worth one
-    test, but Havok validation of it is unknown.
+    (0.39 m at the front axle, 0.09 m at the rear) shakes exactly the split axle. An
+    earlier "phasing" result after patching only the quads had the same root: the body
+    had been fitted separately from the wheels. **Fix:** derive body, wheels, hardpoints,
+    RAY quads, radius and width from **one** transform and one stations file; then the
+    quad patch works (Havok accepts it). Never fit parts separately.
+
+16. **Symptom:** white racing stripes appear on a new body. **Cause:** the template block's
+    decal layer (`0x1` and `SupportDecals`) samples the second UV set, and the importer
+    had copied UV2 from the nearest donor vertex — projecting the donor's livery onto the
+    new shape. **Fix:** set the decal switches from the source material (off here).
+
+17. **Symptom:** tan mud on tyres whose textures are clean (mean RGB 31). **Cause:** the
+    dirt layer (`0x4`, `SupportDirt`, `DirtColor`) inherited from the template. **Fix:** as
+    above — every switch and constant from the source material, never from the template.
+
+18. **Symptom:** the whole vehicle is invisible and you drive through where it should be;
+    no crash. **Cause:** the texture (or model) memory budget's hard cap. **Fix:** size
+    resident textures to the budget (see "Memory budgets") or ship a raised budget file,
+    which changes every vehicle.
+
+19. **Symptom:** speed edits do nothing sensible (top speed stuck far below the target).
+    **Cause:** the edited engine module was the `.ee`'s stale pre-patch copy (it also lacked
+    a member the patch added, `overdrive_extra_rpm`), internalized over the live one.
+    **Fix:** Gotcha 13 applies to every module — list each module's `.ee` copy against the
+    archive copies by name hash before editing.
+
+20. **Symptom:** a converted mesh looks right but some details are on the wrong side.
+    **Cause:** an axis mapping with determinant −1 mirrors the model. **Fix:** see
+    "Importing a skeletal mesh" — proper rotation, checked against bone labels, winding by
+    signed volume.
 
 ## Assets
 
 The source vehicle model was a third-party `.pskx` skeletal mesh (chunked `ACTRHEAD`
-container, ~200k verts, 19 materials). Its **unit scale is unknown and unknowable from
-the file** — the props dump shows every bone at zero translation and unit scale, so the
-transform is baked into the vertices, and the asset ships no metadata. That turned out
-not to matter: because the donor's wheelbase pins body length, the source asset only has
-to supply *proportions*, which are unit-independent (measured wheelbase/length 0.697 and
-track/width 0.703 straight out of the file with a layout reporter). Wheel stations,
-track and radius come from the game side (`land_global` + baked RAYs), never from the
-asset.
+container, 201k points, 300k faces, 19 materials, 180 bones) with UE material dumps and 56
+`.tga` textures. An earlier version of this note called its unit scale "unknowable" and
+fitted it to the donor's wheelbase; that was wrong — it is real centimetres (tyre Ø1.37 m
+vs a 1.40 m reference), and fitting it to the donor is what forced the physics/visual split
+in Gotcha 15. Import at true scale and move the physics with it. It was exported with
+`umodel` from the author's own installed copy of Batman: Arkham Knight
+(`BmGame/CookedPCConsole/Playable_Batmobile_SF.upk`, Ver 863/227, Game 800016). It is
+another game's extracted asset, so builds that contain it stay private: what can be shared
+is the importer, its specs and the method, not the converted `.ee` or textures.
 
-All geometry work is done by one parametric importer (JSON specs, no per-asset code) plus
-an offline orthographic previewer, so no external modeller is needed and a new asset
-rides the same specs.
+All geometry, material and texture work is one pass driven by the asset's own data
+(skeleton, weights, material parameters, texture files), plus an offline orthographic
+previewer, so no external modeller is needed.
 
 ## Cost and time
 
@@ -425,9 +592,17 @@ dissolved under one re-measurement.
   skeletons and animations, not hknp shapes, so neither looks able to produce one.
   (`ApexLib` and `ApexToolset` are both archived and contain no `.epe` or physics
   tooling: archives and textures only, and material/property serialisation.)
-- **Real textures.** Current paint is a flat palette tint over the donor's UVs, which
-  don't match the Serpente texture set. Authoring `.ddsc`s at vanilla texture paths is
-  the next surface after wheels and stance.
+- **Undecoded fields.** CarPaintMM's `unknown` float (1.0) and 16-byte `material_params`
+  (0.235, 65536, 65536, 0), and the Window block's 41 + 16 static bytes (so glass opacity /
+  reflectivity / roughness can't be set from the source yet).
+- **No CarPaintMM equivalents** for tiling micro-detail normals (could be baked into the
+  main normal map), anisotropic ramps and colour ramps; emissive needs CarLight blocks.
+- **Channel semantics** of PropertyMap/TintMap are inferred from vanilla data; one in-game
+  test with a known two-channel mask would confirm them.
+- **High-mip import at vanilla paths.** The tim42 fork's `write-to-hmddsc="True"` import
+  threw (see Textures), so no `.hmddsc` was written; new paths with one full-chain element
+  work without one. ApexToolset's `ddscConvert`, which writes `.hmddsc`, is the untested
+  alternative.
 - **Reference for the custom-vehicle pipeline:** *Meme Vehicle Pack*
   (https://videogamemods.com/vgm/justcause3/mods/meme-vehicle-pack) by Luke JC
   (https://videogamemods.com/u/lukejc3mp-0021), which ships new models such as a Shrek

@@ -1,8 +1,8 @@
 ---
 kind: technique
 title: "Driving real games safely: input, focus and the human at the keyboard"
-tags: [automation, input, sendinput, focus, windowed-mode, crash-reporter, safety, online-guard, dpi-scaling]
-date: 2026-10-01
+tags: [automation, input, sendinput, focus, windowed-mode, crash-reporter, safety, online-guard, dpi-scaling, menu-navigation]
+date: 2026-10-12
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["@rehan_shei"]
 links: []
@@ -67,9 +67,30 @@ Whenever the agent sends input to a real game window.
      contain bytes GBK cannot map.
    - **Fix:** set `PYTHONUTF8=1` and `PYTHONIOENCODING=utf-8` in the environment before calling `um`.
      Affects `um win ps` / `shot` / `drive`.
+9. **Keys sent from your own code don't register.** (2026-10-12, Etrian Odyssey 2 HD, Unity 2020.3.)
+   - **Symptom:** a plugin's `SendInput` Enter was ignored, while `um win drive key` worked on the same screen.
+   - **Cause:** down and up in one `SendInput` call — shorter than a frame, and the game polls key state per
+     frame.
+   - **Fix:** send down, sleep ~80 ms, send up.
+10. **Enter works but arrow keys don't.** (2026-10-12.) **Cause:** arrows/navigation keys need
+    `KEYEVENTF_EXTENDEDKEY` (0x1). **Fix:** set it for VK 0x21–0x28, Insert (0x2D), Delete (0x2E) and the right
+    Ctrl/Alt (0xA3, 0xA5), as `um win drive` does.
+11. **`SetForegroundWindow` silently fails for a freshly launched game.** **Cause:** Windows' foreground lock.
+    **Fix:** tap Alt via `SendInput`/`keybd_event` right before it; never type if focus still isn't yours.
+12. **Menu lists wrap and open on the most recent entry.** (2026-10-12, EO2 HD save list.) "Up ×12 to reach
+    the top" landed on slot 7, and Down ×7 then on slot 5. **Fix:** don't count presses from an assumed
+    start. Set the game's "recent item" (EO2: a byte in the system save) before boot, or read the cursor
+    from a screenshot. Allow ~0.6–0.7 s per move or scroll animations eat presses.
+13. **Brightness-based title detection fires on publisher logos.** They're bright too. **Fix:** require
+    brightness for >3 s *and* a minimum time since launch (~30 s), and only press Enter to skip while the
+    screen is dark.
+14. **The shell waits for the game to exit.** (Git Bash.) `pid=$(script_that_launches_game)` hangs because the
+    game inherits the output pipe. **Fix:** launch detached with output redirected:
+    `(cmd //c start "" "<exe>" >/dev/null 2>&1 &)`.
 
 ## Seen in
 - [Minecraft inside GTA V](../games/gta-v/minecraft-passthrough.md)
 - [San Franciscans (AoE2)](../games/age-of-empires-ii-de/san-franciscans-civ.md)
 - [Fal Arsenal (Terraria)](../games/terraria/fal-arsenal-tmodloader.md)
 - [Black Myth: Wukong — ReShade depth dead end](../games/black-myth-wukong/reshade-depth-dead-end.md) (Gotchas 7 and 8)
+- [EO1 inside EO2 HD](../games/etrian-odyssey-2-hd/etria-inside-eo2-bepinex-protected-il2cpp.md)
