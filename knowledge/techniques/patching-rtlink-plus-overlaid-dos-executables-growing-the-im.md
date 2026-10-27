@@ -21,8 +21,9 @@ tags: [dos, rtlink, overlays, vm-manager, binary-patching, mz-exe, trampolines, 
 - The EXE contains the string `Internal error in .RTLink(R)/Plus run-time code.` (or similar), has a small
   MZ image followed by a chain of "page" records, and most game code lives in those pages.
 - You need more code than fits in caves, or you need to call new code from overlay (page) code.
-- Format reference: eb4x/ghidra-plugin-rtlink, `docs/rtlink-format.md` (Apache-2.0) - read it first. It also
-  has a Ghidra loader for the pages.
+- Format reference: eb4x/ghidra-plugin-rtlink,
+  [`docs/rtlink-format.md`](https://github.com/eb4x/ghidra-plugin-rtlink/blob/main/docs/rtlink-format.md)
+  (Apache-2.0) - read it first. It also has a Ghidra loader for the pages.
 
 ## How
 
@@ -55,8 +56,10 @@ tags: [dos, rtlink, overlays, vm-manager, binary-patching, mz-exe, trampolines, 
   block's segment into your code at run time from CS (a small `fixsegs` routine called first).
 
 ### Calling new code from overlay code: the trampoline layout the manager recognises
-Overlay code never calls a far address directly: it calls a manager vector (in VICEROY `lcall 110D:0D91`),
-which rewrites the offset word of the calling `lcall` and continues through the far jump that follows it.
+Overlay code never calls a far address directly: it calls a manager vector (in VICEROY `lcall 110D:0D91`;
+eb4x's doc writes it `210d:0d91` because Ghidra loads the image at segment 0x1000, and calls the call-plus-jump
+pair a resident-target trampoline), which rewrites the offset word of the calling `lcall` and continues through
+the far jump that follows it.
 On a call, the manager also inspects the caller's call target to decide whether the call comes from an
 overlay page; only then does it protect the caller's return address against the page being discarded.
 - **Working layout (18 bytes):** the hook site in the overlay does `lcall NEWSEG:t`, and
@@ -104,6 +107,12 @@ With EMS/XMS available the manager rarely discards pages, so a broken hook fails
 in-game tests once more in DOSBox with `[dos] xms=false ems=false umb=false`: pages swap constantly and the
 same bug fails every time.
 
+## Not verified
+Only VICEROY.EXE (MSC 6.0 + .RTLink/Plus 6.10). eb4x's doc finds the VM manager's routine bodies byte-identical
+across the games it covers (only their offsets move), so the trampoline rule should carry over, but run the
+emulated call test on your own binary before trusting it. The call-target rule, the BP-chain walk and the
+page-pool startup were read from VICEROY's manager and its error messages; eb4x's doc doesn't cover them.
+
 ## Gotchas
 1. **About 1 run in 10-20: debug assertion popups, garbage prompts with nonsense values, an R6003 divide by
    zero, a freeze after ending the turn.** (2026-10-25.) **Cause:** 13-byte trampolines
@@ -129,7 +138,6 @@ same bug fails every time.
 7. **Addresses read from data were text-pool indices, not pointers.** (2026-10-24.) **Cause:** in this game
    many "string" fields are indices into a text table resolved by a resident routine. **Fix:** resolve them
    through the game's own lookup; check a value against the table before treating it as a pointer.
-
 8. **"Tried to allocate N bytes when only M bytes were free" was expected, but the game kept going.**
    (2026-10-25.) **Cause:** most large buffers are optional; the game falls back to a smaller one or none when
    DOS refuses. **Fix:** measure refused allocations and the low-water mark, not only crashes; a build can be
