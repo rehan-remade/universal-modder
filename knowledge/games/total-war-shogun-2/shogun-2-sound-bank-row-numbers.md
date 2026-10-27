@@ -25,8 +25,10 @@ tags: [sound, db-tables, warscape, total-war, data-order]
 > build time fixed it; in game the battery now picks the same cannon report as an audible battery.
 
 ## Setup
-- Shogun 2 build 6262 (Steam), the 32-bit `empire.retail.dll`.
-- The mod is a PFH3 "mod" pack enabled through `user.script.txt`.
+- Shogun 2 build 6262 (Steam), the 32-bit `empire.retail.dll`: the classic release (app 34330), not the
+  2026 Complete Edition (see the [faction port](shogun-2-napoleon-france-faction-port.md)).
+- The mod is a PFH3 "mod" pack enabled through `user.script.txt`. It's generated on the player's machine
+  from their own Shogun 2 and Napoleon installs and never distributed, the sound bank included.
 - Analysis tools:
   - capstone for disassembly;
   - Frida 17 to spawn the game suspended and hook the DLL as it loads.
@@ -66,9 +68,9 @@ tags: [sound, db-tables, warscape, total-war, data-order]
 2. **At build time, compute two orders for each referenced table the mod ships:**
    - the vanilla order (vanilla fragments only);
    - the modded order (vanilla fragments + the mod's).
-3. **Rewrite and ship.** Rewrite each stored number from `vanilla[old]` to its modded row number and
-   ship the file in the mod pack. The mod's own rows end up in no condition list and take default
-   events.
+3. **Rewrite and pack.** Rewrite each stored number from `vanilla[old]` to its modded row number and
+   put the file in the mod pack (rebuilt from the player's own `sound.pack` on every build). The mod's
+   own rows end up in no condition list and take default events.
 4. **Validate.** The shipped file must equal a fresh remap of the shipped tables.
 
 ## Verification
@@ -111,7 +113,7 @@ None.
     FotS's French takes sit under `english/`, so added units need them under `uk/` too.
   - Ambient chatter goes by a nationality hard-coded for six FotS unit keys. `VO_actor_numbers`
     plays no part.
-  - Details, with addresses, are in the mod's `docs/shogun2_battle_voices.md`.
+  - Details, with addresses, are in the mod's `docs/shogun2_battle_voices.md` (not published).
 - **Agent icons.** The campaign map's agent icons come from
   `rigidmodels/flags/textures/agent_faction_ids0.dds` (`.tai` index), not from `ui/flags`.
 - **Swap replays.** Swapping a unit key in a replay's ESF string table makes a cheap test battle. Only

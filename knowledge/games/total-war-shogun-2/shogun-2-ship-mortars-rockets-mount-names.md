@@ -33,16 +33,17 @@ tags: [naval, ships, mortar, rocket, torpedo, bow-chasers, warscape, total-war, 
 > The Indiaman's bow guns still stall in their reload. Its cause is identified in game but not fixed.
 
 ## Setup
-- **Game:** Shogun 2 build 6262 (Steam) with Fall of the Samurai, Windows 11. The 32-bit
-  `empire.retail.dll` has image base 0x10000000.
+- **Game:** Shogun 2 build 6262 (Steam app 34330, the classic release, not the 2026 Complete Edition) with
+  Fall of the Samurai, Windows 11. The 32-bit `empire.retail.dll` has image base 0x10000000.
 - **Mod:** a PFH3 "mod" pack enabled through `user.script.txt`. Ships use Napoleon hulls converted into
   `models_naval` v6 rows.
 - **Analysis:** capstone over the DLL, plus Frida 17 attached to the running game.
   - Use entry hooks only: a mid-function hook crashed the game.
   - Use one Frida session per function: two sessions hooking the same listener closed the game when both
     were killed.
-- **Test launches:** the exe with a temporary `steam_appid.txt`, driven with `um win`. Saves were snapshotted
-  first with `um backup`.
+- **Test launches:** the exe with a temporary `steam_appid.txt` (Steam still runs and checks that the
+  account owns the game; the file only lets the exe start without Steam's launcher), driven with `um win`.
+  Saves were snapshotted first with `um backup`.
 - **Test battles:** each one has a single ship under test against one enemy ship.
 
 ## Route and why
@@ -113,7 +114,7 @@ tags: [naval, ships, mortar, rocket, torpedo, bow-chasers, warscape, total-war, 
 4. Special shells and rockets: detonator `percussive`, effects that exist in landbattle.xml, and a trail
    (`rocket_trail` plus `additive_rocket_trail` for rockets). Shot type `solid_shot` keeps them off the HUD
    ammunition buttons, since `rocket` has a HUD key.
-5. Validate offline with a model of these rules: this project's `tools/naval_engine.py`,
+5. Validate offline with a model of these rules: this project's own (unpublished) `tools/naval_engine.py`,
    `projectile_flight.py` and `test_naval_engine.py`.
 
 ## Verification
@@ -164,8 +165,9 @@ tags: [naval, ships, mortar, rocket, torpedo, bow-chasers, warscape, total-war, 
    - Run one Frida session per hooked function, and detach gracefully.
 
 ## Assets
-None new. Napoleon's models, animations and shots were already ported; only data rows and hull collision
-changed.
+None new. Napoleon's models, animations and shots were already ported (built from the player's own Napoleon
+install and never distributed, see the [faction port](shogun-2-napoleon-france-faction-port.md)); only data
+rows and hull collision changed.
 
 ## Cost and time
 About 20 hours of wall clock over two days. One supervisor ran an offline worker (disassembly, data, builds)

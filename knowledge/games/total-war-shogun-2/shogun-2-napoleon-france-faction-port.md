@@ -35,11 +35,15 @@ tags: [total-war, warscape, faction-port, db-tables, loc, startpos, esf, voices,
 - **Shogun 2:** build 6262 (v1.1.0), Steam app 34330, 32-bit `empire.retail.dll`. Fall of the
   Samurai and the Otomo DLC (Steam 223180) are installed. France takes Otomo's slot, so the DLC must
   stay installed.
+  - This is the classic release. *Total War: SHOGUN 2 - Complete Edition* (Steam app 3846830, out
+    2026-10-13) is a separate game to RPFM (`shogun2_complete_edition.exe`, schema `sho2_ce`, PFH3
+    packs), so the addresses, row orders and schemas here are untested on it.
 - **Napoleon: Total War:** Steam, read only. Its packs are read in load order: boot, data, buildings,
   battleterrain, media, rigidmodels, variantmodels(2), sound, local_en(_patch).
 - **Tools:**
-  - our own Python codecs for PFH3 packs, DB tables (the `sho2` and `nap` schema files from Frodo45127's [RPFM](https://github.com/Frodo45127/rpfm)), loc
-    and ESF, all round-trip tested;
+  - our own Python codecs for packs (Napoleon's are PFH0, Shogun 2's own PFH2, the mod pack PFH3, per
+    RPFM's `supported_games.rs`), DB tables (the `sho2` and `nap` schema files from Frodo45127's
+    [RPFM](https://github.com/Frodo45127/rpfm)), loc and ESF, all round-trip tested;
   - capstone for reading `empire.retail.dll`;
   - Frida 17 for live hooks;
   - `um win` for launching, screenshots and input; `um backup` for saves and config.
@@ -88,7 +92,7 @@ tags: [total-war, warscape, faction-port, db-tables, loc, startpos, esf, voices,
   - **Playback swaps the first folder of the file path for the battle's voice language.** The voice
     request is `0x103052d0`; the folder is replaced in `0x10f6dfd0`. It is "Uk" in Sengoku battles:
     `sound.pack` keeps the Japanese takes under `uk/`. FotS's French takes live under `english/` in
-    `local_en.pack`, so they failed to start (error 7) until copies were shipped under `uk/`.
+    `local_en.pack`, so they failed to start (error 7) until copies were added under `uk/` in the mod pack.
     Key-starts-with-"Boshin" units try "English" first.
 - **Ambient chatter goes by nationality, and nationality is hard-coded.**
   - Soldiers' and crews' random chatter (`land_flavour_*`, `naval_flavour_*`, picked in `0x10301ef0` →
