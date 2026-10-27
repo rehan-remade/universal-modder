@@ -1,38 +1,42 @@
 ---
 kind: game
-title: "Exact-size zip splicing for Blur DS texture edits, and the deflate wall that stopped a car model swap"
+title: "Exact-size zip splicing for Blur DS texture edits"
 game: "Blur"
 games_also: []
 game_version: "Blur DS beta, Europe, unreleased; 64 MB NDS ROM, title BLUR, game code BBRP, maker code 36"
 platform: console
 engine: unknown
 route: asset-only
-tools: ["Python 3 (struct, zlib)", "melonDS 1.1", "COLLADA .dae mesh round-trip"]
+tools: ["Python 3 (struct, zlib)", "melonDS 1.1", "COLLADA .dae export (mesh comparison)"]
 anti_cheat: "none — unreleased offline beta"
 status: in-progress
 agents: ["OpenCode (DeepSeek V4.1 Flash Free)"]
-humans: ["@GeoffreyMba"]
+humans: ["@GameBreaker20XX"]
 date: 2026-10-21
-links: []
+links: ["https://github.com/melonDS-emu/melonDS"]
 tags: [nds, zip, deflate, exact-size, splicing, texture, palette, firebrand, octane, blur, rom-patching]
 ---
 
-# Exact-size zip splicing for Blur DS texture edits, and the deflate wall that stopped a car model swap
+# Exact-size zip splicing for Blur DS texture edits
 
 > Blur DS keeps every asset in a plain `vfs.zip` sitting at a fixed offset inside a 64 MB NDS ROM, so
 > anything that changes an entry's compressed size shifts every offset after it. I wrote car-texture edits
 > into unused palette space and spliced the resulting deflate streams back at **exactly** their original
-> lengths, producing a ROM with the zip byte-size unchanged and all 3,146 entries intact. The same
-> exact-size constraint is what killed the car model swap: rebuilt meshes compress 25–30% worse, and the
-> small LODs cannot be squeezed back to their original length. The texture ROM is structurally verified;
-> **it was never confirmed booting in-game**, so treat it as unverified. Status `in-progress`.
+> lengths, producing a ROM with the zip byte-size unchanged and all 3,146 entries intact. The texture ROM is
+> structurally verified; **it was never confirmed booting in-game**, so treat it as unverified. Status
+> `in-progress`.
 
 ## Setup
 
 - **Game:** Blur (DS), Europe beta, unreleased — the DS counterpart to the 2010 console title. 64 MB
   (67,108,864-byte) NDS ROM, title `BLUR`, game code `BBRP`, maker code `36`.
-- **Engine:** Firebrand Octane, the same pipeline as TrackMania DS / Turbo DS and GRID DS — `vfs.zip`
-  container, `.n` models in the Turbo-DS short-extension style, NitroSDK 2D formats, Lua 5.1 bytecode.
+- **Where this copy came from:** the game was never sold, so there is no shop copy to dump. The author used a
+  public copy of the unreleased beta from the Hidden Palace archive. It is not linked here, and this note
+  gives no checksums for it.
+- **Test car:** the author's texture tests were on the car called the Spiral. The patch pass below covers all
+  24 car directories, and Verification says what was and wasn't checked.
+- **Engine:** Firebrand Octane, Firebrand's in-house engine. This beta has a `vfs.zip` container, `.n` models,
+  NitroSDK 2D formats and Lua 5.1 bytecode.
 - **Container:** `vfs.zip`, **24,658,789 bytes, 3,146 entries**, stored in the ROM at `0x021C4800` and
   ending at `0x03948B65`.
 - **Tools:** Python 3 with `struct` and `zlib` only; melonDS 1.1 to launch; COLLADA `.dae` export for
@@ -43,8 +47,8 @@ tags: [nds, zip, deflate, exact-size, splicing, texture, palette, firebrand, oct
 `asset-only`, because the goal was a content change on an offline beta with a plain-file container.
 
 - **`data`** would have changed the car roster or stats, not the visuals — easier, but not the goal.
-- **`native-hook` / loader** means patching ARM9 on a retail NDS ROM with no loader ecosystem. Far more
-  risk than the task justified, and it fails the moment anything re-reads the cartridge image.
+- **`native-hook` / loader** means patching ARM9 code in an unreleased beta with no loader ecosystem. Far
+  more risk than the task justified, and it fails the moment anything re-reads the cartridge image.
 - **`decomp-recomp`** — no decompilation of this engine exists.
 
 Asset-only is the right call *provided* you can write into the ROM without moving anything. That
@@ -54,7 +58,7 @@ constraint turned out to be the whole project.
 
 ### The container is a stock zip at a fixed offset
 
-`vfs.zip` is a normal, uncompressed-container Deflate zip: local headers, compressed streams, then a
+`vfs.zip` is a normal zip with Deflate-compressed entries: local headers, compressed streams, then a
 central directory and end-of-central-directory record. Because the whole archive sits at one fixed ROM
 offset, **any change to any entry's compressed size shifts every byte after it** and invalidates the
 central directory's offsets. On a 64 MB cartridge image that is not a problem you can paper over with a
@@ -67,7 +71,7 @@ archive's layout is untouched, and you only have to overwrite those bytes in the
 
 Cars live under `Graphics/Cars/<car code>/<variant>/`, each with an eight-file LOD ladder:
 `lod0`, `lod1`, `lod1net`, `lod2`, `lod3`, `lod3net`, `lod4`, `lod4net`. There are 24 car directories, so
-24 `lod0` targets — and the small LODs are the ones that matter for the size problem.
+24 `lod0` files.
 
 `.n` files carry GX-style primitives (tri-strips, triangles, quads) and palette-indexed textures. Two
 palette groups showed up repeatedly, a body palette (`custom_pl`) and a reflection palette (`envmap_pl`).
@@ -91,8 +95,10 @@ For each patched `.n`:
 1. Recompress the modified file.
 2. Tune the stream until its length equals the original entry's `csize` exactly.
 3. Overwrite that entry's stream in a copy of `vfs.zip`.
-4. Recompute nothing — the central directory CRCs are per *uncompressed* data, so they still have to be
-   updated, but every offset stays valid because no length moved.
+4. Update the entry's CRC-32, which covers the *uncompressed* data and so changes with the edit. It is
+   stored twice: in the entry's local header (offset 14, or in a data descriptor after the stream when
+   flag bit 3 is set) and in its central directory record (offset 16). No offset needs recomputing,
+   because no length moved.
 
 Every spliced entry in the log reports `stream exact`, which is the invariant that matters.
 
@@ -121,51 +127,43 @@ Every spliced entry in the log reports `stream exact`, which is the invariant th
 **Not verified:**
 
 - **The modded ROM was never confirmed running.** No screenshot, no emulator log, no in-game observation —
-  the pipeline ends at a written ROM and an MD5. Everything above proves the file is structurally sound,
+  the pipeline ends at a written ROM. Everything above proves the file is structurally sound,
   not that the game accepts it.
 - Whether the patched texels are actually invisible on the car. Free palette pairs are *unreferenced by
   the mesh*, which is a strong argument, but it was never confirmed on screen.
-
-Original ROM MD5 `B8D258ED8F761D08C1DE857CCBB27402`; patched `37E9309E32985D55E6FDCF25BCB22E28`.
+- The CRC copies in the local headers. `testzip` and the central-directory check above read only the
+  central directory's CRCs (Python's `zipfile` never compares the local header's), and the game's own
+  reader may use either.
 
 ## Gotchas
 
-1. **The model swap died on the small LODs, not on the big one.** **Symptom:** rebuilt meshes fitted,
-   encoded and validated cleanly, but could not be compressed back to the original length.
-   **Cause:** the rebuilt data is roughly **25–30% less compressible** than the original, because the
-   original exporter's mesh quantization is something Deflate exploits and a naive rebuild is not.
-   **Measured gap:** `lod0` came in **174 bytes under** target (a near hit); `lod1` ~3.5% over;
-   `lod1net` ~5% over; `lod2` ~12% over; **`lod3` and `lod3net` ~29% over**; `lod4`/`lod4net` ~18% over.
-   **Fix:** none found. The big LOD is achievable; the small ones are the wall. If you retry, the move is
-   to reproduce the original quantization rather than to find a better compressor.
-2. **`19/24` on the first texture pass, `24/24` on the second. Symptom:** five cars failed with
+1. **`19/24` on the first texture pass, `24/24` on the second. Symptom:** five cars failed with
    `no free palette pair`. **Cause:** some meshes reference every palette pair in their body palette.
    **Fix:** widen the search to a cross-palette region (the reflection palette) instead of only the body
    palette. Budget the writable area per car rather than assuming it exists.
-3. **A single byte of size drift invalidates the whole archive.** **Symptom:** anything that recompresses
+2. **A single byte of size drift invalidates the whole archive.** **Symptom:** anything that recompresses
    an entry normally makes the game's reads land on garbage after that point. **Cause:** every central
    directory offset is relative to the archive start, so a longer stream moves all of them.
    **Fix:** treat `csize` as immutable and assert it before writing, per entry.
-4. **"It recompressed fine" is not verification.** **Symptom:** a stream that decompresses correctly but
+3. **"It recompressed fine" is not verification.** **Symptom:** a stream that decompresses correctly but
    is the wrong length looks healthy in isolation. **Cause:** correctness and length are separate
    properties. **Fix:** check both, per entry, and assert the archive length is unchanged as a whole.
-5. **Exported-mesh diffs lie about timestamps.** **Symptom:** comparing original vs patched `.dae` reports
+4. **Exported-mesh diffs lie about timestamps.** **Symptom:** comparing original vs patched `.dae` reports
    four changed lines and looks like geometry drift. **Cause:** the exporter stamps `<created>` and
    `<modified>` per run. **Fix:** ignore those two elements when hashing or diffing, or normalise them
    first — otherwise you cannot tell "geometry is identical" from "geometry moved slightly".
-6. **Package name collisions bite on a 24 MB archive with 3,146 entries.** Keep the modified archive and
-   the ROM copy distinct until the splice is verified; an in-place rewrite with a bad entry is not
-   recoverable without the original image.
+5. **A bad splice can't be undone in place.** **Symptom:** one bad entry written straight into the ROM
+   image. **Cause:** with 3,146 entries in a 24 MB archive, a rewrite in place leaves nothing to compare
+   against or roll back to. **Fix:** splice into a copy of `vfs.zip`, write that into a copy of the ROM, and
+   keep the original image until the splice is verified.
 
 ## Assets
 
-None shipped. The replacement car model used as a test payload came from an unrelated commercial title
-and is not redistributable; no game files, extracted textures or ROM images are included here.
+None shipped: no game files, extracted textures or ROM images are included here.
 
 ## Cost and time
 
-Several sessions. The texture-patch path converged in two passes; the model-swap path consumed most of the
-effort and ended without a working result.
+Several sessions. The texture-patch path converged in two passes.
 
 ## Open questions
 
@@ -173,7 +171,3 @@ effort and ended without a working result.
   melonDS and look at a car. Until then the texture work is structurally sound and unproven.
 - **Are free palette pairs genuinely invisible?** Unreferenced-by-UV is a strong signal, not a guarantee;
   a mip or a second UV set could still sample them.
-- **Can the model swap be made size-exact?** Only by matching the original quantization, not by improving
-  Deflate. Measure the original's quantization first, then fit to that — not the other way round.
-- **Where is the practical ceiling?** If `lod3` needs 29% more bytes than exist, sub-lod3 mesh replacement
-  may simply be off the table for this engine, and the realistic target is `lod0`/`lod1` only.
