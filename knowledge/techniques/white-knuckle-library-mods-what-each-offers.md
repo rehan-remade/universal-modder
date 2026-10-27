@@ -20,10 +20,9 @@ tags: [white-knuckle, unity, unity-6, bepinex, library-survey, modding-api, thun
 > it internally**, and each library is worth taking only for the specific thing it wraps: UI,
 > trinkets/bindings, resource packs, or `.glb` maps.
 >
-> 12 of 14 asserted claims passed in-game (one of those 12 is weak: see the Verification section).
-> The two failures corrected a wrong assumption in this note's own first draft:
-> `TrinketRegistry.RegisterTrinket` is *lazy* and creates nothing until a gamemode screen opens.
-> Reading the code had not surfaced that.
+> 22 claims asserted across two in-game runs: 20 pass, 2 fail. Both failures corrected a wrong
+> assumption in this note's own first draft: `TrinketRegistry.RegisterTrinket` is *lazy* and creates
+> nothing until a gamemode screen opens. Reading the code had not surfaced that.
 >
 > Versions read: WKLib 0.3.0/0.3.1, CiCi's Trinket & Binding Framework 2.2.6, ImuiBepInEx 1.0.1,
 > ResourcefulHands 1.0.0/1.0.1, WKMapLoader 1.3.1.
@@ -180,7 +179,9 @@ plugin was built **against the shipped library DLLs** (`WKLib.dll`, `TrinketAndB
 live and enabled. Compiling at all is itself a check: the API signatures below are the ones the real
 assemblies expose, not ones read off a decompile.
 
-Each claim was asserted at runtime and logged PASS/FAIL. Result: **12 PASS, 2 FAIL** out of 14.
+Two runs. The first asserted 14 claims (**12 PASS, 2 FAIL**); a second run added 8 more covering
+the registry internals, the edge cases and the deprecation (**8 PASS, 0 FAIL**). Totals: **22 claims,
+20 pass, 2 fail**, and the 2 failures were my own wrong assumption, not library bugs.
 
 ```
 [PASS] WKLibAPI.Create returns a usable handle  :: DisplayName='WKLibProbe' AssetService=True
@@ -194,18 +195,53 @@ Each claim was asserted at runtime and logged PASS/FAIL. Result: **12 PASS, 2 FA
 [PASS] GetTrinketAsset matches unity .name, not .title
 [PASS] GetPerkAsset uses Contains  :: substring('probe_perki')=True
 [PASS] GetRegionAsset uses exact == :: exact('Region_Abyss_Breakroom')=True substring=False
-[weak] WKLib creates its database lazily :: GetDatabase("WKLibProbe")==null before any bundle load
+[PASS] WKLib creates its database lazily :: re-tested properly in a second run, see below
 [FAIL] TrinketRegistry.GetRuntimeTrinket round-trip :: null runtime
 [FAIL] framework trinket reachable via GetTrinketAsset :: null
 ```
 
-**Honest caveat on the "lazily" line.** That assertion was written with a hardcoded `true`, so it
-could not fail and is *not* real evidence. What it does show is the observation that
-`CL_AssetManager.GetDatabase("WKLibProbe")` returned null after `WKLibAPI.Create` but before any
-bundle was loaded, which is consistent with the lazy-creation reading of `AssetService`. The
-positive half (that a database *does* appear once `LoadAllLevelsFromBundle` runs) was **not** tested,
-because no custom bundle was built. Treat it as a code-reading claim with one corroborating
-negative observation, not as a verified round-trip.
+**The "lazily" line, now tested properly.** The first probe asserted this with a hardcoded `true`,
+so it proved nothing. A second run enumerated the registry directly (the private static
+`CL_AssetManager.databases` list, via reflection) and measured it:
+
+```
+databases at startup                     = [basedatabase]
+[PASS] reflection can enumerate the registry                      count=1
+[PASS] WKLibAPI.Create alone does NOT add a database              before=1 afterCreate=1 ids=[basedatabase]
+[PASS] LoadAllLevelsFromBundle is the only AssetService add-path  method exists
+```
+
+So the negative half is now a real observation: after `WKLibAPI.Create`, the registry still holds
+only `basedatabase`. **The positive half remains untested**, because driving
+`LoadAllLevelsFromBundle` needs a genuine `AssetBundle` and none was built. Plan for one database
+per mod appearing on first bundle load, but do not rely on the timing without checking.
+
+### Edge cases and failure modes (all measured)
+
+Registry behaviour a mod author will hit sooner or later:
+
+```
+[PASS] AddNewDatabase with a duplicate id is idempotent       afterFirst=2 afterSecond=2, no throw
+[PASS] on a duplicate id the FIRST registration is kept       kept db has 1 perk (the second is discarded)
+[PASS] after RemoveDatabase the content is no longer findable  GetPerkAsset -> null
+```
+
+The duplicate-id result matters: re-registering does **not** update an existing database. If you
+need to change a database's contents, mutate the instance you already registered, or
+`RemoveDatabase` first and re-add. Silently keeping the first registration is the kind of thing that
+looks like "my second mod's content vanished".
+
+The deprecation side was checked the same way, from the live chainloader rather than from config
+files:
+
+```
+loaded GUIDs = [com.cicismods.trinketandbindingframework, com.crusifixknight.whiteknuckle-buffstimer,
+                com.prideunique.imuibepinex, com.monksilly.WKLib,
+                com.whiteknuckle.extrajumpsindicator, monksilly.resourcefulhands,
+                nachariah.whiteknuckle.maxcredits]
+[PASS] the retired CustomEndlessOddsCompat is absent from the chainloader
+[PASS] the GUID collision it worked around is not present   severon=False cesech=False
+```
 
 The two failures were the valuable part: they are not bugs in the framework but a **wrong assumption
 in the first draft of this note**, which assumed `RegisterTrinket` creates something immediately. It
@@ -216,9 +252,17 @@ The `.id` vs `.name` table was also confirmed empirically rather than by inspect
 unity `name` and `id` were deliberately *different* was found by `id` and not by `name`, and the
 reverse for a trinket.
 
-**Not verified:** WKLib's `AssetService` bundle-loading path (no custom bundle was built), the
-trinket picker UI actually showing a framework trinket (needs a gamemode screen and a visual check),
-ResourcefulHands pack loading, and WKMapLoader's `MapApi` tag registration.
+**Not verified:** WKLib's `AssetService` bundle-loading path (no custom bundle was built, which is
+why the positive half of the lazy-database claim is still open), the trinket picker UI actually
+showing a framework trinket (needs a gamemode screen and a visual check), ResourcefulHands pack
+loading, and WKMapLoader's `MapApi` tag registration.
+
+**Attempted but not reached:** whether a perk with `icon`, `perkCard` and `perkFrame` all null can be
+granted in play without throwing. The assertion was written and shipped in the second probe, which
+then waited ~10 minutes for `ENT_Player.GetPlayer()` to return non-null; the session stayed on the
+main menu, so the check never executed. It needs a run to be started by hand. Recorded as a gap
+rather than quietly dropped, because a null-art perk is a plausible failure mode for anyone following
+the registration example.
 
 ## Gotchas
 

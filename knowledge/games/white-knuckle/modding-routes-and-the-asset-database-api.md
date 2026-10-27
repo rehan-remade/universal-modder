@@ -338,6 +338,14 @@ here, so the UI side of a perk is untested.
     and loading it instantiates null. Ship a mod that grants perks and you have made your users'
     saves depend on your mod staying installed.
 
+15. **Re-registering a database id does not update it: the FIRST registration wins, silently.**
+    Measured: calling `AddNewDatabase("same_id", db2)` after `AddNewDatabase("same_id", db1)` does not
+    throw, does not add a second entry, and leaves `db1` in place, so `GetDatabase` keeps returning
+    the original contents. **Fix:** mutate the database instance you already registered, or
+    `RemoveDatabase(id)` and re-add. Also pick an id unlikely to collide with another mod's, because
+    whoever registers first wins and the loser gets no warning. `RemoveDatabase` does work cleanly:
+    after it the content is no longer findable (`GetPerkAsset` returns null).
+
 ## Cost and time
 
 One session, no API spend. The decompile is ~10s; the probe build-install-launch-read loop is about
@@ -346,9 +354,13 @@ two minutes per iteration, dominated by Proton startup.
 ## Open questions
 
 - Icons, perk cards and frames were left null here, so the **UI side** of custom content is untested.
-  A perk with no `icon`/`perkCard` may throw where the game draws it.
+  A perk with no `icon`/`perkCard` may throw where the game draws it. An assertion for this was
+  written and shipped in a later probe, but the session stayed on the main menu so
+  `ENT_Player.GetPlayer()` never returned and the check did not execute. It needs a run started by
+  hand.
 - Custom **Addressables** bundles for new levels: WKMapLoader and WKLib both wrap this, but shipping
-  your own catalog was not attempted.
+  your own catalog was not attempted. This is also why the positive half of WKLib's
+  lazy-database behaviour is still unproven.
 - WKLib lists custom items as unimplemented. Registering a database is clearly the missing piece, so
   it is probably worth contributing upstream rather than reimplementing this in each mod.
 
