@@ -40,9 +40,11 @@ backpack tree deployed under the pack, and the slide lock engaged after every em
   resource only says 1.0.0.0, so identify it by hash (sha1 `9c349fc1c0d9bb721f1d28e6c77dee08f1a32abe`).
   TR7-Menu-Hook v2.5 (`TR7-Menu-Hook.asi`, sha1 `bcc67ed1642f32ff07da91313d42b0dcd7f7d668`) serves `pc-w\X.drm`
   from `<game>\mods\X.drm` by hooking archive init.
-- That loader carries built-in Bink DLLs, so overwriting the game's `binkw32.dll` with it (the menu hook's own install)
-  needs no `binkw32Hooked.dll`. A release can therefore be a pure drag-and-drop folder that never ships the game's Bink
-  DLL; see [film-outfit-pack-drm-rebuild-idles-release.md](film-outfit-pack-drm-rebuild-idles-release.md).
+- That copy of the loader carries RAD's Bink DLLs built in, so overwriting the game's `binkw32.dll` with it (the menu
+  hook's own install) needs no `binkw32Hooked.dll`. Current Ultimate ASI Loader builds don't carry Bink and need the
+  original as `binkw32Hooked.dll`. A drag-and-drop folder therefore needs no copy of the game's Bink DLL; FMVs played
+  through the built-in Bink are untested. See
+  [film-outfit-pack-drm-rebuild-idles-release.md](film-outfit-pack-drm-rebuild-idles-release.md).
 - tr7.pdb (from a different build) gives struct layouts only; every address was re-derived from this exe and is
   checked at startup against byte signatures ("sites"), with the mod refusing to install on a mismatch.
 - Tooling:

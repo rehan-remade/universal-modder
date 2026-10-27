@@ -184,7 +184,8 @@ Related notes: [the CS1/CS2 modding-API overview](../cities-skylines/cities-skyl
 - **v1, in the real game, driven by the agent** (13:30-14:45 on 2026-10-18, saves backed up first). A dev bridge
   is a folder the mod polls: the agent writes JSON lines to `ModsData/OvalOffice/bridge/cmd.jsonl` and reads
   `out.jsonl` and `status.json`. Commands: `act`, `page`, `speed`, and `eval` with `status`, `follow`, `desk`,
-  `toast`, `load`, `save`, `app`, `puppets` and `redress`. Seen in game, with screenshots:
+  `toast`, `load`, `save`, `app`, `puppets` and `redress`. The bridge acts on whatever lands in that folder, so it
+  is a development aid: keep it out of public builds. Seen in game, with screenshots:
   - the oath; designating a White House, council and courthouse; a cabinet hire confirmed by a council vote (7-2);
   - executive orders changing the city (commercial tax 10 -> 7, garbage budget 100 -> 120 in the dashboard diff);
   - real arrests filed as court cases, and news written from real incidents;
@@ -208,8 +209,10 @@ Related notes: [the CS1/CS2 modding-API overview](../cities-skylines/cities-skyl
    `Unity.exe -projectPath ... -quit` exiting with code 1. **Cause:** Unity 2022.3.62f2 was installed but not yet
    licensed. **Fix:** sign in to Unity Hub and activate a Personal license first, then press Install again (the
    retry built `UnityModsProject`).
-2. **Symptom.** `um scan` reports Unity Mono and suggests BepInEx + HarmonyX. **Cause:** that was the pre-release
-   CS2 route. **Fix:** use the official toolchain; the scan's `.ModdingToolchain` hit is the sign.
+2. **Symptom.** `um scan` reports Unity Mono and suggests BepInEx + HarmonyX. **Cause:** that was the CS2 route
+   before official mod support (Paradox Mods and code mods arrived with patch 1.1.0f1 in March 2024), and `um scan`
+   has no CS2 entry yet. **Fix:** use the official toolchain; the `Cities2_Data\Content\Game\.ModdingToolchain`
+   folder is the sign.
 3. **Symptom.** You need the development player for breakpoints, but the Windows editor installer for 2022.3.71f1 is
    3.66 GB and the Windows "Mono Support" target installer returns 404. **Cause:** Unity only ships that target as
    part of an editor install. **Fix:** download the macOS editor's
@@ -222,7 +225,9 @@ Related notes: [the CS1/CS2 modding-API overview](../cities-skylines/cities-skyl
    initialize"; `-startGame=<id>` and `-continuelastsave` fall back to the main menu ("Asset doesn't exist").
    **Cause:** without Steam's launch environment, the platform layer has no app id. The `.cid` next to a save is
    the package-asset id, not the `SaveGameMetadata` id. **Fix:** set `SteamAppId`, `SteamGameId` and
-   `SteamOverlayGameId` to 949230 in the environment. Load saves through the dev bridge, which calls
+   `SteamOverlayGameId` to 949230 in the environment. Steam still has to be running and signed in to the account
+   that owns the game (`SteamAPI_Init` checks the licence), so this only stands in for Steam's launch environment.
+   Load saves through the dev bridge, which calls
    `GameManager.instance.Load(GameMode.Game, Purpose.LoadGame, <SaveGameMetadata>)`.
 5. **Symptom.** Puppet entities created by the mod never render; `CullingInfo` stays at mask 0 / radius 0.
    **Cause:** culling (re)initialises only entities that carry `Updated`/`BatchesUpdated` when PreCullingSystem

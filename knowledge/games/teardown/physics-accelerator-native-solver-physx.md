@@ -42,8 +42,11 @@ installed. The project lives in the user's own local git repo and has not been r
 
 ## Setup
 - **Game:** Teardown 2.1.0, Steam, buildid 25295735. It renders with D3D12 (`options.xml` gfxapi=1) and scripts in
-  Luau. There's no anti-cheat. The exe carries SteamStub (a `.bind` section, and `.text` encrypted on disk). The mod
-  never edits the exe on disk; it hooks the decrypted image in memory after the game has started.
+  Lua 5.1. There's no anti-cheat. The exe carries SteamStub (a `.bind` section, and `.text` encrypted on disk). The
+  mod never edits the exe on disk; it hooks the decrypted image in memory after the game has started.
+- **Multiplayer:** Teardown has had online multiplayer since 2.0. Every test here was single player. The parallel
+  solver pass isn't bit-exact, so in a session it can change the physics other players see: keep the mod to single
+  player or a lobby you host with friends who agreed. It is untested in multiplayer.
 - **Machine:** i9-14900K (logical 0-15 are P-core HT pairs, 16-31 are E-cores), RTX 5090 32 GB (driver 617.42), 64 GB
   RAM, Windows 11 build 26200. 35-40 Steam Workshop mods were active in every session; the user asked to keep them
   for benchmarks.
@@ -68,7 +71,7 @@ installed. The project lives in the user's own local git repo and has not been r
   - Two small Python tools did most of the day-to-day work (run with `uv run --with capstone --with pefile --with
     numpy`):
     - a disassembler with `dis <rva> [n]`, `calls <rva>` and `callers <rva>` over a private dump of the code
-      section;
+      section, kept outside any repo;
     - `sigmake`, which returns the shortest byte pattern unique in that dump, with `??` for rel32 and
       RIP-relative operands.
 - **universal-modder:** `um backup create` for `%LOCALAPPDATA%\Teardown` and `Documents\Teardown` before every
@@ -172,7 +175,7 @@ dump (75-77 signatures by 0.2.1).
   - A physics replacement that bypasses the engine's contacts loses all of this unless it rebuilds it. PhysX v1 had
     no impact damage at all.
 
-**Luau binding** (needed for the mod's own `TPA_*` functions and for an in-process test bridge):
+**Lua binding** (needed for the mod's own `TPA_*` functions and for an in-process test bridge):
 - API nodes are `{thunk, const char* name, next}` in two linked lists: 490 game functions (head 0x1e53e70) and 77
   core ones such as GetTime, StartLevel and Input*.
 - The walker 0x4a8520 registers each node on a script.
@@ -187,7 +190,7 @@ dump (75-77 signatures by 0.2.1).
 - The engine string (TString, 32 B) is inline unless byte 0x1f is nonzero, in which case it's a heap pointer.
 - The stock menu calls `GetTime()` every frame. Wrapping `GetTime`'s node therefore gives a hook into every script,
   the menu included. The bridge runs queued Lua chunks there, from a named pipe `\\.\pipe\tpa_bridge` (local
-  clients only).
+  clients only). It runs whatever Lua it is sent, so it is a development tool: keep it out of anything released.
 
 **Particles** (category 2, 0x42fb50, manager at scene+0x18):
 - Smoke systems use a 1 m uniform grid with u16 cell counts, so each system tops out at about 65.5k particles.
@@ -350,8 +353,8 @@ win/lose gating), and C1 (60 random cells identical to a transcription of the en
 3000-particle cell). 0.2.1 has **not** been re-tested.
 
 **Not verified:** C1 taking over in game (it matched 21 heavy cells, then hit the false mismatch of Gotcha 6, so
-it never switched on); solver_mt with P-core
-pinning; whether disabling the weather mods lets debris sleep; PhysX v2 vehicles and `GetBodyHit` lists.
+it never switched on); solver_mt with P-core pinning; whether disabling the weather mods lets debris sleep; PhysX v2
+vehicles and `GetBodyHit` lists; anything in multiplayer.
 
 ## Gotchas
 1. **The PC froze and needed a hard restart during an automated explosion benchmark with PhysX v2.**
@@ -382,7 +385,8 @@ pinning; whether disabling the weather mods lets debris sleep; PhysX v2 vehicles
    take the step mutex in every report, and skip actors that have no scene.
 6. **C1 switched itself off in the main menu, with "MISMATCH ... foreign overflow bytes".** **Cause:** the slot-16
    overflow can write into a record owned by another cell's job, and that write races in the engine itself, so
-   comparing those bytes isn't deterministic. **Fix:** 0.2.1 compares only the cell's own records.
+   comparing those bytes isn't deterministic. **Fix:** 0.2.1 compares only the cell's own records (untested in
+   game, like the rest of 0.2.1).
 7. **solver_mt lost its in-game A/B (×1.19 slower), though it won 2× offline and on piles.** **Cause:** its 12 pool
    threads were unpinned and spun in barriers on E-cores, contending with 63 other solver jobs and the engine's 31
    workers. In 0.1, every big island also took one pool mutex, so islands the engine solves side by side queued.
@@ -393,6 +397,7 @@ pinning; whether disabling the weather mods lets debris sleep; PhysX v2 vehicles
    - in 0.2.1, also move any engine job that has run more than 1 ms on an E-core to the P-cores
      (`SetThreadAffinityMask`, at most 6 at once, undone when the job ends). This changes only placement, so it
      stays exact, and it's kept only if a main-thread A/B shows it at least 5 % faster.
+   - Neither 0.2.1 change has run in game yet.
 8. **Debris never goes to sleep after an explosion, so physics costs 24 ms per step for over a minute.** **Cause
    (suspected):** wind was on (world+0xa51), and the velocity pre-pass blends every awake body's velocity toward
    the wind field, so pieces never settle under the sleep threshold. The user's weather mods are the suspects

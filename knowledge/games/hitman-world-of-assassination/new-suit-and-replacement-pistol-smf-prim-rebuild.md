@@ -39,21 +39,25 @@ the crash hunt.
   **Peacock 8.9.1**, **rpkg-cli 2.34.0**, HMTextureTools from SMF, GlacierKit 1.12.15, Blender 5.2.
 - Peacock reads SMF's `deploySummary.json` only at startup: deploy, restart Peacock, then launch.
 - **Offline only.** Everything here was tested under Peacock and never against IOI's servers, which hold the
-  online profile, inventory and progression. Play the modded install under Peacock only.
+  online profile, inventory and progression. Play the modded install under Peacock only, with `leaderboards=false`
+  in Peacock's `options.ini` (it defaults to `true`, and modded runs don't belong on Peacock's shared leaderboards;
+  the load order below includes a gameplay mod, RealisticAI).
 - **(second suit)** Same install and tool versions. SMF load order at the end: `Atampy26.RealisticAI`, the pistol,
   the first suit, the second suit, the disguise-head mod. HMLanguageTools.exe is the copy bundled with SMF 2.33.42.
 - **Deploy wrapper (the project's own Python, not published):** refuse to run while `HITMAN3.exe` is up; copy each
-  mod folder plus its game-derived files (a JSON map of `content/chunk0/<hash>.<TYPE>` -> a file outside the repo) into
-  SMF's `Mods`; run `Deploy.exe --useConsoleLogging --doNotPause` with stdin from an empty file and stdout/stderr
-  to a log file (Gotcha 19); then restart Peacock: kill only Peacock's own `node.exe` / `PeacockPatcher.exe` by
-  PID and start `nodedist\node.exe chunk0.js` and `PeacockPatcher.exe` from the Peacock folder.
+  mod folder plus its game-derived files (a JSON map of `content/chunk0/<hash>.<TYPE>` -> a file outside the repo,
+  never published: they are IOI's files, edited or as-is) into SMF's `Mods`; run
+  `Deploy.exe --useConsoleLogging --doNotPause` with stdin from an empty file and stdout/stderr to a log file
+  (Gotcha 19); then restart Peacock: kill only Peacock's own `node.exe` / `PeacockPatcher.exe` by PID and start
+  `nodedist\node.exe chunk0.js` and `PeacockPatcher.exe` from the Peacock folder.
 - **Backups before every deploy** (`~/.universal-modder/backups/hitman3-runtime-*`): SMF `config.json`,
   `Runtime\packagedefinition.txt`, `Runtime\chunk0patch300.rpkg` (SMF's generated package) and a zip of Peacock's
   `userdata`. Restoring those three files and restarting Peacock rolls a deploy back.
-- **Watching a test run:** launch with `steam://rungameid/1659040`, drive the menus with `um win drive` and look
-  with `um win shot --scale 0.33` (2560x1440 window; Page Down opens Destinations). A PowerShell check reads
-  `Get-WinEvent` System `nvlddmkm` (153 = TDR, a GPU reset), Application 1000 for `hitman3`, and the newest
-  Peacock log (HeroSpawn, ContractStart, "Mission started", and the `SaveAndSynchronizeEvents4` heartbeat).
+- **Watching a test run:** launch with `steam://rungameid/1659040`, drive the menus with `um win drive` (it takes
+  over the keyboard: ask the human first) and look with `um win shot <file> --scale 0.33` (2560x1440 window; Page
+  Down opens Destinations). A PowerShell check reads `Get-WinEvent` System `nvlddmkm` (153 = TDR, a GPU reset),
+  Application 1000 for `hitman3`, and the newest Peacock log (HeroSpawn, ContractStart, "Mission started", and the
+  `SaveAndSynchronizeEvents4` heartbeat).
 
 ## Route and why
 `data` through SMF: `.entity.json` / `.entity.patch.json` (QuickEntity), `.repository.json`,
@@ -105,13 +109,15 @@ except where we changed them. An rpkg round trip requantises every mesh and copi
   sub-mesh+68, 20 bytes per vertex: neighbour indices plus constraints, 0xFF.. = pinned).
 - **Texture tonymeta** (16 bytes): byte 0 is 0 for colour and 1 for normal. Byte 8 is the format: 0x5A BC7,
   0x55 BC5, 0x49 BC1. Bytes 11 and 12 are the size code: 2=512, 3=1024, 4=2048, 5=4096.
-- **Weighted PRIM vertex block (second suit):** per vertex, the position (12 bytes high-res or 8 quantised), 12
-  skin bytes (six influences, weights summing to 255), then `12 + 4 x uv_count` bytes (normal/tangent/binormal and
-  UVs), then 4 colour bytes when the mesh has a colour stream. A mesh's PrimObject min/max (mesh+20/+32) and its
-  sub-mesh's (sub+20/+32) are both the exact vertex extents; `pos_scale` = half extent, `pos_bias` = centre (w lanes
-  0.5 on weighted meshes). IOI writes its blocks in a fixed order with no unreferenced bytes, and every
-  constant-colour mesh still carries the colour stream (5,821 of 6,092 vanilla ones filled with 0xFF). A
-  re-serialiser following those rules reproduced all 1,227 vanilla weighted PRIMs byte for byte.
+- **Weighted PRIM vertex data (second suit):** four blocks, each covering every vertex before the next one starts
+  (RPKG-Tool 2.34.0's `prim_weighted_sub_mesh` reads them in this order): all positions (12 bytes per vertex
+  high-res, 8 quantised), then all skin records (12 bytes: six influences, weights summing to 255), then all
+  normal/tangent/binormal + UV records (`12 + 4 x uv_count` bytes), then all colours (4 bytes). A writer that
+  interleaves them per vertex corrupts the PRIM. A mesh's PrimObject min/max (mesh+20/+32) and its sub-mesh's
+  (sub+20/+32) are both the exact vertex extents; `pos_scale` = half extent, `pos_bias` = centre (w lanes 0.5 on
+  weighted meshes). IOI writes its blocks in a fixed order with no unreferenced bytes, and every constant-colour
+  mesh still carries the colour stream (5,821 of 6,092 vanilla ones filled with 0xFF). A re-serialiser following
+  those rules reproduced all 1,227 vanilla weighted PRIMs byte for byte.
 
 ### Cloth in PRIMs (second suit; decoded from the bytes, channel meanings partly inferred)
 - A cloth PRIM carries a coarse **sim mesh** object (16-2,058 particles in vanilla; our hair 174) that the solver

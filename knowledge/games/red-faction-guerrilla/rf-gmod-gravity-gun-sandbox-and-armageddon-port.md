@@ -8,7 +8,7 @@ platform: windows
 engine: native
 route: native-hook
 tools: ["MinHook 1.3.4", "Dear ImGui 1.91.9b", "Ghidra 12.1.4 (headless)", "capstone + pefile (via uv)", "XAudio2 2.9", "MSVC x86 (Visual Studio 18) + CMake + Ninja", "doctest", "numpy, scipy, Pillow", "um backup"]
-anti_cheat: "none; single-player only. The DLL refuses any exe whose SHA-256 it doesn't know and stays idle in multiplayer."
+anti_cheat: "RFG: none. RF:A: Valve Anti-Cheat (listed on its Steam page, for online co-op). Single player only: uninstall before any online session; the DLL refuses unknown exes, and its multiplayer idle check is untested"
 status: in-progress
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["@skurtyyskirts"]
@@ -37,6 +37,9 @@ tags: ["gravity-gun", "physgun", "telekinesis", "source-movement", "noclip", "vi
   `dinput8!DirectInput8Create` (so the same proxy loads), **not large-address-aware** (2 GB). The only community
   tools found for it are [Gibbed's Volition packfile tools](https://github.com/gibbed/Gibbed.Volition), shipped in
   the game's `build\` folder.
+- **Single player only.** RFG has online PvP, and RF:A has online co-op with Valve Anti-Cheat listed on its Steam
+  page (VAC bans modified clients on VAC-secured servers). The RFG DLL is built to stay idle in multiplayer, which
+  was never tested. Uninstall the mod (`-Uninstall`) before any online session in either game.
 - **Source assets, read from the human's installs and never committed:** Half-Life 2 (app 220, the 2024
   anniversary VPK layout), Garry's Mod (app 4000; its `hl2/resource/halflife2.ttf` is the HUD font), and their
   Garry's Mod Workshop subscriptions: the [[TFA][AT] Project HL2 MMod Pack](https://steamcommunity.com/sharedfiles/filedetails/?id=2665902404)
@@ -114,7 +117,7 @@ render frame) are in [that note](control-resonant-dylan-takeover-retargeted-anim
   jump 200, gravity 600 u/s² (15.2 m/s², for the player only), accelerate 10, air accelerate 10 with the 30 u/s
   wish cap, friction 8, stop speed 10. Noclip 1000 u/s along the view (Shift x3, Alt x0.25).
 - Viewmodels: Source model space is view space; D3D view = (-y, z, x). HL2's viewmodel FOV 54° is horizontal at
-  4:3 (41.98° vertical). Activities are `ACT_VM_*`; the gravity gun's claws open through its `active` pose
+  4:3 (41.83° vertical). Activities are `ACT_VM_*`; the gravity gun's claws open through its `active` pose
   parameter. MMod models are MDL v48 with 60 fps sequences (resampled to 30).
 
 ### Red Faction: Armageddon (static analysis only, nothing confirmed live)
@@ -167,6 +170,7 @@ The human runs every RFG test (the agent never launches RFG); the agent reads `<
   fingerprints in both exes and every new global is writable and holds the predicted shipped value.
 - **Red Faction: Armageddon: never run.** Steam shows its licence agreement on launch, and accepting it was left to
   the human; three launch requests were queued behind it. Every RF:A address is static-only.
+- **Never tested:** whether the RFG DLL really stays idle in multiplayer.
 
 ## Gotchas
 1. **Guns and the gravity gun went through people and debris.** **Cause:** the raycast passed the layer word at
@@ -178,7 +182,8 @@ The human runs every RFG test (the agent never launches RFG); the agent reads `<
    the Dylan mod's test 4). **Fix:** write steps 8, 1/steps 0.125, micro steps 1 and 1/micro 1 together in the
    step detour; leave tau and damping. (Turned back on in the latest build at the human's request; untested.)
 3. **The body showed in first person.** **Cause:** the head-bone lookup by name returned -1 on the live rig.
-   **Fix:** a detour of 0xA7E1D0 forcing alpha 0 for the local player (`camera.fp_hide_body`).
+   **Fix:** a detour of 0xA7E1D0 forcing alpha 0 for the local player (`camera.fp_hide_body`), in the latest build,
+   which hasn't run yet.
 4. **The RPG's flight sound looped forever.** **Cause:** a cue-looped WAV was started as a one-shot at the launch
    point with nothing to stop it. **Fix:** a keyed positional loop per projectile, stopped when the rocket
    explodes; one-shots never loop; rockets expire after 10 s so the RPG can't wait forever on a lost rocket.

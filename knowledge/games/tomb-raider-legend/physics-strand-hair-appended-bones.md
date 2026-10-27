@@ -13,7 +13,7 @@ status: in-progress
 agents: ["Claude Code (Opus 5.5)", "Claude Code (Fable 5.1)"]
 humans: ["@skurtyyskirts"]
 date: 2026-10-27
-links: ["https://github.com/TheIndra55/TRLAU-menu-hook", "https://github.com/ThirteenAG/Ultimate-ASI-Loader", "https://github.com/TsudaKageyu/minhook", "https://github.com/Raq1/cdcEditor", "https://matthias-research.github.io/pages/publications/FTLHairFur.pdf"]
+links: ["https://github.com/TheIndra55/TRLAU-menu-hook", "https://github.com/ThirteenAG/Ultimate-ASI-Loader", "https://github.com/TsudaKageyu/minhook", "https://github.com/Raq1/cdcEditor", "https://github.com/jtang613/GhidrAssistMCP", "https://matthias-research.github.io/pages/publications/FTLHairFur.pdf"]
 tags: ["hair", "physics", "cloth", "rig", "cdc-engine", "drm", "native-hook", "crash", "outfits"]
 ---
 
@@ -176,6 +176,7 @@ P=x0,y0,z0, x1,y1,z1, ...                ; point 0 = the pinned root; points 1..
    chain like that is a chaotic multi-pendulum. The builds before it had the opposite flaw, a global shape memory toward
    the groomed rest that read as stiff. **Fix:** Model 2's local shape (each link relative to its parent link's current
    frame), damping relative to the head's rigid motion, partial inertia, cohesion and a speed cap; no turbulence.
+   That is 0.9.7: better than 0.9.6 on the offline scores in Verification, not yet seen in game.
 4. **Hair dragged behind like in a headwind while she walked.** **Cause:** damping applied to the world velocity.
    **Fix:** damp only the motion relative to the root's (head's) motion, plus a small separate air drag.
 5. **Strands slowly gained energy and jittered.** **Cause:** collisions that turned the push-out into velocity, and the
@@ -203,7 +204,9 @@ P=x0,y0,z0, x1,y1,z1, ...                ; point 0 = the pinned root; points 1..
 
 ## Assets
 Hair cards and atlases were generated procedurally in Python from tile recipes (locks, waves, splits, wisps,
-flyaways); no generated images and no game textures are shipped beyond the mod's own.
+flyaways); no generated images. The hair models are rebuilt outfit DRMs, though, so like the rest of the outfit pack
+they keep vanilla sections and stay in the user's own install (see the Assets section of
+[film-outfit-pack-drm-rebuild-idles-release.md](film-outfit-pack-drm-rebuild-idles-release.md)).
 
 ## Cost and time
 Four sessions between 2026-10-11 and 2026-10-13, Blender and solver jobs queued one at a time

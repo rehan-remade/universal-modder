@@ -25,7 +25,7 @@ dual-wield system that patch 2.5 added for the player (the Double Trouble perk) 
 It runs in the real game: an on-screen probe reported both hands holding the mod's guns with dual wield on,
 screenshots show both models, and the gunshots in a recording cross-correlate with the custom sound files
 (0.70-0.94) while the vanilla Liberty shot scores 0.5 at most. The work also turned up a save crash that is not
-the mod's: saves made with since-removed mods crash about 15-30 s after loading whenever RED4ext is installed.
+the mod's: saves made with since-removed mods crash about 13-30 s after loading whenever RED4ext is installed.
 
 For address lookups in crash dumps this note uses the game's own symbol table; see
 [cyberpunk-2077-native-modding-address-hashes.md](cyberpunk-2077-native-modding-address-hashes.md).
@@ -149,6 +149,9 @@ For address lookups in crash dumps this note uses the game's own symbol table; s
      `UIIcon.weapon_Croft_USPMatch_None__Default` record with `atlasResourcePath`/`atlasPartName`.
    - The pack step copies the depot minus sources (`.glb .png .blend .wav .md`), and minus `.json` except under
      `localization` (Gotcha 7).
+   - These files are CDPR's own with our edits (and the animations in Assets are derived from the Liberty's
+     clips), so the packed archive stays in your own install. A public release would ship only the mod's own parts
+     and edits, and generate these files from each player's install, as the build script already does from yours.
 4. **Animset priorities** (lower wins): vanilla Liberty sets under our variable at their vanilla priorities (base
    layer), flourishes p56, the two-gun flourish p52 (gated on a random variable), the standing reload set p48
    `[dual_wield, w_handgun_croft_uspmatch]`, the other five movement states p40 with an extra `croft_state_<x>`
@@ -251,7 +254,8 @@ For address lookups in crash dumps this note uses the game's own symbol table; s
    `hold <vk> 90` and `sleep` between keys. Esc closes the "Changes in Patch 2.5" popup; focus then starts on the
    account button (bottom right): Left lands on Quit Game, then Up x6 reaches Continue. A small script that finds
    the yellow focus box in a screenshot made the navigation reliable. The intro video's red frames fool a
-   "menu reached" check; wait for the logo instead.
+   "menu reached" check; wait for the logo instead. This drives the user's keyboard and mouse: ask first, and
+   check `um win drive --proc Cyberpunk2077 idle` so you don't type over them.
 7. **The localisation doesn't load ("Resource ... failed to load").** **Cause:** the `onscreens` resource is CR2W
    named `.json`, and a pack filter that skipped `*.json` dropped it. **Fix:** keep `.json` under `localization`.
 8. **`WolvenKit convert d` fails on the edited `.app` ("could not be converted to ... RedPackage").** **Cause:** the

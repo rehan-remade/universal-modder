@@ -8,12 +8,12 @@ platform: windows
 engine: native
 route: native-hook
 tools: ["MinHook 1.3.4", "Dear ImGui 1.91.9b", "Ghidra 12.1.4 (headless)", "capstone + pefile (via uv)", "Janitor 2026.10.6.1", "vgmstream r2168", "XAudio2 2.9", "MSVC x86 (Visual Studio 18) + CMake + Ninja", "doctest", "numpy, scipy, Pillow", "d3dcompiler_47", "um backup"]
-anti_cheat: "none; single-player only (the mod stays idle in multiplayer, read from the game's multiplayer flag)"
+anti_cheat: "none; single-player only. The mod is built to stay idle in multiplayer (it reads the game's multiplayer flag), which was never tested"
 status: in-progress
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["@skurtyyskirts"]
 date: 2026-10-27
-links: ["https://github.com/rfg-modding/RSL", "https://github.com/rfg-modding/RFGR_Types", "https://github.com/LostPhysx/RFG-VR", "https://github.com/rfg-modding/RfgToolsPlusPlus", "https://github.com/rfg-modding/RFGM.Formats", "https://github.com/TsudaKageyu/minhook", "https://github.com/ocornut/imgui", "https://github.com/vgmstream/vgmstream", "https://github.com/dtzxporter/Cast", "rf-gmod-gravity-gun-sandbox-and-armageddon-port.md"]
+links: ["https://github.com/rfg-modding/RSL", "https://github.com/rfg-modding/RFGR_Types", "https://github.com/LostPhysx/RFG-VR", "https://github.com/rfg-modding/RfgToolsPlusPlus", "https://github.com/rfg-modding/RFGM.Formats", "https://github.com/TsudaKageyu/minhook", "https://github.com/ocornut/imgui", "https://github.com/vgmstream/vgmstream", "https://github.com/dtzxporter/Cast", "https://github.com/Scobalula/Janitor", "rf-gmod-gravity-gun-sandbox-and-armageddon-port.md"]
 tags: ["dinput8-proxy", "control-takeover", "pose-override", "animation-retarget", "d3d11-overlay-draw", "despawn", "havok", "first-person", "god-mode", "wwise", "xaudio2", "cross-game-port", "northlight"]
 ---
 
@@ -31,6 +31,9 @@ tags: ["dinput8-proxy", "control-takeover", "pose-override", "animation-retarget
 ## Setup
 - **RFG Re-Mars-tered, Steam app 667720**, `rfg.exe` with exactly the hash above. Windows 11. GOG addresses differ
   non-uniformly, so the tables below are Steam-only. The exe is ASLR-relocated: add (live base - 0x400000).
+- **Single player only.** RFG has online PvP and Steam leaderboards. The mod reads the multiplayer flag (0x2FEB588)
+  and is built to stay idle there, but that was never tested: put `resonant\disable.txt` in place or uninstall
+  before any online match.
 - **Build:** MSVC x86 from Visual Studio 18 (`vcvarsall x64_x86`), CMake + Ninja, `/W4 /WX`. CMake fetches
   [MinHook 1.3.4](https://github.com/TsudaKageyu/minhook) and [Dear ImGui 1.91.9b](https://github.com/ocornut/imgui)
   pinned by SHA-256. Tests: doctest (pure C++20 core) plus native logic tests and a smoke host.
@@ -42,9 +45,10 @@ tags: ["dinput8-proxy", "control-takeover", "pose-override", "animation-retarget
   [RfgToolsPlusPlus](https://github.com/rfg-modding/RfgToolsPlusPlus) and
   [RFGM.Formats](https://github.com/rfg-modding/RFGM.Formats) (packfile formats).
 - **CONTROL Resonant, read offline only and never launched:** Janitor 2026.10.6.1, a command-line
-  extractor/exporter for Remedy's Northlight `.rmdtoc` packs, run at BelowNormal. Animation exports are
-  [Cast](https://github.com/dtzxporter/Cast) files. The exact public source of the Janitor build used was not
-  recorded. [vgmstream](https://github.com/vgmstream/vgmstream) r2168 decodes the `.wem` audio.
+  extractor/exporter for Remedy's Northlight `.rmdtoc` packs, run at BelowNormal. The version matches the
+  v2026.10.6.1 release of Scobalula's [Janitor](https://github.com/Scobalula/Janitor) (GPL-3.0). Animation exports
+  are [Cast](https://github.com/dtzxporter/Cast) files. [vgmstream](https://github.com/vgmstream/vgmstream) r2168
+  decodes the `.wem` audio.
 - **Python** tools run through `uv run --with numpy --with scipy --with pillow python -I ...`.
 - **Backups first:** the original `misc.vpp_pc` and `table.vpp_pc` (the data patch edits them) were snapshotted
   with `um backup` into `~/.universal-modder/backups/rfg-resonant-originals`. The deploy script restores them byte
@@ -214,7 +218,8 @@ result, each hook, and probes.
   are a clean thiscall prologue, the C++ reader loads the real pack (crush shows at frame 20 of
   `dylan_crush_attack1_01`, gone at 100), core 153 / native 56 + 12 smoke tests pass, plus an independent review.
 - **Not verified anywhere:** whether the render state still holds the 3D matrices when 0x550830 runs, where the
-  world's depth buffer is at that point, the despawn guard's thresholds, the first-person eye offset.
+  world's depth buffer is at that point, the despawn guard's thresholds, the first-person eye offset, and whether
+  the mod really stays idle in multiplayer.
 
 ## Gotchas
 1. **Test 1 killed Mason within seconds.** **Cause:** the proxy velocity reads NaN in components the game isn't
@@ -236,7 +241,7 @@ result, each hook, and probes.
    startup.
 6. **Dylan's hits did almost no damage.** **Cause:** the kit's damage numbers were on Resonant's scale; RFG NPCs
    have 300-600 HP. **Fix:** `world.damage_scale` 4 on the kit's hits, with hit logging (first 30, then every
-   50th, HP before and after).
+   50th, HP before and after). It is in the fifth build, which never ran.
 7. **After "physics max", every NPC moved wrong, not just the player.** **Cause:** the solver write is
    world-wide, and it changed the step count (4 → 8) without the stored inverses (+0x324/+0x328), so bodies ran at
    twice real time while NPC character controllers didn't. (Found later in rf-gmod's offline RE.) **Fix:** off by
@@ -246,7 +251,7 @@ result, each hook, and probes.
    0x550830: after the camera update, build skin = player world x FK(hand) x track x inverse bind per joint and
    keep it with the camera position in a small ring; on the render thread draw the entry whose camera matches the
    frame's (within 5 cm, newest wins), with the frame's own view/projection, every pipeline state saved and
-   restored, SEH-guarded (a fault turns it off for the session).
+   restored, SEH-guarded (a fault turns it off for the session). This is the fifth build, which never ran.
 9. **RFG's camera mode 8 looks like a first-person mode but isn't playable.** **Cause:** it takes its view from
    the player's orientation and a camera-bone offset, not from the mouse. **Fix:** keep on-foot mode 10 and move
    real and render pos to the eyes (0xAB2260) after each camera update.

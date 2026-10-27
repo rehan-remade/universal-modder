@@ -1,6 +1,6 @@
 ---
 kind: game
-title: "A film-style Lara outfit pack: every player .drm rebuilt, per-outfit idles and walks, and a drag-and-drop release tested in a clean room"
+title: "A film-style Lara outfit pack: every player .drm rebuilt, per-outfit idles and walks, and a private drag-and-drop package tested in a clean room"
 game: "Tomb Raider: Legend"
 games_also: []
 game_version: "Steam PC build, trl.exe MD5 bd846c8fb3223e53bee022bb307b21bc (NextGen renderer on), Windows 11"
@@ -17,14 +17,14 @@ links: ["https://github.com/TheIndra55/TRLAU-menu-hook", "https://github.com/Thi
 tags: ["outfits", "drm", "cdc-engine", "idles", "animation", "rig", "packaging", "clean-room", "uninstall", "native-hook"]
 ---
 
-# A film-style Lara outfit pack: every player .drm rebuilt, per-outfit idles and walks, and a drag-and-drop release
+# A film-style Lara outfit pack: every player .drm rebuilt, per-outfit idles and walks, and a private drag-and-drop package
 
 A pack that dresses Lara in 2001-film-style outfits everywhere Tomb Raider: Legend shows her (gameplay, cutscenes, the
 main menu and every wardrobe slot) was rebuilt and extended: young Lara and the 19 wardrobe-only slots got film
 outfits (40 DRMs), the Tokyo party gown was rebuilt on its own 96-segment rig with its own walks and idles, a torn
 tactical dress family was rebuilt from the same garment, idles became per-outfit sets, and a wall-stop reaction was added.
 The whole thing was then packaged as a drag-and-drop folder and installed, verified and uninstalled in a clean-room copy
-of the game. Builds were deployed to the human's game and checked in game by them from 2026-10-12 on; the release
+of the game. Builds were deployed to the human's game and checked in game by them from 2026-10-12 on; the
 package passed every offline test, but a launch from the clean room was still owed. The ASI, the loader, the reload
 system and the DRM animation basics are in
 [film-reloads-qa-bridge-physics-mags-asi.md](film-reloads-qa-bridge-physics-mags-asi.md); the strand hair on the two
@@ -38,7 +38,7 @@ dresses is in [physics-strand-hair-appended-bones.md](physics-strand-hair-append
   2015-2022 runtime.
 - Blender 5.2.1 + cdcEditor 0.1.1 (export/import of player DRMs); the mod's own Python DRM parser and container writer
   (layouts from tr7.pdb; it reproduces all 82 extracted vanilla DRMs byte for byte); Ghidra 12.0.1 + GhidrAssistMCP.
-- `um backup create` of the saves folder before every deploy; `um publish check` on the release folder.
+- `um backup create` of the saves folder before every deploy; `um publish check` on the package folder.
 
 ## Route and why
 Data plus a native ASI. Outfits are whole player DRMs bound by object name, so an outfit is a rebuilt DRM in `mods\`;
@@ -90,17 +90,19 @@ sections are spliced back.
 4. Host new idles/walks into the DRM (`animList` + DTP event lists, as in the reloads note) and list them per object in
    the ini.
 5. Deploy with trl.exe closed: `mods\*.drm`, `mods\hair\*.hair`, the ASI and its ini.
-6. Release: copy the deployed set into a folder laid out like the game folder (below), lint it, test it in a clean room.
+6. Package: copy the deployed set into a folder laid out like the game folder (below), lint it, test it in a clean room.
 
-### The release folder (drag and drop into the folder that holds trl.exe)
+### The package folder (drag and drop into the folder that holds trl.exe)
 This is a **private, local package** for the user's own install: its DRMs keep vanilla sections (see Assets), so
 it must not be uploaded as is. A public release needs a patcher that rebuilds the DRMs from the player's install.
 - The loader pair unmodified, `trl_croft.asi`, its ini (logging and test switches off), `mods\`, a README (requirements,
   install, features, controls, settings, uninstall, troubleshooting, credits and licenses, AI-use disclosure), and a
   `Croft2001\` folder with `Verify.bat`, `Uninstall.bat`, a PowerShell 5.1 script, a sha256 manifest and the licence texts
   (UAL MIT, TRLAU-menu-hook GPL-3.0 with a source link, MinHook BSD-2, SMAA MIT). 401 files, 5.6 GB; zip 2.06 GB.
-- No game file is shipped. The menu hook's `binkw32.dll` is Ultimate ASI Loader with built-in Bink DLLs, so it can
-  overwrite the game's Bink DLL with no `binkw32Hooked.dll` (the menu hook's own install does the same).
+- No unmodified game file is in the folder, but the rebuilt DRMs carry vanilla sections (see Assets). The menu
+  hook's `binkw32.dll` (the copy in its v2.5 zip) is an Ultimate ASI Loader build with RAD's Bink DLLs built in, so
+  it can overwrite the game's Bink DLL with no `binkw32Hooked.dll` (the menu hook's own install does the same).
+  Current Ultimate ASI Loader builds don't carry Bink: their Bink proxies need the original as `binkw32Hooked.dll`.
 - Verify: trl.exe is the Steam build (MD5), every mod file present with the right hash, the x86 VC++ runtime installed,
   the classic mistakes (dropped one folder too deep, foreign files in `mods\`, other d3d9 wrappers).
 - Uninstall: removes only files whose hash matches the manifest plus the ini, keeps the loader pair (other Legend mods
@@ -110,7 +112,8 @@ it must not be uploaded as is. A public release needs a patcher that rebuilds th
   Delete the folder afterwards; only the links go.
 
 ## Verification
-- `um publish check` on the release folder against the clean room: PASS, 401 files, 0 failures, 0 warnings.
+- `um publish check` on the package folder against the clean room: PASS, 401 files, 0 failures, 0 warnings. It
+  only catches files byte-identical to the game's, so it can't see the vanilla sections inside the rebuilt DRMs.
 - Scripted clean-room test, all PASS: (A) a folder dropped one level too deep is explained by Verify; (B) a fresh
   install verifies; (C) the 392 installed files equal the deployed, play-tested build except the one ini line;
   (D) Uninstall returns the folder to vanilla plus the loader pair; (E) reinstall.
@@ -163,7 +166,7 @@ To publish, ship only the mod's own data as a patch/installer that rebuilds each
 install (the splice tools already work section by section), and run `um publish check --game <install>` on it.
 
 ## Cost and time
-Sessions on 2026-10-11 to 2026-10-13 (pass 0.9.0 to the 0.9.7 release), several running unattended overnight.
+Sessions on 2026-10-11 to 2026-10-13 (passes 0.9.0 to 0.9.7), several running unattended overnight.
 
 ## Open questions
 - A launch from the clean room to confirm the FMVs play through the loader's built-in Bink.
