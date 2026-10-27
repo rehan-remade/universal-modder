@@ -4,7 +4,7 @@ title: 'Fallout 3 (Steam 1.7.0.4) crashes at startup: stale sD3DDevice in a clou
   launcher that isn''t there'
 game: Fallout 3
 games_also: []
-game_version: 'Steam GOTY (app 22370 / depot 22300), Fallout3.exe 1.7.0.4 (PE timestamp 0x60a80e56, the GFWL-free build)'
+game_version: 'Steam GOTY (app 22370), Fallout3.exe 1.7.0.4 (PE timestamp 0x60a80e56, the GFWL-free build)'
 platform: windows
 engine: creation
 route: data
@@ -12,10 +12,10 @@ tools: ["DXVK 3.1.1 (x32 d3d9.dll)", "a small Python/ctypes debugger (CreateProc
 anti_cheat: 'none'
 status: working
 agents:
-- Claude Code (claude-opus-5-5)
+- Claude Code (Opus 5.5)
 humans: []
 date: '2026-10-20'
-links: ["https://github.com/doitsujin/dxvk", "https://www.nexusmods.com/fallout3/mods/13245", "https://steamcommunity.com/app/22370/discussions/0/7130962134691721277"]
+links: ["https://github.com/doitsujin/dxvk", "https://www.nexusmods.com/fallout3/mods/17209", "https://steamcommunity.com/app/22370/discussions/0/7130962134691721277"]
 tags: ["fallout-3", "gamebryo", "crash", "startup", "falloutprefs", "sd3ddevice", "steam-cloud", "dxvk", "hybrid-graphics", "optimus", "onedrive"]
 ---
 
@@ -26,8 +26,8 @@ tags: ["fallout-3", "gamebryo", "crash", "startup", "falloutprefs", "sd3ddevice"
 > GPU preference, a fresh My Games folder) didn't help. Tracing the process showed the game wasn't really crashing:
 > it decided to quit and run its launcher, under a file name the Steam build doesn't ship, and then crashed during
 > teardown. The trigger was `sD3DDevice` in a `FalloutPrefs.ini` that Steam Cloud kept restoring, naming a different
-> adapter. Making that name match what D3D9 reports (pinned with DXVK) fixed it, and the game ran in the real game
-> and was played.
+> adapter. Making that name match what D3D9 reports (pinned with DXVK) fixed it: the game started and the human
+> played it.
 
 ## Setup
 
@@ -46,8 +46,8 @@ Config and wrapper only (`route: data`): no game files changed. Considered and r
 - `bUseThreadedAI=1` / `iNumHWThreads=2`: already present, and the Steam build's `Fallout_default.ini` ships them.
 - Per-app GPU preference (`HKCU\Software\Microsoft\DirectX\UserGpuPreferences`, `GpuPreference=2;`): harmless but
   didn't change anything; D3D9 still enumerates the Intel adapter as 0 and both drivers load.
-- Intel HD Graphics Bypass (`d3d9.dll` from Nexus 13245): the popular advice for this symptom, but it needs a Nexus
-  login, and DXVK can spoof vendor, device ID and description from a config file.
+- Intel HD Graphics Bypass package (`d3d9.dll`, Nexus 17209): the popular advice for this symptom, but it needs a
+  Nexus login, and DXVK can spoof vendor, device ID and description from a config file.
 - Deleting or renaming `My Games\Fallout3`: Steam immediately re-copies `FALLOUT.INI` from the install's
   `Fallout3\` folder (its install script does that) and Steam Cloud restores the stale `FalloutPrefs.ini`, so a
   "fresh" folder isn't fresh.
@@ -65,8 +65,10 @@ Config and wrapper only (`route: data`): no game files changed. Considered and r
   That is the `ntdll.dll+0x68e26`, `0xC0000005` in Event Viewer. The call chain was CRT `exit` → `_execute_onexit_table`
   → a scalar deleting destructor → `EnterCriticalSection`. It's a symptom of quitting, not the cause.
 - `RendererInfo.txt` is written by the launcher only, not by `Fallout3.exe`. A stale one (here still saying Intel UHD)
-  shows the launcher hasn't run since the hardware changed. Steam's Play button runs `Fallout3.exe` directly, so
-  the launcher never gets a chance to fix `sD3DDevice`.
+  means the hardware hasn't been re-detected since it changed. Steam's launch entry for the game is the launcher,
+  `Fallout3Launcher.exe` (named `FalloutLauncherSteam.exe` before a June 2024 update), not `Fallout3.exe`. The
+  exe's own hand-off asks for `FalloutLauncher.exe`, a name the Steam build doesn't use, so it never reaches that
+  launcher. When the launcher re-detects on its own wasn't tested here.
 - An `"Invalid parameter passed to C runtime function."` debug string appears about 40 ms in on every launch, crash or
   not. It's noise.
 
@@ -102,6 +104,8 @@ on hybrid laptops it leaves the game on the iGPU.
 - With DXVK alone the crash was byte-for-byte identical (same `ntdll` offset and registers), and `Fallout3_d3d9.log`
   showed DXVK on the RTX 4060 with the spoofed IDs. So the graphics path wasn't the problem by itself.
 - After step 4: the process stayed up past 30 s with a `Fallout3` window, and the human played the game.
+- **Not verified:** the plain `sD3DDevice` fix without DXVK, a `FalloutLauncher.exe` copy of the launcher (Open
+  questions), whether Steam's launcher re-detects the adapter on its own, and any other GPU or driver.
 
 ## Gotchas
 
@@ -116,8 +120,8 @@ on hybrid laptops it leaves the game on the iGPU.
    `sD3DDevice` to the reported description.
 4. **Symptom:** Event Viewer and the WER report show no game-side module at fault, and WER keeps no dump. **Fix:** a
    60-line ctypes debugger is enough. No WinDbg is needed, and `LocalDumps` needs admin rights.
-5. **Symptom:** `RendererInfo.txt` names the wrong GPU and never updates. **Cause:** only the launcher writes it, and
-   Steam doesn't run the launcher. It's a clue, not something to fix.
+5. **Symptom:** `RendererInfo.txt` names the wrong GPU and never updates. **Cause:** only the launcher writes it;
+   `Fallout3.exe` never does. It's a clue, not something to fix.
 
 ## Assets
 
@@ -130,6 +134,7 @@ About an hour in one session, most of it ruling out the three standard fixes bef
 ## Open questions
 
 - Is a `FalloutLauncher.exe` copy of `Fallout3Launcher.exe` in the game folder enough on its own, so the game opens
-  the launcher and re-detects? Untested.
+  the launcher and re-detects? Untested here, but one player in the linked Steam thread reports that renaming the
+  launcher (then `FalloutLauncherSteam.exe`) to `FalloutLauncher.exe` fixed their crash, which fits.
 - Does the plain `sD3DDevice` fix (no DXVK) hold on a machine whose iGPU description changed after a driver update?
   That's probably how the mismatch arose here: the saved name was "Intel(R) UHD Graphics" from an older install.
