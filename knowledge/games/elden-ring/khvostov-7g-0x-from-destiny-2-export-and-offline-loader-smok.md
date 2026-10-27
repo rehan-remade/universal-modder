@@ -15,17 +15,18 @@ agents:
 - Claude Code (Opus 5.5)
 humans: []
 date: '2026-10-27'
-links: ['https://github.com/MontagueM/Charm/releases/tag/v3.3.8', 'https://github.com/garyttierney/me3/releases/tag/v0.13.0', 'https://github.com/vswarte/fromsoftware-rs', 'https://github.com/ividyon/WitchyBND']
+links: ['https://github.com/MontagueM/Charm/releases/tag/v3.3.8', 'https://github.com/garyttierney/me3/releases/tag/v0.13.0', 'https://github.com/vswarte/fromsoftware-rs', 'https://github.com/ividyon/WitchyBND', 'https://github.com/vawser/Smithbox']
 tags: [destiny-2, khvostov, charm, me3, offline, asset-export, flver, tpf, matbin, texture-atlas, weapon-model, lod]
 ---
 # Khvostov 7G-0X from Destiny 2 as a textured weapon model in Elden Ring
 
-The genuine Destiny 2 exotic Khvostov 7G-0X, exported with Charm from a locally installed copy, now replaces
-the model of **Crepus's Black-Key Crossbow** in real Elden Ring 1.17.2.0 (offline, through an me3 package).
-Players hold it two-handed with the grip in the hand, the barrel forward and the original Destiny textures. Only
-`parts/wp_a_1514.partsbnd.dcx` and `wp_a_1514_l.partsbnd.dcx` are overridden: **no MATBIN was added and
-`allmaterial.matbinbnd` is untouched**, because the four Destiny texture sets are packed into one atlas that
-the vanilla Crepus material reads. **It does not fire like a rifle yet**: it still behaves as the crossbow.
+The genuine Destiny 2 exotic Khvostov 7G-0X, exported with Charm from the user's own Destiny 2 install, now
+replaces the model of **Crepus's Black-Key Crossbow** in real Elden Ring 1.17.2.0 (offline, through an me3
+package). The character holds it two-handed with the grip in the hand, the barrel forward and the original
+Destiny textures. Only `parts/wp_a_1514.partsbnd.dcx` and `wp_a_1514_l.partsbnd.dcx` are overridden: **no MATBIN
+was added and `allmaterial.matbinbnd` is untouched**, because the four Destiny texture sets are packed into one
+atlas that the vanilla Crepus material reads. **It does not fire like a rifle yet**: it still behaves as the
+crossbow.
 
 ## Setup
 - Windows x64, both games on Steam. Elden Ring app 1245620, exe ProductVersion 2.7.2.0 (App Ver. 1.17.2).
@@ -33,6 +34,12 @@ the vanilla Crepus material reads. **It does not fire like a rifle yet**: it sti
 - me3 0.13.0. Profile with `profileVersion = "v1"`, `savefile = "KhvostovOffline.sl2"`,
   `start_online = false`, `[[packages]] path = 'mods/khvostov'`, and a minimal Rust DLL under `[[natives]]`
   (a loader smoke test only).
+- **Offline only.** me3 starts `eldenring.exe` itself, not `start_protected_game.exe`, so EasyAntiCheat never
+  loads (as in the [Sunless note](sunless-shadow-slave-in-elden-ring-params-native-dll-retextu.md)), and it keeps
+  the game off the matchmaking servers unless `start_online` is set (me3's configuration reference). To play
+  online, quit and start the game from Steam, which loads nothing of the mod.
+- **Destiny 2 never runs.** Charm reads the installed `packages` folder from disk; the BattlEye-protected client
+  is not started, attached to or hooked.
 - FbxImporter 1.11.0, WitchyBND 3.0.1.0, and Smithbox 2.2.6's DLLs referenced from a small .NET 10 console
   tool (`flvertool`, private).
 - `um backup create "%APPDATA%\EldenRing"` before every modded launch.
@@ -170,14 +177,15 @@ the vanilla Crepus material reads. **It does not fire like a rifle yet**: it sti
    Windows exe, so the hash lookup finds nothing. *Fix:* `MSYS_NO_PATHCONV=1`.
 9. **Andre.SoulsFormats can't open KRAK DCX** ("Could not find a supported version of oo2core"). *Cause:* it
    looks next to the executable and in the working directory. *Fix:* copy the game's `oo2core_6_win64.dll`
-   there.
+   there (a local copy for your own tool: it's a game file, so it stays out of any repo or release).
 10. **A log watcher reported a "panic".** *Cause:* every me3 log contains `Core.System.DLPanic.Mode`, a normal
     debug line. *Fix:* don't grep me3 logs for bare "panic".
 
 ## Assets
 The model and textures come from the user's local Destiny 2 installation, read with Charm without starting
 the game. The FBX, PNGs, atlases and built bnds are private user-side files, never committed or released. No
-generated or public assets were used.
+generated or public assets were used. A shareable version would ship only a converter that each player runs
+on their own Destiny 2 and Elden Ring installs, never the exported or rebuilt files.
 
 ## Cost and time
 Two sessions; no paid model or API calls. The model swap itself (diagnosis, realignment, atlas) took about one
