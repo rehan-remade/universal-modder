@@ -879,12 +879,14 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-17",
+  "date": "2026-10-25",
   "links": [
    "https://github.com/etkramer/SplitScreenMod",
    "https://github.com/etkramer/SplitScreenMod/pull/21",
    "https://github.com/etkramer/SplitScreenMod/pull/22",
    "https://github.com/etkramer/SplitScreenMod/pull/23",
+   "https://github.com/etkramer/SplitScreenMod/pull/25",
+   "https://github.com/etkramer/SplitScreenMod/pull/26",
    "https://github.com/Kendoismebutmaybenot/SplitScreenMod-fixes",
    "https://github.com/Team-BmSDK/BmSDK-AC"
   ],
@@ -899,6 +901,58 @@
    "possession",
    "redirect",
    "detour"
+  ]
+ },
+ {
+  "path": "games/batman-arkham-knight/scraping-the-batmobile-umodel-pskx-wwise.md",
+  "kind": "game",
+  "title": "Scraping the Batmobile: umodel PSKX, native class offsets and Wwise banks",
+  "game": "Batman: Arkham Knight",
+  "games_also": [
+   "Just Cause 3"
+  ],
+  "game_version": "GOG Premium Edition, version.txt 1.999, buildId 57731640734362250, Season Pass + all DLC; cooked packages report UE3 Ver 863/227, Engine 10246, Game 800016",
+  "platform": "windows",
+  "engine": "unreal",
+  "route": "asset-only",
+  "tools": [
+   "UE Viewer (umodel)",
+   "vgmstream-cli",
+   "custom Python UE3 package, WWAD and AkBank parsers",
+   "BmSDK-AK generated class bindings (class dump)",
+   "Blender 5.2"
+  ],
+  "anti_cheat": "none \u2014 single-player, offline extraction from the user's own install",
+  "status": "working",
+  "agents": [
+   "OpenCode (space-bunny-free)",
+   "OpenCode (muse-spark-1.3)",
+   "Claude Code (Opus 5.5)",
+   "OpenCode (deepseek-v4.1-flash-free)",
+   "Freebuff (Buffy, model not recorded; wrote the note)"
+  ],
+  "humans": [
+   "@NotTrevino"
+  ],
+  "date": "2026-10-22",
+  "links": [
+   "https://github.com/gildor2/UEViewer",
+   "https://github.com/vgmstream/vgmstream",
+   "https://github.com/Team-BmSDK/BmSDK-AK"
+  ],
+  "tags": [
+   "umodel",
+   "pskx",
+   "ue3",
+   "cooked-packages",
+   "wwise",
+   "bank-extraction",
+   "materials",
+   "textures",
+   "batmobile",
+   "native-classes",
+   "property-offsets",
+   "class-dump"
   ]
  },
  {
@@ -2149,6 +2203,44 @@
   ]
  },
  {
+  "path": "games/dragon-s-dogma-2/martyr-s-bolt-max-hp-sacrifice-recovers-over-time-ordinary-l.md",
+  "kind": "game",
+  "title": "Martyr's Bolt max-HP sacrifice recovers over time, ordinary Loss Gauge untouched",
+  "game": "Dragon's Dogma 2",
+  "games_also": [],
+  "game_version": "Steam 2054970 build 25920212 (Oct 2026 update); REFramework nightly-01433 (d4611aef)",
+  "platform": "windows",
+  "engine": "re-engine",
+  "route": "loader-api",
+  "tools": [
+   "REFramework (Lua)",
+   "REFramework Dump SDK (il2cpp_dump.json)",
+   "fengari 0.1.4 (offline Lua tests)"
+  ],
+  "anti_cheat": "none found; single-player only",
+  "status": "released",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "MizaelX"
+  ],
+  "date": "2026-10-22",
+  "links": [
+   "https://github.com/MizaelX/DD2-Martyr-s-Bolt-Recovery",
+   "https://github.com/praydog/REFramework",
+   "https://github.com/D3athAn63l/DD2_Stuff/tree/main/research/baselines/health/2026-10-11"
+  ],
+  "tags": [
+   "skills",
+   "health",
+   "loss-gauge",
+   "magick-archer",
+   "attribution",
+   "sdk-hook"
+  ]
+ },
+ {
   "path": "games/dwarf-fortress/replace-the-dwarf-map-sprite-with-a-custom-32x32-sprite-stea.md",
   "kind": "game",
   "title": "Replace the dwarf map sprite with a custom 32x32 sprite (Steam, Linux)",
@@ -2319,7 +2411,8 @@
    "https://github.com/MontagueM/Charm/releases/tag/v3.3.8",
    "https://github.com/garyttierney/me3/releases/tag/v0.13.0",
    "https://github.com/vswarte/fromsoftware-rs",
-   "https://github.com/ividyon/WitchyBND"
+   "https://github.com/ividyon/WitchyBND",
+   "https://github.com/vawser/Smithbox"
   ],
   "tags": [
    "destiny-2",
@@ -2538,6 +2631,48 @@
    "info-json",
    "space-age",
    "recon"
+  ]
+ },
+ {
+  "path": "games/fallout-3/fallout-3-steam-1-7-0-4-crashes-at-startup-stale-sd3ddevice-.md",
+  "kind": "game",
+  "title": "Fallout 3 (Steam 1.7.0.4) crashes at startup: stale sD3DDevice in a cloud-restored FalloutPrefs.ini makes it run a launcher that isn't there",
+  "game": "Fallout 3",
+  "games_also": [],
+  "game_version": "Steam GOTY (app 22370), Fallout3.exe 1.7.0.4 (PE timestamp 0x60a80e56, the GFWL-free build)",
+  "platform": "windows",
+  "engine": "creation",
+  "route": "data",
+  "tools": [
+   "DXVK 3.1.1 (x32 d3d9.dll)",
+   "a small Python/ctypes debugger (CreateProcess DEBUG_ONLY_THIS_PROCESS)",
+   "pefile",
+   "capstone"
+  ],
+  "anti_cheat": "none",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-20",
+  "links": [
+   "https://github.com/doitsujin/dxvk",
+   "https://www.nexusmods.com/fallout3/mods/17209",
+   "https://steamcommunity.com/app/22370/discussions/0/7130962134691721277"
+  ],
+  "tags": [
+   "fallout-3",
+   "gamebryo",
+   "crash",
+   "startup",
+   "falloutprefs",
+   "sd3ddevice",
+   "steam-cloud",
+   "dxvk",
+   "hybrid-graphics",
+   "optimus",
+   "onedrive"
   ]
  },
  {
@@ -2912,6 +3047,44 @@
    "camera",
    "raycast",
    "websocket"
+  ]
+ },
+ {
+  "path": "games/grand-theft-auto-iv/complete-edition-after-a-steam-re-update-1-0-8-0-mod-stack-s.md",
+  "kind": "game",
+  "title": "Complete Edition after a Steam re-update: 1.0.8.0 mod stack silently not loading, infinite loads in TBoGT",
+  "game": "Grand Theft Auto IV",
+  "games_also": [],
+  "game_version": "Steam Complete Edition 1.2.0.59 (app 12210, buildid 14009960)",
+  "platform": "windows",
+  "engine": "rage",
+  "route": "loader-api",
+  "tools": [
+   "GTAIV.EFLC.FusionFix 5.0.1",
+   "Ultimate ASI Loader 9.7.4",
+   "ZolikaPatch 7.65 (disabled)",
+   "IV-SDK .NET (disabled)"
+  ],
+  "anti_cheat": "none",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-25",
+  "links": [
+   "https://github.com/ThirteenAG/GTAIV.EFLC.FusionFix",
+   "https://github.com/ThirteenAG/Ultimate-ASI-Loader"
+  ],
+  "tags": [
+   "troubleshooting",
+   "infinite-loading",
+   "fusionfix",
+   "zolikapatch",
+   "downgrade",
+   "achievements",
+   "tbogt",
+   "eflc"
   ]
  },
  {
@@ -3528,6 +3701,49 @@
   ]
  },
  {
+  "path": "games/just-cause-3/reading-the-vehicle-fleet-archives-rtpc-havok.md",
+  "kind": "game",
+  "title": "Reading the whole vehicle fleet: archive names, RTPC values, mesh payloads and Havok collision",
+  "game": "Just Cause 3",
+  "games_also": [],
+  "game_version": "2016 release build, JustCause3.exe timestamp 0x5787641c; every mesh declares RBMDL 1.16.0, every physics file Havok 2014.1.0-r1",
+  "platform": "windows",
+  "engine": "native",
+  "route": "asset-only",
+  "tools": [
+   "Gibbed.JustCause3.SmallUnpack",
+   "Gibbed.JustCause3.ConvertProperty",
+   "Gibbed.JustCause3.ConvertAdf",
+   "custom Python readers: archive index (Jenkins lookup3), ADF v4, RBMDL blocks, Havok 2014 packfiles"
+  ],
+  "anti_cheat": "none (single-player, offline, read-only)",
+  "status": "working",
+  "agents": [
+   "Freebuff (Buffy, model not recorded; wrote the note)"
+  ],
+  "humans": [
+   "@NotTrevino"
+  ],
+  "date": "2026-10-22",
+  "links": [
+   "https://github.com/aaronkirkham/jc-model-renderer",
+   "https://github.com/aaronkirkham/ava-format-lib",
+   "https://github.com/tim42/gibbed-justcause3-tools-fork"
+  ],
+  "tags": [
+   "archives",
+   "rtpc",
+   "adf",
+   "rbm",
+   "havok",
+   "vehicles",
+   "reverse-engineering",
+   "jenkins-hash",
+   "fleet-data",
+   "read-only"
+  ]
+ },
+ {
   "path": "games/just-cause-3/vehicle-mesh-editing-added-geometry-loads-with-matching-toc.md",
   "kind": "game",
   "title": "Vehicle mesh editing: added geometry loads with a matching .ee.toc",
@@ -3946,6 +4162,38 @@
    "lua-chip",
    "melsave",
    "unverified"
+  ]
+ },
+ {
+  "path": "games/melvor-idle-2-demo/timewarp-fast-forward.md",
+  "kind": "game",
+  "title": "TimeWarp fast-forward via override.cfg autoload and physics ticks",
+  "game": "Melvor Idle 2 Demo",
+  "games_also": [],
+  "game_version": "0.11.2-alpha.4 (steam 5373510)",
+  "platform": "macos",
+  "engine": "godot",
+  "route": "other",
+  "tools": [
+   "ilspycmd 11.1",
+   ".NET SDK 10.0.402 (Homebrew)"
+  ],
+  "anti_cheat": "none found by um scan",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-21",
+  "links": [],
+  "tags": [
+   "godot-4",
+   "dotnet",
+   "csharp",
+   "autoload",
+   "override-cfg",
+   "game-speed",
+   "idle"
   ]
  },
  {
@@ -6277,7 +6525,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-18",
+  "date": "2026-10-24",
   "links": [],
   "tags": [
    "dialogue",
@@ -6288,7 +6536,11 @@
    "voice-files",
    "esl",
    "cut-content",
-   "packages"
+   "packages",
+   "exclusive-branch",
+   "debugging",
+   "quest-priority",
+   "shouts"
   ]
  },
  {
@@ -6367,6 +6619,80 @@
    "casc",
    "localization",
    "addon"
+  ]
+ },
+ {
+  "path": "games/star-wars-the-force-unleashed/black-scenery-lighting-groups.md",
+  "kind": "game",
+  "title": "Fixing solid-black scenery in Star Wars: The Force Unleashed (PC): objects in lighting groups no light reaches",
+  "game": "Star Wars: The Force Unleashed",
+  "games_also": [],
+  "game_version": "Ultimate Sith Edition PC 1.2.94564, Steam (SWTFU.exe x86)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "REA 6.7.0 + Ghidra 12.1.4",
+   "MSVC 14.44 (dev-only D3D9 tracer and memory bridge plugin)",
+   "Python 3.12"
+  ],
+  "anti_cheat": "none (single-player)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-24",
+  "links": [
+   "https://github.com/morluto/rea",
+   "https://github.com/NationalSecurityAgency/ghidra"
+  ],
+  "tags": [
+   "lighting",
+   "spherical-harmonics",
+   "level-data",
+   "markerset",
+   "asset-override",
+   "ronin-engine",
+   "d3d9"
+  ]
+ },
+ {
+  "path": "games/star-wars-the-force-unleashed/ronin-engine-modding-surface.md",
+  "kind": "game",
+  "title": "Modding surface of Star Wars: The Force Unleashed (PC): a dinput8 plugin loader, a Lua bridge, and the engine's dormant dev features",
+  "game": "Star Wars: The Force Unleashed",
+  "games_also": [],
+  "game_version": "Ultimate Sith Edition PC 1.2.94564, Steam (SWTFU.exe x86, SteamStub-wrapped)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "REA 6.7.0 + Ghidra 12.1.4",
+   "MSVC 14.44",
+   "Python 3.12"
+  ],
+  "anti_cheat": "none (single-player); SteamStub DRM on SWTFU.exe left in place: exe code read only from private runtime memory dumps kept outside any repository",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-24",
+  "links": [
+   "https://www.nexusmods.com/starwarstheforceunleashed/mods/35",
+   "https://github.com/ThirteenAG/Ultimate-ASI-Loader",
+   "https://github.com/morluto/rea",
+   "https://github.com/NationalSecurityAgency/ghidra"
+  ],
+  "tags": [
+   "lua",
+   "asset-override",
+   "hot-reload",
+   "config",
+   "euphoria",
+   "ronin-engine",
+   "steamstub"
   ]
  },
  {
@@ -7665,6 +7991,54 @@
    "dds",
    "procedural-art",
    "crash-debugging"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-darktide/darktide-unit-extraction-and-beast-of-nurgle-clean-rig.md",
+  "kind": "game",
+  "title": "Extracting Darktide units into Blender and rebuilding the Beast of Nurgle as one clean, animatable rig",
+  "game": "Warhammer 40,000: Darktide",
+  "games_also": [
+   "Warhammer 40,000: Space Marine 2"
+  ],
+  "game_version": "Darktide.exe 0.0.3.0 (e808530), Steam, Oct 2026",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "asset-only",
+  "tools": [
+   "limn 0.7.1",
+   "Bitsquid Blender Tools 0.8.4",
+   "Blender 5.2.2 LTS (headless, Python 3.13)",
+   "numpy"
+  ],
+  "anti_cheat": "Easy Anti-Cheat (online-only live service). Everything here reads the installed bundle files on disk with the game closed; nothing touches the running game, the network, or the community Lua mod loader.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-21",
+  "links": [
+   "https://github.com/manshanko/limn",
+   "https://gitlab.com/qasikfwn/bitsquid-blender-tools"
+  ],
+  "tags": [
+   "darktide",
+   "stingray",
+   "bitsquid",
+   "limn",
+   "bundle",
+   "unit",
+   "bones",
+   "animation",
+   "scene-graph",
+   "rig",
+   "skinning",
+   "weights",
+   "influences",
+   "blender",
+   "beast-of-nurgle",
+   "cross-game-port"
   ]
  },
  {
@@ -9244,9 +9618,10 @@
    "ffmpeg (MPEG-1 Layer II decode)",
    "Blender 5.1 (glTF import check)",
    "cgf-converter 2.0.0 (tried, see Gotcha 3)",
-   "Ghidra 12 (exe section check only)"
+   "Ghidra 12 (exe section check only)",
+   "um win (WinDrive scanmode) for console input"
   ],
-  "anti_cheat": "none (single player). The exe is wrapped in Steam DRM with an encrypted .text; it was not unpacked or modified, and every value here comes from shipped plain-text files",
+  "anti_cheat": "none (single player). The exe is wrapped in Steam DRM with an encrypted .text; it was not unpacked or modified. Values come from shipped plain-text files and from the running game's console",
   "status": "working",
   "agents": [
    "Claude Code (Opus 5.5)"
@@ -9279,6 +9654,7 @@
    "shaders",
    "nanosuit",
    "cvars",
+   "console",
    "lua"
   ]
  },
@@ -9612,6 +9988,40 @@
    "unity",
    "owml",
    "outer-wilds"
+  ]
+ },
+ {
+  "path": "techniques/driving-dosbox-games-from-tests-background-input-parallel-sa.md",
+  "kind": "technique",
+  "title": "Driving DOSBox games from tests: background input, parallel sandboxed instances and screen-state checks",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-25",
+  "links": [
+   "https://www.dosbox.com/"
+  ],
+  "tags": [
+   "dosbox",
+   "dos",
+   "automation",
+   "testing",
+   "background-input",
+   "postmessage",
+   "parallel",
+   "sandbox",
+   "screenshots",
+   "midi",
+   "overlays",
+   "memory-pressure",
+   "windows",
+   "guest-memory",
+   "readprocessmemory",
+   "conventional-memory",
+   "focus-stealing",
+   "wmi"
   ]
  },
  {
@@ -10480,6 +10890,34 @@
   ],
   "links": [
    "https://momo5502.com/posts/2026-10-09-game-decompilation/"
+  ]
+ },
+ {
+  "path": "techniques/patching-rtlink-plus-overlaid-dos-executables-growing-the-im.md",
+  "kind": "technique",
+  "title": "Patching RTLink/Plus overlaid DOS executables: growing the image and calling new code safely from overlays",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-25",
+  "links": [
+   "https://github.com/eb4x/ghidra-plugin-rtlink"
+  ],
+  "tags": [
+   "dos",
+   "rtlink",
+   "overlays",
+   "vm-manager",
+   "binary-patching",
+   "mz-exe",
+   "trampolines",
+   "code-cave",
+   "x86-16",
+   "memory-pressure",
+   "conventional-memory",
+   "page-cache"
   ]
  },
  {

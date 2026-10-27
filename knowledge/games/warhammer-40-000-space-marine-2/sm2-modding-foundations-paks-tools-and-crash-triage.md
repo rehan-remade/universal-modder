@@ -95,6 +95,13 @@ files don't stream). Paks are what you ship.
 - **Write mod paks with `zipfile.ZIP_STORED` for every file** (Saber's page: a pak is a ZIP with compression set to
   Store). The engine streams `tpl_data` and texture mips by byte range straight out of the pak. A DEFLATED pak loads
   but renders black textures and invisible near LODs.
+- **Write plain local headers: no zip64.** Python's `ZipFile.open(info, "w", force_zip64=True)` gives every local
+  header version 4.5, `0xFFFFFFFF` in both 32-bit size fields and a 20-byte zip64 extra field holding the real sizes,
+  which the central directory doesn't carry. A pak written that way mounts but breaks the game's text at startup and
+  loops an arena load back to the menu (gotcha 13). The same files repacked with plain headers (version 2.0, extra
+  length 0, data right after the name) loaded. Set `info.file_size` and leave `force_zip64` False: CPython only
+  switches to zip64 by itself for entries near 2 GiB (`ZIP64_LIMIT`), and pak entries stay far under that. Check
+  every local header after writing.
 
 ### Manifests (`.resource`) and the crash rules they cause
 - `.sso.resource` has several link sections (`linksDesc`, `linksDescWeak`, `linksSsl`, `parents`, `dynamicLinks`).
@@ -176,7 +183,8 @@ files don't stream). Paks are what you ship.
 1. Extract the retail files you change from the CURRENT paks (an extraction from an older patch silently differs;
    we lost a day to a stale animation clip).
 2. Edit text files; keep CRLF and indentation; add `.resource` links for anything new.
-3. Write a ZIP_STORED pak named so it sorts before anything it must beat; put it in `client_pc/root/mods/`.
+3. Write a ZIP_STORED pak with plain (non-zip64) local headers, named so it sorts before anything it must beat; put it
+   in `client_pc/root/mods/`.
 4. Never swap paks while the game runs: it caused an out-of-memory server crash mid-load. Check for the process
    `Warhammer 40000 Space Marine 2 - Retail` first (note: `tasklist` truncates names to 25 chars).
 5. After a game patch: 3-way merge your text edits (old retail -> new retail onto yours). Line-based merges misplace
@@ -219,6 +227,12 @@ files don't stream). Paks are what you ship.
 12. **A patch silently changes text you merged.** Strings, cloth colours, presets and class names moved in Patch 15
     (`PVP_*` presets -> `PVE_PVP_*`, new `PVE_MEDIC`). Fix: the 3-way merge in Build steps; for armour presets see
     the models note (gotcha "not available for the selected Class").
+13. **Startup text broken (raw or garbled), then "Continue" loads part way and drops back to the same screen; no
+    crash report, no dump.** Cause: the pak's local headers carry zip64 extras (above). Every content fix tried first
+    changed nothing: the arena pool, inline animation clips, a Wwise bank rename. Found by diffing the zip STRUCTURE
+    against a pak that worked, not the files. Fix: plain headers. If a pak with the same contents as a working one
+    misbehaves, compare `version needed` and the local extra lengths first. Cost us 3 test rounds (Patch 15.1,
+    Oct 2026).
 
 ## Assets
 None in this note.
