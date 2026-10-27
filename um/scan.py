@@ -259,7 +259,12 @@ def pe_info(path: Path) -> dict | None:
     opt = off + 24
     magic = struct.unpack_from("<H", head, opt)[0]
     dd = opt + (96 if magic == 0x10B else 112)
-    clr_rva = struct.unpack_from("<I", head, dd + 14 * 8)[0] if dd + 15 * 8 <= len(head) else 0
+    # the CLR header is directory 14, so it only exists if NumberOfRvaAndSizes counts it; past the
+    # declared directories comes the section table, and its bytes would read as a CLR RVA (#441)
+    num_dirs = struct.unpack_from("<I", head, opt + (92 if magic == 0x10B else 108))[0]
+    clr_rva = 0
+    if num_dirs > 14 and dd + 15 * 8 <= len(head):
+        clr_rva = struct.unpack_from("<I", head, dd + 14 * 8)[0]
     return dict(arch={0x14C: "x86", 0x8664: "x64", 0xAA64: "arm64"}.get(machine, hex(machine)), managed=clr_rva != 0)
 
 
