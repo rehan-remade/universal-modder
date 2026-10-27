@@ -2,7 +2,8 @@
 # usage: powershell -ExecutionPolicy Bypass -File build.ps1              -> build\dinput8.dll
 #        powershell -ExecutionPolicy Bypass -File build.ps1 -FixedBase   -> build-fixedbase\dinput8.dll
 # -FixedBase (optional variant): no ASLR, preferred base 0x01400000 next to the exe, so the proxy does not land in the
-# middle of a large free block of the 2 GB address space (ISSUES 2). Relocations stay, so a taken base is still fine.
+# middle of a large free block of the 2 GB address space (README, Not tested: a long 4K session). Relocations stay, so
+# a taken base is still fine. install.ps1 installs only build\dinput8.dll.
 param([string]$Out = '', [switch]$FixedBase)
 if (-not $Out) { $Out = if ($FixedBase) { "$PSScriptRoot\build-fixedbase" } else { "$PSScriptRoot\build" } }
 $base = @()  # assigned, not returned from if: a one-element array would collapse into a string

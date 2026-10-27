@@ -1,14 +1,14 @@
 ---
 kind: game
-title: 'Original Metro 2033: SteamStub exe, VFI/UPK archives, QuickLZ and the crc32-keyed scripts.bin'
+title: 'Original Metro 2033: m2033fix (in-memory crash, fullscreen, V-Sync and frame-limiter fixes), VFI/UPK archives, QuickLZ and the crc32-keyed scripts.bin'
 game: Metro 2033
 games_also: []
 game_version: 'Original 2010 Steam build (app 43110), metro2033.exe 1.0.0.1, PE timestamp 2010-08-27'
 platform: windows
-engine: 4A Engine
+engine: native
 route: native-hook
 tools: ["Python 3 + pefile (static PE/RTTI/strings)", "own VFI/UPK lister + pure-Python QuickLZ 1.5 L3 decoder", "MetroTools source (format reference)", "MetroDeveloper 1.2.2 (hangs this build)", "Ghidra 12.1.4 on a read-only memory image", "Frida 17.24.3", "capstone + minidump (Python)", "Zig 0.17.0 (x86-windows-gnu, no CRT)", "PresentMon 2.6 (console)", "GOG 1.01 v5 build (DRM-free reference)", "Application Verifier + cdb (Windows SDK 10.0.26100)"]
-anti_cheat: "none (single-player). The exe is SteamStub-wrapped; it was not unpacked or patched."
+anti_cheat: "none (single-player). The exe is SteamStub-wrapped; it was not unpacked and the file is never patched (m2033fix patches the code in memory after the stub has decrypted it)."
 status: working
 agents:
 - Claude Code (Opus 5.5)
@@ -18,9 +18,10 @@ links:
   - "https://github.com/tsnest/MetroTools"
   - "https://github.com/tsnest/MetroDeveloper"
   - "https://github.com/tsnest/MetroDeveloper/releases"
-tags: [steamstub, rtti, vfi, vfs0, upk, quicklz, scripts-bin, crc32, level-bin, cvars, metrodeveloper, gog, dxgi, vsync]
+  - "examples/metro2033-m2033fix"
+tags: [4a-engine, steamstub, rtti, vfi, vfs0, upk, quicklz, scripts-bin, crc32, level-bin, cvars, metrodeveloper, gog, dxgi, vsync]
 ---
-# Original Metro 2033: SteamStub exe, VFI/UPK archives, QuickLZ and the crc32-keyed scripts.bin
+# Original Metro 2033: m2033fix (in-memory crash, fullscreen, V-Sync and frame-limiter fixes), VFI/UPK archives, QuickLZ and the crc32-keyed scripts.bin
 
 This is a static, read-only reverse of the 2010 Steam release. The exe's code section is SteamStub-encrypted
 on disk, so the engine was mapped from RTTI and strings, which are not encrypted. The archives were decoded
@@ -46,7 +47,10 @@ fully, patch packs included.
   exit-time patch.
 
 ## Setup
-- **Install:** Steam app 43110 (a secondary Steam library), Windows 11.
+- **Install:** Steam app 43110 (a secondary Steam library), Windows 11, started from the Steam client with
+  its SteamStub intact. The 2010 original has been off sale on Steam since Redux (2014); GOG sells it again.
+- **GOG reference:** the author's own install of GOG's release of the original (1.01, GOG v5 of
+  2026-06-02), read on disk and also run for comparison (Gotcha 17).
 - **Exe:** `metro2033.exe` 1.0.0.1, PE32 i386, VS2005 runtime (MSVCR80), PhysX 2.8 (PhysXLoader),
   d3dx9_42, D3D11 path present. The PDB path string is `x:\bin_x86\metro2033.pdb`.
 - **Loader:** MetroDeveloper 1.2.2 was installed: a single `dinput8.dll` + `MetroDeveloper.ini`.
@@ -70,7 +74,7 @@ most option changes need only `user.cfg` (Gotchas 9–13).
 - **The community loader wasn't usable.** MetroDeveloper 1.2.2 hangs this build (Gotcha 8).
 - **Unpacking the exe:** not done. SteamStub counts as DRM under the toolkit's safety rules. The code was
   read from a read-only memory image of the running game, and the patch is applied only after the stub
-  has decrypted `.text` itself.
+  has decrypted `.text` itself. The memory image and the crash dumps stay private, outside any repo.
 
 ## How the game works (what we had to learn)
 - **SteamStub:**
@@ -130,8 +134,8 @@ most option changes need only `user.cfg` (Gotchas 9–13).
 3. Brute-force `scripts.bin` names as `crc32("content\\scripts\\" + candidate + ".bin")`. Draw candidates
    from archive path components, exe strings and the strings inside `scripts.bin`, under folders such as
    `dynamic\<cat>\<name>\<name>`.
-- The scripts are not in the KB. Their layout above is enough to rewrite them in about 150 lines of
-  Python.
+- `vfi_list.py` and `vfi_extract.py` are the author's own and not in the KB. The layout above is enough to
+  rewrite them in about 150 lines of Python.
 - Keep the output outside the game folder and the repo.
 
 **Crash-fix proxy (m2033fix).**
@@ -144,10 +148,11 @@ most option changes need only `user.cfg` (Gotchas 9–13).
   3. Provide your own `memcpy`/`memset`/`strlen` and avoid 64-bit division.
   4. The `.def` is required, otherwise the export is `DirectInput8Create@20`.
 - Behaviour:
-  - `DllMain` only records the module path.
+  - `DllMain` only records the module path and starts one thread for P12. That thread checks the same exe
+    identity, polls 8 bytes until SteamStub has decrypted them, then writes one jump (Gotcha 22).
   - The first `DirectInput8Create` loads `GetSystemDirectoryW()\dinput8.dll`, checks the exe (base
     0x400000, SizeOfImage 0xB64000, TimeDateStamp 0x4C7775B7) and the exact bytes at each site, applies
-    the patches, logs them, then forwards the call.
+    the other patches, logs them, then forwards the call.
   - If anything mismatches, the proxy stays a pure pass-through.
 - Rollback: delete `dinput8.dll`.
 
@@ -164,7 +169,11 @@ most option changes need only `user.cfg` (Gotchas 9–13).
 - **Not verified:**
   - loose-file override and most launch arguments (`-logflush` writes nothing in retail, Gotcha 24);
   - the upk priority order;
-  - the record body schema.
+  - the record body schema;
+  - m2033fix P13 with a gamepad, and P11/P12/P14/P17 on the failures they handle (none occurred, so only
+    their log lines and normal play were checked);
+  - a long 4K session (the largest free address block fell from 158 to 118 MB in 30 minutes, no crash;
+    example README).
 
 ## Gotchas
 1. **Disassembly of `metro2033.exe` is garbage.** **Cause:** SteamStub; `.text` is encrypted and the
@@ -187,7 +196,8 @@ most option changes need only `user.cfg` (Gotchas 9–13).
    thread-stack snapshot shows the main thread sleeping inside the `dinput8.dll` proxy's init. Steam is
    not yet initialised at that point, `steamclient.dll` never loads, and `uengine.log` stays at 0 bytes.
    **Fix:** rename `dinput8.dll` away, and vanilla shows its `_uengine_` window in about 5 s. Retry with a
-   newer MetroDeveloper or report it upstream.
+   newer MetroDeveloper or report it upstream. Per its release notes, 1.2.2 itself fixed Steam copies that
+   1.2.1 broke, and 1.2.3 (2026-04-30) lists only Redux multiplayer fixes; 1.2.3 was not tried here.
 9. **Edits to `%LOCALAPPDATA%\4A Games\Metro 2033\user.cfg` are ignored.** **Cause:** `config_load` reads
    the **Steam Cloud** copy first (`SteamRemoteStorage` FileRead). It falls back to the local file, then
    to the archives. **Fix:** edit `<Steam>\userdata\<id>\43110\remote\user.cfg`.
@@ -268,9 +278,16 @@ most option changes need only `user.cfg` (Gotchas 9–13).
 16. **A proxy that does work in `DllMain` hangs this build** (see 8). A `dinput8.dll` proxy is reliable if it
     defers everything to the game's first `DirectInput8Create` call: on the main thread, about 2–4 s
     after start, with `.text` already decrypted by SteamStub.
+    - The one exception in m2033fix 0.4 is P12, which has to beat the first `user.cfg` read (Gotcha 22).
+      `DllMain` only starts a thread for it; the thread starts after `DllMain` returns and waits for
+      SteamStub to decrypt the bytes before it writes.
 17. **The GOG release (1.01 GOG v5) is the same exe build, without SteamStub.** Same PE timestamp
     `0x4C7775B7`, version 1.0.0.1, PDB path and section sizes. `.rdata`, `.data` and `.rsrc` are
     byte-identical to the Steam file.
+    - GOG has sold the 2010 original since 2026-05-14 (its Preservation Program). The store page's
+      changelog lists the changes below: a high-resolution frame limiter, V-Sync, more resolutions and
+      controller support in v1; mouse and keyboard on pause screens with a controller connected and no
+      Intel Arc warning in v5 (2026-06-02). The copy compared here is the author's own GOG install.
     - Its `.text` is plain on disk, so it is a clean static reference for the Steam build's addresses.
       No memory dump is needed.
     - It also ships a Galaxy `steam_api.dll` wrapper (it implements `SteamRemoteStorage` and
@@ -332,7 +349,8 @@ most option changes need only `user.cfg` (Gotchas 9–13).
     `strncpy_s(buf[1024], len)`, and MSVCR80's invalid-parameter handler exits.
     - The first `user.cfg` read is at about 1.95 s, before the game's first `DirectInput8Create` (about 2.2 s),
       so a fix there is too late. m2033fix 0.4 P12 polls from a thread started in `DllMain` and writes its
-      jump as soon as SteamStub has decrypted the bytes (decryption takes about 0.24 s).
+      jump 0.3 s after SteamStub has decrypted the bytes (decryption takes about 0.24 s; the test logs show
+      the jump in at about 0.7 s).
     - Not fixed: after the copy, `buf[line_length] = 0` is written unchecked, so a file without line breaks
       (e.g. zeros after a failed write) writes past the stack buffer.
 23. **`target_fps` does not cap the frame rate and is not saved.** **Cause:** the vanilla limiter
@@ -367,4 +385,3 @@ most option changes need only `user.cfg` (Gotchas 9–13).
   limiter or its config); not resolved.
 - Answered: a 512-mode list is exceeded in practice (553 modes on a 3840×2160 @ 240 Hz monitor; vanilla
   then loses every 4K mode). The limiters were compared in gameplay (Gotcha 23).
-- P13 (gamepad present) and P11/P12/P14/P17 on the failures they handle were not reproduced in the game.

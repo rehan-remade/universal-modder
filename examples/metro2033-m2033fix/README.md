@@ -153,7 +153,7 @@ Same PC and settings, Steam launches of 130 s each, closed by PID:
 | Without the DLL | 10 | **5/10** at 26–28 s | 4× `0x84F72A` (read `0xC`), 1× `0x84F53C` (write `0x0`); same worker chain in every dump |
 | 0.1 (P1 + P3) | 10 | **0/10** | No dumps; the charmap pointer went old → new directly in every run |
 | 0.2 test build, `r_vsync on` | 10 | **0/10** | P5 A/B OK in every log |
-| 0.2 (this source), `r_vsync off` | 10 | **0/10** | No dumps; P1, P4 ×4, P5 A/B OK in every log |
+| 0.2, `r_vsync off` | 10 | **0/10** | No dumps; P1, P4 ×4, P5 A/B OK in every log |
 
 Without the DLL vs 0.1: Fisher exact, one-sided, p = 0.016.
 
@@ -226,7 +226,8 @@ check left it alone.
 - other builds (Redux, retail).
 
 The GOG build is not supported. Its exe has no SteamStub section (SizeOfImage `0xB0C000`), so the identity
-check fails and it stays vanilla. It already ships its own equivalents of P4 and P5.
+check fails and it stays vanilla. It already ships its own equivalents of P4, P5, P13 and P14, and its own
+frame limiter.
 
 ## Known limits
 - Only `metro2033.exe` 1.0.0.1 (Steam) is supported; anything else stays vanilla.
@@ -241,7 +242,8 @@ check fails and it stays vanilla. It already ships its own equivalents of P4 and
 - [tsnest/MetroDeveloper](https://github.com/tsnest/MetroDeveloper): the community engine mod for the
   series. It uses the same `dinput8.dll` load path, and its settings documented the dev console and
   config cvars.
-- The GOG release of the same exe build was the reference for P4 and P5.
+- The GOG release of the same exe build (the author's own GOG copy, 1.01 GOG v5) was the reference for P4, P5,
+  P13 and P14.
 - Ghidra, Frida, capstone, minidump (Python), PresentMon, Zig.
 - **AI disclosure:** the investigation, code and tests were done by Claude Code (Opus 5.5) with and for
   wh1tem0nst3r. wh1tem0nst3r reviewed each design before the DLL was built, chose P5's stub variant and

@@ -355,10 +355,11 @@ static void apply_p5(void) {
     put("\r\n");
 }
 
-/* ---- P8: frame limiter that waits until a deadline (DESIGN_0.3.md). The engine's limiter at 0x8536FB..0x8537E9
-   sleeps int(1000/target_fps) - int(1000/fps) whole ms, which hides inside the Present wait when the GPU is the
-   bottleneck. The block is skipped and replaced by p8_wait: wait until the previous tick's QPC ([timer+0x70], u64)
-   plus 1/target_fps, sleeping on a high-resolution waitable timer and spinning the last ~1.5 ms. ---- */
+/* ---- P8: frame limiter that waits until a deadline (field note, Gotcha 23). The engine's limiter at
+   0x8536FB..0x8537E9 sleeps int(1000/target_fps) - int(1000/fps) whole ms, which hides inside the Present wait when
+   the GPU is the bottleneck. The block is skipped and replaced by p8_wait: wait until the previous tick's QPC
+   ([timer+0x70], u64) plus 1/target_fps, sleeping on a high-resolution waitable timer and spinning the last
+   fps_limiter_spin_us (600 us by default). ---- */
 #define P8_SITE 0x008536FBu      /* mov eax,[0xA1BE08]: start of the Sleep block */
 #define P8_BACK 0x008537EAu      /* mov cl,[edi+0x2c]: first instruction after the Sleep call */
 #define TARGET_FPS_PTR 0x00A1BE08u /* the cvar's value pointer; the limiter reads target_fps through it */
@@ -490,11 +491,12 @@ static void apply_p9(int p8_on) {
     put("\r\n");
 }
 
-/* ---- P10 (issue 16): fullscreen entry when the game had no focus at start. 0x7A1E4B creates the swap chain with
-   Windowed = [0xA16915]; without focus DXGI answers DXGI_STATUS_OCCLUDED and leaves a window, the game ignores the
-   HRESULT and never retries (it also gets no focus event after a click). After CreateSwapChain (0x7A1EE1) we note
-   the result; once per frame on the main thread (the call at 0x85B523 to 0x85B090) we retry SetFullscreenState(TRUE)
-   when the game window is in front, under the renderer lock 0xA2E5B0 that 0x7A2913 takes for the same call. ---- */
+/* ---- P10 (field note, Gotcha 20): fullscreen entry when the game had no focus at start. 0x7A1E4B creates the
+   swap chain with Windowed = [0xA16915]; without focus DXGI answers DXGI_STATUS_OCCLUDED and leaves a window, the
+   game ignores the HRESULT and never retries (it also gets no focus event after a click). After CreateSwapChain
+   (0x7A1EE1) we note the result; once per frame on the main thread (the call at 0x85B523 to 0x85B090) we retry
+   SetFullscreenState(TRUE) when the game window is in front, under the renderer lock 0xA2E5B0 that 0x7A2913 takes
+   for the same call. ---- */
 #define P10_SITE1 0x007A1EE1u /* mov eax,[edi]; lea ecx,[ebp-0xC]: right after CreateSwapChain */
 #define P10_SITE2 0x0085B523u /* call 0x85B090 in the main-loop tick */
 #define WINDOWED_FLAG 0x00A16915u
@@ -601,11 +603,11 @@ static void apply_p10(void) {
              put_rel(P10_SITE2, 0xE8, (unsigned)&p10_tick_stub), 5);
 }
 
-/* ---- P11 (issue 21): 0x7B3740 sorts the display-mode list and reads its last entry to pick the aspect ratio
-   ([0xA16908]) without checking that the list has one; an empty list (GetDisplayModeList gave 0, HRESULT ignored)
-   reads 0xFFFFFFF8. The function's entry jumps to p11_stub: an empty list sets the desktop aspect and returns
-   (stdcall, 1 argument); otherwise the moved prologue runs and the function goes on. Both callers (0x7A1F9D DX11,
-   0x7ACA25) are covered. ---- */
+/* ---- P11 (field note, Gotcha 21): 0x7B3740 sorts the display-mode list and reads its last entry to pick the
+   aspect ratio ([0xA16908]) without checking that the list has one; an empty list (GetDisplayModeList gave 0,
+   HRESULT ignored) reads 0xFFFFFFF8. The function's entry jumps to p11_stub: an empty list sets the desktop aspect
+   and returns (stdcall, 1 argument); otherwise the moved prologue runs and the function goes on. Both callers
+   (0x7A1F9D DX11, 0x7ACA25) are covered. ---- */
 #define P11_SITE 0x007B3740u
 __attribute__((used)) unsigned g_p11_back = P11_SITE + 6;
 __attribute__((used)) void __cdecl p11_empty(void) {
@@ -655,9 +657,10 @@ static void apply_p11(void) {
     log_site("P11 empty_mode_list_guard", P11_SITE, (unsigned)&p11_stub, put_jmp(P11_SITE, (unsigned)&p11_stub), 6);
 }
 
-/* ---- P12 (issue 14): config_load copies each user.cfg line with strncpy_s(buf[0x400], 0x400, line, len) and then
-   writes buf[len] = 0; a line of 1024+ characters ends the process (MSVCR80 invalid parameter) and writes past the
-   buffer. Clamp len to 1023 at 0x422702. The first config_load runs at ~1.95 s, before DirectInput8Create (~2.2 s),
+/* ---- P12 (field note, Gotcha 22): config_load copies each user.cfg line with
+   strncpy_s(buf[0x400], 0x400, line, len) and then writes buf[len] = 0; a line of 1024+ characters ends the process
+   (MSVCR80 invalid parameter). Clamp len to 1023 at 0x422702. (The unchecked buf[len] = 0 for a file without line
+   breaks is not covered; see the note.) The first config_load runs at ~1.95 s, before DirectInput8Create (~2.2 s),
    so a thread started in DllMain applies this one as soon as SteamStub has decrypted the bytes (~0.25 s). ---- */
 #define P12_SITE 0x00422702u /* mov edi,eax; push edi; push esi; lea ecx,[esp+0x28] */
 __attribute__((used)) unsigned g_p12_back = P12_SITE + 8;
