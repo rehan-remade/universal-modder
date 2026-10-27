@@ -902,6 +902,58 @@
   ]
  },
  {
+  "path": "games/batman-arkham-knight/scraping-the-batmobile-umodel-pskx-wwise.md",
+  "kind": "game",
+  "title": "Scraping the Batmobile: umodel PSKX, native class offsets and Wwise banks",
+  "game": "Batman: Arkham Knight",
+  "games_also": [
+   "Just Cause 3"
+  ],
+  "game_version": "GOG Premium Edition, version.txt 1.999, buildId 57731640734362250, Season Pass + all DLC; cooked packages report UE3 Ver 863/227, Engine 10246, Game 800016",
+  "platform": "windows",
+  "engine": "unreal",
+  "route": "asset-only",
+  "tools": [
+   "UE Viewer (umodel)",
+   "vgmstream-cli",
+   "custom Python UE3 package, WWAD and AkBank parsers",
+   "BmSDK-AK generated class bindings (class dump)",
+   "Blender 5.2"
+  ],
+  "anti_cheat": "none \u2014 single-player, offline extraction from the user's own install",
+  "status": "working",
+  "agents": [
+   "OpenCode (space-bunny-free)",
+   "OpenCode (muse-spark-1.3)",
+   "Claude Code (Opus 5.5)",
+   "OpenCode (deepseek-v4.1-flash-free)",
+   "Freebuff (Buffy, model not recorded; wrote the note)"
+  ],
+  "humans": [
+   "@NotTrevino"
+  ],
+  "date": "2026-10-22",
+  "links": [
+   "https://github.com/gildor2/UEViewer",
+   "https://github.com/vgmstream/vgmstream",
+   "https://github.com/Team-BmSDK/BmSDK-AK"
+  ],
+  "tags": [
+   "umodel",
+   "pskx",
+   "ue3",
+   "cooked-packages",
+   "wwise",
+   "bank-extraction",
+   "materials",
+   "textures",
+   "batmobile",
+   "native-classes",
+   "property-offsets",
+   "class-dump"
+  ]
+ },
+ {
   "path": "games/batman-arkham-knight/splitscreen-one-view-composited-twice.md",
   "kind": "game",
   "title": "Batman: Arkham Knight split-screen: the engine renders one view and composites it twice",
