@@ -1,29 +1,31 @@
 ---
 kind: game
-title: "White Knuckle's climbing, movement and damage look as a Minecraft Fabric mod (1.21.9, ported to 26.3), from your own install"
+title: "White Knuckle's climbing, movement, damage look and inventory as a Minecraft Fabric mod (1.21.9, ported to 26.3), from your own install"
 game: "White Knuckle"
 games_also: ["Minecraft Java Edition"]
 game_version: "White Knuckle Steam build 25612096 (Unity 6000.3.9f1, Mono, D3D11/D3D12), run on Linux through Proton Experimental; Minecraft Java 1.21.9 with Fabric Loader 0.19.5, Fabric API 0.134.1+1.21.9; ported to Minecraft Java 26.3 with Fabric Loader 0.19.5, Fabric API 0.162.0+26.3 (OpenGL and Vulkan)"
 platform: proton
 engine: unity-mono
 route: reimplementation
-tools: ["Fabric on 1.21.9 (Loom 1.12.7, Gradle 9.1, Mojang mappings, JDK 25)", "Fabric on 26.3 (non-remapping Loom 1.18-SNAPSHOT, Gradle 9.7.1, JDK 25)", "xdg-desktop-portal FileChooser through an own pure-Java D-Bus client", "LWJGL tinyfd (Windows folder dialog, 1.21.9)", "SDL3 SDL_ShowOpenFolderDialog (Windows folder dialog, 26.3)", "ilspycmd 8.2.0.7535 on .NET 8", "UnityPy + TypeTreeGeneratorAPI", "vkd3d-compiler.exe (Fedora mingw64-vkd3d) under Wine", "Python 3.10-3.14"]
+tools: ["Fabric on 1.21.9 (Loom 1.12.7, Gradle 9.1, Mojang mappings, JDK 25)", "Fabric on 26.3 (non-remapping Loom 1.18-SNAPSHOT, Gradle 9.7.1, JDK 25)", "xdg-desktop-portal FileChooser through an own pure-Java D-Bus client", "LWJGL tinyfd (Windows folder dialog, 1.21.9)", "SDL3 SDL_ShowOpenFolderDialog (Windows folder dialog, 26.3)", "ilspycmd 8.2.0.7535 on .NET 8", "UnityPy + TypeTreeGeneratorAPI", "vkd3d-compiler.exe (Fedora mingw64-vkd3d) under Wine", "python-xlib XTEST + KDE Spectacle (driving the game on KDE Wayland)", "Python 3.10-3.14"]
 anti_cheat: "none: White Knuckle is single-player and is never modified; only its files are read. Minecraft side tested in single-player, LAN and a Fabric dedicated server."
 status: working
 agents:
 - Claude Code (Opus 5.5)
 humans: []
-date: '2026-10-16'
+date: '2026-10-18'
 links: ["https://github.com/Fizz12215/White-Knuckle-Climbing"]
-tags: [white-knuckle, unity, unity-6, minecraft, fabric, climbing, physics-port, shader-disassembly, dxbc, fsb5, ima-adpcm, fmod, proton, kde-wayland, reference-capture, rewired, ledge-detection, camera, flatpak, xdg-desktop-portal, d-bus, windows-11, pip-pinning, '26.3', vulkan, sdl3, porting]
+tags: [white-knuckle, unity, unity-6, minecraft, fabric, climbing, physics-port, shader-disassembly, dxbc, fsb5, ima-adpcm, fmod, proton, kde-wayland, reference-capture, rewired, ledge-detection, camera, flatpak, xdg-desktop-portal, d-bus, windows-11, pip-pinning, '26.3', vulkan, sdl3, porting, inventory, encumbrance, xtest, game-automation]
 ---
 
-# White Knuckle's climbing, movement and damage look as a Minecraft Fabric mod (1.21.9, ported to 26.3), from your own install
+# White Knuckle's climbing, movement, damage look and inventory as a Minecraft Fabric mod (1.21.9, ported to 26.3), from your own install
 
 > A Fabric mod that plays like White Knuckle's climber:
 > - two-handed grip climbing on ledges, bars and ice, with per-hand grip;
 > - the game's on-foot physics, camera, hands, sounds and health rules;
-> - its damage look and hand-fatigue shader.
+> - its damage look and hand-fatigue shader;
+> - (not released yet) its inventory: the hands hold Minecraft items, and the game's 3D bag, pockets
+>   and weight ring are rebuilt from its data and shaders.
 >
 > The gameplay is reimplemented in Java from the decompiled C# (kept in a private folder, never
 > shipped) and the serialized prefab values. The art and audio never ship: each player runs a Python
@@ -150,11 +152,41 @@ tags: [white-knuckle, unity, unity-6, minecraft, fabric, climbing, physics-port,
     then 63 samples from the first 63 of the 64 nibbles (4-byte interleave, low nibble first).
   - Decoding that way matches FMOD bit for bit.
 - **The dev console** opens with Shift + backtick.
-  - `cheats` enables the other commands.
+  - `cheats` *toggles* the other commands (`cheats true` sets them on); a session with cheats saves no stats.
+  - `spawnitem item_beans 3` puts items straight into the bag (also `item_hammer`, `item_piton`,
+    `item_pillbottle`, `item_injector`); `restart` reloads the level and moves you to its start.
   - `hurtplayer dontkill <n>` deals exact damage without killing (clamps to 0.1 health).
   - `setstamina <0-10>` sets both hands' grip.
   - The playground has pure white, green and black green-screen rooms, which make ideal
     colour-measurement backdrops.
+
+- **The inventory (bag, pockets, weight)**, read from the game's data with UnityPy (the
+  `Inventory-Bag` tree under `Inventory-Bag-Camera` in `level3`) and its two shaders (disassembled as
+  above):
+  - Two hands hold one item each; an empty hand climbs, a holding hand can't (`HandItem.CanClimb`). Hold
+    `Inventory` (Tab) and a bag opens in front of you without pausing; the hand's button takes the item
+    under the crosshair or puts the held one down where you look. One pocket per hand (Q, E).
+  - The bag has its **own camera, FOV 94**, drawn over the world with no head-bob. In its space the
+    background disc (`Inventory_Frame_01`) has radius 1.5 at 2 ahead, the pockets (`Inventory_Pocket_01`,
+    radius 0.41 after the sprite's trim) sit at +/-1.5 on its edge turned to face the camera, and items lie
+    on a sphere of radius 1.6, each exactly where it was put, turned toward the camera, pushed apart slowly.
+    A black sphere around the camera darkens the view. Measured on the green-screen room: the view to 51%,
+    inside the disc 42%, inside a pocket 72% (the game blends in linear light, so sRGB alphas differ).
+  - **Weight:** `GetInventoryWeight` sums the bag's items (hands don't count). The player prefab sets
+    **13** items free and 10 more to the slowest speed (10%); the C# field defaults (5 and 10) are not what
+    the game uses (Gotcha 31).
+  - **The weight ring** is drawn by the disc's shader, not a sprite: its radius is
+    `value x _MaxEncumberanceValue (0.586) x half the sprite`, where the value is load / 13 capped at 1,
+    so at full it sits at 0.956 of the disc. It is dashed with a fixed dash length (so more dashes on a
+    bigger ring), 60% on, slowly drifting with time; its strength is `1.5 - the angle from vertical` folded
+    into one quadrant, so it is strongest at the top and bottom and gone at the sides (where the pockets
+    are). Its colour replaces the disc's black at the disc's own opacity, from a gradient on the bag
+    handler: black up to 20% full (so a light bag shows no ring), grey at 57%, orange at 93%, red-orange
+    full, then toward pure red as the slowdown grows. Changes ease over 0.25 s with an out-bounce.
+  - Labels are TextMeshPro with Rewired glyph tags: `{Hand-Left} - LEFT HAND : RIGHT HAND - {Hand-Right}`
+    above the disc and `{Pocket-Left}` on each pocket; a pocket with more than one item shows "Nx", yellow
+    when full. With the bag open, each empty hand shows the `hand-point` icon by the crosshair while it is
+    on an item, and the hovered item gets a white outline.
 
 ## Build steps
 1. Decompile `Assembly-CSharp.dll` (ilspycmd, above) to a private folder. Dump the serialized
@@ -247,7 +279,16 @@ tags: [white-knuckle, unity, unity-6, minecraft, fabric, climbing, physics-port,
   - screenshots of the hands, blood, damage look and every setup page on both engines. They caught a
     screen with no text that every check had passed (Gotcha 30).
 - **Also:** a standalone `runServer` boots clean.
+- **The inventory (not released yet; on a local branch):** the real game, driven by the agent on KDE
+  Wayland (the game is an XWayland window: XTEST key and mouse events through python-xlib, screenshots
+  with `spectacle -b -n -f` cropped to the window), with console items added one at a time, gave the
+  reference shots; the ring radius was then measured per item from them (27.5 px per item on a 378 px
+  disc) and matched the shader. The mod's gametest checks hands, grabbing items by hand, placing, the
+  bag (taking, putting down where aimed, both hands at once, closing when looking away), pockets, mining
+  with the hammer, per-hand recharge on the server (an iron golem hit by each hand at full strength) and
+  the weight slowdown; its bag screenshots were compared side by side with the game's.
 - **Not verified:**
+  - the inventory in multiplayer with two clients, on Vulkan and on Windows;
   - the "server without the mod" auto-off path against a real vanilla server;
   - on Windows, the `.bat`'s own venv setup and its install-Python branch (it ran with a venv already
     there);
@@ -395,6 +436,20 @@ tags: [white-knuckle, unity, unity-6, minecraft, fabric, climbing, physics-port,
     [Fabric mods for 26.x](../../techniques/fabric-mod-for-26-x-without-mappings.md), Gotchas 9-10. State checks
     can't see layout: look at the screenshots.
 
+31. **The weight limit read from the code was wrong.** `Inventory` declares 5 items free, but the
+    player prefab stores 13: serialized values override C# field defaults. Read the component from the
+    scene before trusting a default. The weight ring (its radius is load / 13) gave it away.
+32. **`dump_component.py` said "Inventory not found".** **Cause:** the read failed partway (an
+    `EOFError` from the regenerated type tree) and the script skipped the object silently. **Fix:** read
+    with a node list cut after the fields you need and `check_read=False`.
+33. **Typing `cheats` turned cheats off** after a `restart` (it toggles and stays set for the session),
+    so every `spawnitem` after it failed quietly. Use `cheats true`. `restart` also moves the player
+    out of the green-screen room, so tell the human.
+34. **Picking items from screenshots needed the crosshair on an item.** The bag picks only what the
+    crosshair ray hits; clicking a gap between items does nothing. Turn with XTEST relative motion first.
+35. **The ring "only shows sometimes".** It is drawn but black while the bag is under 20% full, and
+    small enough to hide under the items until about half full.
+
 ## Assets
 None generated. All art and audio come from the player's own install through the asset tool. The
 hurt vignette is a fitted analytic curve, `0.086 + 0.914 * (1 - exp(-(r/0.287)^2.75))`, within
@@ -410,7 +465,7 @@ investigation (capture, fit, disassembly, port, in-game check) took about one se
   skip a ledge the game would catch. Sampling the aim every frame into the 0.2 s grab memory would
   close most of the gap.
 - Looking 15 degrees past straight up, which Minecraft clamps at 90.
-- Items, the inventory and perks are not ported (the public beta is climbing only). They come next,
-  on 26.3 only (0.4.0 is the last 1.21.9 version).
+- Items and the inventory are built (26.3 only, not released yet); perks and the game's own items
+  besides the hammer are not. A player who dies and loses the starting hammer isn't given another yet.
 - The server trusts the client's "hanging" flag (no fall damage or fly kick while set). It needs a
   server-side plausibility check before use on public servers.

@@ -9603,7 +9603,7 @@
  {
   "path": "games/white-knuckle/climbing-movement-and-damage-look-in-minecraft-fabric.md",
   "kind": "game",
-  "title": "White Knuckle's climbing, movement and damage look as a Minecraft Fabric mod (1.21.9, ported to 26.3), from your own install",
+  "title": "White Knuckle's climbing, movement, damage look and inventory as a Minecraft Fabric mod (1.21.9, ported to 26.3), from your own install",
   "game": "White Knuckle",
   "games_also": [
    "Minecraft Java Edition"
@@ -9621,6 +9621,7 @@
    "ilspycmd 8.2.0.7535 on .NET 8",
    "UnityPy + TypeTreeGeneratorAPI",
    "vkd3d-compiler.exe (Fedora mingw64-vkd3d) under Wine",
+   "python-xlib XTEST + KDE Spectacle (driving the game on KDE Wayland)",
    "Python 3.10-3.14"
   ],
   "anti_cheat": "none: White Knuckle is single-player and is never modified; only its files are read. Minecraft side tested in single-player, LAN and a Fabric dedicated server.",
@@ -9629,7 +9630,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-16",
+  "date": "2026-10-18",
   "links": [
    "https://github.com/Fizz12215/White-Knuckle-Climbing"
   ],
@@ -9660,7 +9661,11 @@
    "26.3",
    "vulkan",
    "sdl3",
-   "porting"
+   "porting",
+   "inventory",
+   "encumbrance",
+   "xtest",
+   "game-automation"
   ]
  },
  {

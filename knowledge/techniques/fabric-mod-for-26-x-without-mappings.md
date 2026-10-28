@@ -197,6 +197,31 @@ Mojang mappings, so most names carried over. Every name below was checked with `
     the old jar). **Fix:** read the instance's `mmc-pack.json` (the `net.minecraft` component's `version`) and skip
     the copy, with a warning, when it isn't the version being built.
 
+13. **Symptom.** A 3D overlay drawn in the first-person hand pass (`FirstPersonHandsAndItemsRenderer
+    .submitHandsWithItems`) shakes when the player walks. **Cause:** the pass's pose starts from the inverse view
+    rotation and then adds the camera bob and hurt tilt, which barely move the world but move something a block
+    away a lot. **Fix:** `pose.pushPose(); pose.setIdentity(); pose.mulPose(camera.getViewRotationMatrix(new
+    Matrix4f()).invert());`, then lay things out in camera space and scale x and y by
+    tan(hand FOV / 2) / tan(wanted FOV / 2), since the pass projects with the hand FOV.
+14. **Symptom.** In that pass, a translucent backdrop doesn't darken what's behind a nearer translucent quad,
+    and `ItemStackRenderState.submit`'s outline colour draws nothing. **Cause:** submission order across
+    render types isn't the draw order, and translucent quads write depth; outlines are a level-pass effect.
+    **Fix:** `collector.order(n)` (lower first) for back-to-front layers; for an outline, submit the item a
+    second time slightly bigger and behind with `OverlayTexture.pack(1f, false)` (the all-white flash).
+15. **Symptom.** A mod that runs Minecraft's `startAttack()` itself (through an invoker) finds it does
+    nothing after any screen was open. **Cause:** `Minecraft.missTime` is set to 10000 while a screen is open
+    and only cleared by `continueAttack(false)`, which the mod had cancelled. **Fix:** clear `missTime`
+    yourself whenever your attack button isn't held.
+16. **Symptom.** A change applied in `Player.tick` when the selected hotbar slot changes is one hit late.
+    **Cause:** a click switches the slot and attacks before the player's tick, on both sides (client
+    `handleKeybinds` runs before `tickEntities`; the server handles `ServerboundSetCarriedItemPacket` and then
+    the attack packet). **Fix:** hook `Inventory.setSelectedSlot` instead. Test it on the server: hit an
+    entity right after switching and read its health.
+17. **Symptom.** Items from blocks a player breaks aren't seen by code that marks the breaker in
+    `PlayerBlockBreakEvents.BEFORE` and clears it in `AFTER`. **Cause:** Fabric's `AFTER` fires before
+    `Block.playerDestroy` spawns the drops. **Fix:** clear the mark at the end of the server tick (and on
+    `CANCELED`); tag drops in `ServerEntityEvents.ENTITY_LOAD`.
+
 ## Seen in
 - A zombie-bones test mod (zombies drop 1-4 bones via `LootTableEvents.MODIFY`): `BUILD SUCCESSFUL` with Loom 1.16.2,
   Gradle 9.8.1 and JDK 25, built the workaround way (Gotchas 3 and 5); `zombie-bones-1.0.0.jar` holds only the mod
@@ -205,6 +230,9 @@ Mojang mappings, so most names carried over. Every name below was checked with `
   [FPV LOGIC drones in Minecraft 26.3](../games/fpv-logic/fpv-logic-drones-flight-model-rc-radio-and-3d-models-in-minecraft.md)
   (Setup, and Gotcha 7 for more 26.x renames) and
   [Portalcraft](../games/portal-2/portalcraft-minecraft-inside-portal-2.md).
+- Gotchas 13-17: the inventory of
+  [White Knuckle Climbing](../games/white-knuckle/climbing-movement-and-damage-look-in-minecraft-fabric.md)
+  (hands holding items, a 3D bag drawn in the hand pass, per-hand attack recharge), checked by its client gametest.
 - *Porting a 1.21.x mod to 26.3* and Gotchas 8-12: the 1.21.9 → 26.3 port of
   [White Knuckle Climbing](../games/white-knuckle/climbing-movement-and-damage-look-in-minecraft-fabric.md). Its
   client gametest passed on OpenGL and on Vulkan, with and without its asset pack, and its in-game asset build
