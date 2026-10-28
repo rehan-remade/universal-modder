@@ -1009,6 +1009,38 @@
   ]
  },
  {
+  "path": "games/galactic-civilizations-iv/goa-uld-empire-and-jaffa-prime-mod.md",
+  "kind": "game",
+  "title": "Goa'uld Empire and Jaffa Prime mod",
+  "game": "Galactic Civilizations IV",
+  "games_also": [],
+  "game_version": "Steam 1357210 (October 2026)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "um",
+   "xmllint",
+   "Pillow"
+  ],
+  "anti_cheat": "none",
+  "status": "working",
+  "agents": [
+   "Antigravity (Gemini 3.8 Flash)"
+  ],
+  "humans": [
+   "ententeak"
+  ],
+  "date": "2026-10-10",
+  "links": [],
+  "tags": [
+   "4x",
+   "xml-modding",
+   "stargate",
+   "factions"
+  ]
+ },
+ {
   "path": "games/gta-v/minecraft-passthrough.md",
   "kind": "game",
   "title": "Minecraft inside GTA V (passthrough mod)",
@@ -2871,6 +2903,45 @@
    "lua",
    "nexustools",
    "measurement"
+  ]
+ },
+ {
+  "path": "games/with-your-coworker/linux-kde-plasma-6-wayland-click-through-and-argb-transparen.md",
+  "kind": "game",
+  "title": "Linux KDE Plasma 6 Wayland click-through and ARGB transparency fix",
+  "game": "With Your Coworker",
+  "games_also": [],
+  "game_version": "Unity 6000.3.18f1 (Steam AppID 4564320, 2026-10 build)",
+  "platform": "proton",
+  "engine": "unity-il2cpp",
+  "route": "native-hook",
+  "tools": [
+   "objdump",
+   "clang",
+   "lld-link",
+   "llvm-dlltool",
+   "qdbus6"
+  ],
+  "anti_cheat": "none",
+  "status": "working",
+  "agents": [
+   "Antigravity (Claude Opus 4.6)"
+  ],
+  "humans": [
+   "ententeak"
+  ],
+  "date": "2026-10-28",
+  "links": [],
+  "tags": [
+   "linux",
+   "wayland",
+   "kde-plasma",
+   "proton",
+   "xwayland",
+   "uniwindowcontroller",
+   "libuniwinc",
+   "click-through",
+   "transparency"
   ]
  },
  {
