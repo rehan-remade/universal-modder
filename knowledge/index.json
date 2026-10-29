@@ -8655,6 +8655,43 @@
   ]
  },
  {
+  "path": "games/total-war-warhammer-iii/bigger-units-scale-every-model-including-workshop-mods.md",
+  "kind": "game",
+  "title": "Bigger Units: every battle model 1.75x, including units from Workshop mods, via a generated DB patch pack",
+  "game": "Total War: WARHAMMER III",
+  "games_also": [],
+  "game_version": "9.0.4.0 (Warhammer3.exe), Steam build 25961564, Windows 11",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "Python 3.14 (stdlib compression.zstd)",
+   "agent-written PFH5 pack reader/writer",
+   "RPFM schema_wh3.ron"
+  ],
+  "anti_cheat": "none (EOS SDK ships for crossplay only); tested in single-player custom battles and campaign",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "valkia-khorne-subjugation-reusing-archaon-dilemmas.md"
+  ],
+  "tags": [
+   "warscape",
+   "total-war",
+   "db-tables",
+   "variants",
+   "unit-scale",
+   "formation-spacing",
+   "compatibility-patch",
+   "generator",
+   "workshop"
+  ]
+ },
+ {
   "path": "games/total-war-warhammer-iii/valkia-khorne-subjugation-reusing-archaon-dilemmas.md",
   "kind": "game",
   "title": "Archaon-style subjugation for Valkia the Bloody: a script-only Warscape mod that reuses CA's own dilemmas",
