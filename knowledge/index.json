@@ -3529,6 +3529,45 @@
   ]
  },
  {
+  "path": "games/gta-vice-city-definitive-edition/minecraft-java-inside-ue4-fobjectptr-ufunction-calls.md",
+  "kind": "game",
+  "title": "Minecraft Java renders inside GTA: Vice City \u2013 The Definitive Edition (FObjectPtr makes property reads opaque, UFUNCTION calls are the way)",
+  "game": "Grand Theft Auto: Vice City \u2013 The Definitive Edition",
+  "games_also": [
+   "Minecraft Java Edition"
+  ],
+  "game_version": "Steam current build (SteamAppId 2963470), UE4.26 'Gameface' fork, DX11 default renderer",
+  "platform": "windows",
+  "engine": "unreal",
+  "route": "passthrough",
+  "tools": [
+   "UE4SS v3.0.1-1183-gcdbc0b66 experimental",
+   "ReShade 6.8.0 add-on API",
+   "Python (fakemc stand-in, frame-diff oracle)",
+   "WScript.Shell SendKeys + Win32 VK injection"
+  ],
+  "anti_cheat": "none single-player; the game runs fine with the Steam client closed",
+  "status": "working",
+  "agents": [
+   "DeepSeek Harness (claude-sonnet-4-5)"
+  ],
+  "humans": [
+   "rehan"
+  ],
+  "date": "2026-10-29",
+  "links": [],
+  "tags": [
+   "ue4ss",
+   "reshade",
+   "lua",
+   "objectptr",
+   "camera-pose",
+   "keyboard-injection",
+   "depth-compositing",
+   "websocket"
+  ]
+ },
+ {
   "path": "games/gunner-heat-pc/private-mono-decompilation-and-source-navigation.md",
   "kind": "game",
   "title": "Private Mono decompilation and source navigation",
