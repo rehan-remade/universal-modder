@@ -7322,6 +7322,48 @@
   ]
  },
  {
+  "path": "games/sprocket/new-wheel-models-for-sprocket-without-a-loader-cloned-addres.md",
+  "kind": "game",
+  "title": "New wheel models for Sprocket without a loader: cloned Addressables bundles, binary catalog.bin keys and IconAtlas icons on Unity 6000.3 IL2CPP",
+  "game": "Sprocket",
+  "games_also": [],
+  "game_version": "Steam 1674170, buildid 25392405 (Sprocket 0.2.55.x), Unity 6000.3.21f1 IL2CPP, metadata v39, Addressables 2.9.1",
+  "platform": "windows",
+  "engine": "unity-il2cpp",
+  "route": "asset-only",
+  "tools": [
+   "UnityPy 1.25.4",
+   "AddressablesTools (nesrak1) @3dbc8210",
+   "Blender 5.2 (bpy, Cycles bake)",
+   ".NET 8 SDK",
+   "Python 3.12"
+  ],
+  "anti_cheat": "none found by um scan; editor/sandbox only, no game code touched",
+  "status": "released",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "J1ND3R9"
+  ],
+  "date": "2026-10-29",
+  "links": [
+   "https://github.com/nesrak1/AddressablesTools",
+   "https://github.com/Hans21223/Sprocket-Quality-of-Life"
+  ],
+  "tags": [
+   "vehicle-parts",
+   "wheels",
+   "addressables",
+   "binary-catalog",
+   "unitypy",
+   "spriteatlas",
+   "icons",
+   "procedural-models",
+   "blender"
+  ]
+ },
+ {
   "path": "games/star-wars-battlefront-ii-2005/porting-a-skinned-starcraft-ii-character-onto-the-swbf2-2005.md",
   "kind": "game",
   "title": "Porting a skinned StarCraft II character onto the SWBF2 (2005) infantry skeleton",
