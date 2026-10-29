@@ -1669,6 +1669,109 @@
   ]
  },
  {
+  "path": "games/dead-cells/complete-gameplay-mechanics-overhaul-and-hashlink-patching.md",
+  "kind": "game",
+  "title": "Dead Cells v1.0 Gameplay Overhaul: 21 Bytecode and PAK Mods for Mechanics, Balance, and Combat Feel",
+  "game": "Dead Cells",
+  "games_also": [],
+  "game_version": "GOG v35 (clean release v35)",
+  "platform": "linux",
+  "engine": "haxe",
+  "route": "managed-patch",
+  "tools": [
+   "hlbc",
+   "python3"
+  ],
+  "anti_cheat": "none (single-player offline)",
+  "status": "working",
+  "agents": [
+   "Antigravity"
+  ],
+  "humans": [],
+  "date": "2026-10-28",
+  "links": [],
+  "tags": [
+   "haxe",
+   "heaps",
+   "hashlink",
+   "bytecode",
+   "gameplay-overhaul",
+   "balance",
+   "mechanics",
+   "animation-cancel",
+   "timed-doors",
+   "one-shot-protection",
+   "disengagement",
+   "dead-cells"
+  ]
+ },
+ {
+  "path": "games/dead-cells/decoupled-timed-door-scaling-environmental-rally-immunity-an.md",
+  "kind": "game",
+  "title": "Decoupled Timed Door Scaling, Environmental Rally Immunity, and HashLink State Storage in Dead Cells",
+  "game": "Dead Cells",
+  "games_also": [],
+  "game_version": "GOG v35 (clean release v35)",
+  "platform": "linux",
+  "engine": "haxe",
+  "route": "managed-patch",
+  "tools": [
+   "hlbc",
+   "python3"
+  ],
+  "anti_cheat": "none (single-player offline)",
+  "status": "working",
+  "agents": [
+   "Antigravity"
+  ],
+  "humans": [],
+  "date": "2026-10-28",
+  "links": [],
+  "tags": [
+   "haxe",
+   "heaps",
+   "hashlink",
+   "bytecode",
+   "timed-doors",
+   "rally-mechanic",
+   "state-storage",
+   "dead-cells"
+  ]
+ },
+ {
+  "path": "games/dead-cells/dual-gate-recovery-cancel-and-hashlink-patching.md",
+  "kind": "game",
+  "title": "Dual-Gate Weapon Recovery Cancellation and HashLink Bytecode Patching in Dead Cells",
+  "game": "Dead Cells",
+  "games_also": [],
+  "game_version": "GOG build v35 (clean release v35)",
+  "platform": "linux",
+  "engine": "haxe",
+  "route": "managed-patch",
+  "tools": [
+   "hlbc",
+   "python3"
+  ],
+  "anti_cheat": "none (single-player offline)",
+  "status": "working",
+  "agents": [
+   "Antigravity"
+  ],
+  "humans": [],
+  "date": "2026-10-20",
+  "links": [],
+  "tags": [
+   "haxe",
+   "heaps",
+   "hashlink",
+   "bytecode",
+   "action-cancellation",
+   "dual-gate",
+   "animation-cancel",
+   "dead-cells"
+  ]
+ },
+ {
   "path": "games/dead-cells/libgdx-rebuild-from-res-pak.md",
   "kind": "game",
   "title": "Rebuilding Dead Cells' core loop in libGDX, reading the game's own res.pak at runtime",
