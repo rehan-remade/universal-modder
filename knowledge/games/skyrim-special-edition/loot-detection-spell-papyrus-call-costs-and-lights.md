@@ -3,26 +3,28 @@ kind: game
 title: 'A fast loot-detection spell with SKSE and po3: Papyrus call costs, threads, and lights on items'
 game: Skyrim Special Edition
 games_also: []
-game_version: 'Skyrim SE 1.7.104 (Steam 1946180), SKSE64 2.3.1, powerofthree''s Papyrus Extender 6.5.2'
+game_version: 'Skyrim SE 1.7.104 (Steam 489830), SKSE64 2.3.1, powerofthree''s Papyrus Extender 6.5.2'
 platform: windows
 engine: creation
 route: loader-api
 tools:
-- Script Extender (Bethesda)
-- powerofthree's Papyrus Extender
+- SKSE64 2.3.1
+- powerofthree's Papyrus Extender 6.5.2
 - Papyrus Compiler (Creation Kit)
 - Mod Organizer 2
 - own Python plugin and NIF writers
 anti_cheat: none found by um scan
 status: working
 agents:
-- Claude Code (claude-opus-5-5)
+- Claude Code (Opus 5.5)
 humans: []
 date: '2026-10-26'
 links:
 - https://github.com/ianpatt/skse64
 - https://github.com/powerof3/PapyrusExtenderSSE
 - https://en.uesp.net/wiki/Skyrim:Detect_Life
+- https://ck.uesp.net/wiki/Category:Non-delayed_Native_Function
+- https://ck.uesp.net/wiki/Papyrus_Compiler_Reference
 tags:
 - papyrus
 - skse
@@ -55,8 +57,10 @@ tags:
 - **Script Extender:** SKSE64 2.3.1 (`skse64_1_7_104.dll`), with Address Library 13 (po3 needs it).
 - **powerofthree's Papyrus Extender** 6.5.2. Its `.psc` sources sit in the mod's `Source/scripts`, and the
   compiler needs them as an import folder.
-- **Papyrus Compiler** (Creation Kit), with imports in this order: vanilla sources, then SKSE's, then po3's,
-  then your own.
+- **Papyrus Compiler** (Creation Kit), with imports in this order: your own, then po3's, then SKSE's, then the
+  vanilla sources. The compiler uses the first copy of a script it finds and ignores the rest (CK wiki, Papyrus
+  Compiler Reference), and SKSE replaces vanilla scripts such as `Form.psc` and `ActiveMagicEffect.psc`, so its
+  folder has to come before vanilla's, unless SKSE's sources are installed over vanilla's in the same folder.
 - **The plugin and meshes are written by the mod's own Python build script**, not the Creation Kit: records are
   copied from Skyrim.esm and edited, and meshes are patched with a small NIF writer. That's why everything below
   names record fields and byte offsets rather than CK tabs.
@@ -65,7 +69,7 @@ tags:
 **SKSE plus po3's Papyrus Extender**, called from Papyrus, with no DLL of our own. Without them the job can't be
 done well:
 - **Vanilla Papyrus can't find references by type** around the player.
-- **It can't read an item's gold value or enchantment.**
+- **It can't read an item's enchantment.** `Form.GetGoldValue()` is vanilla; `GetEnchantment` comes with SKSE.
 - **It can't list a container's contents.**
 
 **The earlier SKSE-free version** (a Detect Life-style concentration spell) had to do without all of that:
@@ -86,19 +90,23 @@ It missed every mod's items and showed nothing on objects.
 **The rule:** a native function call made from Papyrus usually doesn't run at once. It's queued for the game's
 main thread and comes back on a later frame, so one script thread manages roughly one native call per frame (about
 60 a second).
-- **SKSE64** marks only a few functions as no-wait (`kFunctionFlag_NoWait` in its sources):
-  - Form's Register.../Unregister... functions and `SendModEvent`;
-  - Utility's `Create...Array`;
-  - `GetINI...`.
+- **SKSE64** marks some of its functions no-wait (`kFunctionFlag_NoWait` in its sources; 373 in 2.3.1):
+  - the Register.../Unregister... functions and `SendModEvent` on Form, Alias and ActiveMagicEffect;
+  - Utility's `Create...Array`, `Resize...Array` and `GetINI...`;
+  - ModEvent, StringUtil, SKSE's Math additions, UI and Input;
+  - getters and setters on records (MagicEffect, Spell, Potion, ActorBase...).
 
-  `Form.GetType`, `GetGoldValue`, `IsPlayable`, `Armor.GetEnchantment` and `ObjectReference.GetEnchantment` all
-  wait.
-- **po3's Papyrus Extender** registers functions with a `BIND` macro, and only `BIND(fn, true)` is no-wait. In
-  the two source files we read on GitHub's main branch (`Functions/ObjectReference.cpp` and `Functions/Game.cpp`),
-  just three functions are, all small utilities. `FindAllReferencesOfFormType`, `AddAllItemsToArray`,
-  `HasArtObject` and `UpdateHitEffectArtNode` all wait a frame.
-- **Vanilla natives wait too:** `GetBaseObject`, `IsDisabled`, `GetWidth`, `PlaceAtMe`, `VisualEffect.Play`,
-  `EffectShader.Play` and so on.
+  `Form.GetType`, `IsPlayable`, `Armor.GetEnchantment` and `ObjectReference.GetEnchantment` all wait, as does
+  everything SKSE adds to ObjectReference, Armor and Weapon.
+- **po3's Papyrus Extender** registers functions with a `BIND` macro, and only `BIND(fn, true)` is no-wait (the
+  `true` is CommonLibSSE's callable-from-tasklets flag, SKSE's no-wait). In 6.5.2, 46 of its 376 `BIND`s have it,
+  all small getters; in `Functions/ObjectReference.cpp` and `Functions/Game.cpp` just three do
+  (`GetPapyrusExtenderVersion`, `IsSurvivalModeActive`, `IsPluginFound`). `FindAllReferencesOfFormType`,
+  `AddAllItemsToArray`, `HasArtObject` and `UpdateHitEffectArtNode` all wait a frame.
+- **Vanilla natives wait too:** `GetBaseObject`, `IsDisabled`, `GetGoldValue`, `GetWidth`, `PlaceAtMe`,
+  `VisualEffect.Play`, `EffectShader.Play` and so on. The CK wiki's "Non-delayed Native Function" category lists
+  the 57 vanilla ones that don't (Math, `Debug.Trace`/`TraceUser`, `GlobalVariable.GetValue`/`SetValue`, alias
+  `GetReference`/`ForceRefTo`, the update and LOS registrations, `EnableNoWait`/`DisableNoWait`...).
 - **What it cost:** the first version made two or three such calls for every reference of nine item types in
   range, plus a few for each new kind of item. In a College hall that came to about 6 s from cast to the first
   light (measured with timestamps in a custom log).
@@ -168,11 +176,11 @@ EndFunction
   - **It moves with its target.**
 - **Membrane shaders (EFSH):** for a glow on an object, use one made for items, such as the weapon-enchantment
   glows (`EnchBlueFXShader`). They draw on the item's own surface. Detect Life's `LifeDetected` glow is particles
-  only (EFSH flags `0x10001`) and shows nothing on objects.
-- **Through walls:** setting a membrane's Z test to Detect Life's particle Z test (8, at offset 104 of the DATA)
-  makes it draw over everything. Detect Life's particle EFSH played by script on an actor shows through walls
-  even with the actor at `SetAlpha(0)`, so an invisible stand-in actor can carry it. Mysticism - The Lost Art
-  does the same with a rabbit scaled to 0.001.
+  only (EFSH flags `0x10001`: No Membrane Shader, Particle Grayscale Color) and shows nothing on objects.
+- **Through walls:** setting a membrane's Z test (offset 12 of the DATA) to Always Show (8), the value Detect
+  Life's particle Z test has at offset 104, makes it draw over everything. Detect Life's particle EFSH played by
+  script on an actor shows through walls even with the actor at `SetAlpha(0)`, so an invisible stand-in actor can
+  carry it. Mysticism - The Lost Art does the same with a rabbit scaled to 0.001.
 - **Sleeping items:** a havok item that has come to rest isn't updated. Art put on it doesn't show until it's
   bumped, and an animated art on it freezes once it settles again. Containers and actors don't have the
   problem.
@@ -242,8 +250,10 @@ does the following, from its source (`src/Papyrus/Functions/Graphics.cpp`):
    orb, still glow, following orb). They're copied from Skyrim.esm (Detect Life, Candlelight, `EnchBlueFXShader`,
    `LightSpellActorFX`, `FXWitchlightMeshEffect`) and edited as above.
 2. **Meshes:** three patched copies of `LightSpellActorFX.nif`, recoloured blue with the `GradBlueLightEnch.dds`
-   palette on its greyscale swirl. They're written into the mod's own `Meshes/` and built at build time from the
-   player's game files. No game files are kept in any repository.
+   palette on its greyscale swirl. They're written into the mod's own `Meshes/` and built at build time from your
+   own game files. They're edited copies of Bethesda's meshes: fine in your own build, but a published mod must not
+   include them. Give a release an install step that runs the same patcher on the player's own game files, as the
+   cut-gatekeeper note's build step 4 does for its voice files. No game files are kept in any repository.
 3. **The script:** one `ActiveMagicEffect` script, compiled with the SKSE and po3 sources as imports. It searches
    with the threads, judges, and lights each find with a timed `Play`, then fits it.
 4. **Staging:** into a Mod Organizer 2 mod folder, then tested on a new game.
@@ -289,7 +299,8 @@ does the following, from its source (`src/Papyrus/Functions/Graphics.cpp`):
 10. **A recast doubled every light.** **Cause:** `Play` adds another copy. **Fix:** `Stop` then `Play`.
 11. **Papyrus is case-insensitive about every name.** A variable `ammo` clashes with the `Ammo` script, `holders`
     with a function `Holders`, and `WORTH` with `worth`. **Fix:** rename, and read the compiler's "cannot name a
-    variable ... the same as a known type" error literally.
+    variable ... the same as a known type" error literally. (The cut-gatekeeper note's gotcha 21 hit the same with
+    `action` and `shout`.)
 12. **For weeks, the magic menu showed Detect Life's description and turning art,** though the visible effect had
     its own description. **Cause:** the spell is a copy of Detect Life's SPEL, and two of its fields came along.
     - **SPEL `DESC`** is the spell's own description, and the menu shows it in place of the effects' `DNAM` texts.
@@ -302,7 +313,8 @@ does the following, from its source (`src/Papyrus/Functions/Graphics.cpp`):
 
 ## Assets
 None generated. Vanilla Candlelight orb, weapon-enchantment shader and gradient, copied and recoloured at build
-time from the player's own game files, and shipped in the mod (not in this repository).
+time from your own game files. The patched meshes are game files, so a public release builds them from the
+player's own install at install time instead of shipping them (build step 2).
 
 ## Cost and time
 One long day: about twenty dev builds, from a held Detect Life-style spell to the final one-shot spell.

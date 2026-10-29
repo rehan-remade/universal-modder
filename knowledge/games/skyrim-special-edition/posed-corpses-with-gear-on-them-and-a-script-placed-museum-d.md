@@ -65,7 +65,7 @@ tags:
   references nearby (it made several, every session).
 - **The plugin:** ESL-flagged, masters Skyrim.esm and Dawnguard.esm, not localized, written by a Python builder
   that copies vanilla records and edits them. Meshes are patched by a small NIF reader and writer of our own,
-  from the player's game files at build time.
+  from your own game files at build time (see Assets for what a release may include).
 
 ## Route and why
 - **Saarthal: references in the cell itself.** A ragdoll's pose is the placed reference's `XRGD`, so only a
@@ -74,7 +74,8 @@ tags:
 - **The College: no cell edits.** Several popular College mods rebuild those interiors, so everything there is
   placed by script, measured from a persistent vanilla reference (the Eye of Magnus's, MGEyeCollegeRef 00025224).
 - **Voices: only Tolfdir's own recordings.** One of them is a Dragonborn.esm line recorded in his voice type. Its
-  text and voice file are copied, so Dragonborn.esm isn't a master.
+  text and voice file are copied, so Dragonborn.esm isn't a master. The voice file is Bethesda's, so a release
+  copies it from the player's own install at install time, as the cut-gatekeeper note's build step 4 describes.
 
 ## How the game works (what we had to learn)
 
@@ -242,8 +243,11 @@ Three times a copy kept doing what the original did:
     `{}` doc text inside the `.pex`). **Fix:** a scan of the release zip before upload, and neutral comments.
 
 ## Assets
-None generated. Vanilla models are copied with their collision stripped at build time from the player's own game
-files and shipped in the mod (not in this repository). All voice is Tolfdir's own recordings.
+None generated. Vanilla models are copied with their collision stripped at build time from your own game files.
+Those still copies are edited Bethesda meshes: fine in your own build, but a published mod must not include them.
+A public release builds them at install time, with the same NIF patcher run on the player's own game files,
+instead of shipping them. All voice is Tolfdir's own recordings, and the copied Dragonborn line comes from the
+player's install the same way (Route and why).
 
 ## Cost and time
 66 dev builds in five days: 16 on the corpses (8 of them on gotchas 2-5), about 20 on the spell (its own note),
