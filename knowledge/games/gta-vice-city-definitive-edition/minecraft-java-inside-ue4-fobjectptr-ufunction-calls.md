@@ -125,6 +125,13 @@ pixel counts, the real Fabric client end-to-end (fakemc stand-in used throughout
 9. **Symptom:** `AppActivate(pid)` returns true but keys go nowhere. **Cause:** the visible GPU window
    is not the activated one. **Fix:** `ShowWindow(h,9)+SetForegroundWindow` and VERIFY via
    `GetForegroundWindow`'s pid — log want-pid vs have-pid.
+10. **Symptom:** the game "mysteriously" exits minutes after being launched from an agent tool call —
+    clean exit, no crash dump, no WER event, reproducible ~every run. **Cause:** agent harnesses
+    (e.g. DSH) reap the entire child process tree when the tool call that spawned the game completes;
+    the death timestamp equals the call's end timestamp, and the "survival" you measured was just how
+    long the owning call stayed alive. **Fix:** launch game + companion processes detached (Windows:
+    Task Scheduler `schtasks /create /tr "<absolute paths — task env lacks user PATH>" + /run`; the
+    parent becomes taskeng and survives tool-call teardown).
 
 ## Cost and time
 
@@ -133,8 +140,6 @@ exits and hours of chasing.
 
 ## Open questions
 
-- Do the sporadic 30–120 s-post-automation idle exits reproduce with WER LocalDumps armed (HKCU
-  registry needed admin here and failed silently)? The 34 min idle run says probably not.
 - FOV is real but near/far clip planes still carry defaults; calibrate via the ReShade UI (Home key)
   overlay debug or an engine UFUNCTION that survives FObjectPtr.
 - Does mouse-look via raw relative SendInput ever land in-world (cursor-warp works — good enough)?
