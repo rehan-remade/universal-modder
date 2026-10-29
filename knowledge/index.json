@@ -7242,6 +7242,94 @@
   ]
  },
  {
+  "path": "games/skyrim-special-edition/loot-detection-spell-papyrus-call-costs-and-lights.md",
+  "kind": "game",
+  "title": "A fast loot-detection spell with SKSE and po3: Papyrus call costs, threads, and lights on items",
+  "game": "Skyrim Special Edition",
+  "games_also": [],
+  "game_version": "Skyrim SE 1.7.104 (Steam 1946180), SKSE64 2.3.1, powerofthree's Papyrus Extender 6.5.2",
+  "platform": "windows",
+  "engine": "creation",
+  "route": "loader-api",
+  "tools": [
+   "Script Extender (Bethesda)",
+   "powerofthree's Papyrus Extender",
+   "Papyrus Compiler (Creation Kit)",
+   "Mod Organizer 2",
+   "own Python plugin and NIF writers"
+  ],
+  "anti_cheat": "none found by um scan",
+  "status": "working",
+  "agents": [
+   "Claude Code (claude-opus-5-5)"
+  ],
+  "humans": [],
+  "date": "2026-10-26",
+  "links": [
+   "https://github.com/ianpatt/skse64",
+   "https://github.com/powerof3/PapyrusExtenderSSE",
+   "https://en.uesp.net/wiki/Skyrim:Detect_Life"
+  ],
+  "tags": [
+   "papyrus",
+   "skse",
+   "po3",
+   "performance",
+   "threading",
+   "art-object",
+   "visual-effect",
+   "effect-shader",
+   "nif",
+   "spell"
+  ]
+ },
+ {
+  "path": "games/skyrim-special-edition/posed-corpses-with-gear-on-them-and-a-script-placed-museum-d.md",
+  "kind": "game",
+  "title": "Posed corpses with gear on them, and a script-placed museum display, from generated plugin records",
+  "game": "Skyrim Special Edition",
+  "games_also": [],
+  "game_version": "1.7.104 (Steam), Creation Kit 1.7.99 for placement only, SKSE64 2.3.1, powerofthree's Papyrus Extender 6.5.2",
+  "platform": "windows",
+  "engine": "creation",
+  "route": "data",
+  "tools": [
+   "Python plugin writer (own)",
+   "own NIF reader and patcher (Python)",
+   "Creation Kit (layout plugins only)",
+   "Papyrus Compiler (Creation Kit)",
+   "Mod Organizer 2"
+  ],
+  "anti_cheat": "none (single-player)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "https://en.uesp.net/wiki/Skyrim:Under_Saarthal",
+   "https://en.uesp.net/wiki/Lore:Saarthal"
+  ],
+  "tags": [
+   "corpses",
+   "ragdoll",
+   "havok",
+   "nif",
+   "collision",
+   "mannequin",
+   "script-placed",
+   "papyrus",
+   "crosshair",
+   "dragon-font",
+   "message-box",
+   "dialogue",
+   "voice-files",
+   "copied-records",
+   "compatibility"
+  ]
+ },
+ {
   "path": "games/skyrim-special-edition/rebuilding-a-cut-gatekeeper-with-generated-plugin-records-di.md",
   "kind": "game",
   "title": "Rebuilding a cut gatekeeper with generated plugin records: dialogue branches, shared voice lines, force-greets",
