@@ -5089,6 +5089,64 @@
   ]
  },
  {
+  "path": "games/middle-earth-shadow-of-war/small-mods-new-orc-bodies-talion-armour-and-mesh-draw-counts.md",
+  "kind": "game",
+  "title": "Small mods: two new orc body types for grunts and captains, a Talion armour/sword replacer, and the engine facts behind their bugs (MMSH draw counts, armour cloth in .skel, captain body items, save orc records)",
+  "game": "Middle-earth: Shadow of War",
+  "games_also": [
+   "The Elder Scrolls V: Skyrim Special Edition",
+   "Solo Leveling: Arise Overdrive"
+  ],
+  "game_version": "Steam build 3095001 (public branch, unchanged since 2018-09-05), Windows 10 22H2; Skyrim SE and Solo Leveling: Arise Overdrive (Steam) as asset sources",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Python 3.12 + numpy/Pillow (own MMSH/SKEL/.tex/.bndl/.arch06 tools)",
+   "Blender 3.6.23 + blender_niftools_addon 0.1.1 (NIF import)",
+   "Blender 4.2.3 (conform + texture-projection scripts, headless)",
+   "UnityPy (Solo Leveling skinned mesh export)",
+   "custom C# gamedb reader-writer (PowerShell Add-Type)",
+   "texconv",
+   "QuickBMS + aluigi shadow_of_mordor.bms 0.4"
+  ],
+  "anti_cheat": "none; extra archives + game.gamedb, exe untouched. All testing offline through the offline-mode DLL and its local Garrison (never signed in to WB).",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "DeimozZarco"
+  ],
+  "date": "2026-10-29",
+  "links": [
+   "knowledge/games/middle-earth-shadow-of-war/falmer-tribe-a-skyrim-creature-as-a-nemesis-tribe.md",
+   "knowledge/games/middle-earth-shadow-of-war/offline-mode-and-local-garrison.md",
+   "knowledge/games/middle-earth-shadow-of-war/save-format-decrypt-and-collectible-quests.md"
+  ],
+  "tags": [
+   "nemesis",
+   "grunts",
+   "captains",
+   "body-types",
+   "body-replacement",
+   "garrison",
+   "mmsh",
+   "mesh",
+   "draw-count",
+   "havok",
+   "cloth",
+   "skel",
+   "player-armour",
+   "replacer",
+   "textures",
+   "glow",
+   "save-editing",
+   "gamedb",
+   "role-weights"
+  ]
+ },
+ {
   "path": "games/might-and-magic-6/matching-decomp-vc6-byte-identical-text.md",
   "kind": "game",
   "title": "Might and Magic 6: matching decompilation \u2014 VC6 identified by Rich header, byte-identical .text rebuilt, Frida coverage tour",
