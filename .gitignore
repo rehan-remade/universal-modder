@@ -9,7 +9,23 @@ dist/
 # captures and scratch
 *.mkv
 *.audio.raw
+*.rdc
 /scratch/
+cotl-scaler-core/**/bin/
+cotl-scaler-core/**/obj/
+cotl-scaler-core/stage0-renderdoc/out/
+cotl-scaler-core/stage1/out/
+cotl-scaler-core/stage2/out/
+cotl-scaler-core/stage2b/dumps/
+cotl-scaler-core/stage2-renderdoc/out/
+cotl-scaler-core/stage2-renderdoc/inventory-report.txt
+cotl-scaler-core/cotl-scaler-host/*.dll
+cotl-scaler-core/cotl-scaler-host/*.lib
+cotl-scaler-core/cotl-scaler-host/*.exp
+cotl-scaler-core/cotl-scaler-host/*.obj
+cotl-scaler-core/cotl-scaler-host/sdk/bin/
 .pytest_cache/
 # the parent repo ignores bin/ (build output); the CLI launcher lives here
 !bin/
+
+

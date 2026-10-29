@@ -1435,6 +1435,48 @@
   ]
  },
  {
+  "path": "games/convrgence/proof-melonloader-plugin-loads-on-convrgence.md",
+  "kind": "game",
+  "title": "Verifying MelonLoader plugin loading on CONVRGENCE 1.1.0",
+  "game": "CONVRGENCE",
+  "games_also": [],
+  "game_version": "1.1.0 (Steam AppID 2609610, installed BuildID 26164481)",
+  "platform": "windows",
+  "engine": "unity-il2cpp",
+  "route": "loader-api",
+  "tools": [
+   "MelonLoader 0.7.3 Open-Beta",
+   "Cpp2IL 2022.1.0-pre-release.21",
+   "Il2CppInterop 1.5.1-ci.845",
+   "Unity Dependencies 2019.4.2",
+   "SteamVR 2.18.4",
+   "Windows Performance Recorder/Analyzer"
+  ],
+  "anti_cheat": "None found by um scan for this offline test",
+  "status": "in-progress",
+  "agents": [
+   "Qwen (model not recorded)",
+   "OpenCode (gpt-6-luna)"
+  ],
+  "humans": [],
+  "date": "2026-10-27",
+  "links": [
+   "https://www.nexusmods.com/convrgence/mods/12",
+   "https://steamcommunity.com/app/2609610/discussions/0/4356745470644408423/",
+   "https://store.steampowered.com/news/app/2609610/view/1826362059925270",
+   "https://store.steampowered.com/news/app/2609610/view/1811772772380015",
+   "https://store.steampowered.com/news/app/2609610/view/5749481331444650186",
+   "https://learn.microsoft.com/en-us/windows-hardware/test/wpt/windows-performance-recorder"
+  ],
+  "tags": [
+   "melonloader",
+   "il2cpp",
+   "plugin-loading",
+   "performance-investigation",
+   "vr-frame-timing"
+  ]
+ },
+ {
   "path": "games/crash-bandicoot-n-sane-trilogy/croc-inside-crash-n-sane-live-two-engine-mashup.md",
   "kind": "game",
   "title": "Croc inside Crash N. Sane: live two-engine mashup and native port",
@@ -1641,6 +1683,48 @@
    "r2modman",
    "thunderstore",
    "recon"
+  ]
+ },
+ {
+  "path": "games/cult-of-the-lamb/custom-motion-vectors-and-an-ngx-dlss-host-for-cult-of-the-l.md",
+  "kind": "game",
+  "title": "Custom motion vectors and an NGX DLSS host for Cult of the Lamb (Unity DX11, no native upscaler)",
+  "game": "Cult of the Lamb",
+  "games_also": [],
+  "game_version": "Steam build 25223484, v1.5.26.1058",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "native-hook",
+  "tools": [
+   "BepInEx 5.4.21",
+   "HarmonyX",
+   "ILSpy 8.2",
+   "RenderDoc 1.46",
+   "NVIDIA DLSS SDK (nvngx 310.x)",
+   "BepInEx.ConfigurationManager v19.1",
+   "MSVC 2022"
+  ],
+  "anti_cheat": "none (offline single-player)",
+  "status": "working",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "https://github.com/NVIDIA/DLSS",
+   "https://renderdoc.org",
+   "https://github.com/BepInEx/BepInEx.ConfigurationManager",
+   "https://docs.bepinex.dev"
+  ],
+  "tags": [
+   "cult-of-the-lamb",
+   "unity",
+   "motion-vectors",
+   "dlss",
+   "ngx",
+   "native-hook",
+   "upscaling"
   ]
  },
  {

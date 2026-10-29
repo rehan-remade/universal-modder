@@ -26,6 +26,16 @@ tags: ["cult-of-the-lamb", "unity", "mono", "bepinex", "doorstop", "r2modman", "
 > Manager leave behind, because they keep BepInEx in their profile, so the install is probably modded through a
 > manager rather than broken. Nothing was built or launched, and no manager profile was looked for.
 
+## Update 2026-10-29 (supersedes the "no BepInEx folder" observation)
+
+- `BepInEx/` now exists in the game folder (BepInEx 5.4.21, installed directly - no r2modman profile was
+  found). Shipped plugins from this repo: StartupSkip, Camera MV Probe, Motion Vectors, Scaler Host
+  (+ BepInEx.ConfigurationManager for the F1 menu).
+- The scaler project (custom motion vectors + NGX DLSS host) is documented in
+  `custom-motion-vectors-and-an-ngx-dlss-host-for-cult-of-the-l.md` in this folder; the working project
+  lives in `cotl-scaler-core/` at the repo root.
+- Build known: Steam build 25223484, v1.5.26.1058. Renderer: Built-In RP, Direct3D 11.
+
 ## Setup
 
 - Steam, Windows, x64. `um scan` reports engine `unity-mono` from `UnityPlayer` + `Managed/Assembly-CSharp.dll`.
