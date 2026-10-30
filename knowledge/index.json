@@ -2723,6 +2723,111 @@
   ]
  },
  {
+  "path": "games/i-am-your-beast/making-thrown-weapons-return-in-i-am-your-beast-boomerang-be.md",
+  "kind": "game",
+  "title": "Making thrown weapons return in I Am Your Beast (Boomerang BepInEx plugin)",
+  "game": "I Am Your Beast",
+  "games_also": [],
+  "game_version": "Unity 2022.3.5f1 (9674261d40ee), game files dated 2025-02-20, Steam app 1876590",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "loader-api",
+  "tools": [
+   "BepInEx 5.4.23.5 (Doorstop 4.5.0)",
+   "HarmonyX (ships inside BepInEx)",
+   "Microsoft.Net.Compilers.Toolset (Roslyn from NuGet, no .NET SDK)",
+   "um win shot, um win drive"
+  ],
+  "anti_cheat": "none - single-player only",
+  "status": "working",
+  "agents": [
+   "OpenCode (mimo-v2.6-flash-free)"
+  ],
+  "humans": [],
+  "date": "2026-10-19",
+  "links": [],
+  "tags": [
+   "unity-mono",
+   "bepinex",
+   "harmony",
+   "weapon-toss",
+   "physics",
+   "building-without-an-sdk"
+  ]
+ },
+ {
+  "path": "games/i-am-your-beast/persistent-gore-and-live-presets-in-i-am-your-beast-butcher.md",
+  "kind": "game",
+  "title": "Persistent gore, presets and a live config reload in I Am Your Beast (Butcher BepInEx plugin)",
+  "game": "I Am Your Beast",
+  "games_also": [],
+  "game_version": "Unity 2022.3.5f1 (9674261d40ee), game files dated 2025-02-20, Steam app 1876590",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "loader-api",
+  "tools": [
+   "BepInEx 5.4.23.5 (Doorstop 4.5.0)",
+   "HarmonyX",
+   "Microsoft.Net.Compilers.Toolset (Roslyn, no .NET SDK)",
+   "ilspycmd",
+   "um win"
+  ],
+  "anti_cheat": "none - single-player only",
+  "status": "working",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash Free)"
+  ],
+  "humans": [],
+  "date": "2026-10-23",
+  "links": [],
+  "tags": [
+   "unity-mono",
+   "bepinex",
+   "harmony",
+   "gore",
+   "decals",
+   "config",
+   "time-scale",
+   "camera-shake",
+   "game-feel",
+   "hitstop"
+  ]
+ },
+ {
+  "path": "games/i-am-your-beast/unlocking-the-retail-gated-developer-menu-in-i-am-your-beast.md",
+  "kind": "game",
+  "title": "Unlocking the retail-gated developer menu in I Am Your Beast (BepInEx 5, one Harmony postfix)",
+  "game": "I Am Your Beast",
+  "games_also": [],
+  "game_version": "Unity 2022.3.5f1 (9674261d40ee), game files dated 2025-02-20, Steam app 1876590",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "loader-api",
+  "tools": [
+   "BepInEx 5.4.23.5 (Doorstop 4.5.0)",
+   "HarmonyX (ships inside BepInEx)",
+   "ilspycmd (NuGet package, run on an installed .NET runtime)",
+   "Microsoft.Net.Compilers.Toolset (Roslyn from NuGet, no .NET SDK)",
+   "um scan, um win shot, um win drive"
+  ],
+  "anti_cheat": "none - single-player only",
+  "status": "working",
+  "agents": [
+   "OpenCode (mimo-v2.6-flash-free)"
+  ],
+  "humans": [],
+  "date": "2026-10-17",
+  "links": [],
+  "tags": [
+   "unity-mono",
+   "bepinex",
+   "harmony",
+   "dev-menu",
+   "building-without-an-sdk",
+   "plugin-host-lifetime"
+  ]
+ },
+ {
   "path": "games/just-cause-3/vehicle-mesh-editing-added-geometry-loads-with-matching-toc.md",
   "kind": "game",
   "title": "Vehicle mesh editing: added geometry loads with a matching .ee.toc",
@@ -5896,6 +6001,52 @@
    "skins",
    "personal-files",
    "custom-content"
+  ]
+ },
+ {
+  "path": "games/true-crime-streets-of-la/true-crime-streets-of-la-2004-d3d8-wrapper-maze-4k-reshade-d.md",
+  "kind": "game",
+  "title": "True Crime: Streets of LA (2004) - D3D8 wrapper maze, 4K, ReShade DX11 via dgVoodoo2, RTX Remix verdict, ASI cheat harness + engine memory map",
+  "game": "True Crime: Streets of LA",
+  "games_also": [],
+  "game_version": "R.G. Mechanics repack (oldgamesdownload copy), TrueCrime.exe 2,932,736 B, PE32 i386, image base 0x400000, not LAA",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "dgVoodoo2 2.87.5 (x86 D3D8 -> D3D11)",
+   "Ultimate ASI Loader",
+   "ThirteenAG Widescreen Fix (TrueCrimeStreetsofLA.WidescreenFix.asi)",
+   "ReShade 6.7.0 (DX11 build as dxgi.dll)",
+   "RTX Remix runtime 1.6.1 x86 (bridge layout)",
+   "TrueCrimeDualSense.asi v1.0.1 (XInput controller fix + HUD scale + its own movaps fix)",
+   "TrueCrime.asi (ours) - registry fallback + DInput gamepad filter + in-memory movaps patch + config-driven cheat harness, built with 32-bit TinyCC",
+   "capstone (static xref/disassembly), numpy (live memory diffing)"
+  ],
+  "anti_cheat": "none (single-player; GameSpy master server is dead)",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (deepseek-v4.1-flash-free)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [],
+  "tags": [
+   "d3d8",
+   "dgvoodoo2",
+   "reshade",
+   "rtx-remix",
+   "wide-screen",
+   "4k",
+   "movaps",
+   "registry-key",
+   "dinput",
+   "crash-fix",
+   "asi",
+   "cheat-harness",
+   "save-format",
+   "memory-map",
+   "karma"
   ]
  },
  {
