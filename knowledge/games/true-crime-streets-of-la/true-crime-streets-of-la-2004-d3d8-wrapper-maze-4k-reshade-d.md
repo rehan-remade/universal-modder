@@ -250,6 +250,21 @@ The identification method that beat every memory sweep: **one controlled action,
     entirely: apply the `movaps`->`movups` patch **in memory at load time** from the `.asi`, so the
     on-disk exe stays byte-identical to stock and Defender has nothing to flag. Defer to another mod's
     identical fix when it is already installed (check for the file) so two patches do not fight.
+13. **The game silently dies ~11 s in when its exe is not at the classic desktop-root lab path.**
+    Sublime symptom: the mod log shows `CreateDevice failed (hr 0x8876086C)` x100 then
+    `display 3840x2160@60 | pp 1536x864 ... windowed 0` before the process exits (`0x8876086C` is
+    `D3DERR_INVALIDCALL`). **Cause:** the game picks **1536x864 = the desktop as seen by a
+    DPI-unaware process** (3840 x 2160 at 250 % scaling) and then asks for an invalid exclusive
+    fullscreen backbuffer. It only picks the real 3840x2160 when its exe path is the path it has
+    always run from; rename or nest the lab and it breaks. **What does NOT fix it** (all tried): a
+    DPI manifest beside the exe (the exe has no embedded one, so the external applies, yet the
+    process still measures awareness = 0); inheriting awareness from the launching process;
+    dgVoodoo's `DesktopResolution = 3840x2160`; and refreshing the game's own `InstallPath`
+    registry value, though a mod should still keep that value fresh because the game writes it once
+    at key-creation time and then goes stale on any folder move. **Working fix:** keep the lab at a
+    path-free-of-nesting **junction** placed at the path the game expects, and launch through it
+    (<desktop-root lab path>\TrueCrime.exe here). Diagnose this one from the mod's
+    own log - `TrueCrimeDualSense.log` prints the CreateDevice parameters that name the cause.
 
 ## Assets
 None yet, but the save/career layer is now known well enough to build one: `Saves\save*.bin` (3,600 B,
