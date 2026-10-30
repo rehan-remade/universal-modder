@@ -17,6 +17,11 @@ links:
   - "knowledge/games/middle-earth-shadow-of-war/falmer-tribe-a-skyrim-creature-as-a-nemesis-tribe.md"
   - "knowledge/games/middle-earth-shadow-of-war/offline-mode-and-local-garrison.md"
   - "knowledge/games/middle-earth-shadow-of-war/save-format-decrypt-and-collectible-quests.md"
+  - "https://github.com/niftools/blender_niftools_addon"
+  - "https://pypi.org/project/UnityPy/"
+  - "https://github.com/ReaperAnon/Middle-Earth-Mod-Loader"
+  - "https://www.nexusmods.com/middleearthshadowofwar/mods/278"
+  - "https://github.com/LordMonstey/Monstey-Mesh-Publisher"
 tags: [nemesis, grunts, captains, body-types, body-replacement, garrison, mmsh, mesh, draw-count, havok, cloth, skel, player-armour, replacer, textures, glow, save-editing, gamedb, role-weights]
 ---
 
@@ -33,19 +38,39 @@ tags: [nemesis, grunts, captains, body-types, body-replacement, garrison, mmsh, 
 > help other modders.
 
 ## Setup
-- Game: Steam build 3095001, Windows 10 22H2, OfflineMode DLL (see the offline note), tested on the user's
-  long-running campaign save (Act 3+, Udûn imported as a region).
-- Sources: Skyrim SE, Steam build 24914197, SkyrimSE.exe 1.7.104.0 (`Skyrim - Meshes0/1.bsa`, `Textures2/5/7.bsa`:
-  Daedric cuirass/gauntlets/boots, Ebony Blade, NPC orc FaceGen head); Solo Leveling: Arise Overdrive, Steam build
-  24663924 (Unity; High Orc skinned mesh via UnityPy).
+- Game: Steam build 3095001, Windows 10 22H2, OfflineMode DLL (see the
+  [offline note](offline-mode-and-local-garrison.md)), tested on the user's long-running campaign save (Act 3+, Udûn
+  imported as a region).
+- **Play the modded game offline**, as in the other notes here: keep the offline-mode DLL installed while these
+  archives and the modded `game.gamedb` are in `default.archcfg`, and don't use Online Conquest, Online or Friend
+  Vendettas, or WB's own Garrison (the DLL removed). A captain with one of these bodies, stored on WB's server or met
+  in someone's vendetta, references pieces and bundles an unmodded game doesn't have.
+- Sources, from the user's own Steam copies: Skyrim SE, Steam build 24914197, SkyrimSE.exe 1.7.104.0
+  (`Skyrim - Meshes0/1.bsa`, `Textures2/5/7.bsa`: Daedric cuirass/gauntlets/boots, Ebony Blade, NPC orc FaceGen head);
+  Solo Leveling: Arise Overdrive, Steam build 24663924 (Unity; High Orc skinned mesh via UnityPy).
 - Our tools (Python unless noted): MMSH reader/writer, SKEL Havok stripper, LTAR packer, bundle builder, a C#
   gamedb editor, a save decrypt/encrypt helper.
 
+## Credits
+- **Bethesda** (Skyrim SE), **Netmarble** (Solo Leveling: Arise Overdrive) and **Monolith / WB Games** (Shadow of
+  War): every source asset comes from the user's own copies.
+- [niftools](https://github.com/niftools/blender_niftools_addon) for NIF import, and
+  [UnityPy](https://pypi.org/project/UnityPy/) (K0lb3, MIT) for the Unity mesh export.
+- QuickBMS and `shadow_of_mordor.bms` 0.4 (Luigi Auriemma, <http://quickbms.aluigi.org>); texconv
+  ([DirectXTex](https://github.com/microsoft/DirectXTex)).
+- The plugin shim (Smaller facts) follows the API of ReaperAnon's
+  [Middle Earth Mod Loader](https://github.com/ReaperAnon/Middle-Earth-Mod-Loader).
+  [Nemesis Recurrence](https://www.nexusmods.com/middleearthshadowofwar/mods/278) is YoRHa9S's plugin for it.
+- Independent public code for MMSH v17:
+  [Monstey Mesh Publisher](https://github.com/LordMonstey/Monstey-Mesh-Publisher) (LordMonstey; MIT engine, GPL
+  Blender add-on). Its reader agrees with fact 1.
+
 ## Route and why
-Data only, same as the Falmer tribe: converted meshes and textures in extra `.arch06` archives listed in
-`x64\default.archcfg`, and edits in `game.gamedb`. Captain bodies hijack **stock** body items, because the corpse
-and Garrison paths only accept stock item records (Falmer note). The Talion replacer overwrites one stock player
-gear set (route A: same model paths, bundle pairs rebuilt) instead of adding new gear items.
+Data only, same as the [Falmer tribe](falmer-tribe-a-skyrim-creature-as-a-nemesis-tribe.md): converted meshes and
+textures in extra `.arch06` archives listed in `x64\default.archcfg`, and edits in `game.gamedb`. Captain bodies
+hijack **stock** body items, because the corpse and Garrison paths only accept stock item records (Falmer note).
+The Talion replacer overwrites one stock player gear set (route A: same model paths, bundle pairs rebuilt) instead
+of adding new gear items.
 
 ## How the game works (what we had to learn)
 ### 1. MMSH per-part draw counts (new)
@@ -53,6 +78,10 @@ gear set (route A: same model paths, bundle pairs rebuilt) instead of adding new
   second per-part block, 48 bytes per part: `u32 vertexBytes, u32 indexBytes, u32 paletteCount, u32 1`, then
   **16 × u16 triangle counts** (one per draw state; stock: every slot = the part's triangle count, except the T4
   armour's body part, which has 0 and a smaller count in the first two slots).
+- Monstey Mesh Publisher's MMSH v17 reader (Credits) reads the same block as `<4I16H>`, one per buffer set (vertex,
+  index and palette buffers), and the `1` is the number of parts in that set. Its source comments say the game uses
+  the stored counts only for a one-part set; a set with several parts draws each part with its own index count / 3.
+  Every part here had a set of its own.
 - Find it by its signature: for every part, `indexBytes == 6 × max(slot)`. The game **draws that many
   triangles**. If a part is smaller than the stock template it was written over, the draw reads the *next parts'*
   indices against this part's vertices.
@@ -78,17 +107,24 @@ gear set (route A: same model paths, bundle pairs rebuilt) instead of adding new
   `Flint_Body` / `Tinder_Body`, carried **no body item**: the body lived only in the appearance record.
 - The next body-slot roll then replaced it. Tark Slayer promotions (an orc that kills Talion) rolled `Infested_Body`
   (the orc came out Falmer, which looked like "it joined the Falmer tribe") or `IT_Body_Scar` (stock scarred body).
-- Where the items differed (gamedb attribute hashes): `29D1CBB4` character type list (`Trait_AllBut_Olog` vs empty),
-  `B2EDA81E` (50 vs 20 / 0), `E512B887` own LOD body item (none vs `Flint_BodyLOD`), appearance tags
+- Where the items differed (gamedb attributes, named by their AttrHash from the
+  [Goblins note](goblin-tribe-a-new-nemesis-tribe-via-game-gamedb.md), the toolkit note's sowhash): `29D1CBB4`
+  character type list (`Trait_AllBut_Olog` vs empty), `B2EDA81E`, one of the Falmer note's two item replace priority
+  attributes (50 vs 20 / 0), `E512B887` own LOD body item (none vs `Flint_BodyLOD`), appearance tags
   `C06541A5` / `44009124` (`Right_Shoulder` vs `Right_FullArm` / `Left_FullArm`).
 - Copying Infested's values onto the hijacked items fixed it. On the next load the game gave the body items to the
   existing new-body captains by itself, and new captains kept their bodies through Dominate and the Garrison.
+- `Flint_Body` and `Tinder_Body` carry the names of The Blade of Galadriel's captains (a paid expansion, Steam app
+  561650). Only the item records are reused: their pickers, FixUp pieces and materials bundle point at the new
+  bodies, so none of the expansion's art shows and nothing from it is unlocked.
 - Not fixable by data: **role-forced scars**. Titles whose role items use `IB_Body_Scar` → `AD_Body_Scar`
   (Face-Eater, Blood Axe, Who Devours, Battle-Forged, gluttons) swap any body for `Orc_<Size>_Body_Scar`, stock
   and Falmer included. `AD_Body_Scar` pickers key only on body type (2 slim, 3 buff, 4 stocky, 5 olog).
 
 ### 4. Orc records in the save (new detail)
-- Decrypted with the save tool from the save note. Name references are 4-byte name hashes.
+- Decrypted with the save tool from the [save note](save-format-decrypt-and-collectible-quests.md), whose scope
+  applies to the repair below: your own saves, both copies backed up and edited, loaded only with the offline DLL
+  installed. Name references are 4-byte AttrHash values (tag `00` + the hash, as in the save note).
 - An orc's **item list**: entries 69 bytes apart; the body item sits right after `IT_Orc_Body_LOD`, the head item
   after it.
 - Then its **role** (`Faction/Roles/Definitions`), then the **appearance record**: grunt class model at −12, head
@@ -110,8 +146,10 @@ gear set (route A: same model paths, bundle pairs rebuilt) instead of adding new
   glow instead worked: rasterise the armour parts in texture space, measure each texel's bind-pose distance to
   Skyrim's glow shells (BVH nearest), paint green with the shell's vapour pattern, and mark those texels dielectric
   in `_s`. It read as glowing in lit scenes.
-- Plugins for the ME ModLoader (`OnPluginLoad(api)`) run under a tiny loader shim of our own. Nemesis Recurrence
-  dereferences the API object, so the shim must pass a dummy object (vtable of no-ops), not null.
+- Plugins for ReaperAnon's Middle Earth Mod Loader (`OnPluginLoad(ModLoader::PluginAPI*)`) run under a tiny loader
+  shim of our own. `PluginAPI` is a class of virtual methods (`RegisterPlugin`, in the loader's `modloaderapi.h`),
+  and Nemesis Recurrence dereferences the API object, so the shim must pass a dummy object (vtable of no-ops), not
+  null.
 
 ## Build steps
 1. Bodies: export the skinned source mesh, conform it onto the stock orc rig (Falmer note's segment method), write
@@ -119,8 +157,8 @@ gear set (route A: same model paths, bundle pairs rebuilt) instead of adding new
    entries; hijack a stock body item per new body (pickers for slim 2 / stocky 4 / buff 3, ModelFixUp pieces, mats
    bundle) **and make the item generator-valid (fact 3)**. Add the head bundle to `NPCHead.StaticBundles`.
 2. Talion: conform Skyrim armour onto the T4 armour template (keep its 4-part layout and part-name hashes), strip
-   the `.skel` cloth, paint the glow, then rebuild both bundle pairs from the newest stock `.bndl` entry list. Ship
-   the loose `.tex` + `.tex0` pairs too: a `.tex0` beats the highmip stream.
+   the `.skel` cloth, paint the glow, then rebuild both bundle pairs from the newest stock `.bndl` entry list. Put
+   the loose `.tex` + `.tex0` pairs in the archive too: a `.tex0` beats the highmip stream.
 3. Every archive: run the MMSH draw-count patcher (fact 1), then install. Close the game first and back up the
    saves, archcfg and db.
 
@@ -138,7 +176,8 @@ Not verified:
 - which of the four item fields matters most (all four were copied);
 - a captain made **before** the fact 3 fix: repaired, dominated and accepted into the Garrison, but it showed a stock
   body there;
-- long-term save stability.
+- long-term save stability;
+- Flint and Tinder themselves in an install that owns The Blade of Galadriel (they should show the new bodies).
 
 ## Gotchas
 1. Long black slabs from a replacer mesh → stale MMSH per-part triangle counts (fact 1) → write/patch the draw
@@ -167,4 +206,6 @@ One long session (2026-10-29), about eight in-game test rounds by the user.
 - Whether a real emissive glow is possible on player armour (`talion_armor.fxo` has no emissive input; the weapon
   shader has one).
 - Next project (planned): two new human factions on the Easterling / Gondorian soldier bases, one hostile to all
-  and one friendly to Talion, with dominatable captains.
+  and one friendly to Talion, with dominatable captains. The Easterlings come from The Desolation of Mordor DLC
+  (Nexus mod 272, which brings them into free roam, requires it), so that faction is only for an install that owns
+  the DLC.
