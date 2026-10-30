@@ -9579,6 +9579,147 @@
   ]
  },
  {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-active-reload-and-cloned-abilities.md",
+  "kind": "game",
+  "title": "Space Marine 2 active reload (press window, jam, HUD flash) and cloned abilities via enum extension",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026); built Oct 8-16 2026, ability work Oct 8-23 2026. Mod Tools app 3856330 build 25506153",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Saber SM2 Mod Tools (ModEditor docs, enum extension sample)",
+   "Python 3 (zipfile, struct, numpy, PyYAML)",
+   "own Morpheme .nmb patcher",
+   "own .sani clip writer and event-track codec",
+   "own Wwise bank writer",
+   "WwiseConsole 2019.2",
+   "own sslbin disassembler (reading compiled logic only)"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "active-reload",
+   "reload",
+   "firearm",
+   "morpheme",
+   "animation-network",
+   "action-controller",
+   "blueprint",
+   "hud",
+   "wwise",
+   "abilities",
+   "enum-extension",
+   "war-cry"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-building-a-new-map-with-the-map-converter.md",
+  "kind": "game",
+  "title": "A brand-new playable map in Space Marine 2 with Saber's Map Converter, plus hub scene edits",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026). Mod Tools app 3856330 build 25506153 (ModelConverter --map_mode, UsfExporter, Furnace, AIConverter, TerrainConverter, LightProbeConverter, resolve_scene_resources)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Saber SM2 Mod Tools (ModelConverter --map_mode, UsfExporter convert_tpl.py, furnace.exe, TextureConverter / convert_pct.py)",
+   "Saber's shipped converter source (ToolsSource: MapConverter.cs, MapBuilder)",
+   "Python 3 (own glTF writer, tpl_markup / lods_base patchers, lwi_container and dom_list readers)",
+   "Blender (preview renders with back-face culling, BC6H decode)",
+   "a small Win32 window-text reader for hidden crash dialogs"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "https://spacemarine2-modding.prismray.io/"
+  ],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "swarm-engine",
+   "map",
+   "level",
+   "map-converter",
+   "furnace",
+   "gltf",
+   "lwi",
+   "instancing",
+   "grass",
+   "collision",
+   "cdt",
+   "sky",
+   "lighting",
+   "shadows",
+   "prefab",
+   "water",
+   "hub",
+   "dom-list",
+   "navmesh"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-hub-battle-barge-thunderhawk-and-usables.md",
+  "kind": "game",
+  "title": "Space Marine 2 Battle Barge hub: replacing the hero Thunderhawk, a walk-in ramp with push-button seats, the launch countdown, hidden collision and usables",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026). Mod Tools app 3856330 build 25506153",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Saber SM2 Mod Tools (ModelConverter, UsfExporter)",
+   "Python 3 (struct, zipfile, numpy)",
+   "own cd_list / class_list / dom_list / lwi_container codecs",
+   "own .sani clip codec and Morpheme .nmb patcher",
+   "own sslbin disassembler",
+   "Blender (offline preview renders)"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "hub",
+   "battle-barge",
+   "thunderhawk",
+   "vehicle",
+   "usable",
+   "level-sequence",
+   "xseq",
+   "smart",
+   "collision",
+   "lwi",
+   "cd-list",
+   "dom-list",
+   "countdown",
+   "textures",
+   "banners"
+  ]
+ },
+ {
   "path": "games/warhammer-40-000-space-marine-2/sm2-missions-scenarios-faction-swaps-and-esd-spawning.md",
   "kind": "game",
   "title": "Space Marine 2 missions: scenario faction swaps, level files, the ESD spawn director and rebaking a navmesh with spawn points",
@@ -9601,7 +9742,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-13",
+  "date": "2026-10-29",
   "links": [],
   "tags": [
    "space-marine-2",
@@ -9643,7 +9784,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-15",
+  "date": "2026-10-29",
   "links": [
    "https://spacemarine2-modding.prismray.io/",
    "https://www.nexusmods.com/warhammer40000spacemarine2/mods/233"
@@ -9684,7 +9825,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-13",
+  "date": "2026-10-29",
   "links": [],
   "tags": [
    "space-marine-2",
@@ -9702,7 +9843,10 @@
    "custom-head",
    "ai-mesh",
    "collision",
-   "cloth"
+   "cloth",
+   "skin-weights",
+   "mml-cfg",
+   "parallax"
   ]
  },
  {
@@ -9729,7 +9873,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-15",
+  "date": "2026-10-29",
   "links": [],
   "tags": [
    "space-marine-2",
@@ -9747,7 +9891,13 @@
    "execution",
    "interplay",
    "xseq",
-   "spawning"
+   "spawning",
+   "bio-titan",
+   "boss-ai",
+   "melee-timing",
+   "gore",
+   "wwise",
+   "root-motion"
   ]
  },
  {
@@ -9783,6 +9933,112 @@
    "armoury",
    "talker",
    "constructor"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-one-constructor-for-every-class-and-fast-usf-builds.md",
+  "kind": "game",
+  "title": "Every Space Marine 2 class on one soldier armour constructor, and glTF-to-USF rebuilds in minutes instead of an hour",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026). Mod Tools app 3856330: game-folder ModelConverter v13.0.0, Mod Tools ModelConverter release + ToolsSource v14.0.0, UsfExporter, CDTConverter",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "asset-only",
+  "tools": [
+   "Saber SM2 Mod Tools (ModelConverter, UsfExporter convert_tpl.py, CDTConverter)",
+   "ModelConverter rebuilt from Saber's GPL ToolsSource (.NET 11 preview SDK, offline, against the shipped SharpGLTF/Newtonsoft DLLs)",
+   "Python 3 (json, hashlib, struct)",
+   "PowerShell build scripts"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "swarm-engine",
+   "tpl",
+   "usf",
+   "gltf",
+   "modelconverter",
+   "usfexport",
+   "constructor",
+   "armour",
+   "customization-library",
+   "build-speed",
+   "incremental-build",
+   "byte-identical",
+   "shader-cache"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-porting-assets-from-other-games.md",
+  "kind": "game",
+  "title": "Porting owned content from other games into Space Marine 2 (personal use): Witcher 3 level kit, Space Marine 1 Orks, Gears of War E-Day, Elden Ring, Helldivers 2",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [
+   "The Witcher 3",
+   "Elden Ring",
+   "Gears of War: E-Day",
+   "Warhammer 40,000: Space Marine - Master Crafted Edition",
+   "Helldivers 2",
+   "Red Dead Redemption 2"
+  ],
+  "game_version": "SM2 Steam build 25799387 (Patch 15.1, Oct 2026), most work on Patch 14.x-15; Saber Mod Tools (Oct 2026: ModelConverter, UsfExporter, Map Converter + Furnace, TextureConverter). Sources: The Witcher 3 Remastered 5.01 (GOG), Space Marine Master Crafted Edition (Steam), Gears of War: E-Day (UE 5.5 IoStore build), Elden Ring + Shadow of the Erdtree (Steam), Helldivers 2 (Steam, Stingray)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "asset-only",
+  "tools": [
+   "Saber SM2 Mod Tools (ModelConverter --map_mode, UsfExporter, Furnace, TextureConverter)",
+   "Blender (headless, isolated user profile)",
+   "Witcher3-Blender-Tools (dingdio) Blender add-on",
+   "own SpeedTree 7 .srt parser (Python)",
+   "filediver v0.7.58 (Helldivers 2 extractor)",
+   "own UE 5.5 IoStore + ACL v2.1 readers (Python)",
+   "own Havok 2010.2 packfile reader (Python)",
+   "Wwise 2019.2.15 WwiseConsole",
+   "ffmpeg",
+   "Python 3 (numpy, scipy)"
+  ],
+  "anti_cheat": "SM2 has EasyAntiCheat: every build here loads through Saber's official mods folder (Mods Detected, private lobbies), no injection. Source games with anti-cheat (Elden Ring EAC, Gears E-Day EAC, Helldivers 2 GameGuard) were never launched or patched for this work; their files were read offline from the author's own installs.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [],
+  "tags": [
+   "space-marine-2",
+   "cross-game",
+   "port",
+   "asset-conversion",
+   "mashup",
+   "witcher-3",
+   "redengine",
+   "speedtree",
+   "map-converter",
+   "furnace",
+   "lwi",
+   "elden-ring",
+   "gears-of-war",
+   "unreal-5",
+   "iostore",
+   "acl",
+   "space-marine-1",
+   "havok",
+   "helldivers-2",
+   "stingray",
+   "wwise",
+   "opus",
+   "retarget",
+   "personal-use"
   ]
  },
  {
@@ -9851,7 +10107,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-15",
+  "date": "2026-10-29",
   "links": [],
   "tags": [
    "space-marine-2",
@@ -9871,7 +10127,11 @@
    "sound",
    "crosshair",
    "hud",
-   "equipment"
+   "equipment",
+   "heroic-version",
+   "honor-shop",
+   "executions",
+   "ik"
   ]
  },
  {

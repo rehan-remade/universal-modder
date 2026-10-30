@@ -12,9 +12,9 @@ anti_cheat: "EasyAntiCheat. Everything here uses Saber's official mods folder (c
 status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: []
-date: 2026-10-15
+date: 2026-10-29
 links: []
-tags: [space-marine-2, saber, npc, enemy, boss, tyranid, morpheme, nmb, sani, animation, retarget, finisher, execution, interplay, xseq, spawning]
+tags: [space-marine-2, saber, npc, enemy, boss, tyranid, morpheme, nmb, sani, animation, retarget, finisher, execution, interplay, xseq, spawning, bio-titan, boss-ai, melee-timing, gore, wwise, root-motion]
 ---
 
 # Space Marine 2 new enemies: NPC classes, cloned Morpheme networks, .sani clips, retargeting and executions
@@ -27,7 +27,9 @@ tags: [space-marine-2, saber, npc, enemy, boss, tyranid, morpheme, nmb, sani, an
 > (manifests, crash dumps, the new-brand crash) and
 > [the models note](sm2-models-tpl-format-modelconverter-and-textures.md) (tpl export). The Marine-side network edits
 > for weapon clips are in [the weapons note](sm2-weapons-skins-reloads-perks-vfx-and-sounds.md). Verified in game
-> unless marked.
+> unless marked. Additions from 2026-10-15..29 are dated: a close-range boss built on the retail Bio-Titan (Hierophant)
+> class, a ported humanoid melee NPC (gore, sound bank, strike timing, reaction exits, network caches), and how
+> sequences move actors and play sounds/VFX.
 
 ## Setup
 - Steam build 25799387 (Patch 15.1); most of the work on Patch 14.x. Saber Mod Tools (Oct 2026) incl.
@@ -73,6 +75,46 @@ donor creature: everything is cloned, because the engine keys animations by name
   full skin. The client effects attach to `fx_*` locators that are MARKUP entities (ship the boss's `.tpl_markup`:
   locators, ragdoll shapes, render params, mutators), not tpl nodes. The server class can keep the donor's tpl for
   hitboxes (`ownerTplName` in the weapon desc).
+
+### Gore on a new model (2026-10-15..16)
+- `ssl/damage/gore/gore_mesh_library_mgs.sso` `meshes.<archetype>.<object>` LOOKS per archetype, but its constructor
+  fills ONE map keyed by mesh OBJECT name across all archetypes. A new archetype block repeating a retail object name
+  throws on the duplicate key and the client hangs on "joining server" forever: no crash dialog, empty report folders,
+  only a `.ssldmp` in `...\client\ssl_crash_dump\` (stack: dictionary add <- gore library constructor <- creating the
+  Hub game system). Check that folder first for any "joining server" hang.
+- Consequence: a model that REUSES a retail model's object names silently gets that model's cut regions and gibs
+  (retail variants share regions this way). Own gore = unique object names. Missing hit-hull names in the region lists
+  are tolerated.
+- **The gore system is switched on per TPL name, not per archetype:** the same file needs `ecsGoreTplLib.<tpl> =
+  { __value = "<gore set tpl>" }` and `gorePools.<tpl>`. Without both, the model's cap meshes (hidden per region via
+  vertex-colour ids) are drawn permanently and nothing can be cut ("spawns with gore coming out of him").
+- **Caps still drawn after that = the instance-constructor template is never applied.** It needs a row
+  `<tpl> = { variants = [ { templateName = "..." } ], __type = "InstConstructorTemplateLinkVariants" }` in
+  `ssl/main/game/actor_geom_level_customizer.sso`, in EVERY section (a level's own section replaces `default` with no
+  fallback). Applying the template shows only the objects its layers name, which is what hides the caps, so the layers
+  must name YOUR objects (inline `geomObjNames` override, as a retail cultist variant does) or the whole model vanishes.
+  The hang and the permanent caps were seen in game; the build with the customizer row raised no cap complaint in its
+  test, but that was not explicitly confirmed.
+
+### A custom sound bank for a new NPC (2026-10-15..16)
+- Host wiring (Warrior-class example): the client cls `play_sound_on_morpheme_event.mrEventSounds` maps clip strings to
+  Wwise events; the cls `prop_blueprints.Sound` graph starts/stops idle and run loops on Morpheme TAGS, plays death on
+  `OnDeath` (except execution targets / mortal headshots) and hit sounds; the `.cls.resource` `linksSound` loads each
+  event's bank. NPC step sounds come from clip cues, not a step system. `npc_client`'s sound-group loader loads the group
+  named after the class.
+- Clip cues are payload events (a `Sound` string) and may only go into the clip's own retail tracks (`Sound`,
+  `Sound_Vox`, `Sound_Step`, `SFX` ...), because network anim nodes cache each clip's track list (below). Loco loops
+  carry no sound tracks; their `*_sound` sibling clips carry the steps.
+- **HIRC order is children-first.** Wwise links a parent only to children ALREADY loaded, and an event only to actions
+  already loaded; nothing is re-linked later. Retail writes Sounds, then their containers, then mixers bottom-up, then
+  actions, then events. A bank sorted by object type parsed cleanly in a bank viewer but loaded 47 of 49 containers
+  empty: the NPC was completely silent in game (proved by cross-correlating the recording against every source file).
+  Before shipping a hand-built bank, simulate the load order and count empty containers (retail: zero).
+- Events with `prepareOrder <= 0` play straight from the loaded bank (correct for in-bank media; retail has hundreds,
+  NPCs included). Bank layout details for this Wwise version (v150): FX entries are 6 bytes; a random/sequence
+  container's child list is easiest found from the END of its body. Continuous loops use the continuous bit with loop
+  count 0; a per-hit chance = silent takes plus the weighted bit. The children-first rebuild of the same bank played in
+  game (verified).
 
 ### How character animation is wired (everything by name)
 - Client `prop_morpheme_controller` (`animSet`, `nameBundle`) + `.cls.resource` `linksMr` pick
@@ -138,6 +180,65 @@ donor creature: everything is cloned, because the engine keys animations by name
    name and the first namesake wins; a Blend2 never sits under a SingleFrame or wraps a clip whose markers must
    arrive; additive streams start from the LIVE retail clip's frame 0.
 
+### Network internals that matter when clips change (2026-10-15)
+Decoded on the Tyranid Warrior network (3 sets, ~1200 nodes) while porting a humanoid melee enemy onto it; a parser
+for node definitions, attributes and state machines read all 44 retail networks cleanly.
+- Network asset: u32 at +168 = node count, u64 at +176 = offset of the node-offset table (0 = no record). Attribute
+  handles are SELF-relative i64 offsets; per-set attributes are indexed `set * nSemantics + semantic`. Node type ids
+  follow Morpheme's public enums; attribute type ids differ (measure them).
+- **Anim nodes (type 104) cache clip data per animation set:** anim-list index, set asset id, the clip DURATION, the
+  number of discrete and duration event tracks and a CRC-32/BZIP2 hash of each track GUID (clip file order). The
+  single-set Marine network keeps the same block at a fixed offset. Clips re-made with different timing or a different
+  track list leave these caches stale. What worked: give every new clip the retail track list back (dropped tracks
+  stay, empty), fresh GUIDs, and write durations + hashes into YOUR set's blocks only. The same nodes cache the clip's
+  start/end trajectory (positions and quaternions); copied nodes may hold zeros there, harmless unless root motion is
+  applied.
+- Saber anim-slot nodes are type 1001 (slot id inside); the slot table lives in the network asset. A declared slot no
+  node reads can carry info-only table entries for moves the network plays from fixed nodes. Network-only table
+  entries name anim NODE leaf names, not clip names.
+- **Transitions** are an OR of AND-groups; conditions are variable-size records (type, negate flag, the CP node id,
+  greater/less/or-equal and in-range variants). State machines keep no CP input list, so a condition can be repointed at
+  any CP node. Saber's expression VM: `[s][a][b][op]` with move, divide, compares and jump opcodes.
+- **Creature LOCO hard-codes the donor's speeds** (Warrior: walk/run blend over 2.25..6 m/s, sprint only when the max
+  desired speed is exactly 8.5, walking start for desired speed 2..2.5, stop choice at 4). A creature whose clips move
+  at other speeds needs those gates re-pointed (e.g. at the walking-mode CP).
+- **Saber LegIK (type 158) stores the HOST's leg segment lengths** (and derived sums) in the node; a retargeted body
+  with other proportions gets bent legs. Disabling it (its distance threshold expression set to -1) was the fix.
+- **Sync:** walking stops enter by a sync-event transit that uses the event INDEX, so loops feeding them must keep the
+  host's two foot events per cycle; start -> loco is a plain transit, so a start clip must end on the loop's frame 0.
+  Measure foot plants from motion, not from imported "foot" tags (another game's tags were sound cues).
+- **Reaction exits on event 205.** The Warrior network leaves heavy-hit, stagger, parry-reaction and stun-out states on
+  Footsteps event 205 (the track partitions the clip as 200 | 0 | 205) with a 0.5 s blend to LOCO. A clip that copies the
+  host's event fractions inherits the host's recovery time: a body still lying on the floor got blended to running in
+  0.5 s. Rule used: 205 no earlier than the frame from which key joints stay within ~35 cm of the settled end pose and
+  the head is at >= 90 % of its final height; only ever move it later.
+- **Snap entries:** ANY -> heavy hit and stagger use a 0 s blend, so a clip that starts kneeling teleports to the floor.
+  Prepend a short transition reel. Pair stun loops with their own exits (a standing-daze exit after a kneeling loop
+  spun the body 170 deg while matching in head height).
+- **Head look is off during attacks:** attack states emit `look_at_enable_mr` = 0 and re-enabling waits for the melee
+  CP to drop, so the clip's own head shows. Bake the look direction into attack clips.
+
+### Melee strike timing for NPCs (2026-10-15)
+Validated on the retail Tyranid Warrior (all five strikes land in a replay, and the fit lands on Saber's own
+constraint ends):
+- Constraint window events: 305 = position + rotation, 306 = position, 307 = rotation. At the window END the attacker
+  faces the target and the gap between the two rigid-body capsules equals `constraintOffset` (Saber's hint: extra
+  offset between collision capsules, -1 = constrain to the target root). Value = the strike's
+  `constraintSettingsOverrides.ConstraintOffset`, else the combo desc's `constraintSettings` (1.8 for the claw desc);
+  speed capped by `maxLinearSpeed` (10, heavies 20). Capsule radius 0.75 for both Warrior and Marine.
+- Damage window 405: the strike's `meleeDetectors` (named segments on locator bones) are swept against the target's
+  hit hulls. Hits are purely geometric: the blade must pass through the player.
+- Retail norm over 287 NPC attack clips: exactly one 405 per strike, and the constraint ends a median 0.067 s AFTER
+  405 opens (only 9 end more than 0.15 s before it).
+- AI start distance: the Warrior combo kata sprints until the enemy is within `ComboSlashRangeMax` (class blackboard:
+  10 brawler / 4 defensive); jump attack 7-16 m, heavy 0-5 m.
+- Recipe for new or ported clips: place a target at the constraint end, measure where the weapon sweeps through it,
+  put 405 around that impact and end the constraint there; `ConstraintOffset` = measured distance minus 1.5 m of
+  capsule radii; check `ComboSlashRangeMax` against the clip's reach. Imported hit tags from another game were gameplay
+  timers (no blade test) and made most strikes whiff, one mid-spin with the back to the player. The model is checked
+  offline against retail; strikes retimed with it were built, but their hit rate in game was not confirmed (the port
+  was paused for animation feel).
+
 ### `.sani` clip format (what our writer handles)
 - A chunked file plus a `.sani_data` sidecar. Chunks: 241 meta (channel names), 242 regular animation data (inline;
   246 streamed), 243 additive layer (inline; 247 streamed), 244 trajectory (root motion), 245 events - always the LAST
@@ -164,6 +265,18 @@ donor creature: everything is cloned, because the engine keys animations by name
 - A from-scratch writer reproduced 155 retail clips to 0.02 mm / 0.003 deg. Pitfalls: a rotation "is it constant"
   epsilon of 1e-5 froze slow bones (use ~1e-9); an older public reader takes the LAST 242/243 chunk (misreads additive
   files) and pads Optimized rows wrongly.
+- (2026-10-15) Full survey with Saber's own reader as the oracle (the `FioSaveLoad` library from the Mod Tools): all
+  ~44,900 retail clips (client, server, TPL paks) parse with exact byte consumption and re-serialise byte-identical.
+  Header `ETNA` + u16 version: 1 = no compression (cinematics; Optimized layout only; trajectory uncompressed as vec3
+  then WXYZ quaternion arrays), 2 = quantization (a u16 compression id per layer and for the trajectory), 3 = TPL object
+  clips (Q16 with scale tracks and one visibility float curve per joint). Chunk 248 is an empty "out of streaming
+  budget" flag; streaming chunks 246/247 carry `preload` frames while the sidecar holds ALL frames.
+- Q16 packing: positions packed 11/11/10 bits in a u32, rotations u16x3 of `q.xyz / (1 + w)`, floats u16, offset = min,
+  ranges below 1e-4 widened to 1e-4. Optimized rows: vec3/quat rows padded to 4 entries, float rows never padded.
+- **Every clip of an animation set has the IDENTICAL channel list = the rig's bone order** (one list across ~17,400
+  Marine clips; 195 channels on the Warrior): a new clip must reproduce it exactly. Player clips run at 24 fps, NPC
+  clips at 30. Player float curves (length, foot positions, look-at) are almost always constant 0. Event parameters
+  have Bool/Int/Float/String types; retail uses only String (`Sound`).
 
 ### Retargeting creature motion onto a new body without reshaping the mesh
 - Give the creature its OWN skeleton: donor hierarchy and bind orientations, joints placed at the new anatomy. Then
@@ -187,6 +300,18 @@ donor creature: everything is cloned, because the engine keys animations by name
 - Saber's official **Animation Retargeting** blueprint node (Oct 2026) maps the Primaris set onto a humanoid of other
   proportions (sample config in the test scene mod's client scenario; equipment positions need manual tuning). It is
   Primaris-based and does not cover creature sets.
+- (2026-10-16..23) **What made new creature moves acceptable** (judged by a human from rendered videos): moves built on
+  the creature's OWN retail clips, or a limb driven along a designed path by IK with a clear weight shift and the other
+  feet planted. Rejected as "super rough": attacks made from a few rotation offsets on spine/neck/tail chains plus IK,
+  added tremble, arms wound up too high or spread out, joints bent past what retail clips ever bend. Rules that came
+  out of it: cap every IK joint inside the range measured from the retail clips (keep never-bent joints rigid); no added
+  jitter; monotone curve tangents (no overshoot); after a strike, one hold and ONE pull-back into the idle (no tug);
+  neck extension jams armour plates into the back shell, so let the body rear or tip instead; check mesh
+  self-intersection per frame on the real mesh before rendering; verify signs (a jaw pitch sign was inverted in every
+  early preview, closing the jaw into the skull); look targets must lie in front of the head (on a huge creature the
+  head sits far forward of the origin).
+- When trying a new animation DONOR (another creature or game), render 3-5 attacks plus the idle carry/stance first.
+  A full 175-slot moveset was rejected on sight for one trait visible in the idle (the weapon dragging on the ground).
 
 ### Executions (finishers)
 - Who can execute what: `ssl/smarts/pair_combat_library.sso` -> executors -> `targetsInfo.<KEY>.finisherDescs`, KEY =
@@ -205,6 +330,34 @@ donor creature: everything is cloned, because the engine keys animations by name
 - **A new `.xseq` must be registered in the GLOBAL `interplay_controller_default.sso`**; a class-inline interplay
   override was ignored and the execution crashed (`interplaySequence` null). There is no unused retail xseq to borrow.
 
+### Sequences (`.xseq`): root motion, sounds and VFX actors (2026-10-15)
+- **No root motion from emotes or sequences.** Root motion is script-driven only: the Morpheme prop's root mover /
+  move-by-trajectory (melee, `BlueprintNodeAbilityTaskRootAnimation`, grabs) or the controller's native
+  `useAnimRootMotion` (deaths; off for players). A smart emote's anim mode only puts the rigid body in anim mode;
+  nothing moves it, and retail emote clips carry zero trajectory.
+- **Retail moves actors in a sequence by ATTACHING them to an animated bone:** a usable door attaches `#/initiator`
+  via `xc_track_attach_to_object` to a bone of the door's animated object; cinematics spawn an actor with geom
+  `cc_cinematic_items` (rig ROOT + CENTRE + Trajectory + `item_01..24`, metres) that plays a standalone section clip,
+  and other actors attach to its item bones (the `.xseq.resource` links the clip's `.sani.resource`, the actor class
+  and the tpl). Spawnables are placed in local metres around the sequence origin; an emote's origin is the user.
+- **But an attach inside a smart EMOTE did not move the player** (the sit played in place; tested). Retail
+  player-moving sequences attach the initiator to SCENE object bones under a usable (anim mode NONE), and interaction /
+  finisher smarts pause the character transform sync; finishers move the initiator with a root mover on the clip's
+  trajectory. Use a usable + level sequence for anything that must move the player.
+- Absolute scene references exist: `<scn>/<scene>__<layer>/a/b` names a scene object (`<layer>__a__b` in the cd_list).
+- **Sounds:** sound-track sections `{from, to, rowIndex, soundDesc{type{name, __type GameSound}, __type
+  GameSoundDesc}}` on an `xc_track_actor` bound to a `sound_actor_full` actor. Every event must be listed in the
+  `.xseq.resource` `linksSound` (that loads its bank). `GameSound` has no volume (only fades and parameter overrides);
+  emitters have attenuation scale and size. Some retail events are SILENT (`media_bundles: []`, wem in no header):
+  check media before choosing one. A section spanning a sequence loop's points keeps playing; keep one-shots out of
+  loop ranges.
+- **VFX:** the xseq's trailing actors dict holds `sfx_entity` actors (`transform` world position/rotation,
+  `desc.properties.sfx.list.<sfx brand> = { scale }`, `__onlyOn "visual"`); a track `#/<name>` with path
+  `desc/properties/sfx/list/<brand>/active` and an `xc_spline_bool` switches each on at a time.
+- Lamps in `.sfx` files are `sfx_light_base` entries (`lightType "point"`, `RadiusCtrl`, `ColorCtrl` A,R,G,B,
+  `Intensity`) inside an `sfx_group`; retail "glowing" lenses are small 0.2-0.4 m lights right on the lens, no
+  sprites. Continuous particles use a `constantFlow` emission type.
+
 ### Spawning in the testing arena
 - Testing Menu's copy of `xscenes/test_scene_mod/test_scene_mod_scenario_server.sso` sets
   `useDefaultArchetypesPoolsLibrary = False` with an explicit pool: add your `LevelArchetype` + `linksDescWeak` there.
@@ -218,6 +371,39 @@ donor creature: everything is cloned, because the engine keys animations by name
   cosmetic boid flock. A playable "flyer" = a ground NPC whose clips hold the body several metres above its ground
   capsule (hover), with attacks diving down into parry range. Wings can ride a donor's second arm pair (the Tyranid
   warrior network). Loaded and spawned in game; combat feel and execution still open.
+
+### A close-range boss on the retail Bio-Titan class (2026-10-22..29)
+Goal: turn the long-range Bio-Titan (internal name Hierophant, archetype `TyrHierophant`, ~45 m tall) into a boss that
+walks up to the squad, takes real bullet damage and fights with stomps, swipes and acid. Built by overriding its class
+(no new skeleton), with new clips on its own network.
+- Retail facts: 49 per-bone `*_cdt` hit meshes already cover the body (88 % of the surface within 0.5 m); damage
+  sensitivity 0.02 for bullets and 0 for melee, HP 1100; it keeps 50-215 m away; its smokescreen spawns at map markers.
+  Changing the class also changes the Bio-Titan in every mode that uses it.
+- **Its server body is a 1.8 m `char_server` pillar** scaled up, so the legs cannot be hit in melee. Fix: `geom_server`
+  `nameTpl` = its own model (as the Lord of Change class does), plus server `cdtSkeleton` collision. Scaled-down copies
+  (client `geom.scale` in spare `npc_modded_N` slots; scale nodes cannot target other actors) keep the pillar.
+- **Target picking:** an inline override of the Hive Tyrant's target-picker brand made it chase whoever deals it the
+  most damage (built; not checked on its own).
+- **New moves:** a new clip played through an existing network state (the smoke ability's), an anim-table entry, a new
+  `AbilityUid` via the enum extension (see the [active reload / abilities note](sm2-active-reload-and-cloned-abilities.md))
+  and a server-side ground burst at a leg locator. Retail taunts (with their `abort` entry) served as phase roars at HP
+  thresholds; a charged shot fires the retail big shells from a client view module. In an ability CLIENT blueprint,
+  getting a transform without an actor ref returns the owner. Retail bomb projectiles use gravity 30 (the big one 10).
+- **AI pitfall:** a close-range branch put first under "Shooting / Movement" sat under a top-priority utility monitor
+  whose cooldown starts only ON_SUCCESS, so it kept pre-empting the kata and restarting the retail volley (the "spammed
+  charged shot"). Fix: put the branch under "Approach / Walking" and gate the volley to >= 35 m.
+- **Idling:** the retail walk fallback needs level `MovementPoints` (a test arena has none) and waits 6.5-13 s, and an
+  approach band of 32-42 m left it standing. Next build: approach 22-30 m and walk an arc around the target with
+  `BhvNodeMoveToPosition` between attacks (built, untested).
+- **Blood on hits** comes from the covering system (`prop_covering`, a voxel field: 0.5 m voxels on `npc_client`, 1 m and
+  a 1000 m max distance on Saber's own cutscene Bio-Titan); a 45 m body needs the override.
+- Also in the build: weak-point damage multipliers per body part, a melee damage multiplier, LOD distance past 120 m.
+- **Textures:** PC ships only one 2048 set for it (cutscenes and gibs use the same), ~24 texels/m on the body. A
+  4096 set under the retail names plus an `mml_cfg` top-mip entry raised the detail.
+- Parry route (researched, not built): parriable NPC strikes come from the NPC melee system (`MeleeDesc` strikes with
+  `isLockParryStance`, no `attack_indication_dodge` track, not `isPervasive`).
+- Status: tested in game as "pretty good" (close-range moveset, acid spew, stomp flurry, belly slam, phase roars,
+  weak points); remaining complaint = idling between attacks.
 
 ### Creature textures and part swaps
 - Retail Tyranid conventions: DirectX normal maps (strong, xy std ~0.35-0.4), spec R metal 0 / G rough / B AO, diffuse
@@ -247,6 +433,11 @@ donor creature: everything is cloned, because the engine keys animations by name
 - Every crash rule above came from a real boot or load crash, confirmed by the `.ssldmp` heap or error.yaml.
 - Not verified: the execution sequence itself after the Footsteps-event fix, a globally registered new xseq, the
   official `noSsl` NPC route, combat AI on new movesets (built clips are not yet wired into AI behaviour trees).
+- (2026-10-15..29) In game: the gore-library hang and its fix by unique object names; a hand-built NPC bank silent
+  until rebuilt children-first; the sit attach inside an emote NOT moving the player; the Bio-Titan boss with real
+  bullet damage, new close-range moves on new ability uids, AI branch moved under approach, tested as "pretty good"
+  (combat AI on a new moveset now partly answered: new branches inside the retail behaviour tree work). Built, not
+  confirmed: the level-customizer cap fix, retimed strike windows, reaction-exit retiming, the arc-walk between attacks.
 
 ## Gotchas
 1. **New NPC looks exactly like the donor in game.** Cause: hand-built class sslbins are ignored and the client class
@@ -284,6 +475,35 @@ donor creature: everything is cloned, because the engine keys animations by name
     Fix: add both in the arena scenario copy.
 18. **Display name still the donor's.** Cause: name comes from `ui_ai_archetypes_library` keyed by archetype, and the
     first-sorting pak's `strings_english.str` wins. Fix: own entry + merged strings file.
+19. **Client stuck on "joining server" forever, no crash dialog.** **Cause:** a gore-library entry repeated a retail
+    mesh object name (one global map). **Fix:** unique object names; read `client\ssl_crash_dump\*.ssldmp` first.
+20. **New model spawns with gore caps showing and can't be dismembered.** **Cause:** no `ecsGoreTplLib`/`gorePools` rows
+    for its tpl, then no level-customizer template row (the template is what hides the caps). **Fix:** all three, in
+    every customizer section, with layers naming your objects.
+21. **Hand-built NPC bank completely silent although it parses.** **Cause:** HIRC objects not written children-first, so
+    containers and events linked to nothing. **Fix:** retail order (sounds, containers, mixers bottom-up, actions,
+    events); simulate the load and count empty containers.
+22. **Ported NPC blends from lying on the floor straight into running.** **Cause:** reaction exit event 205 copied from
+    the host's timing. **Fix:** move 205 to where the body has settled (never earlier).
+23. **Hit reaction teleports the body to a kneel.** **Cause:** 0 s entry blends show frame 0 at once. **Fix:** start
+    reaction clips standing or prepend a transition reel.
+24. **Ported strikes whiff, one with the back turned.** **Cause:** imported hit timing; SM2 hits are geometric at the
+    constraint end. **Fix:** measure the sweep at the constraint end, set 405 there, set `ConstraintOffset`.
+25. **Retargeted creature walks with bent legs / wrong gait gates.** **Cause:** LegIK stores the host's leg lengths; LOCO
+    gates on the host's exact speeds. **Fix:** disable the LegIK threshold; re-point speed conditions.
+26. **New clips lose events or end at the wrong time.** **Cause:** anim nodes cache per-clip duration and track hashes.
+    **Fix:** retail track list, fresh GUIDs, patch durations/hashes in your set's blocks.
+27. **Sit/walk-in sequence plays on the spot.** **Cause:** sequences and emotes apply no root motion, and attaching inside
+    an emote does not move the player. **Fix:** a usable + level sequence that attaches the initiator to a scene bone.
+28. **Boss legs can't be hit in melee.** **Cause:** the server body is a small scaled pillar. **Fix:** `geom_server
+    nameTpl` = the real model.
+29. **Boss spams its retail volley after adding a close-range branch.** **Cause:** the branch sat under a top-priority
+    utility monitor with an ON_SUCCESS cooldown, restarting the volley. **Fix:** put it under approach/walking and gate
+    the volley by distance.
+30. **Boss idles for long stretches in a test arena.** **Cause:** the walk fallback needs level `MovementPoints` and
+    waits 6.5-13 s. **Fix (untested):** explicit move-to-position arcs between attacks.
+31. **New creature moves rejected as rough.** **Cause:** offset keyframes on chains, joints past retail ranges, added
+    tremble, overshoot. **Fix:** build on retail clips or path-driven IK capped to retail ranges; show 3-5 moves first.
 
 ## Assets
 The boss mesh was AI-generated (Tripo) and repainted by the human in Substance Painter; motion is the retail
@@ -296,3 +516,5 @@ so keep builds with the AI-generated boss private.
 - Whether new interplay sequences work once registered globally.
 - Decoding the remaining cinematic `.sani` compression ids.
 - Whether the official `noSsl` CLS route makes the modder slots fully obsolete for complex bosses.
+- Whether a parriable boss strike works through the NPC melee-desc route on a 45 m creature.
+- Whether new interplay sequences can move the player inside an emote at all (only usables did).
