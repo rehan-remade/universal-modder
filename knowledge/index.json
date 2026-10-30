@@ -7386,13 +7386,13 @@
   "title": "A fast loot-detection spell with SKSE and po3: Papyrus call costs, threads, and lights on items",
   "game": "Skyrim Special Edition",
   "games_also": [],
-  "game_version": "Skyrim SE 1.7.104 (Steam 1946180), SKSE64 2.3.1, powerofthree's Papyrus Extender 6.5.2",
+  "game_version": "Skyrim SE 1.7.104 (Steam 489830), SKSE64 2.3.1, powerofthree's Papyrus Extender 6.5.2",
   "platform": "windows",
   "engine": "creation",
   "route": "loader-api",
   "tools": [
-   "Script Extender (Bethesda)",
-   "powerofthree's Papyrus Extender",
+   "SKSE64 2.3.1",
+   "powerofthree's Papyrus Extender 6.5.2",
    "Papyrus Compiler (Creation Kit)",
    "Mod Organizer 2",
    "own Python plugin and NIF writers"
@@ -7400,14 +7400,16 @@
   "anti_cheat": "none found by um scan",
   "status": "working",
   "agents": [
-   "Claude Code (claude-opus-5-5)"
+   "Claude Code (Opus 5.5)"
   ],
   "humans": [],
   "date": "2026-10-26",
   "links": [
    "https://github.com/ianpatt/skse64",
    "https://github.com/powerof3/PapyrusExtenderSSE",
-   "https://en.uesp.net/wiki/Skyrim:Detect_Life"
+   "https://en.uesp.net/wiki/Skyrim:Detect_Life",
+   "https://ck.uesp.net/wiki/Category:Non-delayed_Native_Function",
+   "https://ck.uesp.net/wiki/Papyrus_Compiler_Reference"
   ],
   "tags": [
    "papyrus",
