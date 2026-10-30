@@ -4956,6 +4956,145 @@
   ]
  },
  {
+  "path": "games/middle-earth-shadow-of-war/map-import-shadow-of-mordor-udun-as-a-new-region.md",
+  "kind": "game",
+  "title": "Map import: Shadow of Mordor's Ud\u00fbn as a playable new region in Shadow of War",
+  "game": "Middle-earth: Shadow of War",
+  "games_also": [
+   "Middle-earth: Shadow of Mordor"
+  ],
+  "game_version": "Shadow of War Steam build 3095001 (exe 1.0.8874.0, public branch, unchanged since 2018-09-05), Windows 10 22H2; Shadow of Mordor Steam copy (public branch, build 7348332) as the map source",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Python 3.12 + numpy/Pillow (own SoM/SoW format readers, converters and writers)",
+   "C# GADB reader-writer (PowerShell Add-Type)",
+   "Recast v1.6.0 (recastnavigation, own CLI)",
+   "TagTools (Havok 2016 TAG0 reader/writer, ported to Python 3)",
+   "QuickBMS + aluigi shadow_of_mordor.bms 0.4",
+   "Ghidra 12.1.4 (headless, analysis only) + Temurin JDK 21",
+   "w64devkit GCC 16.2 (trace plugin, Recast CLI)",
+   "Shadow of War Dll Loader (Nexus 99, loads the diagnostic plugin)",
+   "texconv (DirectXTex)",
+   "Blender 4.2.3 (headless previews)"
+  ],
+  "anti_cheat": "none; single-player only. The mod is data (an extra .arch06 + game.gamedb), the exe file is untouched (SteamStub/Denuvo untouched). The diagnostic trace plugin hooks code in memory and is only installed for tests. Every test ran offline through the offline-mode DLL (never signed in to WB).",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "DeimozZarco"
+  ],
+  "date": "2026-10-29",
+  "links": [
+   "knowledge/games/middle-earth-shadow-of-war/map-import-toolkit-formats-and-tools.md",
+   "knowledge/games/middle-earth-shadow-of-war/offline-mode-and-local-garrison.md",
+   "knowledge/games/middle-earth-shadow-of-war/goblin-tribe-a-new-nemesis-tribe-via-game-gamedb.md",
+   "knowledge/games/middle-earth-shadow-of-war/save-format-decrypt-and-collectible-quests.md",
+   "https://github.com/recastnavigation/recastnavigation",
+   "https://github.com/blueskythlikesclouds/TagTools",
+   "https://www.nexusmods.com/middleearthshadowofwar/mods/99"
+  ],
+  "tags": [
+   "map-import",
+   "total-conversion",
+   "mashup",
+   "new-region",
+   "world-map",
+   "fast-travel",
+   "region-map",
+   "minimap",
+   "prefab-conversion",
+   "material-conversion",
+   "texture-conversion",
+   "havok",
+   "hknp",
+   "collision",
+   "navmesh",
+   "recast",
+   "hkai",
+   "parkour",
+   "terrain",
+   "army-screen",
+   "nemesis",
+   "faction",
+   "ai-spawns",
+   "quests",
+   "lua",
+   "trace-plugin",
+   "lithtech",
+   "firebird"
+  ]
+ },
+ {
+  "path": "games/middle-earth-shadow-of-war/map-import-toolkit-formats-and-tools.md",
+  "kind": "game",
+  "title": "Map import toolkit: Shadow of War / Shadow of Mordor file formats and the tools we wrote",
+  "game": "Middle-earth: Shadow of War",
+  "games_also": [
+   "Middle-earth: Shadow of Mordor"
+  ],
+  "game_version": "Shadow of War Steam build 3095001 (exe 1.0.8874.0), Windows 10 22H2; Shadow of Mordor Steam copy as the source",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Python 3.12 + numpy/Pillow",
+   "C# 5 GADB reader-writer via PowerShell Add-Type",
+   "Recast v1.6.0 core in an own CLI (w64devkit g++)",
+   "TagTools (TAG0 reader/writer, Python 3 port)",
+   "QuickBMS + aluigi shadow_of_mordor.bms 0.4",
+   "texconv (DirectXTex)",
+   "Ghidra 12.1.4 (analysis only)",
+   "w64devkit GCC 16.2 (trace plugin)",
+   "Blender 4.2.3 (headless previews)"
+  ],
+  "anti_cheat": "none; single-player, offline. Tools only read the user's own game files and write a mod archive + database; the exe file is never modified.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "DeimozZarco"
+  ],
+  "date": "2026-10-29",
+  "links": [
+   "knowledge/games/middle-earth-shadow-of-war/map-import-shadow-of-mordor-udun-as-a-new-region.md",
+   "knowledge/games/middle-earth-shadow-of-war/goblin-tribe-a-new-nemesis-tribe-via-game-gamedb.md",
+   "https://github.com/recastnavigation/recastnavigation",
+   "https://github.com/blueskythlikesclouds/TagTools"
+  ],
+  "tags": [
+   "toolkit",
+   "file-formats",
+   "ltar",
+   "bundles",
+   "objres",
+   "gadb",
+   "prfb",
+   "ltmi",
+   "texr",
+   "wdsc",
+   "terrain",
+   "havok",
+   "tag0",
+   "hknp",
+   "hkai",
+   "recast",
+   "cadb",
+   "volm",
+   "uiwd",
+   "uis",
+   "kit-copy",
+   "trace-plugin",
+   "map-import",
+   "lithtech",
+   "firebird"
+  ]
+ },
+ {
   "path": "games/middle-earth-shadow-of-war/offline-mode-and-local-garrison.md",
   "kind": "game",
   "title": "Offline mode and local Garrison: a winhttp stand-in for WB's Hydra server",
