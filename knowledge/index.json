@@ -7165,14 +7165,14 @@
   "games_also": [
    "Helldivers 2"
   ],
-  "game_version": "1.4.1#912 (Unity 2021.3.33f1, Mono), Steam, Windows 11; separate lab copy of the install",
+  "game_version": "1.5.0#1224 (Hallowed Concepts update, Steam build 25921972; Unity 2021.3.33f1, Mono), Steam, Windows 11; first built on 1.4.1#912; separate lab copy of the install",
   "platform": "windows",
   "engine": "unity-mono",
   "route": "loader-api",
   "tools": [
    "BepInExPack 5.4.2122",
-   "RoR2BepInExPack 1.43.0",
-   "R2API ContentManagement 1.0.11 / Language 1.1.0 / Prefab 1.1.1",
+   "RoR2BepInExPack 1.46.0 (1.43.0 on 1.4.1)",
+   "R2API ContentManagement 1.1.0 (1.0.11 on 1.4.1) / Language 1.1.0 / Prefab 1.1.1",
    "HookGenPatcher 1.2.9 (lab only)",
    ".NET SDK 8 (netstandard2.1)",
    "ilspycmd 8.2",
@@ -7181,15 +7181,18 @@
    "uv + numpy/pillow"
   ],
   "anti_cheat": "none (co-op PvE, no anti-cheat); all testing in a separate lab copy of the game",
-  "status": "working",
+  "status": "released",
   "agents": [
    "Claude Code (Claude Opus 4.x, Sonnet and Opus 5.5 across sessions)"
   ],
   "humans": [
    "Terr4"
   ],
-  "date": "2026-10-04",
-  "links": [],
+  "date": "2026-10-18",
+  "links": [
+   "https://github.com/TheTerr4/RoR2-Helldiver",
+   "https://thunderstore.io/c/riskofrain2/p/Terr4/Helldiver/"
+  ],
   "tags": [
    "survivor",
    "skills",
@@ -7204,7 +7207,8 @@
    "texture-compression",
    "config",
    "benchmark",
-   "test-bridge"
+   "test-bridge",
+   "game-update"
   ]
  },
  {
