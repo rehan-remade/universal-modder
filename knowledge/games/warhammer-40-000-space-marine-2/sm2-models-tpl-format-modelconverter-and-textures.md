@@ -12,9 +12,9 @@ anti_cheat: "EasyAntiCheat. Everything here uses Saber's official mods folder (c
 status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: []
-date: 2026-10-13
+date: 2026-10-29
 links: []
-tags: [space-marine-2, saber, swarm-engine, tpl, gltf, modelconverter, usfexport, shader-cache, textures, pct, constructor, armour, custom-head, ai-mesh, collision, cloth]
+tags: [space-marine-2, saber, swarm-engine, tpl, gltf, modelconverter, usfexport, shader-cache, textures, pct, constructor, armour, custom-head, ai-mesh, collision, cloth, skin-weights, mml-cfg, parallax]
 ---
 
 # Space Marine 2 models and textures: the .tpl format, Saber's converter round trip, the shader cache and custom meshes
@@ -32,6 +32,12 @@ tags: [space-marine-2, saber, swarm-engine, tpl, gltf, modelconverter, usfexport
 - Saber Mod Tools. Two ModelConverter copies exist and they are not the same:
   `ModEditor/tools/bin/ModelConverter/ModelConverter.exe` converts **tpl -> glTF**; the copy in
   `ModelConverter/ModelConverter/` only does USF <-> glTF and silently prints its version when given a tpl.
+  (2026-10-29) Versions differ too: the glTF -> USF converter inside the game folder
+  (`<game>/client_pc/root/ModelConverter/ModelConverter/`) reports **v13.0.0**; the Mod Tools app's release and its
+  `ToolsSource` are **v14.0.0**. The USF format is the same, but v14 builds a second material layer and a `map2` UV set
+  when a material's extras name a second texture; v13 silently ignores that texture. On a big armour merge that was 279
+  meshes in 40 groups, i.e. new material shapes and shader-cache risk. Pick one converter per project and keep it
+  (details in [the all-class constructor note](sm2-one-constructor-for-every-class-and-fast-usf-builds.md)).
 - UsfExporter (`convert_tpl.py`) turns the USF into `.tpl` + `.tpl_data` + `.lods_base` + `.geom_dbg` + `.cdt`.
 - Saber ships the converter SOURCE in `ModelConverter/ToolsSource` (GltfConverter.cs, Tpl.cs, USF code). Reading
   `Tpl.cs` answered more format questions than any amount of hex diffing.
@@ -111,6 +117,18 @@ Prefer 1 for anything structural; prefer 2 when you only touch a few objects and
     int16 range. ModelConverter's own decode of that normal is wrong (~89 deg off).
   - Skinned layout seen in constructors: stream A stride 20 (`int16 xyz`, 2-byte normal, 4 x u8 weights, 4 x u16 bone
     indices), stream B stride 8 (4-byte tangent, u16 U, u16 V). Bone indices index the tpl's node-name table directly.
+  - (2026-10-22) **Only three of the four weight bytes are weights.** Retail characters never use a real 4th
+    influence, ModelConverter always writes 255 into the 4th byte, and only `JOINTS_0` / `WEIGHTS_0` are read
+    (`_1` sets are ignored). In the retail soldier constructor ~415k vertices have w1+w2+w3 < 255 and the shortfall
+    sits on whatever bone is in joint slot 3 (CHEST, CENTRE, helmet-tail jiggles: one helmet goes down to 216/255).
+    The likely encoding is an implicit `w4 = 255 - (w1+w2+w3)` on slot 3 (inferred from data, not confirmed in game).
+    With three weights summing to 255 nothing changes. To fit a 4+-influence source, merge per host joint, then
+    **subtract-min** (subtract the smallest of the four from all, renormalise): it stays continuous across rank swaps.
+    Dropping the lightest left a crease at the belt; a per-vertex best-3-bones fit crumpled the surface because
+    neighbours picked different trios.
+  - (2026-10-29) Skin joint ids are ids in Saber's object table, not indices into the flat name list: bones come
+    first (`obj_list.json engine_objects`, `bone: true`), the name table skips one unnamed object after them, and
+    names can repeat. Map ids through `engine_objects`, never with a name lookup.
 - Node/bone names: one flat run of `u32 len + ascii` (bones, then locators, then mesh LOD nodes `<obj>_grp`, `<obj>`,
   `<obj>_LOD1..5`). A split's owner object id = name index + K, where K differs per file (+1, +4, +58 seen); anchor it
   empirically (LOD0 holds the most vertices and counts descend). Objects bind to splits through parallel u16
@@ -148,7 +166,26 @@ Prefer 1 for anything structural; prefer 2 when you only touch a few objects and
   and everything else are rebuilt from defaults. The material drives the vertex format: with no `layer1` nothing
   references UV1 and the exporter strips the second UV set, so the hair/special objects come back on a different FVF
   and become novel permutations. Affix flags and copying the retail `.td` folder into the exporter project do not
-  change this.
+  change this. (2026-10-29) That is the game-folder v13 converter. The v14 converter (Mod Tools release / source)
+  does build a second layer plus a `map2` UV set when the extras name a second texture, which is a different material
+  shape again; see Setup.
+- (2026-10-14) **Parallax materials lose their height-map reference.** Retail materials whose td has a `parallax`
+  block (hull walls, floors, grills) carry `extraParams.parallax.baseLayerParallax.textureName = "<tex>_hdetm"` in
+  every split record; UsfExport always writes `""`, so a copy of such a material is a pair retail never ships. Patch
+  the string back into the material records (splits sub-chunk 8). Strings are `u32 len + bytes`, so the record grows:
+  re-emit sub-chunks 4 and 5 with new end offsets, the parent splits chunk end (the only header whose end equals the
+  old sentinel offset) and the final `0xFFFF` sentinel; a scan of every u32 found nothing else holding those offsets.
+  The tpl.resource needs no extra link (the `_hdetm` pct arrives through the td.resource). Offline-verified; the
+  in-game difference was not checked.
+- (2026-10-29) **Retail itself ships records whose submaterial the td lacks** (e.g. a Raven Guard torso record asks
+  for `default1`); they fall through to the engine's global default. A deliberately missing name such as
+  `zz_global_default` is therefore a safe retarget for a crashing object, at the cost of its look.
+- (2026-10-29) **A green "lens" may be a material, not a texture.** Retail scanner lenses get their colour from the
+  `glass` submaterial's values (tint, filter, chameleon); the lens texture and `_em` are neutral. For a red glowing
+  lens clone a whole retail td whose submaterial already has an emissive block and is used on your FVF in a retail
+  tpl, change only values, and put the colour into the `_em` texture. Retail Vanguard lens values are around
+  `intensity 30, bloomIntensity 500` (a value change only, so features stay identical; bloom look not yet confirmed
+  in game).
 - Fixes that worked: (a) never round-trip vanilla objects you do not need to touch; (b) patch the few fields that make
   a pair novel IN PLACE in the exported tpl (e.g. restore `colorSetIdx` 1/2/3/0 on cloth objects from the same-named
   retail record) - never splice whole retail records by name, objects have several variants; (c) retarget a crashing
@@ -169,6 +206,13 @@ Prefer 1 for anything structural; prefer 2 when you only touch a few objects and
   non-colourable shell.
 - `texType` on a custom BC3 texture's `.pct.resource`: leave it `''`. A build that set `nm`/`spec` crashed with a
   skin permutation (that build had a second change, so the blame is not certain; empty is proven safe).
+- (2026-10-29) **Check new materials against RETAIL tpls only.** A merged build passed a feature-set check against
+  the previous merged build plus retail, then crashed in game: the earlier build "passed" only because nobody had
+  opened the screen that draws those objects. Reference sets must be retail files the game ships, never your own
+  earlier output. The crash dialog's `error.yaml` for this class of bug names `vid_sdr_cache.cpp` and a glt vertex
+  shader with defines such as `GLT_SFX_HIGHLIGHT`, `RENDERBLOCK_COLOR`, `GEOM_TWISTING`,
+  `USE_CUSTOMIZATION_TEXTURES`. `GLT_SFX_HIGHLIGHT` is most likely the armoury's hover highlight (one such crash came
+  exactly when hovering an item), so an object can render fine and crash only on hover (more in the all-class note).
 
 ### What ModelConverter and UsfExport do to your model (measured)
 - Converter: needs ABSOLUTE input/output paths, reads `config.json` from the CURRENT directory, and throws a
@@ -177,6 +221,24 @@ Prefer 1 for anything structural; prefer 2 when you only touch a few objects and
   `skinned_geometry`; meshes per object with `_LOD1..5` (as children of LOD0 - render LOD0 alone when previewing) and
   `_cdt`; materials named `<td>_matN`; vertex buffers are INTERLEAVED (honour bufferView byteStride or you get
   exploded geometry). Winding comes out CW because the converter flips on both import and export; don't "fix" it.
+- (2026-10-29) **A raw tpl -> glTF export does not convert back.** Every skinned mesh lands on an ANONYMOUS node that
+  is a detached scene root, while the same-named node in the hierarchy stays empty. Fed back in, the importer types
+  the named node as a skin, finds no skin and logs "Skipping ... no skin attached"; the USF then holds only the
+  skeleton. It also fools analysis (a class comparison that read raw exports saw no meshes and reported zero
+  conflicts). Fix: move `mesh` + `skin` from each anonymous node onto the node whose name equals the mesh name (on
+  constructors every mesh name matches a node exactly), delete the anonymous nodes, reindex.
+- (2026-10-16) **Unnamed tpl objects come back without their matrix.** The tpl -> glTF converter builds unnamed
+  objects as bare `Obj<id>` nodes and never sets their transform. Retail uses such nodes for real transforms: a chain
+  axe's group carries scale 0.01 (body under it at x100), and the soldier constructor has 46 unnamed parents with
+  translations and 90 deg rotations above the cloth/damper capsule end points `*_cdt_*_a/b`. Re-exported, the axe
+  rendered 100x size (the armoury showed only giant specular edges, no crash) and 90 capsule points sat 0.1-2.4 m
+  off (trinkets swinging through legs and head). Fix: read each object's LOCAL matrix from the original tpl with
+  Saber's own reader (the FioSaveLoad / GeomManager classes in the Mod Tools source) and write every non-identity one
+  into its `Obj<id>` node before converting. Quick check for the scale case: count float32 `0.01` hits in the tpl
+  (retail 71, broken export 0). On the constructor, matching the 67 `Obj<id>` nodes by their named descendants
+  restored 46 matrices and brought every capsule point within 1 cm of retail (offline check).
+- (2026-10-29) glTF `bufferView` offsets are read as **Int32** (the converter uses SharpGLTF): a single 3.99 GB
+  `.bin` failed. Split the buffers so each `.bin` stays under 2 GB.
 - **Tangents.** tpl -> glTF never writes TANGENT; glTF -> tpl reads TANGENT if present, otherwise every vertex gets a
   constant default (bytes 255,127,127,0). Every round-tripped model therefore had its normal map applied through a
   wrong basis until we supplied tangents. And when you supply them, ModelConverter **negates them** (xyz and w) unless
@@ -235,6 +297,20 @@ Prefer 1 for anything structural; prefer 2 when you only touch a few objects and
   with < 256 joints stores uint8; copying its accessor header made the exporter read every index as two bones. The
   error is invisible at bind pose (identity skinning) and shreds the mesh once the lobby pose moves. Shallow-copying a
   node also shares its `extras` (all copies got the last copy's customization set).
+- (2026-10-14) **UsfExport asserts that every vertex's FIRST weight is > 0** (`obj->GetVertBoneWeight(k, 0) > 0`
+  in `obj_skin_tools.cpp`, exit -1, no tpl; the text is only in `usf2tpl.err`, and a multi-GB crash dump lands in
+  the exporter project's `sandbox/crash_dumps`). ModelConverter accepts such input. Meshes written with joints in a
+  fixed bone order trip it whenever a vertex is fully on a later bone. Sort each vertex's influences heaviest first
+  (like retail), point unused slots at joint 0 with weight 0, assert `W[:,0] > 0` before writing.
+- (2026-10-15) **UsfExport welds coincident vertices regardless of per-vertex masks.** Vertices with equal position
+  and UV are merged (`weld_vtx` / `weld_uv` 0.00005 in `default_options.ps`) even when their paint/gore mask bits
+  differ; retail seams survive only because their two sides have different normals. To keep a hard mask seam, nudge
+  each extra coincident copy by +0.0002 in U per copy (0.4 texel at 2048, survives int16 UV compression) and verify
+  by a round trip matched on position AND UV.
+- (2026-10-29) **Memory.** glTF -> USF holds the whole USF in memory and converts every skinned mesh twice; a ~4 GB
+  input needed ~33-34 GB and took 62 min on a 32 GB machine, almost all of it paging. Free RAM first, or see the
+  all-class note for a splice and a low-memory converter build that cut this to minutes. UsfExport on the same model
+  took 11-13 min.
 
 ### Player armour constructors and the customization library
 - All armour pieces of a class live in one constructor tpl (`cc_sm_constructor_soldier`, `_raider`, ...; soldier
@@ -271,6 +347,23 @@ Prefer 1 for anything structural; prefer 2 when you only touch a few objects and
   by mastery type and carrying its own physics. Robe cloth that works in missions exploded on the dummy; removing the
   robe sims from the dummy only fixed it. The dummy and preset traps of a cloned class (`masteryType`, `isChampion`
   presets) are in the [class note](sm2-new-playable-class-on-character-mod-slot.md).
+  (2026-10-22 correction) Removing the sims only works when the render meshes are skinned smoothly. Robe RENDs taken
+  from an NPC were split hard between HIP_L and HIP_R (one panel 95 % per side with a jump of up to 0.75 at the seam);
+  unsimulated they tore 17-21x into floor-length sheets as soon as the figure's thighs moved. What fixed it (confirmed
+  in game): simulate them on the figure with vanilla's OWN figure cloth entries as templates (`robe_shared_03_front`
+  for a front panel, `_back` for side skirts; topological remap ~0.16), which use per-cloth radii ~1.2-1.4 with
+  `collisionThickness -1` and so effectively ignore the figure's shared capsules. Never use the `_vest` template for
+  hanging pieces (gravity -1, damping 0.7, high air drag: strips drift down for seconds); a scarf worked with its own
+  mission entry copied whole.
+- (2026-10-29) Bone names exist twice in a constructor glTF (the `hierarchy` tree and the `ROOT` skin tree), and a
+  merged skeleton can repeat names inside `ROOT` as well. Read inverse bind matrices through the mesh's `skin`, and
+  map bones by full node path, never by the first node with that name.
+- (2026-10-29) A tpl family is several files (`.tpl`, `.tpl_data`, `.geom_dbg`, `.lods_base`, `.cdt`,
+  `.tpl_markup`, `.tpl.resource`), and the first-sorting pak wins PER FILE. Several test paks that each shipped part of
+  the soldier constructor made the game load a mix (header from one pak, data from another, markup from a third).
+  Ship the whole family from one build and check which pak wins each path. A rebuild from your glTF source also drops
+  any byte-level patch applied to the previous tpl_data (e.g. a head moved in place), so re-apply those after every
+  rebuild.
 - After Patch 15 split sections into HALO / CLOTH / COAT, any preset missing those keys leaves the equipped uid blank
   and the WHOLE slot shows "not available for the selected Class". Presets must match retail's key set for the
   current patch. An equipped challenge-locked item gives the same message.
@@ -337,6 +430,33 @@ These apply to private builds only: Saber's mod rules don't allow AI-generated c
   TRUEVISION footer; copy the retail alpha plane if you only repaint RGB).
 - UI textures (crosshair bitmaps): `.pct.resource` with format 0, one mip, and the mip file holding raw
   premultiplied BGRA pixels.
+- (2026-10-15/23) **TextureConverter channel map**, measured with constant-colour test TGAs decoded back:
+
+  | td usage | pct format | what is stored |
+  |---|---|---|
+  | `MD+MT` | 52 BC7 sRGB | RGBA as given |
+  | `MNM` | 36 BC5 | XYZ renormalised, then XY |
+  | `MSCG+MRGH` | 36 BC5 | R = metal, G = roughness taken from the source **alpha** |
+  | `MAO` | 37 BC4 | AO taken from the source **alpha** |
+  | `MEM` | (RGB-only format) | output alpha ~0 whatever the source |
+
+  So write roughness into A (A = G) for weapon/tyranid specs. An `MNM` source needs a real Z in blue
+  (`z*0.5+0.5`): with B = 0 the converter renormalises (x, y, -1) and flattens every normal. A three-channel
+  `MSCRGHAO` spec (vehicles) reads B as AO, so a spec derived from a weapon needs B = 255. On Tyranid sets the
+  `_em` texture is an AO map (usage MAO), not emissive.
+- (2026-10-15) `convert_settings.resample = 1` in a td (sword / torso tds have it) HALVES the output: feed 2x the
+  wanted size or set it to 0. The converter's `pct_resource_gen` step links only pcts that already exist, so convert
+  the base texture LAST. It also writes a `.td.resource` and pct files into the shared exporter project; remove yours
+  afterwards. The Mod Tools UsfExporter project already contains every retail td (18,316, identical to
+  `default_td.pak`): to rebuild a retail-named texture use that td as is.
+- (2026-10-14) **`mml_cfg` and non-retail sizes.** `topmip` counts kept mips from the smallest STORED one, and a
+  chain stops at the 4-px short side (a 2048x512 texture stores 8 mips; retail lists it Ultra 9 / High 8 / Medium 7 /
+  Low 6; non-square textures are common in retail). An entry copied from a 2048 template for a 4096 texture must add
+  the extra stored mip on Ultra/High/Medium/Low (High 10 -> 11), or the 4K map is shown at 2K. Insert entries into the
+  current retail file and ship it (foundations note); only one pak can win that path, so merge entries from several
+  mods into one copy.
+- (2026-10-22) Chrome-like painted metal measured on a retail gauntlet: metal 255, albedo ~148 neutral, roughness
+  p10/p50/p90 = 48/63/119.
 
 ### Props, vehicles and collision
 - Physics shapes built from mesh streams (`*_glr` convex shapes on a rigid-body object) crashed a level load (null
@@ -379,7 +499,9 @@ These apply to private builds only: Saber's mod rules don't allow AI-generated c
 ## Build steps
 New standalone model (weapon, prop, creature body):
 1. Export the retail tpl you replace to glTF (ModEditor's ModelConverter, absolute paths) and copy its node tree,
-   object names, affixes, LOD layout and tpl-baked animations.
+   object names, affixes, LOD layout and tpl-baked animations. (2026-10-29) Before using that export: move meshes off
+   the anonymous root nodes onto their named nodes, and copy the real local matrices of every unnamed `Obj<id>` node
+   from the retail tpl.
 2. Build your meshes into that tree (x10 + node scale 0.1 for small detail), one material/texture set per `_matN`,
    glTF TANGENT on every primitive, COLOR_0 pre-rotated where needed.
 3. ModelConverter (cwd = its folder, `--keep-tangent-orientation`) -> UsfExport in a private project copy.
@@ -404,6 +526,13 @@ armoury dummy.
   objects integer-identical to retail after the fix), maxTile parsing (28,084/28,084 bytes), scene `.cdt` decoding.
 - Not verified in game: the latest tangent and unshrink fixes on every model, the scene-collision face removal, cloth
   hair re-weighting, the convex-shape crash's root cause.
+- Added 2026-10-29. In game: the 100x weapon from a dropped `Obj<id>` scale (later builds with the matrix restored
+  were played and worked), the robe-on-armoury-figure fix with vanilla figure templates. In the tools: the
+  first-weight assertion and its fix, the anonymous-mesh-node export bug, the Int32 buffer limit. Offline: the
+  TextureConverter channel table (constant-colour round trips), the 3-weight / slot-3 remainder statistics, the
+  capsule points back within 1 cm of retail after restoring `Obj<id>` matrices, the v13/v14 second-layer difference
+  (structural USF diffs), the mixed tpl family (by listing which pak wins each file). Not verified in game: the
+  parallax record patch, the implicit 4th weight, lens bloom values.
 
 ## Gotchas
 1. **Crash "Prebuilt shader cache or executable is obsolete" when an item is equipped or a level loads.** Cause: a
@@ -474,7 +603,46 @@ armoury dummy.
 31. **Boot crash reading near-null after adding a texture set.** Cause: a cloned `.td.resource` lost its `name:` /
     `td:` lines. Fix: assert both on every td manifest.
 32. **Robes explode on the armoury figure only.** Cause: dummy cloth config. Fix: remove the robe sims from the dummy
-    entries (missions keep them), or use Saber's long-robe dummy settings.
+    entries (missions keep them), or use Saber's long-robe dummy settings. (2026-10-22) Removing the sims tears robes
+    whose render meshes are split hard between the hips; the fix confirmed in game was simulating them with vanilla's
+    own figure entries (`robe_shared_03_front` / `_back`) as templates, see gotcha 46.
+33. **A re-exported weapon shows only giant specular edges in the armoury; trinkets swing through the legs.**
+    Cause: unnamed `Obj<id>` nodes lose their matrices in tpl -> glTF (a 0.01 group scale, capsule parents' offsets).
+    Fix: copy each unnamed object's local matrix from the retail tpl into the glTF before converting.
+34. **glTF -> USF output holds only the skeleton ("Skipping ... no skin attached").** Cause: the raw tpl -> glTF
+    export puts meshes on anonymous root nodes. Fix: move mesh + skin onto the same-named node, delete the anonymous
+    ones.
+35. **UsfExport exits -1 a few minutes in, no tpl.** Cause: assertion `GetVertBoneWeight(k, 0) > 0` (read
+    `usf2tpl.err`): a vertex whose first weight slot is 0. Fix: sort influences heaviest first; delete the multi-GB
+    crash dump it leaves in the exporter project.
+36. **Conversion of a very large merged glTF fails reading buffers.** Cause: Int32 bufferView offsets; one 3.99 GB
+    `.bin`. Fix: split into several `.bin` files under 2 GB each.
+37. **glTF -> USF takes an hour and the PC crawls.** Cause: the converter keeps the whole USF in memory and converts
+    skinned meshes twice; past physical RAM it pages constantly. Fix: free RAM, or splice changed groups / use a
+    low-memory converter build (all-class note).
+38. **A second texture requested in a material's extras never shows, or a converter swap creates new shader
+    shapes.** Cause: the game-folder v13 converter ignores second textures; v14 adds a second layer and `map2` UVs.
+    Fix: one converter version per project; audit materials if you switch.
+39. **A copied hull/floor material with parallax may crash or look flat.** Cause: UsfExport blanks
+    `baseLayerParallax.textureName`. Fix: write `<tex>_hdetm` back into the records and fix the chunk end offsets
+    (in-game effect not checked).
+40. **Normal map converts completely flat.** Cause: `MNM` source with B = 0. Fix: store a real Z in blue.
+41. **Weapon or creature looks mirror-glossy / matte everywhere after a repaint.** Cause: `MSCG+MRGH` reads roughness
+    from the source alpha. Fix: write roughness into A (A = G).
+42. **Converted texture is half the expected size.** Cause: `convert_settings.resample = 1` in the cloned td. Fix: set
+    0, or feed 2x.
+43. **A new texture set is missing from its td.resource links.** Cause: `pct_resource_gen` links only pcts that exist
+    when it runs. Fix: convert the base texture last.
+44. **A 4K texture looks no sharper than the 2K one it replaced, even on High.** Cause: the `mml_cfg` entry copied
+    from the 2048 template keeps the template's mip count. Fix: add the extra stored mip on every quality slot.
+45. **A hard paint/gore mask seam comes back on the wrong vertices.** Cause: UsfExport welds coincident vertices
+    with equal UVs regardless of masks. Fix: nudge each extra copy +0.0002 in U.
+46. **Robe sheets to the floor on the armoury figure after the sims were removed from it.** Cause: NPC robe render
+    meshes split hard between HIP_L / HIP_R tear once unsimulated. Fix: simulate them with vanilla's own figure cloth
+    entries as templates (front / back); never the `_vest` template for hanging pieces (slow drifting strips).
+47. **The model the game loads is not the build you think (fixes missing, parts from older tests).** Cause:
+    first-sorting pak wins per file, so the game assembled one tpl family from several paks. Fix: ship and check the whole family
+    together.
 
 ## Assets
 Custom meshes came from AI 3D generation (Tripo) and from retail parts re-used inside the game's own tpls; textures
@@ -488,3 +656,8 @@ private and use hand-made meshes for a release.
 - Whether the engine draws skin compounds that mix LOD levels per bone or as a whole.
 - Exact effect of `texType` on custom textures.
 - A reliable way to enumerate the cached shader permutations (the `.sdc` cache is hash-keyed, no define strings).
+- (2026-10-29) Whether the 4th weight byte really encodes an implicit remainder on joint slot 3.
+- (2026-10-29) Seen in the ModelConverter source, not checked on data: the non-masked vertex-colour path appears to
+  index colours per primitive instead of per mesh, so in a multi-material mesh with colour sets the 2nd and later
+  primitives could overwrite the first primitive's colours and leave their own at 0. Worth checking before blaming
+  `colorSetIdx` for colour bugs on multi-material meshes.

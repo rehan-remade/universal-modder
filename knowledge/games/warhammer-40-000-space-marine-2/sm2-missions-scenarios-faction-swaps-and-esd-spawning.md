@@ -12,7 +12,7 @@ anti_cheat: "EasyAntiCheat. Everything here uses Saber's official mods folder (c
 status: in-progress
 agents: ["Claude Code (Opus 5.5)"]
 humans: []
-date: 2026-10-13
+date: 2026-10-29
 links: []
 tags: [space-marine-2, saber, scenario, mission, faction-swap, tyranids, chaos, esd, spawn-director, navmesh, aiconverter, furnace, cd-list, class-list, level, lobby]
 ---
@@ -172,9 +172,42 @@ scenario.
   address when its own flag is off, so "host on, joiners off" can't work, and the flag must be the same on client and
   server. A one-byte edit of the compiled server module to allow duplicates crashed the server at startup (sslbins
   can't be replaced). Data-only fix for a shared barge: flag False.
+- (2026-10-29) The hub's launch flow (ready zone, countdown, ramp states, departure), its ASSEMBLE marker and
+  usables that play a level sequence on the player are in the
+  [hub note](sm2-hub-battle-barge-thunderhawk-and-usables.md).
 - The loading-screen Thunderhawk roster is client-side (session members this client knows, duplicate classes dropped
   in compiled code, bots fill to 3); seats are `interplayTracks` in `scenes/loading_scene.pak` `loading_scene.cd_list`
   plus 3 tracks per loading cinematic. The 3-member squad cap is compiled.
+
+### Per-level enemy look (2026-10-13 / 10-14)
+Recolouring one faction for one level (snow-camouflaged Tyranids on a snow map) without touching other levels:
+- `ssl/main/game/actor_geom_level_customizer.sso` maps tpl names to instance-constructor templates per LEVEL name
+  (the engine's level name, e.g. `pve_snowex`), falling back to `default`; a level section replaces `default`
+  entirely (see the [NPC note](sm2-new-enemies-npc-classes-and-morpheme-animation.md)). A template's
+  `materialModifier = "<x>"` switches every split whose td has a submaterial `<x>` to it; a td submaterial with
+  `tex.diffOverride = "<pct>"` swaps the base colour (retail's `chitin_dead` pattern). Gibs inherit the modifier.
+  This per-level template path recoloured enemies in game.
+- Classes with `fixedTemplateId` look their template up globally and ignore the level list; they need a class
+  blueprint that applies the template or sets the material.
+- **Every owned-actor blueprint node (Set Material, SetInstConstructorTemplate, OnApplyConstructorPreset, Geom nodes)
+  needs `actorRef = { def = "<OWNER>" __type = "ActorRefParam" }`.** Without it the node quietly does nothing
+  (decompiled: the node's actor is just that ref's value). A class with no blueprints yet also needs
+  `prop_blueprints.prop.resource` in its manifest's `linksDesc`. With the ref, a scripted Trygon recoloured in game.
+- Timing traps seen in game: `OnBlueprintStartedOrReset` never fires for `.xseq` cinematic actors; pooled
+  fixed-template NPCs receive their spawn preset BEFORE the blueprint subscribes, and the preset's material reset
+  wipes an instant Set Material; actors pooled while the level loads see a level name that is not yet the target
+  level. The blueprint trigger the engine fires in its init handler (`BlueprintCommonLibraryOninit`), plus
+  `OnInitLevel` and a short scheduled re-check, is the latest design; not yet tested.
+- Per-map screen tint: the map's colour-grading presets (`presets/data/<scene>/col_grad_*.s3dprs`: `useLutTexture`,
+  `lutTexture`, `lutTextureIntensity`) can point at your own LUT: format 22 (BGRA8) 32x32x32 laid out
+  data[z = B][y = G][x = R], gamma space, one `_0.pct_mip`, `mml_cfg` topmip 1 like retail `neutral_lut`. The colour
+  balance sliders' sign is undocumented, so bake the tint into the LUT. Built and played; the tint itself was not
+  checked separately.
+- `ApplyMaterialSuffix` and tpl_markup `mtlMutators` are shader mutators, not texture swaps. For actors without a
+  constructor template use `BlueprintLibrarySetmaterial` (`objName` empty = whole actor).
+- Scenario actor arrays: `GetVariable 'ACTOR_ARRAY'` (GetVariableActorArray), `AddActorToArray` (pin `AddActor`),
+  `RemoveActorFromArray` (`RemoveActor`), `GetActorFromArray` (index -> `Get`), `ContainsActorInArray` (`HasActor`),
+  `ArrayActorIsEmpty` (`IsEmpty`).
 
 ## Build steps
 Faction swap: rewrite `archetypeN` in the stage's compositions (role/threat matched), fix
@@ -195,6 +228,8 @@ Spawn points on a level without them:
   pressure / hold readouts work (they showed desired pressure 0 and "ON HOLD", which led to the hold-stage finding);
   the `IntRefParam` and missing-pin crashes.
 - Offline: cd_list / class_list byte-exact round trips; the rebuilt `.nav` contains all 388 point names.
+- (2026-10-29) Per-level look: the per-level template recolour and the `actorRef` fix were seen in game; some enemies
+  created early (pooled at load, cinematic actors) stayed vanilla, and the timing redesign is untested.
 - NOT yet seen in game: enemies spawned by the director on the converted level (the hold release was the last fix and
   is untested), the shared-barge fix pak, near objective markers.
 
@@ -230,6 +265,12 @@ Spawn points on a level without them:
     wait ~0.5 s between them.
 15. **With the 12-player flag every player loads their own barge.** Cause: the flag makes clients ignore the match's
     hub data. Fix: flag False (shared barge); a host-only setting cannot work.
+16. **A blueprint Set Material / template node on an enemy class does nothing, no error.** Cause: no `actorRef`
+    (`<OWNER>`) on the owned-actor node. Fix: add it to every such node (2026-10-13).
+17. **Per-level recolour misses a few enemies (the intro creature, the first gaunts).** Cause: cinematic actors never
+    fire the start/reset event, pooled NPCs get their preset before the blueprint subscribes, and actors pooled during
+    level load see the wrong level name. Fix in progress: trigger from the init handler and `OnInitLevel`, re-check
+    shortly after spawn (2026-10-14).
 
 ## Assets
 None. A short intro voice line for the converted level was produced separately (see the voices note for the media

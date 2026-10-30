@@ -12,9 +12,9 @@ anti_cheat: "EasyAntiCheat. Everything here uses Saber's official mods folder (c
 status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: []
-date: 2026-10-15
+date: 2026-10-29
 links: []
-tags: [space-marine-2, saber, weapons, weapon-skin, melee, firearm, reload, active-reload, morpheme, animation-network, perks, damage, burning, vfx, sound, crosshair, hud, equipment]
+tags: [space-marine-2, saber, weapons, weapon-skin, melee, firearm, reload, active-reload, morpheme, animation-network, perks, damage, burning, vfx, sound, crosshair, hud, equipment, heroic-version, honor-shop, executions, ik]
 ---
 
 # Space Marine 2 weapons: skins, new melee weapons, reload and hip-fire animations, perks, VFX, sounds and crosshairs
@@ -27,7 +27,10 @@ tags: [space-marine-2, saber, weapons, weapon-skin, melee, firearm, reload, acti
 > [the foundations note](sm2-modding-foundations-paks-tools-and-crash-triage.md),
 > [the models note](sm2-models-tpl-format-modelconverter-and-textures.md) and, for the `.nmb` / `.sani` formats,
 > [the NPC/animation note](sm2-new-enemies-npc-classes-and-morpheme-animation.md). Verified in game unless marked
-> otherwise.
+> otherwise. The full active-reload build and the ability-clone details have their own note:
+> [active reload and cloned abilities](sm2-active-reload-and-cloned-abilities.md). Additions from 2026-10-16..29 are
+> dated in the text (a new heroic melee version with its own model and perk, a melee skin that fires bolter shots, per-skin
+> Marine VFX overrides).
 
 ## Setup
 - Steam build 25799387 (Patch 15.1). Patch 15/15.1 changed a lot of weapon data (new frost VFX, one-handed thunder
@@ -125,6 +128,46 @@ network, which we patched in place (the engine loads an edited `primaris.nmb` fr
   `PerkApplicationSetAbility(abilityUid)`: clone one for a new uid. Perks keyed on `MeleeStrikeWeaponType` carry over
   if the new weapon keeps the type.
 
+### Heroic versions you add yourself (2026-10-16)
+- A new version in `melee_versions_library` (e.g. a fifth heroic chainsword version with its own skin) gets its
+  gameplay stats from `modifierUid` and its perks ONLY from the version tier (the server applies modifier perks +
+  selected perks when the loadout is customised). An appearance skin's own version entry gives no perks.
+- **Ownership.** From the decompiled armoury logic: a version counts as purchased when `rarity == 0` or it has an
+  `honorShopLock`. A heroic (rarity != 0) with no lock sits in a "not owned, not buyable" state: visible, never
+  selectable. What made it selectable: `honorShopLock = { invertResult = True  requiredItemUid = "<item>"
+  __type = "HonorShopLockReason" }` (an inverted "not purchased" check that is always satisfied) AND the item uid
+  declared in `ssl/main/user/honor_shop/honor_shop_library.sso` `items` (NOT in `orderedItemsByCategory`, which is the
+  list the shop shows, so it is never on sale). With an unknown item uid the armoury tooltip falls back to an
+  "unexpected" tooltip ("...") without the Equip button. Saves made while the lock was missing heal themselves (a lock
+  forces the purchased flag). Verified in game: the version became equippable and later test rounds used it.
+- The armoury version NAME and the four stat bars come from `ssl/abilities/ui/ui_abilities_library.sso`
+  `<weapon>.versions."<ver>"` (`MeleeUiVersionData`: `versionName`, `strikePower`, `strikeSpeed`, `control`, `defense`
+  BALANCED/BLOCK/FENCING), not from the skin's `MeleeUiSkinData`. Missing entry = "..." and odd bars.
+- A custom heroic perk can be a clone of another weapon's perk under a NEW desc name in `perk_server_factory.sso`
+  (mod-authored perk names load), plus a `ui_skills_library` heroic entry, a `perks_with_indication` HUD entry and
+  strings. Calibration from retail: a `PERCENT_MULT` bonus of N shows as "+N%" in the UI. (Built 2026-10-16, not
+  confirmed in game.)
+
+### Executions for a new melee weapon
+- `ssl/smarts/pair_combat_library.sso` `requiredMeleeUids` is a LIST, so one weapon can use the execution sets of two
+  retail weapons (e.g. power axe + chainsword) by adding its desc uid to both groups. The filters are melee uid,
+  inventory, class and enemy: there is no skin filter, so a skin cannot have its own executions.
+
+### Melee clips, sounds and actor overrides (2026-10-16)
+- A melee actor that overrides its class's animation layers must keep the WHOLE retail layer list. An override that
+  kept only the four chain layers dropped `MainLayer`/`anim_2`/... and the weapon's swing-sound meshes with them, so
+  most swings went silent. Copy the missing layers back from the class `.cls`. Verified.
+- Strikes played through `AnimationSlot_Melee` lose weapon sound cues that sit early in the clip: a strike entered from
+  another strike starts mid-crossfade. Every retail slot strike cues its weapon sound at >= ~0.32 s; clips inherited from
+  network-node strikes cued at 0.02-0.27 s and only the first hit of a combo was heard. Moving each weapon cue to
+  max(cue, 0.34 s), still before the damage window, fixed it in game. Retail chainsword slash events chain via
+  `stopAudioIDs` (the 2nd hit stops the 1st hit's rev layer); keep that.
+- **A melee desc must use only node types that retail melee descs use.** A desc that routed every strike through a
+  skin check built from actor-level blueprint nodes (trigger/subscribe BP event on actor, get blueprint owner, bool
+  switch) loaded empty and crashed at boot on a null `comboDesc` (`gsCreateSslMain() failed ... 'null' object`), even
+  though Saber's own PS parser read the file and every pin existed. Gate strikes with
+  `BlueprintNodeCheckModifierFlag` on a perk flag instead (perk transplant above).
+
 ### Perks, flags and damage side effects
 - There is no way to condition damage on a weapon version outside `stackManagerDesc`, and skins are invisible to the
   damage system. Strikes are gated by `BlueprintNodeCheckModifierFlag` on named flags, and flags come from perks.
@@ -181,6 +224,48 @@ sideEffects   =   [
   `dmg_type_finisher`, unverified).
 - Blueprint nodes must sit at the exact sibling indent; brace balance does not catch a node nested inside a field.
 
+### Per-skin and per-strike VFX on melee weapons (2026-10-16..22)
+- **Two places own a melee move's VFX.** Weapon-side effects live in the weapon class / factory actor (scoped to the
+  actor, so per skin). Marine-side effects (sickle waves, power stunts) are fired by the MARINE's
+  `ssl/characters/player/marine/blueprint_marine_vfx_power_<weapon>.sso` `BulkVFXOnMorphemeEvents` on clip events.
+  Which of these blueprints a class runs is not obvious: the power AXE blueprint ran on some classes and the power SWORD
+  blueprint on every other class (including a modded character slot), so patch both.
+- **Per-skin Marine VFX (retail precedent: the power sword file):** event infos of type
+  `VfxOnMorphemeEventInfoSkinOverride` with `vfxListsSkinOverrides = { "<skinUid>" = { __value = [ ... ] } }`, the node
+  input `overrideSkinUidRef` fed by `BlueprintNodeGetCurrentMeleeSkinUid`, and `useSkinOverrideRef` true. An override
+  list (even an empty one) REPLACES the default list; a missing skin key falls back. Override lists may name only
+  effects in the Marine's sfx list (`pc_marine_base_client/authority.cls`), so new effects mean overriding those
+  classes. Worked in game: the sickle wave vanished for one skin (the blue left over was the weapon-side trail).
+- **Scope an effect to ONE strike** by hooking clip events that exist only in that strike's clip (the power axe
+  backstep has two marker strings no other axe clip carries). Duration events shared by two strikes hit both.
+- **Hide an additive trail per actor:** a sfx override with `visuals.colorIntensityMultiplier = 0`, `__onlyOn =
+  "visual"` and the effect's `__type` (same shape as a retail Chaos variant). Verified.
+- **Remove a weapon sound per actor:** the sound comes from the weapon class's "Melee Audio" graph
+  (`EquipmentUserOnMorphemeEvent` -> `PlaySoundClientOrAuthority`); override that node in the actor's
+  `BlueprintWpnMeleeEffects` with an event name that never fires and an empty `OnEmitEvent`. Verified. `GameSound` has no
+  volume field, so "quieter" means removing, swapping or re-mixing the media.
+- **Impact effects per actor:** `melee_end_effects_library` `mainDamageEndEffectsOverrides` entries
+  `{ weaponType, actorId, endEffectsId }` are keyed by ACTOR, so a skin can borrow another weapon's hit effects.
+- **Recolouring a whole effect set:** rotate hue only on saturated colours (S > 0.12) in the target hue range and keep
+  S/V; skip distortion emitters (`*_dist_*`) and grey smears. `lwiGeom` emitters take colour via `sfxMtlOverrides`
+  (textures are generic). A weapon blueprint can also restart a Marine effect (the axe's dash overhead does), which a
+  colour pass on the weapon misses: find it by grepping for the effect name across blueprints. (Built, not confirmed.)
+- **Charge-up effects on a different blade shape:** chainsword charge emitters attach to a motor locator
+  (`exaust_source`) and blade points the new model lacks, so they spawn in odd places. Per actor: hide emitters
+  (`isVisible = False` plus the emitter `__type`; entries keyed `CPU_EMITTER*`/`GPU_EMITTER*` carry no `__type` line, the
+  key is the type), move others with a `transform` override, and swap the heat ribbon mesh through
+  `...emitters2.lwi_heat.typeParams.lwiGeom.nameGeomTpl` (a retail challenge skin does this). Verified in game.
+- **Swing trails follow tpl meshes:** the trail shape comes from `sfx_<weapon>_attack_0N` strip meshes in the weapon
+  tpl (weapon space). Reshape them onto the new blade. ModelConverter's tpl -> glTF round trip collapses these strips
+  to a point, so check them by matching the tpl mesh splits directly. (Built, untested.)
+- **Muzzle flash on a melee weapon (cosmetic bolter shots on a spear skin):** the cinematic bolter muzzle `sfx_group`
+  (`ssl/sfx/cinematics/fx_cine_bolter_muzzle_with_tracer.sfx`) works on a weapon actor once its emitters and light are
+  re-parented to a tpl locator with a local offset to the barrel mouth (the locator's local y maps to the effect's +z),
+  restarted by `BlueprintTimeLibraryDelay` steps after a clip event. Marine locators under `surface` are fixed in the
+  character frame, not the weapon. Retail flash emitters are 3-17 cm and live 40-60 ms, so scale emit size and life up
+  for gameplay readability. Real extra hits would change every weapon sharing the desc and clip, so this stays cosmetic.
+  Verified in game (shots audible and visible; the barrel-locked version is untested).
+
 ### Sounds on weapons
 - Shot sounds are in the CLIENT actor `.cls` (the authority's `shootSound` is empty):
   `prop_blueprints.blueprints.SoundFirearmShootSingle.nodes.PlaySoundClientOrAuthority_2` with `soundClientDesc` (3D,
@@ -198,6 +283,14 @@ sideEffects   =   [
 - Weapon-exclusive media can also be replaced inside the retail `wpn` bank (same event ids, new media) - scope is
   every version that uses those media. The bank format and how to judge loudness are in the
   [voices/Wwise note](sm2-voices-talkers-and-wwise-audio.md): compare against retail guns recorded in the same scene.
+- (2026-10-22) **Automatic-weapon shot events are loops.** `wpn_firearm_shoot_{2d,3d}_<auto weapon>` is a continuous
+  random-sequence container (infinite, ~171 ms trigger rate); its `_tail` event is a stop action on the same containers.
+  "Play, then the tail ~0.08 s later" gives a single shot (verified audible in game). Such a single iteration is quiet
+  (the rifle relies on repetition): one bolter iteration measured ~4 LU under the melee whoosh playing at the same time,
+  so it got lost. Fix that worked in game: a new 2D event in an own bank with a pre-mixed, limited burst for the shooter,
+  and the competing whoosh removed on that actor (bank route in the
+  [active reload note](sm2-active-reload-and-cloned-abilities.md)). Measure loudness on a MONO render: dual-mono
+  stereo reads ~3 LU louder.
 
 ### Crosshairs and the reload HUD
 - Chain: the firearm description's `sightPreset` (enum: AUTO, SINGLE, HEAVY_AUTO, SHOTGUN, PRECISE_AUTO, SNIPER,
@@ -290,6 +383,22 @@ sideEffects   =   [
   set-Morpheme-parameter node: a mod-driven router input.
 - Reload clips carry a network `checkExit` duration window that ends ~0.77-0.84 of the clip on rifles and 0.5 on
   pistol aim reloads; keep custom duration events before it.
+- (2026-10-15) **IK that reads helper joints from the pose itself.** Under the unarmed state (loco, event slots,
+  usables) two always-on TwoBoneIK nodes pull `FOOT1R/L` onto `foot_targ_R/L`; above almost everything (except the emote
+  state, which bypasses them) the IK_CENTER nodes pull `HANDL/HANDR` onto `Left/Right_hand_hold`, weighted by
+  expressions on lock_hands, wpn_type, melee pose and so on. In every retail clip checked the helpers sit at 0 mm / 0 deg
+  from their joints, so the IK is a no-op. Anything that rebuilds a pose bone by bone (re-rooting, mirroring,
+  averaging, retargeting) moves the helpers off and the hand reaches out or the feet drag in game while an offline
+  preview looks right. Fix: per frame set helper local = inverse(world(parent)) x world(joint) by FK over the clip's own
+  channels (hand holds are children of `Gun_pose`, foot targets of `surface`), and check the DECODED clip. Verified.
+- **Switch selection flags.** A Switch node stores two u32 evaluation flags: mode (0/1/2) and selection (0 closest,
+  1 floor, 2 ceiling). Floor switches with thresholds [0, 1, 2, ...] make a control parameter like `Debug_Float1` a
+  multi-way router (values 1..5 picked jam / clean / tail clips in the active-reload build). The network has dozens of
+  never-entered debug switches and anim nodes that can be patched in place as new slots.
+- **Anim nodes cache each clip's event tracks** (track count + CRC-32/BZIP2 of each track GUID, and the clip
+  duration); details in the [NPC/animation note](sm2-new-enemies-npc-classes-and-morpheme-animation.md). A clip whose
+  track list or timing differs from the node's cache can lose events. The network only emits CACHED tracks, so new
+  markers go onto a clip's existing `event`/`Sound` track (never Footsteps), not into a new track.
 
 ### Input during actions (what an active-reload mechanic needed)
 - `actions/filter_rules/action_filter_rule_reload.sso` whitelists Game.Reload during a reload, so a second press
@@ -302,6 +411,9 @@ sideEffects   =   [
   (priority 110) - a way to block firing during a custom animation.
 - `ConditionInvert(ConditionTriggerMorphemeEventRecently)` (no retail use) behaved as always TRUE. Build conditions
   from positive triggers and NOT-body-state only.
+- (2026-10-16) A press binding that must not fire on a key that is ALREADY held when the binding becomes active needs
+  `shouldCheckInputOnActivation = False`. From the decompiled action event: with True, a held input is "used" the moment
+  the binding activates (holding R through a reload fired the press at once). Fix built, not yet confirmed in game.
 - Nodes proven to fire in the Marine client blueprint: Morpheme event / duration-event subscriptions (a duration
   event's deactivate fires when the clip is cut - good for "the player interrupted here"), If, variables, set Morpheme
   parameter, WaitOneFrame, CheckBodyStateCondition, Delay (duration can come from a float variable via the
@@ -323,6 +435,8 @@ sideEffects   =   [
 - An ability animation task cannot start an emote; the war-cry controller leaves `OnFail` unwired, so the cast hung
   (charge kept, shooting blocked). Wire `OnFail` before experimenting. Emotes are smarts: a class can start one with
   the server node `BlueprintNodeEnterSmart` and an INLINE `smartDesc` (retail does this for NPC prayers).
+- (2026-10-23) A badly indented `.ext` silently drops the WHOLE enum extension and the next ability using an extended
+  uid crashes at boot; more in the [active reload / cloned abilities note](sm2-active-reload-and-cloned-abilities.md).
 
 ### Worked examples (SM2 mechanics only)
 - Revolver skin on the heavy bolt pistol: cylinder = the magazine under `mag_spawn_loc` reusing the inferno pistol's
@@ -356,6 +470,11 @@ sideEffects   =   [
   one-handed hammer animations).
 - Not verified: the UNIQUE crosshair swap, the finisher damage-type string, whether fresh event-track GUIDs matter for
   cloned clips, the remaining holster glue cause.
+- (2026-10-16..22) In game: a self-made heroic chainsword version made selectable by the inverted honor-shop lock, with
+  its own name/stat bars; swing sounds restored by the full layer list and retimed cues; charge-up emitters hidden/moved
+  and the heat ribbon swapped per actor; on a spear skin, the per-skin Marine VFX override, the trail hidden by
+  `colorIntensityMultiplier 0`, the whoosh removed by a node override, and the own-bank bolter burst. Built, not
+  confirmed: the cloned heroic perk, reshaped swing trails, the green recolour pass, barrel-locked muzzle flashes.
 
 ## Gotchas
 1. **New shot sound on a skin does nothing.** Cause: cosmetic skins don't run their actor's shot blueprint; the
@@ -412,6 +531,30 @@ sideEffects   =   [
 27. **Custom HUD element in the wrong colour.** Cause: no `colorEffect`, so it inherits the crosshair tint. Fix:
     `colorEffect "ADVANCED"` + `advancedTintMult`.
 28. **Cross-weapon perk accepted?** Yes - a version's `perkUids` takes any perk; use it to get an exclusive flag.
+29. **New heroic version shows in the armoury but can't be selected or bought.** **Cause:** rarity != 0 with no lock means
+    "not owned"; an honor-shop lock naming an item that doesn't exist gives a "..." tooltip with no Equip button. **Fix:**
+    inverted `HonorShopLockReason` + the item in `honor_shop_library` `items` (not in the shop's ordered list).
+30. **Version name "..." and wrong stat bars.** **Cause:** no `ui_abilities_library` `versions."<ver>"` entry (skin UI data
+    is not used for this). **Fix:** add a `MeleeUiVersionData` entry.
+31. **Perks listed on a skin's version entry do nothing.** **Cause:** perks attach only from the version tier. **Fix:** put them on
+    the version that the loadout uses.
+32. **Boot crash on a null `comboDesc` after a melee desc edit that parses fine.** **Cause:** the desc used actor-level
+    blueprint node types no retail melee desc uses, and the whole brand loaded empty. **Fix:** only node types seen in retail
+    melee descs; gate strikes with `CheckModifierFlag`.
+33. **Only the first hit of a combo makes the weapon sound.** **Cause:** early sound cues in slot strikes are lost in the
+    strike-to-strike crossfade. **Fix:** weapon cues at >= ~0.34 s (before the damage window), as retail slot strikes do.
+34. **Most swings silent after a per-actor animation override.** **Cause:** the override listed only some of the class's
+    animation layers, dropping the ones that carry the swing-sound meshes. **Fix:** keep the full layer list.
+35. **Charge-up fire appears in odd places on a new blade.** **Cause:** emitters attach to locators the new tpl doesn't have
+    (motor exhaust, chainsword blade points). **Fix:** hide or re-transform those emitters per actor; keep the glow.
+36. **A per-skin Marine VFX override works on some classes but not on others.** **Cause:** different classes run
+    different Marine weapon-VFX blueprints (axe vs sword). **Fix:** add the skin override to both.
+37. **Bolter burst on a melee move inaudible.** **Cause:** one iteration of an auto-weapon loop is ~4 LU under the melee
+    whoosh. **Fix:** a pre-mixed burst event for the shooter and remove the whoosh on that actor; judge on mono renders.
+38. **A reload/press binding fires instantly when the player holds the key.** **Cause:** `shouldCheckInputOnActivation =
+    True` uses an already-held input on activation. **Fix:** set it False.
+39. **Hand reaches away from the gun / feet drag in a rebuilt clip that previews fine.** **Cause:** hand-hold and foot-target
+    helper joints moved off their joints, and always-on IK pulls the limbs onto them. **Fix:** re-pin helpers per frame by FK.
 
 ## Assets
 Weapon models from AI 3D generation (Tripo) plus retail parts reused from the game's own tpls; textures baked or
@@ -424,3 +567,5 @@ mods (see the foundations note's Setup), so keep builds with the Tripo models pr
 - Whether event tracks of cloned clips resolve globally by track-GUID hash (fresh GUIDs were given as a precaution).
 - A data path from gameplay to the reload bar's own colour.
 - Whether the `noSsl` CLS route allows genuinely new firearm actor classes.
+- Whether node overrides placed on a brand-typed weapon VFX blueprint merge with it or replace it (untested).
+- Where the heavy chainsword sound is cued (a Morpheme tag, not traced).
