@@ -1,0 +1,44 @@
+{
+  "type": "ItemTurret",
+  "name": "Straight Shot",
+  "description": "Control turret: no guidance after launch.",
+  "size": 2,
+  "health": 450,
+  "range": 250,
+  "reload": 70,
+  "rotateSpeed": 8,
+  "shootCone": 8,
+  "inaccuracy": 0,
+  "recoil": 1,
+  "coolantMultiplier": 1,
+  "category": "turret",
+  "requirements": [
+    "copper/50"
+  ],
+  "research": "duo",
+  "ammoTypes": {
+    "copper": {
+      "type": "MissileBulletType",
+      "speed": 2.7,
+      "damage": 12,
+      "lifetime": 105,
+      "width": 8,
+      "height": 12,
+      "homingPower": 0,
+      "homingRange": 200,
+      "homingDelay": 8,
+      "drag": 0,
+      "shrinkY": 0,
+      "trailLength": 24,
+      "trailWidth": 2,
+      "trailChance": 0,
+      "trailColor": "edb765",
+      "frontColor": "ffffff",
+      "backColor": "edb765",
+      "hitColor": "edb765",
+      "splashDamage": 0,
+      "splashDamageRadius": 0,
+      "ammoMultiplier": 2
+    }
+  }
+}

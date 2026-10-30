@@ -1,0 +1,4 @@
+src/obj/
+src/bin/
+__pycache__/
+*.pyc

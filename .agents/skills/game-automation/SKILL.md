@@ -15,7 +15,8 @@ um win ps                                      # windowed processes: pid, name, 
 um win launch --steam 105600                   # or: um win launch "C:\Games\Foo\Foo.exe" -- -windowed
 um win shot --exe Terraria.exe shot.png --scale 0.33   # full frame + a 1/3 copy that's cheap to look at
 um win drive --proc Terraria "focus" "click 640 360" "key 0x1B" "type hello" "hold 0x44 1500"
-um win drive --proc Terraria idle              # seconds since the user last touched mouse/keyboard
+um win drive --proc Terraria "hold 0x20 150" "sleep 200" "hold 0x20 150"   # sleep <ms> pauses between steps
+um win drive --proc Terraria idle              # seconds since the user last touched mouse/keyboard (does not wait)
 um win kill <pid>                              # exact PID only
 um win reg get "HKCU\Software\..."             # registry (reg set backs the key up first)
 ```
@@ -29,6 +30,8 @@ the game window's **client area**.
 - Keyboard: `key <vk> [tap|down|up]`, `hold <vk> <ms>`, `type <text>`, `scanmode on` (DirectInput /
   raw-input games that ignore virtual-key events).
 - Window: `focus`, `rect`, `size <w> <h>` (sets the client size), `title`, `fg`, `idle`, `untop`.
+- Timing: `sleep <ms>` waits between steps in one call. Each `um win drive` call starts PowerShell (1-2 s),
+  so put timed combos in one call.
 - Virtual-key codes: Esc 0x1B, Enter 0x0D, Space 0x20, W/A/S/D 0x57/0x41/0x53/0x44, F1 0x70, Shift 0x10,
   Ctrl 0x11, arrows 0x25-0x28.
 

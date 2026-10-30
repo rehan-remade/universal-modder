@@ -21,7 +21,8 @@
     scanmode on|off            send hardware scan codes (DirectInput / raw-input games ignore VK-only events)
     size <w> <h>               resize the window so its CLIENT area is w x h (windowed mode)
     untop                      undo the topmost flag focus may set
-    idle                       seconds since the last real user input on this machine
+    sleep <ms>                 wait before the next command (timed combos in one call)
+    idle                       seconds since the last real user input on this machine (doesn't wait)
   Safety: input is only sent while the target window is the foreground window (or nothing is, and the
   cursor is over the game), so keys never leak into other apps. Close stdin to quit.
 #>
@@ -224,6 +225,7 @@ public static class WinDrive
                 }
                 return "ok";
             case "wheel": Send(Mouse(0x0800, unchecked((uint)int.Parse(n[0])), 0, 0)); return "ok";
+            case "sleep": Thread.Sleep(Math.Max(0, int.Parse(n[0]))); return "ok";   // ms; -1 would be Infinite and hang
             case "idle":
             {
                 var li = new LASTINPUTINFO(); li.size = (uint)Marshal.SizeOf(typeof(LASTINPUTINFO));
@@ -237,16 +239,21 @@ public static class WinDrive
     public static void Run(string p)
     {
         proc = p.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? p.Substring(0, p.Length - 4) : p;
-        Console.Out.WriteLine("ready " + (Window() != IntPtr.Zero ? "window" : "no-window"));
-        Console.Out.Flush();
+        // UTF-8 both ways, like um.common.text_utf8() on the Python side: window titles and "type" text are
+        // not ASCII, and Console.In/Out would use the console's code page (OEM, e.g. 936 on a Chinese Windows).
+        var utf8 = new System.Text.UTF8Encoding(false);
+        var stdout = new System.IO.StreamWriter(Console.OpenStandardOutput(), utf8);
+        var stdin = new System.IO.StreamReader(Console.OpenStandardInput(), utf8);
+        stdout.WriteLine("ready " + (Window() != IntPtr.Zero ? "window" : "no-window"));
+        stdout.Flush();
         string line;
-        while ((line = Console.In.ReadLine()) != null)
+        while ((line = stdin.ReadLine()) != null)
         {
             if (line.Trim().Length == 0) continue;
             string reply;
             try { reply = Do(line); } catch (Exception e) { reply = "error " + e.Message; }
-            Console.Out.WriteLine(reply);
-            Console.Out.Flush();
+            stdout.WriteLine(reply);
+            stdout.Flush();
         }
     }
 }

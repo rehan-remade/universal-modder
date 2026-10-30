@@ -39,6 +39,19 @@ rules below.
 - **Leaks:** knowledge from beta builds and leaked SDKs or source is fine to write up in your own words, and
   so is saying where it came from. The leaked material itself stays out: no pasted code, attached files,
   download links or license keys, and no instructions to fetch them.
+- **DRM-wrapped executables** (Steam stub, Arxan, Denuvo, iOS FairPlay): analysing your own legally installed
+  copy is fine, from the running game's memory or a private dump kept outside any repository, and so is
+  writing up what you learned in your own words. A note never explains how to strip or unpack the protection,
+  never links an unpacked executable or a DRM-removal tool, and never gives steps whose result is the game
+  running without its DRM.
+- **Console custom firmware** (Luma3DS, Atmosphère and the like): modding your own console through it is
+  fine, with games you bought, cartridges and discs you dumped yourself, or software that came with the
+  console. For installing the firmware, link the community's guide (3ds.hacks.guide for the 3DS) instead of
+  repeating its steps. A note never includes console keys, title keys, seeds, tickets or firmware files,
+  never links download sites for game files or installers (CIA, NSP, NSZ) or shop clients that install
+  them (freeShop, Tinfoil), and keeps a modded console off the official online services. Signature patches
+  are there so your own mods load; using them for games you didn't buy is the ownership bypass ruled out
+  below.
 - **No cheating other players, and no bypasses:**
   - nothing that gives an edge over other players on servers you don't run (aimbots, ESP, speed hacks,
     bots);

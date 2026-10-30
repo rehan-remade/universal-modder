@@ -138,8 +138,8 @@ user supplies their own ROM for assets.
 ## Pattern 5: reimplement the guest's rules headless, keep the host as the view
 The host stays the real game (its weapons, mods and multiplayer); only the guest's *rules* are rewritten,
 as a pure simulation that imports nothing from the host. Best for guests whose gameplay is numbers
-(tower defense, card, puzzle, top-down 2D, turn-based) and for online-capable guests you must never
-inject into. Example: Bloons TD 6 inside Minecraft
+(tower defense, card, puzzle, top-down 2D, turn-based) and for guests you can't or shouldn't run at all
+(an anti-cheat-protected client, or one with no offline mode). Example: Bloons TD 6 inside Minecraft
 (`knowledge/games/minecraft/bloons-td-6-in-minecraft.md`).
 - **The sim is the source of truth.** Run it at the guest's own step rate and units (BTD6: 60 steps/s,
   BTD6 units). Game speed changes the number of steps per host tick, never dt.
@@ -164,8 +164,12 @@ inject into. Example: Bloons TD 6 inside Minecraft
   services.
 - Everything guest-side comes from the user's own install or dump. Publish code and converters, not assets
   (`um publish check --game`).
-- An online-capable guest (accounts, co-op, leaderboards) is read from its files offline only: never
-  launched, patched or hooked by the mod or its tools.
+- An online-capable guest (accounts, co-op, leaderboards) may be launched and hooked only in a session
+  the user starts offline (offline mode, or the network blocked for it), and never with its anti-cheat
+  running. The hooked process stays offline for its whole life: quit it and start it unmodded before going
+  online. The note says so in Setup and `anti_cheat`. Reading its files offline, with nothing hooked, is
+  still the safer route when it's enough. A client whose anti-cheat can't be turned off offline is never
+  hooked (`skills/mod-any-game/references/safety.md`).
 - Be honest about what's AI-built. Creators who weren't got called out publicly.
 - Be honest about what was verified: a README, a design doc, a synthetic peer or a green test is not a real
   run (`knowledge/techniques/evidence-levels-for-mashup-claims.md`).

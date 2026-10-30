@@ -1,0 +1,68 @@
+{
+  "game": "Mindustry",
+  "gameBuild": "160.7",
+  "modVersion": "0.1.0",
+  "reviewed": "2026-10-09",
+  "platform": "macOS 15.7, Apple M1 Max, official x86_64 app under Rosetta, bundled Java 25.0.1",
+  "gameSource": "https://anuke.itch.io/mindustry",
+  "gamePurchaseCost": 0,
+  "modSha256": "4048d28855e299342e2b9123c8b751bb1a09a0ad1909b717fadd639781850b3a",
+  "recordedRun": {
+    "game": "Mindustry",
+    "build": "160.7",
+    "modVersion": "0.1.0",
+    "simulationTicks": 1800.3606212288141,
+    "durationSeconds": 30.00601035381357,
+    "method": "real desktop engine; scripted identical targets; fixed aim; no splash; steering demonstration, not a normal-play benchmark",
+    "shots": [
+      25,
+      25
+    ],
+    "hits": [
+      1,
+      24
+    ],
+    "finished": true,
+    "observer": "alpha",
+    "observerDead": false
+  },
+  "cleanZipRun": {
+    "game": "Mindustry",
+    "build": "160.7",
+    "modVersion": "0.1.0",
+    "simulationTicks": 1800.0225236713886,
+    "durationSeconds": 30.000375394523143,
+    "method": "real desktop engine; scripted identical targets; fixed aim; no splash; steering demonstration, not a normal-play benchmark",
+    "shots": [
+      25,
+      25
+    ],
+    "hits": [
+      1,
+      24
+    ],
+    "finished": true,
+    "observer": "alpha",
+    "observerDead": false
+  },
+  "install": "ZIP copied into mods folder on restored clean profile, then game relaunched. Engine/source files are byte-identical to published ZIP; only README was clarified after testing.",
+  "importFilePicker": "Did not open in this Mac test. Built-in Import File route remains unverified.",
+  "recovery": "Mod disabled via Mods, game restarted, ModLab menu entry confirmed absent. Universal Modder backup restored to separate clean profile; diff: zero added, removed or changed files before launch.",
+  "toolkit": "Universal Modder 0.2.0 revision 8370faa8e114baf33acdb23079aff552a7728c4b; kb search, scan, backup create/restore/diff and publish check used. No existing Mindustry knowledge-base case. Official mod API required source review.",
+  "publishCheck": {
+    "files": 8,
+    "failures": 0,
+    "warnings": 0
+  },
+  "capture": {
+    "method": "55 actual window screenshots, sampled at approximately 1.5 fps with recorded timestamps; repeated frames encoded at 24 fps; no audio",
+    "durationSeconds": 37.125,
+    "width": 1440,
+    "height": 900
+  },
+  "limits": [
+    "Scripted identical targets and fixed aim; not a normal-play benchmark.",
+    "Other operating systems, multiplayer and independent learner acceptance are untested.",
+    "0.02 guidance is a suggested learner experiment, not a verified result."
+  ]
+}

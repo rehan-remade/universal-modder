@@ -20,6 +20,10 @@ legal advice. When a game's EULA or mod policy matters, read it (search "<publis
   - tamper with DRM (Denuvo, Steam stub) or ownership checks.
 
   If a loader needs the game's EXE patched past DRM, stop.
+
+  Reading a protected EXE to understand it is different: analysing your own copy, in live memory or as a
+  private dump kept outside any repo, is fine. Never write an unpacked EXE into the game folder, run it, or
+  share it, and keep unpacking steps out of notes (CONTRIBUTING.md).
 - VAC (Valve) bans for modified clients on VAC-secured servers. Run local tests with `-insecure` and never
   join public servers while anything is injected.
 - Tools running next to a protected game (debuggers, Cheat Engine, overlays that inject) can trip its
@@ -28,6 +32,11 @@ legal advice. When a game's EULA or mod policy matters, read it (search "<publis
 ## Ownership and redistribution
 - Mod games the user owns, from their own install or dumps of cartridges and discs they own. Don't download
   ROMs, ISOs or game files.
+- **Consoles:** custom firmware on the user's own console (Luma3DS on the 3DS, Atmosphère on the Switch) is
+  fine for modding games they bought or dumped themselves; it's what loads LayeredFS-style mods. Ask first,
+  and install it by the community's guide (3ds.hacks.guide for the 3DS), which backs up the NAND. Never fetch
+  console keys, title keys, seeds or tickets, never install games from CIA/NSP sites or shop clients like
+  freeShop or Tinfoil, and keep a modded console off the official online services.
 - **Don't publish:**
   - game files, or byte-identical copies of them;
   - extracted assets;

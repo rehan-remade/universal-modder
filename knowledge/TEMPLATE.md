@@ -1,5 +1,6 @@
 ---
 # Field note: how a game was modded, written so the next agent can repeat it. Keep the keys; delete the comments.
+# Quote list items with ": ", a comma or only digits in them, e.g. games_also: ["Cataclysm: Dark Days Ahead"].
 kind: game
 title: "Homing missiles and a tactical nuke in Terraria"   # what you built, in plain words
 game: "Terraria"                                          # the game's usual name

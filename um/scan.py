@@ -4,11 +4,16 @@
     um scan terraria               # fuzzy name or a path; prints the report
     um scan "C:\\Games\\Foo" --json  # machine-readable, for agents
 
+The report starts with `host:`, the machine `um` runs on: OS and version, CPU (named like the exes' `[x64]`,
+`[x86]`, `[arm64]`) and WSL. Compare them to know whether the game is native here. It warns when the exes are
+Windows builds and the host is neither Windows nor WSL.
+
 The report ends with ranked modding routes and the playbook to read next
 (skills/mod-any-game/references/engines/*.md). Everything here is read-only.
 """
 from __future__ import annotations
 
+import argparse
 import fnmatch
 import json
 import os
@@ -16,9 +21,10 @@ import re
 import struct
 import subprocess
 import time
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from um.common import die, is_mac, is_windows, is_wsl, ps_exe, to_posix
+from um.common import PS_UTF8, die, is_mac, is_windows, is_wsl, ps_exe, text_utf8, to_posix
 
 MAX_ENTRIES = 80_000
 MAX_DEPTH = 6
@@ -52,12 +58,12 @@ def win_folders() -> dict:
         return {}
     cache = win_folders.__dict__
     if "v" not in cache:
-        ps = ("$f=[Environment]; "
+        ps = (PS_UTF8 + "$f=[Environment]; "
               "@($f::GetFolderPath('UserProfile'),$f::GetFolderPath('MyDocuments'),$f::GetFolderPath('ApplicationData'),"
               "$f::GetFolderPath('LocalApplicationData')) -join '|'")
         exe = ps_exe()
         try:
-            out = subprocess.run([exe, "-NoProfile", "-Command", ps], capture_output=True, text=True, timeout=30,
+            out = subprocess.run([exe, "-NoProfile", "-Command", ps], capture_output=True, **text_utf8(), timeout=30,
                                  cwd="/mnt/c" if is_wsl() else None).stdout.strip()
             prof, docs, roaming, local = (out.split("|") + ["", "", "", ""])[:4]
             cache["v"] = {k: to_posix(v) for k, v in dict(profile=prof, documents=docs, appdata=roaming, localappdata=local).items() if v}
@@ -80,7 +86,7 @@ def steam_registry_root() -> Path | None:
     elif is_wsl():
         try:
             out = subprocess.run(["reg.exe", "query", r"HKCU\Software\Valve\Steam", "/v", "SteamPath"], capture_output=True,
-                                 text=True, timeout=15, cwd="/mnt/c").stdout
+                                 **text_utf8(), timeout=15, cwd="/mnt/c").stdout
         except (OSError, subprocess.TimeoutExpired):
             return None
         m = re.search(r"SteamPath\s+REG_SZ\s+(.+)", out)
@@ -253,7 +259,12 @@ def pe_info(path: Path) -> dict | None:
     opt = off + 24
     magic = struct.unpack_from("<H", head, opt)[0]
     dd = opt + (96 if magic == 0x10B else 112)
-    clr_rva = struct.unpack_from("<I", head, dd + 14 * 8)[0] if dd + 15 * 8 <= len(head) else 0
+    # the CLR header is directory 14, so it only exists if NumberOfRvaAndSizes counts it; past the
+    # declared directories comes the section table, and its bytes would read as a CLR RVA (#441)
+    num_dirs = struct.unpack_from("<I", head, opt + (92 if magic == 0x10B else 108))[0]
+    clr_rva = 0
+    if num_dirs > 14 and dd + 15 * 8 <= len(head):
+        clr_rva = struct.unpack_from("<I", head, dd + 14 * 8)[0]
     return dict(arch={0x14C: "x86", 0x8664: "x64", 0xAA64: "arm64"}.get(machine, hex(machine)), managed=clr_rva != 0)
 
 
@@ -349,12 +360,29 @@ LOADERS = [
     ("Fabric/Forge profile", ("*fabric-loader*", "*neoforge*", "*forge-*.jar")),
     ("Steamodded (Balatro)", ("*steamodded*",)),
     ("Hollow Knight Modding API", ("*modding api*", "*/managed/mods/*")),
+    ("RE_Kenshi (Kenshi OGRE plugin)", ("re_kenshi.dll", "kenshilib.dll")),
+    ("Kenshi Mod Manager", ("kenshimodtool.exe",)),
+    ("DFHack", ("dfhooks*.dll", "libdfhooks*.so")),
 ]
+
+# folders whose exes/jars belong to installers and runtimes, not the game (matched with leading "_" stripped,
+# so GOG's __redist/__support, EA's __installer and Steam's _CommonRedist count)
+SKIP_DIRS = {"redist", "commonredist", "vcredist", "directx", "installer", "installers", "support"}
+
+
+def _in_skip_dir(rel: str) -> bool:
+    return any(part.lstrip("_") in SKIP_DIRS for part in rel.split("/")[:-1])
+
 
 MOD_DIRS = ["mods", "mod", "addons", "plugins", "custom", "workshop", "usermods", "~mods", "content/paks/~mods", "data/scripts", "bepinex/plugins"]
 
 # known games: better routes than the engine default
+BANNERLORD_ROUTE = ("official module system: Modules/<id>/SubModule.xml + ModuleData XML/XSLT and C# MBSubModuleBase; "
+                   "optional Bannerlord.Harmony for managed patches; inspect the installed TaleWorlds DLLs")
+BANNERLORD_BIN_DIRS = ("win64_shipping_client", "gaming.desktop.x64_shipping_client", "win64_shipping_weditor")
 KNOWN = {
+    "mount & blade ii: bannerlord": (BANNERLORD_ROUTE, "bannerlord.md"),
+    "mount & blade ii bannerlord": (BANNERLORD_ROUTE, "bannerlord.md"),
     "terraria": ("tModLoader (free Steam app 1281930): C# ModItem/ModNPC/ModProjectile/ModSystem, hot reload from ModSources", "dotnet-xna.md"),
     "stardew valley": ("SMAPI + Content Patcher (JSON content packs) or C# SMAPI mods with Harmony", "dotnet-xna.md"),
     "celeste": ("Everest + Olympus; C# code mods with MonoMod hooks, maps with Lönn/Ahorn", "dotnet-xna.md"),
@@ -375,16 +403,40 @@ KNOWN = {
     "slay the spire": ("ModTheSpire + BaseMod (Java, SpirePatch)", "misc-engines.md"),
     "slay the spire 2": ("the game's own mod loader: C# .dll + Godot .pck + .json manifest in mods/; BaseLib (NuGet Alchyr.Sts2.BaseLib) for cards, relics and characters", "godot.md"),
     "balatro": ("Steamodded + lovely (Lua injection into the LÖVE game)", "misc-engines.md"),
+    "kenshi": ("FCS .mod data mods + asset overrides in mods/<name>/ mirroring data/ (load order in the launcher or KMM); code via RE_Kenshi + KenshiLib C++ plugins (VS2010 v100 x64, GPLv3, listed in the mod's RE_Kenshi.json) - the game exe is native, no CLR", "native.md"),
     "factorio": ("official Lua modding API (mods/ folder, data.lua + control.lua)", "misc-engines.md"),
+    "mindustry": ("the built-in mod loader, no patching: mod.hjson/mod.json + content/<type>/*.hjson|json (blocks, units, items...), "
+                  "sprites/ (sprites-override/ replaces vanilla), scripts/main.js; Java mods are jars from Anuken/MindustryJavaModTemplate. "
+                  "Mods go in %APPDATA%/Mindustry/mods, ~/.local/share/Mindustry/mods, or <install>/saves/mods on Steam", "misc-engines.md"),
+    "dwarf fortress": ("raws, no exe patching (v50+): mods/<name>/ with info.txt (ID, NUMERIC_VERSION) + objects/ and graphics/ raws, in the "
+                       "user folder (Bay 12 Games/Dwarf Fortress under %APPDATA% or ~/.local/share; the install in portable mode) or the "
+                       "Workshop. Mods are picked and ordered at world creation and copied to data/installed_mods (bump NUMERIC_VERSION after "
+                       "edits); graphics replacements declare [REQUIRES_ID_AFTER_ME:vanilla_creatures_graphics]. DFHack (Lua) for scripting",
+                       "misc-engines.md"),
     "counter-strike 2": ("Workshop maps / Source 2 tools; local -insecure only. VAC: never inject on official servers", "source.md"),
     "portal 2": ("VScript (Squirrel) + Puzzle Maker/Hammer, Workshop", "source.md"),
     "half-life 2": ("Source SDK 2013 mods (C++), maps with Hammer", "source.md"),
     "doom": ("WAD/PK3 mods with a source port (GZDoom/UZDoom)", "misc-engines.md"),
+    "the binding of isaac: rebirth": ("Lua mod in <install>/mods/<name>/ (main.lua, content/*.xml, resources/ overrides), IsaacDocs API; "
+                                      "EnableMods=1 + EnableDebugConsole=1 in options.ini; vanilla assets via tools/ResourceExtractor",
+                                      "isaac.md"),
+    "call of duty: world at war": ("dual route: zero-linker data override in mods/<name>/*.iwd (GSC/CSC, IWI textures, weapons) + mod.ff via linker_pc.exe for binary assets; T4M (d3d9.dll) raises asset limits; solo or a co-op lobby you host, never public servers", "iw-engine.md"),
+    "call of duty 4: modern warfare": ("data overrides in mods/<name>/*.iwd + mod.ff via linker_pc.exe; single-player, or a multiplayer server you run (CoD4X)", "iw-engine.md"),
     "minecraft": ("Fabric (Mixin) or NeoForge", "minecraft.md"),
 }
 
+# known games recognised by their files when the folder name doesn't say (renamed, portable or non-store installs)
+KNOWN_FILES = [
+    ("call of duty: world at war", ("codwaw.exe", "codwawmp.exe")),
+    ("call of duty 4: modern warfare", ("iw3sp.exe", "iw3mp.exe")),
+    ("dwarf fortress", ("data/vanilla/*/info.txt", "dwarf fortress.exe", "dwarfort")),
+    ("mindustry", ("mindustry.exe", "mindustry.json", "mindustry.jar", "mindustry.app/contents/resources/desktop.jar")),
+    ("the binding of isaac: rebirth", ("isaac-ng.exe",)),
+]
+
 # save/profile folders that don't follow the game's name ({profile}, {documents}, {appdata}, {localappdata})
 KNOWN_SAVES = {
+    "call of duty: world at war": ["{localappdata}/Activision/CoDWaW/players"],
     "age of empires ii: definitive edition": ["{profile}/Games/Age of Empires 2 DE"],
     "terraria": ["{documents}/My Games/Terraria"],
     "tmodloader": ["{documents}/My Games/Terraria/tModLoader"],
@@ -419,6 +471,7 @@ def online_only(name: str) -> str | None:
 
 ENGINES = {
     # key: (label, playbook, route)
+    "bannerlord": ("Bannerlord (TaleWorlds native engine + managed modules)", "bannerlord.md", BANNERLORD_ROUTE),
     "unity-mono": ("Unity (Mono)", "unity.md", "BepInEx 5 (or MelonLoader) plugin in C# with HarmonyX patches; read Managed/Assembly-CSharp.dll with ILSpy; assets via AssetRipper/UABEA"),
     "unity-il2cpp": ("Unity (IL2CPP)", "unity.md", "BepInEx 6 (IL2CPP) or MelonLoader; recover types with Cpp2IL / Il2CppDumper, patch through Il2CppInterop"),
     "unreal": ("Unreal Engine", "unreal.md", "UE4SS (Lua/C++ hooks, live property viewer) and/or pak mods in Content/Paks/~mods (FModel to browse, retoc/repak to pack)"),
@@ -435,23 +488,32 @@ ENGINES = {
     "genie": ("Genie (Age of Empires DE)", "genie-aoe2.md", "data mods (genieutils-py), graphics/UI mods, scenarios; SLD sprites"),
     "clausewitz": ("Paradox Clausewitz/Jomini", "misc-engines.md", "script mods (plain text) in Documents/Paradox Interactive/<game>/mod"),
     "re-engine": ("Capcom RE Engine", "big-frameworks.md", "REFramework (Lua scripts, in-game UI) + Fluffy Mod Manager for pak/natives replacements"),
+    "mt-framework": ("Capcom MT Framework", "big-frameworks.md", ".arc archives under native*/ (nativePC, nativeDX10, ...): ARCtool to unpack/repack, Fluffy Mod Manager to install; DeadRisingEx for Dead Rising; native code via DLL hooks"),
     "fromsoft": ("FromSoftware (Dantelion)", "big-frameworks.md", "ModEngine2 + Smithbox/DSMapStudio, param edits; offline only"),
     "rage": ("Rockstar RAGE", "big-frameworks.md", "story mode: ScriptHookV + ASI loader, OpenIV/CodeWalker for assets; never online"),
+    "hedgehog": ("Hedgehog Engine (Sonic Team)", "big-frameworks.md", "Hedge Mod Manager + its HE1/HE2 mod loaders (Generations, Lost World, Forces, Frontiers, Shadow Generations) or Unleashed Recompiled's built-in loader: mod.ini folders of loose file replacements"),
+    "blackrock": ("Black Rock Studio engine (Split/Second)", "big-frameworks.md", "no community tools: .ark packs, .model/.textures assets and plaintext .params config to reverse yourself; native code via DLL hooks"),
     "redengine": ("CD Projekt REDengine", "big-frameworks.md", "REDmod, Cyber Engine Tweaks, RED4ext, WolvenKit (Cyberpunk); REDkit (Witcher 3)"),
     "idtech": ("id Tech / Doom family", "misc-engines.md", "WAD/PK3/PK4 mods, source ports"),
     "cryengine": ("CryEngine", "native.md", "pak (zip) overrides, Lua/XML where exposed; native hooks otherwise"),
     "frostbite": ("Frostbite", "native.md", "Frosty Tool Suite for supported titles, offline only; most titles have kernel anti-cheat"),
     "electron": ("Electron / NW.js / HTML5", "misc-engines.md", "extract resources/app.asar (or package.nw), patch JS, open devtools"),
     "love2d": ("LÖVE (Lua)", "misc-engines.md", "the .love/exe is a zip of Lua; patch or inject with lovely"),
+    "zengin": ("ZenGin (Gothic 1/2)", "zengin.md", "Daedalus script mods first (MDK scripts -> .DAT in a .mod volume; Ikarus/LeGo, Ninja); Union plugin SDK (x86 C++ DLL in system/autorun, gothic-api headers) for engine code; GD3D11 renderer; assets in Data/*.vdf via ZenKit. Union/GD3D11 need G1 1.08k_mod or G2 NotR 2.6.0.0-rev2: check the exe build first (on Steam use the Workshop beta, don't swap the exe), see zengin.md"),
     "java": ("Java", "misc-engines.md", "decompile jars (Vineflower/CFR), patch with a mod loader or bytecode (Mixin/ASM)"),
     "defold": ("Defold", "misc-engines.md", "unpack game.arcd; Lua scripts"),
     "cocos": ("Cocos2d-x", "native.md", "Lua/JS scripts if bundled; else native hooks"),
     "haxe": ("Haxe/OpenFL/HaxeFlixel", "misc-engines.md", "assets/ overrides; hscript mod loaders where present (Polymod)"),
+    "iw": ("IW engine (Call of Duty)", "iw-engine.md", "data overrides in mods/<name>/*.iwd (GSC/CSC scripts, IWI textures, weapons) + mod.ff via the Mod Tools' linker_pc.exe; um fastfile reads rawfiles out of your own .ff"),
     "native": ("Unknown native engine", "native.md", "proxy-DLL loader + function hooks (MinHook/SafetyHook), memory reading; Ghidra/IDA + x64dbg + Cheat Engine"),
 }
 
 
 # --------------------------------------------------------------------------- detection
+
+# exe basenames that mark a binary as an editor/tool, never the game itself
+# (matched against the lower-cased stem, e.g. "forgotten construction set")
+TOOL_EXE_RE = re.compile(r"construction.?set|\bfcs\b|mod.?tool|mod.?manager|\bkmm\b|launcher|editor|setup|installer")
 
 
 def detect(ix: Index) -> tuple[list[tuple[str, int, list[str], dict]], dict]:
@@ -461,6 +523,25 @@ def detect(ix: Index) -> tuple[list[tuple[str, int, list[str], dict]], dict]:
 
     def add(key, score, ev, **det):
         hits.append((key, score, ev, det))
+
+    # Bannerlord has its own module system; a managed launcher alone suggests the wrong generic .NET route.
+    bannerlord_dlls = ix.find(*(f"bin/{d}/taleworlds.mountandblade.dll" for d in BANNERLORD_BIN_DIRS))
+    if bannerlord_dlls and ix.has("modules/native/submodule.xml"):
+        dll = min(bannerlord_dlls, key=lambda f: BANNERLORD_BIN_DIRS.index(f.split("/")[1]))
+        version_file = dll.rsplit("/", 1)[0] + "/version.xml"
+        det = dict(product="Mount and Blade II Bannerlord")
+        if version_file in ix.files:
+            # the two shapes builds have shipped (BUTR's Bannerlord.ReferenceAssemblies reads the same two): a Value on
+            # the root, or <Singleplayer Value="v1.2.9"/> inside it. Older builds have no Version.xml on disk at all.
+            try:
+                root = ET.parse(ix.path(version_file)).getroot()
+                sp = root.find("Singleplayer")
+                version = (root.get("Value") or ((sp.get("Value") or sp.get("value")) if sp is not None else None) or "").strip()
+                if version:
+                    det.update(version=version, version_file=version_file)
+            except (OSError, ET.ParseError, LookupError, ValueError):
+                pass
+        add("bannerlord", 100, [dll, "modules/native/submodule.xml"], **det)
 
     # Unity
     data_dirs = [d for d in {"/".join(f.split("/")[:-1]) for f in ix.find("*_data/globalgamemanagers", "*_data/data.unity3d", "*_data/maindata")}]
@@ -538,20 +619,62 @@ def detect(ix: Index) -> tuple[list[tuple[str, int, list[str], dict]], dict]:
     if ix.has_dir("renpy") and ix.has_dir("game"):
         add("renpy", 100, ["renpy/ + game/"], archives=len(ix.find("game/*.rpa")))
 
+    # ZenGin (Gothic 1/2): the exe lives in system/, assets in Data/*.vdf volumes
+    if ix.has("system/gothic.exe", "system/gothic1.exe", "system/gothic2.exe") or \
+            (ix.has("system/vdfs32g.dll", "system/vdfs32.dll") and ix.has("data/*.vdf")):
+        add("zengin", 95, ix.find("system/gothic*.exe")[:1] + ix.find("data/*.vdf")[:1])
+
     # XNA / FNA / MonoGame / .NET
     xna = ix.find("fna.dll", "monogame.framework.dll", "microsoft.xna.framework*.dll", "*/fna.dll")
-    exes = [f for f in ix.files if f.endswith(".exe") and "/" not in f][:12]
+    # shallowest first: the main exe often sits one level down (Gothic's system/, UE's binaries/)
+    exes = sorted((f for f in ix.files if f.endswith(".exe") and not f.rsplit("/", 1)[-1].startswith("unins")
+                   and not _in_skip_dir(f)),
+                  key=lambda f: (f.count("/"), f))[:12]
     managed = []
+    sizes: dict[str, int] = {}
     for e in exes:
         info = pe_info(ix.path(e))
         if info:
             facts.setdefault("executables", {})[e] = info
             if info["managed"]:
                 managed.append(e)
+        try:
+            sizes[e] = ix.path(e).stat().st_size
+        except OSError:
+            pass
     if xna or ix.has("content/*.xnb"):
         add("xna-fna", 95, (xna or ["Content/*.xnb"])[:2] + managed[:1])
     elif managed or ix.find("*.runtimeconfig.json"):
-        add("dotnet", 70, (managed or ix.find("*.runtimeconfig.json"))[:2])
+        biggest_managed = max([sizes.get(m, 0) for m in managed] + [0])
+        # native candidates are non-tool binaries only: managers/bundles (e.g. Kenshi's
+        # 164 MB KMM) can dwarf the actual game exe, and when every native exe is
+        # tool-like (setup.exe, ...) there is no game binary to prefer
+        game_like = [e for e in exes if e not in managed and not TOOL_EXE_RE.search(Path(e).stem)]
+        big_native = sorted(
+            (e for e in game_like if sizes.get(e, 0) > biggest_managed),
+            key=lambda e: -sizes.get(e, 0),
+        )
+        # a .NET Core/5+ apphost is a native exe next to <stem>.dll with a sibling
+        # <stem>.runtimeconfig.json / <stem>.deps.json: the game is still .NET
+        apphost = bool(big_native) and any(
+            big_native[0][:-4] + ext in ix.files for ext in (".runtimeconfig.json", ".deps.json"))
+        if managed and big_native and not apphost and all(TOOL_EXE_RE.search(Path(e).stem) for e in managed):
+            # the only managed binaries are editors/tools (e.g. Kenshi's Forgotten
+            # Construction Set); the shipped game binary is native, so .NET routes
+            # (Harmony/BepInEx) do not apply to the game process
+            ogre = ix.find("*ogremain*.dll")[:2]
+            add("native", 65, big_native[:1] + ogre,
+                note=f"managed exe(s) look like tools ({', '.join(managed)}); game binary is native")
+        else:
+            add("dotnet", 70, (managed or ix.find("*.runtimeconfig.json"))[:2])
+
+    # OGRE (custom native engines, e.g. Kenshi): OgreMain + plugin config.
+    # Only a secondary signal here; the tool-exe demotion above (or a stronger
+    # engine hit) takes precedence when it fires.
+    if not any(h[0] == "native" for h in hits) and ix.has("*ogremain*.dll"):
+        plug = ix.find("plugins.cfg", "plugins_*.cfg")
+        add("native", 55, ix.find("*ogremain*.dll")[:2] + plug[:1],
+            **({"plugin_cfg": plug[0]} if plug else {}))
 
     # Source / Source 2
     if ix.has("*/gameinfo.gi") or ix.has("game/bin/win64/engine2.dll"):
@@ -575,9 +698,26 @@ def detect(ix: Index) -> tuple[list[tuple[str, int, list[str], dict]], dict]:
     if ix.has("re_chunk_000.pak", "re_chunk_000.pak.*"):
         add("re-engine", 100, ["re_chunk_000.pak"])
 
+    # Capcom MT Framework: .arc archives under a native* folder whose name depends on the port: nativePC (Dragon's
+    # Dogma: Dark Arisen), nativePC_MT (Resident Evil 5), nativeDX10 (Devil May Cry 4 SE), nativeWin64 (Dead Rising)
+    if ix.has("native*/*.arc"):
+        add("mt-framework", 95, ix.find("native*/*.arc")[:2])
+
     # FromSoftware
     if ix.has("eldenring.exe", "game/eldenring.exe", "darksoulsiii.exe", "game/darksoulsiii.exe", "sekiro.exe", "armoredcore6.exe", "game/armoredcore6.exe", "nightreign.exe", "game/nightreign.exe") or ix.has("*/regulation.bin", "regulation.bin"):
         add("fromsoft", 95, ix.find("*eldenring.exe", "*darksoulsiii.exe", "*sekiro.exe", "*armoredcore6.exe", "*nightreign.exe", "*regulation.bin")[:2])
+
+    # Sonic Team's Hedgehog Engine: the exes Hedge Mod Manager looks for (HE1: Unleashed Recompiled, Generations,
+    # Lost World; HE2: Forces, Frontiers, Shadow Generations), or loose HE1 split archives (#ActD_Africa.ar.00 + .arl).
+    # Sonic Generations (2011) packs its .ar files into CRI bb*.cpk packfiles, so the archives alone don't catch it.
+    he_exes = ix.find("unleashedrecomp.exe", "unleashedrecomp", "sonicgenerations.exe", "slw.exe", "*sonic forces.exe",
+                      "sonicfrontiers.exe", "sonic_x_shadow_generations.exe")
+    if he_exes or (ix.has("*.arl") and ix.has("*.ar", "*.ar.??")):
+        add("hedgehog", 95, he_exes[:1] + ix.find("*.arl")[:1])
+
+    # Black Rock Studio's engine (Split/Second): .shaderinst shader instances next to .model assets
+    if ix.has("*.shaderinst") and ix.has("*.model"):
+        add("blackrock", 95, ix.find("*.shaderinst")[:1] + ix.find("*.model")[:1])
 
     # RAGE
     if ix.has("gta5.exe", "gta5_enhanced.exe", "playgtav.exe", "rdr2.exe", "gtaiv.exe") or (ix.has("*.rpf") and ix.has("*.exe")):
@@ -607,7 +747,8 @@ def detect(ix: Index) -> tuple[list[tuple[str, int, list[str], dict]], dict]:
     # LÖVE, Java, Defold, Cocos, Haxe
     if ix.has("love.dll", "*.love", "lovec.exe"):
         add("love2d", 95, ix.find("love.dll", "*.love")[:1])
-    jars = ix.find("*.jar")
+    # shallow jars only: a bundled Ghidra/SDK in a dev subfolder isn't the game's engine
+    jars = [j for j in ix.find("*.jar") if j.count("/") <= 1 and not _in_skip_dir(j)]
     if jars and (ix.has_dir("jre", "jre/*", "jdk*", "java*") or len(jars) <= 5):
         add("java", 60, jars[:2])
     if ix.has("game.dmanifest", "game.arcd"):
@@ -616,6 +757,9 @@ def detect(ix: Index) -> tuple[list[tuple[str, int, list[str], dict]], dict]:
         add("cocos", 90, ix.find("*libcocos2d*.dll", "*cocos2d*.dll")[:1])
     if ix.has("lime.ndll", "*lime.hdll"):
         add("haxe", 80, ix.find("lime.ndll", "*lime.hdll")[:1])
+    if (ix.has("zone/*/*.ff", "zone/*.ff") or ix.has("main/*.iwd") or
+            ix.has("iw3sp.exe", "iw3mp.exe", "codwaw.exe", "codwawmp.exe", "iw4sp.exe", "iw4mp.exe")):
+        add("iw", 95, ix.find("zone/*/*.ff", "zone/*.ff", "main/*.iwd", "*iw*.exe", "*codwaw*.exe")[:3])
 
     if not hits:
         add("native", 10, ["no known engine signature"])
@@ -658,6 +802,48 @@ def save_hints(name: str, det: dict) -> list[str]:
     return out
 
 
+def host_info() -> dict:
+    """The machine `um` runs on. `arch` uses the names of an exe's `arch` (x86, x64, arm64) so the two compare directly."""
+    import platform
+    # Windows asks WMI for the CPU from Python 3.12 on; before that, an x64 Python emulated on Windows on Arm
+    # reads its own process architecture and reports x64
+    machine = platform.machine().lower()
+    arch = {"x86_64": "x64", "amd64": "x64", "x86": "x86", "i386": "x86", "i686": "x86",
+            "arm64": "arm64", "aarch64": "arm64"}.get(machine, machine)
+    translated = False
+    if is_mac() and arch == "x64":
+        # an x86_64 Python on an Apple Silicon Mac runs under Rosetta; the hardware is arm64
+        try:
+            out = subprocess.run(["sysctl", "-n", "sysctl.proc_translated"], capture_output=True, **text_utf8(),
+                                 timeout=5).stdout.strip()
+        except (OSError, subprocess.TimeoutExpired):
+            out = ""
+        if out == "1":
+            arch, translated = "arm64", True
+    if is_mac():
+        os_name, version = "macos", platform.mac_ver()[0]
+    elif is_windows():
+        os_name, version = "windows", platform.version()
+    else:
+        os_name = "linux"
+        try:
+            version = platform.freedesktop_os_release().get("PRETTY_NAME") or platform.release()
+        except OSError:
+            version = platform.release()
+    # the same keys on every host, so `--json` readers never meet a missing field
+    return dict(os=os_name, os_version=version or "unknown", arch=arch, wsl=is_wsl(), translated=translated)
+
+
+def host_line(h: dict) -> str:
+    if h["wsl"]:
+        base = f"Windows via WSL ({h['os_version']})"
+    elif h["os"] == "linux" and not h["os_version"][:1].isdigit():
+        base = h["os_version"]                      # a distro name, for example "Ubuntu 24.04.1 LTS"
+    else:
+        base = {"macos": "macOS", "windows": "Windows", "linux": "Linux"}.get(h["os"], h["os"]) + " " + h["os_version"]
+    return f"{base}, {h['arch']}" + (" (Python runs under Rosetta)" if h.get("translated") else "")
+
+
 def scan(query: str) -> dict:
     game = resolve_game(query)
     root = Path(game["path"])
@@ -668,20 +854,27 @@ def scan(query: str) -> dict:
     anti = [n for n, pats in ANTI_CHEAT if ix.has(*pats) or ix.has_dir(*[p.rstrip("/*") for p in pats if p.endswith("/*")])]
     loaders = [n for n, pats in LOADERS if ix.has(*pats) or ix.has_dir(*[p.rstrip("/*") for p in pats if p.endswith("/*")])]
     moddirs = [d for d in MOD_DIRS if d in ix.dirs]
+    if key == "bannerlord" and "modules" in ix.dirs:
+        moddirs.append("modules")
     name = (game.get("name") or root.name)
     lname = name.lower()
-    known = next((v for k, v in sorted(KNOWN.items(), key=lambda kv: -len(kv[0])) if k == lname or (k in lname and len(k) > 5)), None)
+    known = next((v for k, v in sorted(KNOWN.items(), key=lambda kv: -len(kv[0])) if k == lname or (k in lname and len(k) > 5)), None) \
+        or next((KNOWN[k] for k, pats in KNOWN_FILES if ix.has(*pats)), None)
     online = online_only(name)
     routes = []
     if known:
         routes.append(dict(route=known[0], playbook=known[1], why="known game"))
     if not known or known[1] != playbook or key == "native":
         routes.append(dict(route=route, playbook=playbook, why=f"engine: {label}"))
-    if key not in ("native",):
+    if key not in ("native", "bannerlord"):
         routes.append(dict(route=ENGINES["native"][2], playbook="native.md", why="fallback when no loader reaches what you need"))
     warnings = []
+    host = host_info()
     if len(ix.files) < 5:
         warnings.append("the install folder is (nearly) empty: the game is not fully installed, or lives elsewhere")
+    if facts.get("executables") and host["os"] != "windows" and not host["wsl"]:
+        warnings.append(f"the exes are Windows (PE) builds but this host is {host_line(host)}: not native, so it needs a compatibility "
+                        "layer (unless the folder also holds a build for this OS); read skills/game-recon/references/compatibility.md")
     if anti:
         warnings.append(f"anti-cheat present ({', '.join(anti)}): offline/single-player only, never inject into online play; "
                         "many titles need the anti-cheat disabled via an official offline launch option - do not bypass it")
@@ -697,7 +890,7 @@ def scan(query: str) -> dict:
         workshop=game.get("workshop"), saves=save_hints(name, det),
         executables=facts.get("executables", {}), routes=routes, warnings=warnings,
         playbook=f"skills/mod-any-game/references/engines/{routes[0]['playbook']}",
-        files_indexed=len(ix.files), index_truncated=ix.truncated,
+        files_indexed=len(ix.files), index_truncated=ix.truncated, host=host,
     )
     return report
 
@@ -705,8 +898,10 @@ def scan(query: str) -> dict:
 def format_report(r: dict) -> str:
     e = r["engine"]
     lines = [f"{r['name']}" + (f"  ({r['store']} {r['appid']})" if r.get("store") else ""),
-             f"  path:      {r['path']}",
-             f"  engine:    {e['label']}  [{e['confidence']}%]  evidence: {', '.join(map(str, e['evidence']))}"]
+             f"  path:      {r['path']}"]
+    if r.get("host"):
+        lines.append(f"  host:      {host_line(r['host'])}")
+    lines += [f"  engine:    {e['label']}  [{e['confidence']}%]  evidence: {', '.join(map(str, e['evidence']))}"]
     extra = {k: v for k, v in e.items() if k not in ("key", "label", "confidence", "evidence")}
     if extra:
         lines.append("             " + ", ".join(f"{k}={v}" for k, v in extra.items()))
@@ -751,7 +946,8 @@ def main(args):
 
 
 def register(sub):
-    p = sub.add_parser("scan", help="find installed games; fingerprint engine, anti-cheat, loaders, saves, routes")
+    p = sub.add_parser("scan", help="find installed games; fingerprint engine, anti-cheat, loaders, saves, routes",
+                       description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("game", nargs="?", help="name (fuzzy) or install folder")
     p.add_argument("--list", action="store_true", help="list installed games (Steam, Epic, Xbox)")
     p.add_argument("--json", action="store_true")

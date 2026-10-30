@@ -133,7 +133,9 @@ Paths come from environment variables, with these defaults:
    `reshade-shaders\Shaders\`.
    - It stops rather than replaces a `dinput8.dll`, `ReShade64.asi` or `args.txt` that isn't its own
      (`FORCE=1` overrides).
-   - `install.sh --remove` deletes exactly the files it adds.
+   - `install.sh --remove` deletes the files it adds. It deletes `ReShade.ini` only if install wrote it, which
+     install records in a `.mcpassthrough_reshade_ini` marker (an install from before the marker keeps its
+     `ReShade.ini`; delete that by hand). `ReShadePreset.ini` is always written and removed, so back up your own.
    - `build.bat` also works from a Windows prompt, in a copy of `gta/` with `third_party/` fetched.
 4. **GTA settings.** The demo ran GTA windowed at 1920x1080, with "Pause game on focus loss" off, depth of field
    off, and post FX lowered. Minecraft's window is resized to GTA's picture, up to 1080p worth of pixels. Depth

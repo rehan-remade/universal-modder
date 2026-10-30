@@ -112,6 +112,9 @@ Measured on four GameMaker titles, 2026-10-06. All four walks completed exactly 
 
 ## Seen in
 
-No game notes yet. This note came out of a Katana ZERO x Loop Hero mashup feasibility check, where both
+- [DELTARUNE Chapter 1](../games/deltarune/jevil-practice-mod.md): VM (`CODE` present, `Is YYC - False`,
+  bytecode 17), so the UndertaleModTool route worked.
+
+This note came out of a Katana ZERO x Loop Hero mashup feasibility check, where both
 guests turned out to be YYC and the intended UndertaleModTool route was unavailable for either. Versions
 used: UndertaleModTool CLI 0.9.2.0 (Windows), GameMaker bytecode v17 across all four titles.

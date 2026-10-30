@@ -9,7 +9,7 @@
 
 EDL (edit decision list) - every key but "segments" is optional:
   {"size": [1920, 1080], "fps": 30, "bpm": 128,
-   "theme": {"accent": "#B6FF3B", "text": "#FFFFFF", "chip": "#0A0D12E0"},
+   "theme": {"accent": "#B6FF3B", "text": "#FFFFFF", "chip": "#0A0D12E0"},   # + "title_font"/"body_font"/"mono_font": .ttf paths
    "transition": {"type": "fade", "duration": 0.3},        # any ffmpeg xfade type, or "cut"
    "clip_volume": 0.6, "music": {"path": "track.mp3", "volume": 0.8, "start": 0, "fade_in": 0.2},
    "watermark": {"path": "logo.png", "height": 54, "corner": "br", "opacity": 0.9},
@@ -23,6 +23,7 @@ EDL (edit decision list) - every key but "segments" is optional:
   "dur" is seconds, or give "beats" with a top-level "bpm" (+ "beat_lock" so cuts land on the grid despite transitions).
   "fill": blur | crop | pad for clips that aren't 16:9. "watermark": false on a segment hides the logo there.
   Titles are one line, bottom-left, sliding in after the transition; "credit" sits on the same line.
+  Space Grotesk has Latin glyphs only: for Cyrillic, Greek or CJK titles set the theme's *_font to a font that has them.
 
 Style that works on X: open on the strongest moment (<= 2-3 s before real gameplay), one-line titles,
 3-5 s per clip, credit every creator whose footage you use, end on the name/URL, fade out.
@@ -37,17 +38,18 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from um.common import die, need
+from um.common import die, need, text_utf8
 
 FONTS = Path(__file__).parent / "fonts"
 TITLE_FONT = FONTS / "SpaceGrotesk-Bold.ttf"
 BODY_FONT = FONTS / "SpaceGrotesk-Medium.ttf"
 MONO_FONT = FONTS / "JetBrainsMono-Bold.ttf"
+FONT_OVERRIDES: dict[Path, str] = {}   # set per EDL from the theme's title_font / body_font / mono_font
 
 
 def ff(*args, quiet=True):
     cmd = ["ffmpeg", "-hide_banner", "-y"] + (["-loglevel", "error"] if quiet else []) + [str(a) for a in args]
-    r = subprocess.run(cmd, capture_output=True, text=True)
+    r = subprocess.run(cmd, capture_output=True, **text_utf8())
     if r.returncode:
         die("ffmpeg failed:\n" + " ".join(cmd)[:3000] + "\n" + r.stderr[-3000:])
     return r
@@ -55,7 +57,7 @@ def ff(*args, quiet=True):
 
 def _probe_ffmpeg(path) -> dict:
     """ffprobe-less fallback: parse `ffmpeg -i` banner."""
-    err = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(path)], capture_output=True, text=True).stderr
+    err = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(path)], capture_output=True, **text_utf8()).stderr
     if "Invalid data" in err or "No such file" in err:
         die(f"cannot read {path}: {err.strip().splitlines()[-1]}")
     m = re.search(r"Duration: (\d+):(\d+):([\d.]+)", err)
@@ -70,7 +72,7 @@ def _probe_ffmpeg(path) -> dict:
 def probe(path) -> dict:
     if not shutil.which("ffprobe"):
         return _probe_ffmpeg(path)
-    r = subprocess.run(["ffprobe", "-v", "error", "-print_format", "json", "-show_streams", "-show_format", str(path)], capture_output=True, text=True)
+    r = subprocess.run(["ffprobe", "-v", "error", "-print_format", "json", "-show_streams", "-show_format", str(path)], capture_output=True, **text_utf8())
     if r.returncode:
         die(f"ffprobe {path}: {r.stderr.strip()}")
     d = json.loads(r.stdout)
@@ -172,7 +174,7 @@ def beats(path) -> dict:
 
 def mux(video, raw_audio, meta_json, out, offset=None):
     """Recorder output (video .mkv + game-only f32le audio + QPC timing json) -> mp4 with synced sound."""
-    meta = json.loads(Path(meta_json).read_text())
+    meta = json.loads(Path(meta_json).read_text(encoding="utf-8"))
     dur = probe(video)["duration"]
     start = offset if offset is not None else meta.get("audio_offset_s", 0.0)
     ff("-i", video, "-f", meta.get("format", "f32le"), "-ar", meta.get("rate", 48000), "-ac", meta.get("channels", 2), "-ss", f"{max(0.0, start):.3f}", "-i", raw_audio,
@@ -191,7 +193,7 @@ def _rgba(hexs, default="#FFFFFF"):
 
 def _font(path, size):
     from PIL import ImageFont
-    return ImageFont.truetype(str(path), size)
+    return ImageFont.truetype(str(FONT_OVERRIDES.get(path, path)), size)
 
 
 def title_chip(text, credit, W, H, theme, out):
@@ -410,11 +412,16 @@ def render_segment(i, seg, edl, work: Path, W, H, fps, dur, t_in, t_out, total_n
 
 def compile_edl(edl_path, out, preview=False, keep=False):
     edl_path = Path(edl_path)
-    edl = json.loads(edl_path.read_text())
+    edl = json.loads(edl_path.read_text(encoding="utf-8"))   # not the locale encoding: titles can be any script
     base = edl_path.parent
 
     def rel(p):
         return str((base / p).resolve()) if p and not Path(p).is_absolute() else p
+
+    FONT_OVERRIDES.clear()
+    for key, default in (("title_font", TITLE_FONT), ("body_font", BODY_FONT), ("mono_font", MONO_FONT)):
+        if edl.get("theme", {}).get(key):
+            FONT_OVERRIDES[default] = rel(edl["theme"][key])
 
     for seg in edl["segments"]:
         if "clip" in seg:
@@ -424,9 +431,12 @@ def compile_edl(edl_path, out, preview=False, keep=False):
                 if seg["card"].get(k) and not str(seg["card"][k]).startswith("#"):
                     seg["card"][k] = rel(seg["card"][k])
     W, H = edl.get("size", [1920, 1080])
+    if W % 2 or H % 2:
+        die(f"size {W}x{H}: width and height must be even (yuv420p H.264 refuses odd sizes)")
     fps = edl.get("fps", 30)
     if preview:
-        W, H, fps = W // 2, H // 2, min(fps, 30)
+        # half size, kept even: 1080x1350 would halve to 540x675, which libx264 refuses
+        W, H, fps = W // 4 * 2, H // 4 * 2, min(fps, 30)
     bpm = edl.get("bpm")
     default_tr = edl.get("transition", {"type": "fade", "duration": 0.3})
     segs = edl["segments"]
@@ -457,8 +467,11 @@ def compile_edl(edl_path, out, preview=False, keep=False):
     inputs, graph = [], []
     for f in files:
         inputs += ["-i", f]
-    for k in range(len(files)):   # one timebase for every input: concat and xfade refuse to mix them
-        graph.append(f"[{k}:v]settb=AVTB,setpts=PTS-STARTPTS[s{k}]")
+    for k in range(len(files)):
+        # xfade needs one timebase and a declared frame rate on both inputs. FFmpeg 7.0/7.1's setpts marks its output
+        # rate unknown (1/0), so fps= declares it again; settb=AVTB comes last because fps= sets 1/fps and concat
+        # (a cut) outputs AVTB, which a later xfade must match
+        graph.append(f"[{k}:v]setpts=PTS-STARTPTS,fps={fps},settb=AVTB[s{k}]")
     total = durs[0]
     vlast, alast = "s0", "0:a"
     for k in range(1, len(files)):
