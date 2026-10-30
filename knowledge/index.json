@@ -6237,6 +6237,45 @@
   ]
  },
  {
+  "path": "games/padre-got-a-gun/fusion-2-5-build-296-decode-and-event-patch.md",
+  "kind": "game",
+  "title": "Decoding a Clickteam Fusion 2.5 (build 296) data file and patching its events",
+  "game": "Padre Got A Gun",
+  "games_also": [],
+  "game_version": "V1.3, itch.io standalone (V1.2 decoded too). Clickteam Fusion 2.5 runtime build 296.9 (Modules/mmfs2.dll 3.0.296.9), 32-bit exe",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "Python 3 (standard library only)",
+   "NebulaFD September 2026 Update (commit a24d4d1)",
+   "ilspycmd",
+   "um scan"
+  ],
+  "anti_cheat": "none: offline single-player, DRM-free. The .dat's Protection chunk holds only a 4-byte checksum of the event, object and frame data (Gotcha 6), with no key, serial or licence data, so it isn't DRM or an ownership check",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [],
+  "tags": [
+   "clickteam-fusion",
+   "fusion-2.5",
+   "build-296",
+   "ccn",
+   "pamu",
+   "chunk-encryption",
+   "events",
+   "protection-checksum",
+   "nebulafd",
+   "conpty",
+   "data-mod",
+   "itch-io"
+  ]
+ },
+ {
   "path": "games/pathfinder-wrath-of-the-righteous/mass-effect-biotics-kinetic-barriers-and-rifles-as-a-wotr-cl.md",
   "kind": "game",
   "title": "Mass Effect biotics, kinetic barriers and rifles as a WotR class (UMM, blueprints in code)",
