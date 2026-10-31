@@ -8033,6 +8033,128 @@
   ]
  },
  {
+  "path": "games/terminator-dark-fate-defiance/defianceloader-plugins-data-mods-and-engine-facts.md",
+  "kind": "game",
+  "title": "Native DefianceLoader plugins and data mods: engine facts, tables, lbox, multi-slot weapons, editors",
+  "game": "Terminator: Dark Fate - Defiance",
+  "games_also": [],
+  "game_version": "1.09.1223 (Steam, the loader's steam-2026-10-07) with DefianceLoader 1.9.0, plugin ABI 5",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "native-hook",
+  "tools": [
+   "DefianceLoader 1.9.0",
+   "MSVC (Visual Studio 2022)",
+   "IDA",
+   "Python 3"
+  ],
+  "anti_cheat": "none seen; all of this is single player, and the plugins are marked as not multiplayer safe",
+  "status": "released",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-31",
+  "links": [
+   "https://github.com/DefianceLoader/DefianceLoader"
+  ],
+  "tags": [
+   "frontedge",
+   "cats-who-play",
+   "leonardo",
+   "galileo",
+   "facets",
+   "plugins",
+   "spreadsheetml",
+   "lbox",
+   "table-merge",
+   "map-editor",
+   "crash-analysis"
+  ]
+ },
+ {
+  "path": "games/terminator-dark-fate-defiance/porting-mechanics-and-vehicles-from-gostomelskie-bogatyri.md",
+  "kind": "game",
+  "title": "Rebuilding mechanics of a sister engine branch as plugins: morale, stamina, towing, supply, vehicles",
+  "game": "Terminator: Dark Fate - Defiance",
+  "games_also": [
+   "Gostomelskie bogatyri"
+  ],
+  "game_version": "TDF 1.09.1223 (Steam) with DefianceLoader 1.9.0; Gostomelskie bogatyri build of 2026-09-10",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "reimplementation",
+  "tools": [
+   "DefianceLoader 1.9.0",
+   "MSVC (Visual Studio 2022)",
+   "IDA",
+   "Python 3",
+   "Maya (mayapy)"
+  ],
+  "anti_cheat": "none seen; single player only",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-31",
+  "links": [
+   "https://github.com/DefianceLoader/DefianceLoader"
+  ],
+  "tags": [
+   "frontedge",
+   "cats-who-play",
+   "sister-branch",
+   "morale",
+   "stamina",
+   "towing",
+   "trailers",
+   "supply",
+   "covers",
+   "skeletons",
+   "rtti-diff"
+  ]
+ },
+ {
+  "path": "games/terminator-dark-fate-defiance/porting-syrian-warfare-maps-triggers-and-effects.md",
+  "kind": "game",
+  "title": "Syrian Warfare's maps, triggers, buildings and effects converted to run in Terminator: Dark Fate - Defiance",
+  "game": "Terminator: Dark Fate - Defiance",
+  "games_also": [
+   "Syrian Warfare"
+  ],
+  "game_version": "TDF 1.09.1223 (Steam) with DefianceLoader 1.9.0; Syrian Warfare 2018 x86",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Python 3",
+   "IDA",
+   "texconv",
+   "TDF's own map editor",
+   "TDF's Luac.exe"
+  ],
+  "anti_cheat": "none seen; single player only",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-31",
+  "links": [],
+  "tags": [
+   "frontedge",
+   "cats-who-play",
+   "map-port",
+   "land-format",
+   "triggers",
+   "lua-bytecode",
+   "psyfx",
+   "mlms",
+   "detour"
+  ]
+ },
+ {
   "path": "games/terraria/eye-of-cthulhu-rl-agent.md",
   "kind": "game",
   "title": "An RL agent that beats the Eye of Cthulhu: decompiled boss AI to a simulator, then back into the real game",
