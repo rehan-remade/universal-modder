@@ -8275,52 +8275,6 @@
   ]
  },
  {
-  "path": "games/test-drive-unlimited-2/playing-tdu2-online-with-project-paradise-2.md",
-  "kind": "game",
-  "title": "Playing Test Drive Unlimited 2 online with Project Paradise 2 (server, NAT, migration, driver regressions)",
-  "game": "Test Drive Unlimited 2",
-  "games_also": [],
-  "game_version": "retail; community server current as of 2026-03",
-  "platform": "windows",
-  "engine": "unknown",
-  "route": "passthrough",
-  "tools": [
-   "Project Paradise 2 server + launcher (project-paradise2.de)",
-   "dgVoodoo2",
-   "DXVK",
-   "TDU2 Unpacker GUI"
-  ],
-  "anti_cheat": "Community-run. Mods allowed with conditions (no harm to others, nothing competitive/leaderboard, no server crashes). The PP2 launcher closes the game while a process on its cheat/RE-tool list is running (Gotcha 11). No anti-cheat bypass documented.",
-  "status": "in-progress",
-  "agents": [
-   "OpenCode (DeepSeek V4.1 Flash)"
-  ],
-  "humans": [
-   "Selene0623"
-  ],
-  "date": "2026-10-05",
-  "links": [
-   "https://project-paradise2.de/",
-   "https://turboduck.net/forums/topic/28390-test-drive-unlimited-2-modding-wiki/",
-   "https://github.com/djey47/tdumt2",
-   "https://github.com/Project-Paradise-2/Gamelauncher"
-  ],
-  "tags": [
-   "tdu2",
-   "project-paradise",
-   "multiplayer",
-   "p2p",
-   "nat",
-   "upnp",
-   "port-forwarding",
-   "amd",
-   "nvidia",
-   "drivers",
-   "revival-server",
-   "savegame-migration"
-  ]
- },
- {
   "path": "games/test-drive-unlimited-2/reading-tdu2-vehicle-physics-havok-packfiles.md",
   "kind": "game",
   "title": "TDU2 vehicle physics: the Havok 5.5.0 packfile format inside .bnk containers",
@@ -8387,7 +8341,6 @@
   ],
   "date": "2026-10-05",
   "links": [
-   "https://project-paradise2.de/",
    "https://turboduck.net/forums/topic/28390-test-drive-unlimited-2-modding-wiki/",
    "https://github.com/djey47/tdumt2"
   ],
