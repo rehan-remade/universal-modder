@@ -3,16 +3,16 @@ kind: game
 title: 'Reading the whole vehicle fleet: archive names, RTPC values, mesh payloads and Havok collision'
 game: 'Just Cause 3'
 games_also: []
-game_version: '2016 release build, JustCause3.exe timestamp 0x5787641c; every mesh declares RBMDL 1.16.0, every physics file Havok 2014.1.0-r1'
+game_version: 'Steam build 20206564 (2025-12-17), JustCause3.exe timestamp 0x5787641c; every mesh declares RBMDL 1.16.0, every physics file Havok 2014.1.0-r1'
 platform: windows
 engine: native
 route: asset-only
 tools: ['Gibbed.JustCause3.SmallUnpack', 'Gibbed.JustCause3.ConvertProperty', 'Gibbed.JustCause3.ConvertAdf', 'custom Python readers: archive index (Jenkins lookup3), ADF v4, RBMDL blocks, Havok 2014 packfiles']
 anti_cheat: 'none (single-player, offline, read-only)'
 status: working
-agents: ['Freebuff (Buffy, model not recorded; wrote the note)']
+agents: ['Freebuff (DeepSeek V4.1 1017; ran the grab passes and wrote the first version)', 'Claude Code (Opus 5.5)']
 humans: ['@NotTrevino']
-date: '2026-10-22'
+date: '2026-10-30'
 links:
 - https://github.com/aaronkirkham/jc-model-renderer
 - https://github.com/aaronkirkham/ava-format-lib
@@ -23,19 +23,24 @@ tags: ['archives', 'rtpc', 'adf', 'rbm', 'havok', 'vehicles', 'reverse-engineeri
 # Reading the whole vehicle fleet: archive names, RTPC values, mesh payloads and Havok collision
 
 > A Just Cause 3 vehicle is not a folder of meshes: it is one `.ee` bundle inside an archive whose
-> filenames exist only as hashes. This note is the read-only grab that opened all of it — **81,862 of
-> 81,953 archive entries named, 6,045 vehicle modules decoded to 3.1 million named values, 56,136
-> meshes decoded from 77,611 blocks, and 35,499 Havok compound instances wired to 25,769 part
-> indices**. It was built to answer "what is a good donor for a 7 m Batmobile, and what does its
+> filenames exist only as hashes. This note is the read-only grab that opened all of it — **81,952 of
+> 81,953 archive entries named, 6,045 vehicle modules decoded to 3.1 million named values, all
+> 77,611 render blocks decoded, and 35,499 Havok compound instances wired to 25,769 part
+> indices**. A second pass then read every vehicle *system* the port needed from the same files:
+> weapons, turrets, doors, audio, damage, water, interaction, spawning and registration ("Vehicle
+> systems, read from the same files"). It was built to answer "what is a good donor for a 7 m Batmobile, and what does its
 > handling actually do", so every table is fleet-wide and every script has a `check` that re-reads the
 > game and fails on drift. Nothing here writes a file or launches the game.
 
 ## Setup
 
-- Windows, single-player, offline. The install is the 2016 release build (`JustCause3.exe` timestamp
-  `0x5787641c`); the vehicle content is the base game plus the DLC archives that ship with it. The DLC
-  archives are only read for the fleet tables: a donor or part taken from a DLC vehicle is only for
-  players who own that DLC.
+- Windows, single-player, offline. The game is owned on Steam; the install matches Steam build
+  20206564 (2025-12-17), and `JustCause3.exe` still carries its 2016 timestamp `0x5787641c`. The
+  vehicle content is the base game plus the DLC under `dlc_win64/`: Sky Fortress, Mech Land Assault
+  and Bavarium Sea Heist, plus the pre-order and bonus packs (`v0300_preorder`, `v0604_preorder`,
+  `v1401_preorder`, `v0805_sportmech`, `w142_preorder`, `w163_preorder`, `w901_scorpiongun`,
+  `skin_flame`). The DLC archives are only read for the fleet tables: a donor or part taken from a
+  DLC vehicle is only for players who own that DLC.
 - No loader, no anti-cheat, no online services. The work is **read-only**: archives and bundles are
   unpacked in memory or to a scratch folder, and nothing is written back.
 - [Gibbed's Just Cause 3 tools](https://github.com/tim42/gibbed-justcause3-tools-fork) for the
@@ -83,8 +88,19 @@ things the game never writes down together: the hash of the path, and the payloa
   `assets/jc3/dictionary.json` that ships with
   [jc-model-renderer](https://github.com/aaronkirkham/jc-model-renderer) (**26,051** rows). The second
   is what names the DLC.
-- Result: **81,862 of 81,953 entries named (99.9%)**. The remaining **91** are censused by magic byte
-  instead of guessed; a name that does not hash to the entry is worse than an unnamed entry.
+- First pass: **81,862 of 81,953 entries named (99.9%)**. The other **91** sat in four archives:
+  86 in `patch_win64/game0`, 2 in `patch_win64/game1`, 2 in `patch_win64/game4` and 1 in
+  `archives_win64/game67`. They were censused by magic byte first; a name that does not hash to the
+  entry is worse than an unnamed entry.
+- Second pass: **90 of the 91 named from the data**, each one hashing to its entry. 88 are navmesh
+  tiles whose names follow a grid (`ai/tiles/<x>_<y>.navmeshc`). One `.hmddsc` was named from the
+  archive's write order. One Polish `.wavc` was named from a token in its FSB5 name table, which is
+  the same in every language. **81,952 of 81,953**; the last one is a dialogue take
+  (`patch_win64/game4`, hash `016DE9D1`) that no filelist, dictionary, string or candidate search
+  names.
+- Two filelist traps: 63 "paths" that never resolved were Gibbed's `; <hit>/<total>` trailer lines
+  read as paths, and the DLC has no filelists at all (the base game alone resolves 47,555 of 47,557
+  from them).
 - A path can exist in several mounts. `MOUNT_RANK` (patch > dlc > base) decides which copy loads, and
   the index records it per row, so a later join cannot silently read the wrong build.
 - Vehicle space: **5,435 indexed paths** and **233 `.ee` bundles**.
@@ -141,7 +157,13 @@ part index, damage type, behavior, model, collision body, light flag, children a
 An `.rbm` is an RBMDL container: header, then blocks, each ending in a `0x89ABCDEF` checksum. Every
 vehicle mesh in the game is version **1.16.0**, so header reading is uniform.
 
-The fleet holds **56,136 meshes in 77,611 blocks**. Four block families matter:
+The header field that reads **9 on every vehicle file** is the tag (`m_Tag`, default 8, 9 on JC3
+vehicles), not the block count. `m_NumberOfBlocks` comes first and varies from 1 to 9. Reading them
+in the wrong order is what made "every vehicle mesh has 9 blocks" look like a rule. The Serpente
+body really does have 9 `CarPaintMM` blocks, which are deform and damage zones (flags `0x1000`,
+`0x1004`, `0x101F`), while the Mugello body has 3.
+
+The fleet holds **56,136 meshes in 77,611 blocks**. The first pass decoded four block families:
 
 | decoder | blocks | how it is read | oracle |
 |---|---:|---|---|
@@ -167,7 +189,12 @@ were not compared here. It picks the stride from the block's flags rather than a
 dequantises with a scale the block stores (`m_Packed.m_Scale`, `Attributes` +0x28) instead of fitting
 one to the AABB. The AABB and `pristine_index_count` above sit in bytes it leaves as padding.
 
-Totals: **77,237 decoded + 374 framed, 0 failed**, **20,797,479 vertices**, **19,197,927 triangles**,
+The 374 framed blocks were decoded in a later pass: they are `General`, `GeneralJC3`,
+`BavariumShield`, `WaterDisplacementOverride` (`0xF99C72A1`, which the exporter calls "WaterHull"),
+`Prop` and one family known only by its hash, `0x90FE086C`. Name block types from the published
+enum, not from a word list.
+
+First-pass totals: **77,237 decoded + 374 framed, 0 failed** (now 77,611 decoded, 0 framed), **20,797,479 vertices**, **19,197,927 triangles**,
 **806,529 material slots**. Decoded positions and indices are written per entity as float32 ×3 and
 u16/u32 pairs — outside the repository.
 
@@ -207,6 +234,59 @@ and 62,504,473 value rows with 0 failures**: 25,025 effects, 6,455 camera tunes,
 `EffectTrimData` and 20+ camera tune classes. The `check` re-reads every file and compares a **row
 digest and an object census**, so a decode that stopped early cannot pass.
 
+### Vehicle systems, read from the same files
+
+The second pass (2026-10-26 to 10-28) asked the port's questions of the decoded tables, one record
+per system. Each record is generated by a script whose `--check` re-reads the archives and diffs
+the page, and each check was tamper-tested once (change one number, expect a FAIL). The donor
+throughout is the Serpente, `v0300_car_kensington_sportsmuscle_civilian_01`.
+
+- **Weapons.** 25 vehicle weapon ids in three ADF classes (`WeaponTuning` 22 ids, `AutoAim` with 11
+  shared presets). Every root class (`CCar`, `CAirPlane`, `CBoat`, `CHelicopter`, `CTrain`) has
+  **four weapon slots** as object-id pointers, `00000000` when unused: `main_weapon` (`851CAABE`), a
+  second driver slot `00568A74` that no shipped name table names (a 1.1-million-string search found
+  nothing), `mounted_weapon`, and `mounted_weapon_2` (`AC0BC788`). Property names hash with the same
+  Jenkins lookup3 as archive paths. 53 armed entities are wired.
+- **Turrets.** A turret is two parts and two Havok hinges. On the medium tank, `mediumtank_turret`
+  (behaviour `Turret`) yaws about +Y within ±179°, and its child `mediumtank_cannon` (`Cannon`)
+  pitches about +X from −5° to +20°. The fire point names both parts in two unnamed string
+  properties.
+- **Doors.** A door is three pieces: a behaviour name (`FrontLeftDoor`, `Hood`, `MissileHatch` …), an
+  index in `door_parts[]`, and a `hkpLimitedHingeConstraintData` in the `.physicsc`. The part itself
+  holds no angle or speed. There are 224 door rows in 56 modules. Every hood hinges about X.
+- **Moving parts.** Only hinged and rotating parts name a driving variable (`steering_roll`,
+  `flaps_T`, `hatches_T`, `main_rotor_rpm`, `weapon_rpm` …). Every hinged row reads its variable as
+  a 0..1 position except `SteeringFork`, which reads it as an angle. `rotoscope_rpm_per_cycle` is
+  20 on 7 rows and 50 on the 5 rotor rows.
+- **EMP.** The EMP truck's pulse is an entity-level `CForcePulse` that does 100 damage over a full
+  25 m radius (the ordinary car blast does 500 in 5 m). It has no duration, target class or
+  "disable" member, so "disables vehicles" is not in the data.
+- **Damage.** Immunity is an entity field, not a module member: the vehicle root carries `health`
+  (float 100) and `invulnerable` (int32, 0 on all 233 roots), 4 bytes at `epe+1167`. It is an
+  all-or-nothing gate, so armour that should take 24 tank shells has to come from `max_health` and
+  the armour channel split instead.
+- **Water.** 189 entities sink (`will_sink` 1), 8 float and 35 boats carry `BoatBuoyancy`. No member
+  anywhere makes a vehicle drive underwater.
+- **Traffic and registration.** The donor is ordinary traffic, so replacing it puts NPC-driven
+  copies on the roads. A new standalone `.ee` loads with **no** global registry edit on every route
+  that names the entity by path (9 spawn tables). Only the Rebel Drop item keys on a 32-bit leaf
+  hash. `BaseName` is `hash_jenkins(<vehicle family prefix>)` on 45 of 45 vanilla items.
+- **Interaction.** 85 prefixed objects in the donor graph (`entry` 29, `exit` 26, `transition` 12 …);
+  only 15 carry their own transform. Exits pick a state by the parent's speed: below 5 the normal or
+  fall exit, above 5 a roll-out or the parachute exit. 4,832 exit objects across the fleet have no
+  velocity or launch member, so no vehicle can eject its driver upwards.
+- **Seat.** The vehicle places the driver only through its interaction graph. The pose is chosen on
+  the character side (`rico_base.afsmb`, its IK targets and 36 `MOD_*` selectors), not by any
+  vehicle module.
+- **Audio.** `.ee.fmod_guids` lists the vehicle's 45 FMOD events across three banks. In a bank, every
+  `TLNB` body is `[16-byte tune GUID][16-byte owning event GUID]`, so event → tune is stored on both
+  sides (257/257). Tune → wave is not stored (0 of 649).
+- **Strings and icons.** The display name is `profile/online.stringlookup`, keyed by
+  `hash_jenkins(leaf)`, in 11 languages.
+- **Writing `.physicsc`.** The packfile reader gained a writer. A round trip is byte-identical (2/2
+  files, 54 hulls re-emitted), and remapping, uniform scaling and hull replacement pass their checks.
+  A brand-new hull is still blocked: the face table has a prefix nobody has named yet.
+
 ## Build steps
 
 1. **Index the archives.** For each `.tab`/`.arc` pair, read the flat hash → offset/size table, look
@@ -238,10 +318,11 @@ digest and an object census**, so a decode that stopped early cannot pass.
 
 | what | oracle |
 |---|---|
-| archive names | both dictionaries hash to their entries; 99.9% named, 91 censused by magic |
+| archive names | both dictionaries hash to their entries; 81,952 of 81,953 named, every derived name hashes to its entry |
 | modules | 6,045 of 6,045 decoded; row count and member paths regenerated by `check` |
 | meshes | 52,902 + 23,395 blocks re-encode byte-exactly; 940 quantised blocks agree with their own AABB to 0.29% |
-| framed blocks | 374 blocks: the texture table is self-locating and the index buffer ends at the checksum |
+| formerly framed blocks | all 374 now decoded; at framing time, the texture table was self-locating and the index buffer ended at the checksum |
+| `.physicsc` writer | round trip byte-identical on 2/2 files (54 hulls); the read-side gate is unchanged |
 | wheel stations | 17 of 17 `.physicsc` copies equal `land_global` to the last digit |
 | collision shapes | every hull block sums to its extent; every plane supports its vertex set |
 | part wiring | 40 of 40 shared part indices agree between the `.epe` and `DeformPoints` |
@@ -258,7 +339,9 @@ What is **not** verified, and must not be claimed:
 - **Body → shape wiring.** The 80-byte body and 64-byte motion entries are counted and sized, but
   their fields are not pinned. Part wiring comes from the compound instances, which is what the port
   needed.
-- **Writing.** Nothing here writes a `.physicsc` or a `.rbm`. This is a read-side grab.
+- **Writing new collision.** The `.physicsc` writer can round-trip, remap, scale and replace
+  existing hulls. It cannot add a new hull, and no written file has been tried in game yet.
+- **Behaviour.** The systems section reads what the files carry. None of it has been driven in game.
 
 ## Gotchas
 
@@ -266,10 +349,11 @@ What is **not** verified, and must not be claimed:
    path instead of the path *inside* the bundle, with its extension and its `models/` or `editor/`
    prefix. **Fix:** hash the inner path; verify against a file you can also read by name. (The same
    rule as the mesh-editing note's Gotcha 13.)
-2. **99% of entries resolve and the last 91 never will.** **Cause:** that is not a hash bug. Some
-   entries carry no name in either source (developer leftovers, debug payloads); their bytes start
-   with a recognisable magic instead. **Fix:** census the unnamed entries by magic, record them as
-   unnamed, and stop trying candidate strings. A wrong name is worse than an honest `unnamed`.
+2. **99% of entries resolve and the last 91 look hopeless.** **Cause:** that is not a hash bug. They
+   are in neither name source. **Fix:** census them by magic, then derive names from the data
+   itself, never from guessed strings: grid patterns (88 navmesh tiles), archive write order, and
+   tokens in the payload's own name table. Accept a name only when it hashes to the entry, and
+   record what is left (1 here) as `unnamed`.
 3. **A module join produces duplicated, conflicting rows.** **Cause:** module instance names truncate
    at 32 characters, so two instances can collide in the string. **Fix:** group by `type-name` and
    keep the full identity as the key, not the truncated label.
@@ -336,8 +420,11 @@ re-runs the whole grab against the install in minutes.
 - **Face-table semantics.** One validated field out of four is not a decoded record.
 - **Body and motion entries.** Pinning their fields is the step from "which part owns this shape" to
   "how the vehicle assembles".
-- **A writer.** Everything here is read-only by design; writing a `.physicsc` remains an open problem
-  in the destination-side note.
+- **A new hull.** The writer handles existing hulls. Adding one needs the face table's unnamed prefix.
+- **The last unnamed entry.** One dialogue `.wavc` (`016DE9D1`).
+- **`invulnerable` and the damage model in game.** Whether damage is applied as flat hit points or
+  as a percentage changes the `max_health` a given armour ratio needs by exactly 2×. One in-game
+  probe decides it.
 
 ## Related and credits
 
@@ -350,5 +437,7 @@ re-runs the whole grab against the install in minutes.
 - [jc-model-renderer](https://github.com/aaronkirkham/jc-model-renderer) (aaronkirkham) — its shipped
   `dictionary.json` is the second name source, and its block headers are a reference for the RBMDL
   layouts.
-- The grab pass itself was run in this project's agent sessions on 2026-10-22 and recorded in the
-  project journal; this note condenses those records.
+- The grab passes were run in this project's agent sessions from 2026-10-22 to 2026-10-29 and
+  recorded in the project journal; this note condenses those records. How the Batmobile's values
+  were mapped onto these carriers is in the Just Cause 3 note on
+  [translating the Batmobile](translating-the-batmobile-row-ledger.md).

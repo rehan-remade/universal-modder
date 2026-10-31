@@ -15,9 +15,9 @@ agents:
 - 'OpenCode (muse-spark-1.3)'
 - 'Claude Code (Opus 5.5)'
 - 'OpenCode (deepseek-v4.1-flash-free)'
-- 'Freebuff (Buffy, model not recorded; wrote the note)'
+- 'Freebuff (DeepSeek V4.1 1017; wrote the first version of the note)'
 humans: ['@NotTrevino']
-date: '2026-10-22'
+date: '2026-10-30'
 links:
 - https://github.com/gildor2/UEViewer
 - https://github.com/vgmstream/vgmstream
@@ -33,10 +33,11 @@ tags: ['umodel', 'pskx', 'ue3', 'cooked-packages', 'wwise', 'bank-extraction', '
 > containers and the embedded Wwise banks need your own parsers, but the event→media graph resolves
 > completely. The handling numbers were the wall: the cooked property tags carry values but no
 > names, and three attempts to read the native class layout from the shipped files each failed for a
-> different reason. A generated scripting SDK broke it — **414 of the Batmobile's 422 named fields
-> now resolve by class plus absolute offset**, and the eight that don't are one nested screen-shake
-> bool block. Everything here was done for a Just Cause 3 vehicle port, but the extraction lessons
-> are game-side, not destination-side.
+> different reason. A generated scripting SDK broke it: **all 423 of the Batmobile's cooked offset
+> fields now resolve by class plus absolute offset**. The rest of the grab (projectiles, 253
+> animation sequences, bone ownership, sockets, variants, damage rules, the camera and the HUD) is
+> under "Beyond the mesh". Everything here was done for a Just Cause 3 vehicle port, but the
+> extraction lessons are game-side, not destination-side.
 
 ## Setup
 
@@ -209,9 +210,11 @@ AkEvent (by name) → FNV-1(lowercase(name)) → HIRC event object → action (+
 ```
 
 The hash was calibrated on a serial whose name is in the export table:
-`Play_BattlemodeEngine = 0x388710DB`, which is FNV-1 of `play_battlemodeengine`. The second pair the
-project recorded, `Transition_In = 0x102067E6`, does not check out (FNV-1 of `transition_in` is
-`0xE9A427F2`), so either the id was miscopied or the event's full name differs. In a bank, an event
+`Play_BattlemodeEngine = 0x388710DB`, which is FNV-1 of `play_battlemodeengine`. The second pair,
+`0x102067E6`, was recorded under the short label `Transition_In`; the event's full name is
+`Play_Batmobile_Engine_Transition_In`, and FNV-1 of `play_batmobile_engine_transition_in` is exactly
+`0x102067E6` (the MK2 twin, `Play_Batmobile_MK2_Engine_Transition_In`, is `0xD7A391F3`). Hash the
+full event name, never a shortened label. In a bank, an event
 record is `id` + `u32 count` + the ids at `+8`. For `BML_Engine` this resolved **17/17 events to
 media**, and the extracted loops were auditioned by ear before being used.
 
@@ -274,12 +277,69 @@ really `AirControlYawTorqueFactorMax`; `AirControlTimeInAir` is at `0x4BC` and t
 `VehicleWeapons[0]` (referent `Weapons.Batmobile_Cannon_V2`); `0x2AC` is `DriftingBoostCooldown`;
 and `VehicleTransmission` is 112 bytes, not 92.
 
-**Residue.** 8 of the 422 fields stay unnamed: the nested screen-shake bools, where the flattened
-offset is ambiguous between `BMScreenShakeStruct` and its `AdvancedOptions` child. They are recorded
-by offset and not guessed. Separately, seven classes (`RBatmobileCannon`, `RBatmobileHeavyCannon`,
+**Residue, closed.** The first pass left 8 fields unnamed: bool and float residue in nested
+structs, where the flattened offset is ambiguous between `BMScreenShakeStruct` and its
+`AdvancedOptions` child. They were closed by resolving against the **innermost** struct's own
+declaration and then reading the packed bool word bit by bit, so the count is now **423 of 423**.
+Separately, seven classes (`RBatmobileCannon`, `RBatmobileHeavyCannon`,
 `RBatmobileSonar`, `RBatmobileWinch`, `RVehicle`, `RVehicleBatmobileBase`, `RInventoryGadget`)
 cannot be regenerated from the *shipped* declaration — that copy is a different build. That does not
 affect the names, which come from absolute offsets in the dump.
+
+### Beyond the mesh: the rest of the grab
+
+With names in hand, the rest of the vehicle came out of the same four packages
+(`Playable_Batmobile_SF`, `_MK2_SF`, `_Joker_SF`, `_Funhouse_SF`). Each record below has a script
+with a `--check` that re-derives it and diffs the generated page byte for byte.
+
+- **Weapons and projectiles.** 62 objects over 13 classes, 1,185 fields (1,002 named) and 594
+  references. 10 projectiles over 26 instances, 9 with a launcher target. File values include
+  `ComboFiringInterval` 0.138 s, `LockOnTimeMax` 6.0 s, `ChargeUpTime` 2.5 s, `MaxTargets` 8/16 and
+  projectile `Damage` 75.
+- **Animation.** 253 `AnimSequence`s in 13 `AnimSet`s and 3 `AnimTree`s, with 3,147,888 keys and
+  309 notifies (204 sound, 35 script). Every export is named `AnimSequence`, so the real name is
+  the `SequenceName` at offset 84. Each sequence is classified by the bones it actually moves
+  (≥ 0.5 cm or 0.5°), never by its name.
+- **LODs.** The first export was LOD0 only, because `ExportMeshLods=false` in `umodel.cfg` silently
+  overrides `-lods` (gotcha 22). The 3 LODs have 299,837 / 144,857 / 21,720 faces.
+- **Bone ownership.** 180 bones, one root (`Batmobile_Chassis`). Every point has a unique owner
+  with weight ≥ 0.5 (0 ties). 1,701 LOD0 faces straddle bones; summed weight decides 1,670 of them,
+  and the 31 three-way 1.0/1.0/1.0 ties go to the part with the larger vertex share, never to bone
+  order.
+- **Poses.** The gameplay transformation is `Batmobile_V2_Tank_Spread_Open_Game`, frames 0 → 60
+  (1.967 s), and it closes against `_Close_Game` to 0.054 cm. The box grows from 3.495 × 2.341 ×
+  7.026 m to 4.691 × 2.865 × 7.443 m and the turret rises 0.633 m. The spread only toes the wheels
+  17–19°. The real 90° strafe stance is a different sequence (`Batmobile_V2_Tank_Strafe`). The
+  non-`_Game` pair is the cinematic version and has a different end box.
+- **Sockets.** 65 of 65 placed. 61 sit inside the body box; the four `HangFromRope_*` sockets are
+  2.4 m above it by design. Six `HeadLight*` sockets ride the winch door.
+- **Variants.** Four archetypes: V2 (180 bones, 19 materials), MK2 (−0.76% faces, 175 bones) and
+  Joker (+1.98%, 220 bones, 20 materials). Funhouse ships the Joker mesh export byte for byte.
+- **Damage rules.** UEViewer stops parsing `UStruct` at `Children` for this game
+  (`UnTypeinfo.h`: "remaining data will be dropped anyway"), so no function body had been read out
+  of the package before. The `Function` export layout was recovered and is checked against six
+  anchors on every run:
+  `u16 0 | Next | SuperField | Children | Line | ScriptSize | Script | flags | name`, with
+  `ScriptSize == len(script) + 1`. A cooked **native** function keeps `0x29 <own property>`
+  descriptors where the bytecode would be, which tells native from script by the body itself.
+  Native: `ShouldRadialDamageHit`, `CanBatmobileDoImpactDamage`, `SetDamageLevel`,
+  `SetArmouredMode`, `GetDamageMod`. Script: `TakeDamage` (2,028 B),
+  `CalculateAndStoreImpactDamage`, `TakeRadiusDamageFromWeapon` and others.
+- **Modes.** 107 declared mode-family fields (`BattleMode*`, `Strafe*`, `Transformation*`,
+  `AirControl*` …), of which only 46 are serialised; 61 carry no value in any package. The lookup
+  must be scoped by class: offset `0x320` is `BattleModeTrailingSteerFactorMoving` on
+  `RVehicleSimBatmobile` and `BattleModeSteerBias` on `SVehicleWheel`. `BattleModeVSpeedCurve` is
+  three points (0 → 60, 600 → 40, 1200 → 30), and `TurningModeMaxSpeed` is 600 cm/s (21.6 km/h).
+- **Camera.** The 400 cm in the active `DrivingCamConfig1/2` is a spring boom along the camera's
+  forward axis, with a pitch-lerped sit offset **added** on top. At rest the camera sits 7.00 m
+  behind and 1.30 m above the car. The plain `DrivingCamConfig` is a zeroed template (gotcha 23).
+  FOV 85/95 is **horizontal**, so for an engine with vertical FOV it becomes about 54.5/63.1.
+- **HUD.** 25 modules, not two movies: 15 `RHudModule*` classes bound to 19 carved movies, with
+  252 `UC_*` setters. The speedometer is not a HUD movie at all. It is
+  `RPlayerController.bDebugSpeedometer` (off in both configs), drawn natively by `DrawHUD`.
+- **Native remainder.** 925 untagged exports: 785 are 2- or 6-byte stubs. Of the 140 larger ones,
+  128 sit in the Joker package (it ships the script classes and FaceFX), and 44 could carry a value.
+  None yielded one; the bytecode and the unmodelled tails are recorded as `UNKNOWN`.
 
 ## Build steps
 
@@ -316,7 +376,7 @@ What was measured, and how:
 - **Audio** — byte-exact WWAD extraction on an 8 MB entry; bank carving verified on 10 packages;
   `BML_Engine` resolves all **17/17** events to media; the user identified the engine loops by ear.
 - **Textures** — 56 textures exported and cross-checked against material bindings, not just counted.
-- **Native field names** — 414 of 422 cooked fields resolve; the class-size arithmetic lands on
+- **Native field names** — 423 of 423 cooked offset fields resolve; the class-size arithmetic lands on
   exactly 1,220 B for `RVehicleSimBatmobile` with all 165 declared rows on their dump offset, and
   37/37 on `RVehicleSimCar`. Native write offsets agree (`0x3B0` `DriveMode`, `0x3B1`
   `SkidToStopDir`) and all 195 object referents match their declared classes.
@@ -325,7 +385,9 @@ What is **not** verified, and must not be claimed:
 
 - That any named handling, mass, damage or armour **value** behaves as its name in the destination
   game — the names are measured, the in-game behaviour is the port's still-open job.
-- The eight undecidable screen-shake bools (see below); they are recorded by offset only.
+- Any value the files do not carry. G1-23 listed 71 such rows (5 weapon/damage, 61 mode fields
+  with no serialised value, 5 units the name does not document); there was no Arkham Knight footage
+  to measure them from, so each one is recorded as `UNKNOWN` with its reason, not estimated.
 - That the `BML_Battlemode` bank exists in a form reachable from shipped files at all.
 - That other Arkham Knight vehicles export as cleanly. Only the Batmobile package was worked.
 
@@ -430,6 +492,30 @@ What is **not** verified, and must not be claimed:
     dump.** **Cause:** the copy of those classes in `BmGame.upk` is a different, smaller build than the
     one the engine linked. **Fix:** this affects re-derivation offline, not naming: the names come from
     absolute offsets in the running build's dump. Record the mismatch and move on.
+22. **`-lods` exports only LOD0.** **Cause:** `ExportMeshLods=false` in `umodel.cfg` overrides the
+    command-line flag without a warning. **Fix:** run umodel from a temporary folder with its own
+    config that sets `ExportMeshLods=true`, and leave the user's config alone.
+23. **The camera distance reads 0, so you conclude it is native.** **Cause:** you read
+    `DrivingCamConfig`, a zeroed template. The active configs are `DrivingCamConfig1`/`2`, at
+    400 cm. **Fix:** find which config the archetype points at before you read one. A present value
+    that you misread still counts as missing.
+24. **Ported FOV looks far too wide.** **Cause:** Arkham Knight's 85/95 is horizontal, and many
+    engines (Just Cause 3 among them) use vertical FOV. **Fix:** convert at the target aspect ratio
+    (`vfov = 2·atan(tan(hfov/2)/aspect)`); at 16:9, 85 → 54.5 and 95 → 63.1.
+25. **No function body can be read from the package.** **Cause:** UEViewer drops everything after
+    `Children` for this game. **Fix:** parse the `Function` export yourself (layout under "Beyond the
+    mesh") and prove it with anchors that hold on every export: the size identity, the one-byte
+    `EX_Return` bodies and the trailing name.
+26. **A green `--check` hides wrong numbers in the write-up.** **Cause:** the check compared only
+    the JSON, and the Markdown page beside it was written by hand, so five wrong numbers passed.
+    **Fix:** generate every page from its record, diff the page byte for byte in `--check`, and
+    tamper-test the check once (change a number, expect a FAIL).
+27. **A local LLM judge says it found 22 default values.** **Cause:** asked to judge raw search hits
+    (executable store sites and text matches), it accepted stack-frame stores, register-sourced
+    values and offsets mistaken for literals. An audit that opened every source confirmed **0 of
+    22**. **Fix:** reject what can be decided mechanically in the search itself, show the model
+    only hits with a visible literal, and calibrate on known positives and negatives before trusting
+    a single verdict.
 
 ## Assets
 
@@ -442,8 +528,12 @@ private (Setup, "What ships").
 - **Textures:** 56 TGA files (DDS export was disabled).
 - **Audio:** 498 WEMs in the `SFX` WADs; `BML_Engine` (7.3 MB) with 17 events mapped to media;
   `BML_Burnout`, `BML_AUX` and `MK2_Engine` carved with the same tools.
-- **Native layout:** 34 classes, 2,351 properties, 42 structs from the generated dump; 422 cooked
-  fields resolved, 414 named, 8 undecidable by offset.
+- **Native layout:** 34 classes, 2,351 properties, 42 structs from the generated dump; 423 of 423
+  cooked offset fields named.
+- **Grab records:** 62 weapon objects over 13 classes with 10 projectiles; 253 animation sequences
+  in 13 `AnimSet`s and 3 `AnimTree`s (3,147,888 keys, 92 MB of key frames kept outside the repo);
+  180 bones with every face of all 3 LODs owned or split; 65 sockets; 4 variant packages; 777
+  feature rows in the coverage census.
 
 ## The negative result, and how it fell
 
@@ -462,8 +552,9 @@ closed from it. The missing input was a class declaration from the build that wa
 
 That is what a generated SDK is. BmSDK-AK's build reflects over the running game's `UClass` chain and
 writes every property with the offset the engine itself linked it to, so "the field at object+0x4A8"
-becomes a name without any struct walking. With it, **414 of the 422 Batmobile fields resolve**; the
-eight exceptions are the flattened screen-shake bools, recorded by offset and not guessed. The slot
+becomes a name without any struct walking. With it, **414 of the Batmobile fields resolved at
+once**, and the last eight (flattened screen-shake bools and floats) fell to the innermost struct's
+declaration plus the packed bool word: **423 of 423**. The slot
 rules could then be checked instead of fitted (native-class section above), which is how the
 `AirControl*`, weapon-array and `0x318` errors were caught.
 
@@ -479,8 +570,11 @@ sanity band, not the game's internal number.
   none of the 3,266 packages swept, and its `Turbo`/`BattlemodeEngine` event bytes appear nowhere on
   disk outside the referencing serials. The remaining test is runtime file-access observation, not
   more static scraping.
-- **The eight screen-shake bools.** Their flattened offset is ambiguous between `BMScreenShakeStruct`
-  and its `AdvancedOptions` child. One disassembly of the accessor, or one in-game bit test, settles it.
+- **The 71 `UNKNOWN` value rows.** Mode fields that are declared but never serialised (61 of the
+  107 mode-family fields), five weapon/damage natives and five undocumented units. They need either
+  a disassembly of the native code that sets them or real footage measured at a known frame rate.
+  A search of the executable's store sites and the game's text found none of them (gotcha 27).
+- **What the 20 script `Function` bodies do.** Their bytecode is located and sized, not decoded.
 - **Do the named values hold in game?** The names are measured; whether `AirControlYawTorqueFactorMax`
   drives yaw the way the port assumes is a driving test on the destination side.
 - **Do other vehicles export as cleanly?** Only the Batmobile package was worked. The dump route is

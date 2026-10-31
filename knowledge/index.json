@@ -929,12 +929,12 @@
    "OpenCode (muse-spark-1.3)",
    "Claude Code (Opus 5.5)",
    "OpenCode (deepseek-v4.1-flash-free)",
-   "Freebuff (Buffy, model not recorded; wrote the note)"
+   "Freebuff (DeepSeek V4.1 1017; wrote the first version of the note)"
   ],
   "humans": [
    "@NotTrevino"
   ],
-  "date": "2026-10-22",
+  "date": "2026-10-30",
   "links": [
    "https://github.com/gildor2/UEViewer",
    "https://github.com/vgmstream/vgmstream",
@@ -4242,7 +4242,7 @@
   "title": "Reading the whole vehicle fleet: archive names, RTPC values, mesh payloads and Havok collision",
   "game": "Just Cause 3",
   "games_also": [],
-  "game_version": "2016 release build, JustCause3.exe timestamp 0x5787641c; every mesh declares RBMDL 1.16.0, every physics file Havok 2014.1.0-r1",
+  "game_version": "Steam build 20206564 (2025-12-17), JustCause3.exe timestamp 0x5787641c; every mesh declares RBMDL 1.16.0, every physics file Havok 2014.1.0-r1",
   "platform": "windows",
   "engine": "native",
   "route": "asset-only",
@@ -4255,12 +4255,13 @@
   "anti_cheat": "none (single-player, offline, read-only)",
   "status": "working",
   "agents": [
-   "Freebuff (Buffy, model not recorded; wrote the note)"
+   "Freebuff (DeepSeek V4.1 1017; ran the grab passes and wrote the first version)",
+   "Claude Code (Opus 5.5)"
   ],
   "humans": [
    "@NotTrevino"
   ],
-  "date": "2026-10-22",
+  "date": "2026-10-30",
   "links": [
    "https://github.com/aaronkirkham/jc-model-renderer",
    "https://github.com/aaronkirkham/ava-format-lib",
@@ -4280,12 +4281,56 @@
   ]
  },
  {
+  "path": "games/just-cause-3/translating-the-batmobile-row-ledger.md",
+  "kind": "game",
+  "title": "Translating the Batmobile into a Just Cause 3 vehicle: a row ledger from two file grabs",
+  "game": "Just Cause 3",
+  "games_also": [
+   "Batman: Arkham Knight"
+  ],
+  "game_version": "JC3: Steam build 20206564 (2025-12-17), JustCause3.exe timestamp 0x5787641c. BmAK: GOG Premium Edition 1.999, buildId 57731640734362250",
+  "platform": "windows",
+  "engine": "native",
+  "route": "asset-only",
+  "tools": [
+   "custom Python generators with --write/--check (one per translation card)",
+   "Gibbed.JustCause3 tools",
+   "Blender 5.2 (headless)",
+   "Capstone (executable store-site search)"
+  ],
+  "anti_cheat": "none (single-player, offline)",
+  "status": "in-progress",
+  "agents": [
+   "Freebuff (DeepSeek V4.1 1017)",
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "@NotTrevino"
+  ],
+  "date": "2026-10-30",
+  "links": [],
+  "tags": [
+   "porting",
+   "cross-game",
+   "vehicles",
+   "translation-ledger",
+   "batmobile",
+   "damage-model",
+   "weapons",
+   "audio",
+   "lights",
+   "collision",
+   "verification",
+   "agent-workflow"
+  ]
+ },
+ {
   "path": "games/just-cause-3/vehicle-mesh-editing-added-geometry-loads-with-matching-toc.md",
   "kind": "game",
   "title": "Vehicle mesh editing: added geometry loads with a matching .ee.toc",
   "game": "Just Cause 3",
   "games_also": [],
-  "game_version": "Steam release build, JustCause3.exe timestamp 0x5787641c (2016); model files declare RBMDL v1.16.0",
+  "game_version": "Steam build 20206564 (2025-12-17), JustCause3.exe timestamp 0x5787641c (2016); model files declare RBMDL v1.16.0",
   "platform": "windows",
   "engine": "native",
   "route": "asset-only",

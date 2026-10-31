@@ -3,7 +3,7 @@ kind: game
 title: 'Vehicle mesh editing: added geometry loads with a matching .ee.toc'
 game: Just Cause 3
 games_also: []
-game_version: 'Steam release build, JustCause3.exe timestamp 0x5787641c (2016); model files declare RBMDL v1.16.0'
+game_version: 'Steam build 20206564 (2025-12-17), JustCause3.exe timestamp 0x5787641c (2016); model files declare RBMDL v1.16.0'
 platform: windows
 engine: native
 route: asset-only
@@ -59,7 +59,9 @@ tags: ['vehicles', 'mesh', 'rbm', 'avalanche-engine', 'havok', 'gibbed', 'revers
 ## Setup
 
 - Windows, hybrid graphics (Intel HD + GTX 1070) — which turned out to matter, see Gotcha 7.
-- Stock Steam install, no DLC manager, no loader, no anticheat.
+- Owned on Steam; the install matches Steam build 20206564 (2025-12-17), with the DLC under
+  `dlc_win64/` (list in the [fleet note](reading-the-vehicle-fleet-archives-rtpc-havok.md)). No
+  DLC manager, no loader, no anticheat.
 - Single player only; JC3MP is not covered by this note. Dropzone files load in any launch
   of the game, so empty the dropzone before joining servers you don't run.
 - Gibbed.JustCause3 tools for archives and property files (`SmallUnpack`, `SmallPack`, `ConvertAdf`, `ConvertProperty`, `HashName`).
@@ -586,7 +588,11 @@ dissolved under one re-measurement.
 
 ## Open questions
 
-- **Authoring Havok collision.** I know of no public tool that writes `.physicsc`.
+- **Authoring Havok collision.** Partly answered since: the project's own packfile reader now
+  writes `.physicsc`. It round-trips byte for byte and can remap, uniformly scale and replace the
+  donor's 54 existing hulls, but it cannot add a new one, and no written file has been loaded in
+  game yet ([fleet note](reading-the-vehicle-fleet-archives-rtpc-havok.md)). Before that, I knew
+  of no public tool that writes `.physicsc`.
   ApexMax is a weak lead at best: its README calls it an "Apex Engine importer for 3ds
   Max" (archived 2019). HavokMax is archived too, and HavokLib's supported classes are
   skeletons and animations, not hknp shapes, so neither looks able to produce one.
@@ -596,7 +602,11 @@ dissolved under one re-measurement.
   (0.235, 65536, 65536, 0), and the Window block's 41 + 16 static bytes (so glass opacity /
   reflectivity / roughness can't be set from the source yet).
 - **No CarPaintMM equivalents** for tiling micro-detail normals (could be baked into the
-  main normal map), anisotropic ramps and colour ramps; emissive needs CarLight blocks.
+  main normal map), anisotropic ramps and colour ramps; emissive needs CarLight blocks. Since
+  then, the 4,576 emissive faces have been cut into 8 lamp parts and written as 24 `CarLight`
+  RBMs (3 LODs each), and the body has been split into 11 moving parts along bone ownership. Both
+  are built and checked offline only, not yet loaded
+  ([translation note](translating-the-batmobile-row-ledger.md)).
 - **Channel semantics** of PropertyMap/TintMap are inferred from vanilla data; one in-game
   test with a known two-channel mask would confirm them.
 - **High-mip import at vanilla paths.** The tim42 fork's `write-to-hmddsc="True"` import
