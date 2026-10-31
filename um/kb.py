@@ -21,8 +21,11 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import time
+import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from um.common import data_dir, die, need, text_utf8
@@ -61,26 +64,56 @@ def cache_root() -> Path:
     return data_dir() / "kb" / REPO.replace("/", "__") / "knowledge"
 
 
-def sync(quiet: bool = False) -> Path:
-    """Mirror knowledge/ from GitHub into the cache (git tree API + raw files; no auth needed)."""
+def _download(url: str, timeout: float) -> bytes:
+    request = urllib.request.Request(url, headers={"User-Agent": "universal-modder", "Accept": "application/vnd.github+json"})
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return response.read()
+
+
+def sync(quiet: bool = False, *, timeout: float = 20, workers: int = 8) -> Path:
+    """Mirror knowledge/ from GitHub into the cache (git tree API + raw files; no auth needed).
+
+    Downloads are bounded and concurrent. Progress goes to stderr so a caller parsing JSON from stdout is unaffected.
+    The previous cache is replaced only after every selected file has downloaded.
+    """
+    if timeout <= 0 or workers < 1:
+        raise ValueError("timeout and workers must be positive")
     api = f"https://api.github.com/repos/{REPO}/git/trees/{BRANCH}?recursive=1"
-    req = urllib.request.Request(api, headers={"User-Agent": "universal-modder", "Accept": "application/vnd.github+json"})
-    tree = json.load(urllib.request.urlopen(req, timeout=60))
+    tree = json.loads(_download(api, timeout))
     paths = [t["path"] for t in tree.get("tree", []) if t["type"] == "blob" and t["path"].startswith("knowledge/")
              and t["path"].endswith((".md", ".json"))]
     root = cache_root()
     tmp = root.with_name("knowledge.tmp")
     shutil.rmtree(tmp, ignore_errors=True)
-    for p in paths:
-        dst = tmp / p[len("knowledge/"):]
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        url = f"https://raw.githubusercontent.com/{REPO}/{BRANCH}/{p}"
-        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "universal-modder"}), timeout=60) as r:
-            dst.write_bytes(r.read())
+    tmp.mkdir(parents=True)
+    completed = 0
+
+    def report():
+        if not quiet:
+            print(f"\rknowledge sync: {completed}/{len(paths)}", end="", file=sys.stderr, flush=True)
+
+    report()
+    try:
+        with ThreadPoolExecutor(max_workers=min(workers, len(paths) or 1)) as pool:
+            futures = {pool.submit(_download, f"https://raw.githubusercontent.com/{REPO}/{BRANCH}/{path}", timeout): path
+                       for path in paths}
+            for future in as_completed(futures):
+                path = futures[future]
+                destination = tmp / path[len("knowledge/"):]
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes(future.result())
+                completed += 1
+                report()
+    except BaseException:
+        shutil.rmtree(tmp, ignore_errors=True)
+        if not quiet:
+            print(file=sys.stderr)
+        raise
     shutil.rmtree(root, ignore_errors=True)
     tmp.rename(root)
     (root / ".synced").write_text(str(time.time()), **TEXT)
     if not quiet:
+        print(f"\rknowledge sync: {len(paths)}/{len(paths)}", file=sys.stderr)
         print(f"synced {len(paths)} files from github.com/{REPO} -> {root}")
     return root
 
@@ -99,8 +132,10 @@ def resolve_root(explicit: str | None = None, remote: bool = False) -> Path:
     if stale:
         try:
             return sync(quiet=True)
-        except OSError as e:
-            if not root.exists():
+        except (OSError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, ValueError) as e:
+            if root.exists():
+                print(f"knowledge sync failed ({e}); searching stale cache {root}", file=sys.stderr)
+            else:
                 die(f"no local knowledge/ and GitHub sync failed ({e}); clone https://github.com/{REPO}")
     return root
 
