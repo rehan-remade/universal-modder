@@ -69,13 +69,16 @@ tags: [ue4ss, lua, datatable, reward-multiplier, exp, gold, grinding, runtime-um
    (Ctrl+R reloads all Lua mods in game).
 2. Create `ue4ss/Mods/RewardMultiplier/` with an empty `enabled.txt`, add `RewardMultiplier : 1` to `mods.txt`,
    and put three files in `Scripts/`:
-   - **`config.lua`** returns a table: `Enabled` (start state, `false` = opt-in), `Exp`, `Gil`, `MRP`,
-     `Presets`, key names (`ToggleKey`, `CycleKey`, `ReloadKey`, `OverlayKey`) and the overlay options.
+   - **`config.lua`** returns a table: `Enabled` (start state; `false`, so the mod is opt-in each session),
+     `Exp`, `Gil`, `MRP`, `Presets`, key names (`ToggleKey`, `CycleKey`, `ReloadKey`, `OverlayKey`), the
+     overlay options and `ShowHotkeys` (a small grey row of key hints under the label).
      Load it with `package.loaded["config"] = nil; require("config")`, so a hotkey can re-read it.
    - **`main.lua`**, the table part:
      - Every 5 s (`LoopAsync` → `ExecuteInGameThread`), look in `FindAllOf("DataTable")` for the object whose
        `GetFName()` is `DT_GameDifficultyParam`. Re-find it if `IsValid()` fails or `GetAddress()` changes.
      - The first time you find it, save each row's `ExpRate` / `MoneyRate` / `MRPointRate` from `ForEachRow`.
+       Store them in UE4SS shared variables (`ModRef:SetSharedVariable`) keyed by the table address, and on
+       start reuse them if the address matches (Gotcha 7). Set `ModRef.OnUnload` to write them back.
      - **Apply:** `ForEachRow(function(name, row) row.ExpRate = original * mult ... end)`. Rows are references, so
        the write lands in the live table. When the mod is off, write the originals back.
    - **`overlay.lua`**, the status label, built from stock UMG classes, in this order:
@@ -122,6 +125,14 @@ tags: [ue4ss, lua, datatable, reward-multiplier, exp, gold, grinding, runtime-um
    rebuilds the label if needed.
 6. **An opt-in start needs care with config reload.** If `Enabled` in the config is the start state, a plain
    config reload turns the mod off mid-grind. Keep the runtime on/off state across reloads.
+7. **After a few Ctrl+R hot reloads, the 5x preset paid out far more than 5x.** **Cause:** a hot reload throws
+   away the Lua state, but the live DataTable keeps its multiplied values. The new instance read those as its
+   "originals", so each reload stacked another multiplier (the log showed a 2.0 baseline after one reload, so
+   5x became 10x, and it kept growing). Cycling presets in one session was fine. **Fix:** read the shipped
+   values once per game process and keep them in `ModRef:SetSharedVariable` (documented as not reset by hot
+   reload; a game restart clears it), keyed by the table's `GetAddress()`. Also restore them in
+   `ModRef.OnUnload`. Verified: fresh start, 5x, reload, 5x, reload; the baseline stayed at 1.0 / 1.5. A table
+   that already stacked can only be cleaned by restarting the game.
 
 ## Assets
 None. The label is built from stock UMG classes at runtime.
