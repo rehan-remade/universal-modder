@@ -26,8 +26,8 @@ tags: [split-screen, co-op, unreal-engine-3, bmsdk, wwise, audio, camera, posses
 > Every fix except the Clayface one was played and confirmed by the human in the real game (Steam build). PRs #21,
 > #22, #25 (no teleport when sliding under gaps; solo kept like the normal game) and #26 (the extra player ragdolls
 > on death instead of P1; no teleport to P1 after a fight) were merged upstream. #23 (finding the sound range check
-> by its bytes, so it can work on Epic) and #30 (double doors with the players on opposite sides; remote batarang
-> range) are still open there, so those parts are only in the author's fork for now.
+> by its bytes, so it can work on Epic) and #30 (doors; remote batarang range; finding players after a controller
+> swap) are still open there, so those parts are only in the author's fork for now.
 
 ## Setup
 - Batman: Arkham City GOTY, Steam, Windows 11. The game runs as 32-bit DX11.
@@ -241,6 +241,13 @@ They are cdecl, game object IDs are 32-bit, and there are 8 listeners. The mangl
     **Fix:** log `Actor.Timers` for the batarang, controller, camera and pawn to find the timer by name, then restart
     it with `SetTimer`. `ModifyTimerTimeDilation` crashed the game when called from a component's `OnTick`. Measured:
     solo 17.8 s, 8002 uu; co-op before 10.0 s, 4524 uu; co-op after 18.2-18.4 s, 7658-8453 uu.
+15. **After swapping controllers, P2 was left behind at a building door and fell out of the world.** **Cause:**
+    BmSDK's `Game.GetPlayerPawn(i)` goes through `FindPlayerByControllerId`, so `i` is a controller, not a
+    `GamePlayers` slot. After rotating `ControllerId`, the "move the other players" loop moved P1 again and skipped P2.
+    **Fix:** use `GamePlayers[i].Actor`'s `CombatPawn` everywhere. The symptom looked like a door bug, and only logging
+    both pawns through the transition showed P2 never moved. `RLevelTransitionDoor` takes everyone together based on
+    P1, so an extra player opening one now makes P1 open it, which also keeps P2's camera off the door's cinematic
+    camera. Confirmed in game.
 
 ## Assets
 None.
