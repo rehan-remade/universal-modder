@@ -67,9 +67,10 @@ def test_gamemaker_and_rpgmaker(tmp_path):
     assert engine_of(tmp_path / "b", {"www/js/rpg_core.js": "//", "Game.exe": b"MZ"})[0] == "rpgmaker-mvmz"
 
 
-def _pe(managed=True, arch=0x14C, pad=0):
+def _pe(managed=True, arch=0x14C, pad=0, dirs=16):
     # minimal PE (x86 PE32 by default, PE32+ for arch=0x8664), optionally with a CLR header
-    # directory entry, padded by `pad` bytes so tests can control file sizes
+    # directory entry, padded by `pad` bytes so tests can control file sizes. `dirs` is the
+    # declared NumberOfRvaAndSizes; the section table begins right after the declared directories.
     pe = bytearray(1024 + pad)
     pe[0:2] = b"MZ"
     struct.pack_into("<I", pe, 0x3C, 0x80)
@@ -77,6 +78,7 @@ def _pe(managed=True, arch=0x14C, pad=0):
     struct.pack_into("<H", pe, 0x84, arch)
     opt = 0x80 + 24
     struct.pack_into("<H", pe, opt, 0x20B if arch == 0x8664 else 0x10B)
+    struct.pack_into("<I", pe, opt + (108 if arch == 0x8664 else 92), dirs)
     if managed:
         struct.pack_into("<I", pe, opt + (112 if arch == 0x8664 else 96) + 14 * 8, 0x2000)
     return bytes(pe)
@@ -86,6 +88,18 @@ def test_managed_pe(tmp_path):
     p = tmp_path / "Game.exe"
     p.write_bytes(_pe())
     assert scan.pe_info(p) == {"arch": "x86", "managed": True}
+
+
+def test_short_data_directory_pe_is_not_managed(tmp_path):
+    # NumberOfRvaAndSizes may be fewer than 16; the section table then follows, and its
+    # bytes must not read as a CLR directory RVA - a native exe took the .NET route (#441).
+    # Bytes where the 15th slot would sit are section-table data, deliberately nonzero.
+    pe = bytearray(_pe(managed=False, arch=0x8664, dirs=6))
+    opt = 0x80 + 24
+    struct.pack_into("<I", pe, opt + 112 + 14 * 8, 0xDEADBEEF)  # section bytes, not a CLR RVA
+    p = tmp_path / "Game.exe"
+    p.write_bytes(bytes(pe))
+    assert scan.pe_info(p) == {"arch": "x64", "managed": False}
 
 
 @pytest.mark.parametrize("bin_dir", ["Win64_Shipping_Client", "Gaming.Desktop.x64_Shipping_Client"])
