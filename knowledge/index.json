@@ -7208,6 +7208,60 @@
   ]
  },
  {
+  "path": "games/s-t-a-l-k-e-r-2-heart-of-chornobyl/nola-up-to-five-player-co-op-in-a-single-player-unreal-5-gam.md",
+  "kind": "game",
+  "title": "NOLA: up to five player co-op in a single-player Unreal 5 game with a native UE4SS C++ mod",
+  "game": "S.T.A.L.K.E.R. 2: Heart of Chornobyl",
+  "games_also": [],
+  "game_version": "Steam app 1643320, build 25382007 (game update 2.0 line, with the Cost of Hope DLC), Unreal Engine 5.5.4; UE4SS v3.0.1 experimental build 1164 as the loader",
+  "platform": "windows",
+  "engine": "unreal",
+  "route": "native-hook",
+  "tools": [
+   "UE4SS v3.0.1 experimental (C++ mod API, PolyHook detours)",
+   "CMake + MSVC",
+   "Ghidra 12.1.4 (headless, full decompile of the shipping exe)",
+   "repak 0.2.3",
+   "Python (save codec oracle, table generators, fake clients)",
+   "Steamworks flat API (the game's own steam_api64)",
+   "C# (installer)"
+  ],
+  "anti_cheat": "none; single-player game with no anti-cheat and no online mode. NOLA only links players into sessions they host themselves, and nothing here touches DRM, ownership checks or Steam accounts",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "Jaumn"
+  ],
+  "date": "2026-10-21",
+  "links": [
+   "https://github.com/Joaovitor404silva/NOLA-Stalker2-Coop"
+  ],
+  "tags": [
+   "unreal",
+   "ue5",
+   "ue4ss",
+   "cpp",
+   "co-op",
+   "multiplayer",
+   "netcode",
+   "host-authoritative",
+   "a-life",
+   "npc-sync",
+   "damage",
+   "downed-revive",
+   "saves",
+   "save-splice",
+   "loading-screen",
+   "quests",
+   "steam-lobby",
+   "udp",
+   "installer",
+   "repak"
+  ]
+ },
+ {
   "path": "games/s-t-a-l-k-e-r-2-heart-of-chornobyl/zone-kit-keep-the-game-systems-reference-drop-the-800-gb.md",
   "kind": "game",
   "title": "Zone Kit: keep the game-systems reference, drop the 800 GB",
