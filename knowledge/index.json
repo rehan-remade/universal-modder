@@ -1730,6 +1730,64 @@
   ]
  },
  {
+  "path": "games/collapse/collapse-2008-formats-memory-timing-and-8876086c.md",
+  "kind": "game",
+  "title": "Collapse (2008): data formats, the init_heap fence, the engine's leaks and races, and the collapsefix 1.0.0 fix",
+  "game": "Collapse",
+  "games_also": [
+   "Collapse: Devastated World"
+  ],
+  "game_version": "Steam app 289620, collapse.exe 2,392,108 B, SHA-256 3003600f\u2026bded283, PE timestamp 2008-10-13 (has the 1.1 AA option, no fullscreen-vsync path)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "Python 3 + pefile + capstone (via uv)",
+   "Ghidra 12.1.4 headless (full decompile to text, twice for ST7)",
+   "Frida 17.24.3 (spawn, system-DLL hooks only)",
+   "own .table reader/writer and package v8 extractor (Python)",
+   "Zig 0.17 (32-bit test host)",
+   "um win shot (ffmpeg gfxcapture)",
+   "WinDbg 1.2610 + ProcDump 12.02 (unhandled-exception dump)",
+   "Python minidump (dump triage)"
+  ],
+  "anti_cheat": "none. Single-player, Steam build has no SteamStub and no steam_api (DRM-free exe). Retail discs reportedly used StarForce.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "wh1tem0nst3r"
+  ],
+  "date": "2026-10-28",
+  "links": [
+   "https://web.archive.org/web/20250811064700/https://www.playground.ru/collapse/file/patch_collapse_v1_1-863187",
+   "https://web.archive.org/web/20251022211914/https://www.wsgf.org/dr/collapse/en",
+   "https://web.archive.org/web/20260709041135/https://www.pcgamingwiki.com/wiki/Collapse",
+   "https://web.archive.org/web/20081120161419/http://creoteam.com/forum/",
+   "https://steamcommunity.com/app/289620/discussions/0/540743128682268318/",
+   "https://reshax.com/topic/18427-collapse-2008-t000-unpack/",
+   "https://web.archive.org/web/20170623084809/http://forum.xentax.com/viewtopic.php?f=10&t=11253"
+  ],
+  "tags": [
+   "creoteam",
+   "d3d9",
+   "vc6",
+   "table",
+   "package",
+   "dxt",
+   "init-heap",
+   "large-address-aware",
+   "gettickcount",
+   "frame-pacing",
+   "8876086c",
+   "invalidcall",
+   "fov",
+   "setup-ini",
+   "frida"
+  ]
+ },
+ {
   "path": "games/crash-bandicoot-n-sane-trilogy/croc-inside-crash-n-sane-live-two-engine-mashup.md",
   "kind": "game",
   "title": "Croc inside Crash N. Sane: live two-engine mashup and native port",
