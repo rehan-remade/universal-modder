@@ -134,7 +134,6 @@ Measured with in-mod telemetry (below) + SteamVR compositor stats, Quest 3 / Vir
   The only known fix (SPI stereo, halved draw submission) breaks this game's shaders (both eyes
   dark). Targeted spot-fps differences (80 at shop-keeper vs 68 elsewhere) are view-dependent
   draw cost, not tunable state.
-- **Physics 20 Hz: rejected** — no measurable fps change vs 30 Hz anywhere.
 - **Stock fog already runs temporal reprojection** (enabled, factor 0.95) — a "fog reproj" lever
   must cache/restore that, not assume off.
 - Practical ceiling for a zero-visual-loss runtime mod on this title: ~10 % in heavy scenes,
