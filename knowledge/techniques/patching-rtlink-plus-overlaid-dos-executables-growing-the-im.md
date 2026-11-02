@@ -3,19 +3,20 @@ kind: technique
 title: 'Patching RTLink/Plus overlaid DOS executables: growing the image and calling new code safely from overlays'
 status: working
 agents:
-- Claude Code (Opus 5.5)
+- Claude Code (Claude Opus 5.5)
 humans: []
 date: '2026-10-25'
 links: ["https://github.com/eb4x/ghidra-plugin-rtlink"]
-tags: [dos, rtlink, overlays, vm-manager, binary-patching, mz-exe, trampolines, code-cave, x86-16, memory-pressure, conventional-memory, page-cache]
+tags: [dos, rtlink, overlays, vm-manager, binary-patching, mz-exe, trampolines, code-cave, x86-16, memory-pressure, conventional-memory, page-cache, umb, gates, hook-dispatcher, relocations, keystone, assembler]
 ---
 # Patching RTLink/Plus overlaid DOS executables: growing the image and calling new code safely from overlays
 
 > How to add new code to a DOS game linked with .RTLink/Plus (Pocket Soft's "VM" overlay manager, common in
 > early-90s MicroProse titles) and call it from overlay code without the manager returning into the wrong
 > code. Learned while binary-patching Sid Meier's Colonization 3.0 (VICEROY.EXE, MSC 6.0 + .RTLink/Plus 6.10):
-> about 14 KB of new code reached from 40+ hook sites, verified by an in-game test suite including a run with
-> EMS/XMS turned off.
+> first about 14 KB of new code reached from 40+ hook sites inside the image (2026-10-25), then (2026-10-27 to
+> 11-01) most new code moved to an upper memory block, reached through gates and one shared hook dispatcher;
+> verified by emulated tests of the manager's rules and full suites of 296 to 334 tests per release.
 
 ## When to use it
 - The EXE contains the string `Internal error in .RTLink(R)/Plus run-time code.` (or similar), has a small
@@ -74,6 +75,49 @@ overlay page; only then does it protect the caller's return address against the 
 - Emulate the manager's test: for every hook site, decode the chain from the call target the way the manager
   does and assert it reaches the vector call. This catches a bad layout in seconds.
 
+### Calling code in an upper memory block: gates
+Once the new code lives in a UMB (see
+[Upper memory for patched DOS games in DOSBox](upper-memory-for-patched-dos-games-in-dosbox-code-in-a-umb-e.md)),
+its segment is only known at run time and the overlay manager must still see a vectored call. Each call from an
+overlay goes through a 10-byte **gate** in a small block that stays in conventional memory: the literal
+`lcall <vector>; ljmp UMBSEG:hook` (the second working form above, entered at the lcall), with the `ljmp` segment
+filled in by the start-up loader. The overlay site keeps its `lcall NEWSEG:gate` form, so run the emulated
+call-target test over every gate too.
+- Calls from resident code need only a 5-byte direct `ljmp`.
+- Calls between code still in conventional memory and the UMB code go through small far stubs both ways (a near
+  call can't cross segments); UMB code must not read conventional data through CS.
+- The gate block has a fixed size. The one-shot start-up code can sit in the gate area of the EXE image and be
+  overwritten by the gates once it has run (gotcha 16).
+
+### One gate for many hooks: a dispatcher keyed by the return address
+Gates are scarce (118 slots here, 6 left at one point); MZ relocation slots are scarcer (3 left). Cold hooks can
+share ONE gate:
+- every such overlay site calls the same gate, which jumps to a dispatcher in the UMB;
+- the dispatcher checks that its far return address points just past an `lcall NEWSEG:<that gate>`, builds a key
+  from the low 4 bits of the return offset plus the 6 bytes after the call, looks it up in a table generated at
+  build time, and enters the hook with a near `ret`, so registers, flags and stack are exactly what a gate of its
+  own would leave;
+- the build keeps a site on its own gate when the 6-byte window holds a relocated word or a patched segment word
+  (it would read differently at run time), when the site is a far jump or a resident caller, or when two hooks
+  share a key. Hot hooks (per pixel, per tile, per move, AI scoring) keep their own gate on purpose: the lookup costs
+  about 20 instructions plus about 12 per table entry before the match;
+- count hits per site, and misses with their return address, in a small header; a miss stops the game in a loop
+  rather than running the wrong hook, and the tests read the counters from guest RAM and require zero misses;
+- **the manager may hand you its own return vector instead of the caller's address** (gotcha 12). After the first
+  call through a vectored stub, RTLink returns through a fixed vector in its own segment and keeps the real return
+  address in a stack of 10-byte records (offset, segment, overlay, previous slot, segment). When the dispatcher sees
+  that vector and the manager's "replaced slot" variable names its own gate, it reads the caller from the top
+  record. The build asserts that the manager bytes it relies on are unchanged.
+
+Result here: 47 sites of 41 hooks moved onto one gate; free gates went from 6 to 46.
+
+### Refuse patches on relocated words at build time
+A word that the DOS loader (MZ relocation table) or the overlay manager (a page's list-1 entries) relocates is
+rewritten when the code loads. A patch that puts other bytes there runs as garbage, but only once that page is
+loaded, so emulated tests that don't model relocation miss it (gotcha 11). Make the build compute every relocated
+word of the patched EXE and refuse any patch byte on one, unless the word is still a resident segment operand or is
+declared harmless in a reviewed list (6 such hits here).
+
 ### Hooks keep their own BP frame
 The manager re-vectors overlay return addresses by walking the BP chain. A hook entered from an overlay must:
 - `push bp; mov bp, sp` on entry, so [bp+2] is its own return address;
@@ -106,9 +150,13 @@ that never happened. List every caller of the routine you hook and classify each
 With EMS/XMS available the manager rarely discards pages, so a broken hook fails only now and then. Run the
 in-game tests once more in DOSBox with `[dos] xms=false ems=false umb=false`: pages swap constantly and the
 same bug fails every time.
+- Once the patched game *requires* a UMB (DOSBox 0.74 gives one only with XMS on), that conf can't start it. This
+  project dropped the stress conf then (2026-10-27) and relies on the emulated call-target test over every site and
+  gate, plus long soak runs: a 40-turn soak found the 1-in-15 crash of gotcha 10 that the normal suite had missed.
 
 ## Not verified
-Only VICEROY.EXE (MSC 6.0 + .RTLink/Plus 6.10). eb4x's doc finds the VM manager's routine bodies byte-identical
+Only VICEROY.EXE (MSC 6.0 + .RTLink/Plus 6.10). The return-vector record layout (dispatcher section) was read from
+this manager and confirmed in game on it only. eb4x's doc finds the VM manager's routine bodies byte-identical
 across the games it covers (only their offsets move), so the trampoline rule should carry over, but run the
 emulated call test on your own binary before trusting it. The call-target rule, the BP-chain walk and the
 page-pool startup were read from VICEROY's manager and its error messages; eb4x's doc doesn't cover them.
@@ -144,9 +192,43 @@ page-pool startup were read from VICEROY's manager and its error messages; eb4x'
    "working" while degrading screens.
 9. **A state-recording hook tied units to AI ships that never sailed.** (2026-10-25.) **Cause:** the hooked
    routine was also called by the AI to count and put back. **Fix:** treat those call sites as look-only.
+10. **"evm0012" with a CS of DEAD after long play, about 1 run in 15 of a 40-turn soak.** (2026-10-28.) **Cause:**
+    given free upper memory, the manager built a page heap there, right under DOSBox's EMS page frame at E000. A
+    return into a page was re-vectored to a frame whose segment plus the module's offset ran past E000 (DE52 + 5B =
+    DEAD), so the manager couldn't place the return address. The unpatched game has the same hazard (a few of its
+    test runs were flaky the same way). **Fix:** the start-up allocates all remaining upper memory after its own
+    block and keeps it, so the manager keeps its pages in conventional memory and EMS/XMS. 42 clean soaks after.
+11. **MSC run-time error R6001 at the end of a game, only with one feature in play.** (2026-10-28.) **Cause:** a
+    patch moved an `lcall` three bytes on, so the patched bytes covered a word the overlay manager relocates; when
+    the page loaded, the call was rewritten into garbage. Emulated tests passed because they didn't apply the
+    relocation. **Fix:** keep the call at its old address, and add the build-time relocated-word check above.
+12. **The first dispatcher build stopped at the title with a miss.** (2026-10-30.) **Cause:** the miss address was
+    the manager's own return vector, not an overlay: after the first vectored call RTLink substitutes it for the
+    caller's return address. **Fix:** recognise the vector and read the real caller from the manager's record
+    stack; the emulated dispatcher test now models both cases (plain return address, and vector plus record).
+13. **A build step hung for good while assembling.** (late October 2026.) **Cause:** Keystone (0.9.2, 16-bit mode)
+    hangs on `;` comment lines in the source, and once on a source a regex had mangled. **Fix:** never pass
+    comments to Keystone (strip them from generated asm). A timeout around each call would turn a hang into an
+    error (not used here).
+14. **About 1 assembly in 600 read every decimal literal as hex (`cmp al, 10` became `cmp al, 10h`); once it
+    raised "Literal value out of range for directive" on a source that assembled before and after.** (2026-10-31,
+    2026-11-01.) **Cause:** an intermittent radix misread in Keystone 0.9.2 that seems to depend on its heap state.
+    **Fix:** a wrapper that appends a sentinel (`cmp al, 10`), assembles on a fresh engine, retries until the
+    sentinel's bytes are `3C 0A` (up to 16 tries) and drops it; it also retries a `KsError` on a fresh engine and
+    re-raises after 3, so a real source error still fails fast.
+15. **Wrong or missing bytes from Keystone in 16-bit mode, with no error.** (2026-10-22 to 10-30.) **Cause:** it
+    emits 32-bit forms (66h prefix) for `push imm`, `retf`, long `jcc` and `call dword ptr [x]`, mis-encodes 16-bit
+    `call imm`, `ret` and `leave`, silently drops near displacements below -8000h, rejects or misreads labels named
+    like registers, mnemonics or hex numbers (`out`, `k2`, `eb0`), and dropped a trailing `.short` when the source
+    had no final newline. **Fix:** hand-encode those forms, wrap displacements at 64 KB, and disassemble every
+    assembled piece and compare it with the source before it goes into the EXE.
+16. **No gate slots left for new hooks.** (2026-10-28.) **Cause:** the one-shot start-up code filled the gate
+    block. **Fix:** keep the start-up code in the gate area of the image and let the gates overwrite it after it
+    has run (room for 66 more gates at the same size); later the shared dispatcher for cold hooks.
 
 ## Seen in
 - Sid Meier's Colonization 3.0 (DOS, GOG release) binary-patching project (no public game note yet).
 - Related: `driving-dosbox-games-from-tests-background-input-parallel-sa.md` (the in-game test harness and the
-  no-EMS/XMS stress conf).
+  no-EMS/XMS stress conf) and `upper-memory-for-patched-dos-games-in-dosbox-code-in-a-umb-e.md` (moving the new
+  code into a UMB, transient code modules).
 - Credit: the page format comes from eb4x/ghidra-plugin-rtlink (`docs/rtlink-format.md`).

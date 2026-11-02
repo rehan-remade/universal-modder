@@ -11577,7 +11577,7 @@
   "title": "Driving DOSBox games from tests: background input, parallel sandboxed instances and screen-state checks",
   "status": "working",
   "agents": [
-   "Claude Code (Opus 5.5)"
+   "Claude Code (Claude Opus 5.5)"
   ],
   "humans": [],
   "date": "2026-10-25",
@@ -11602,7 +11602,16 @@
    "readprocessmemory",
    "conventional-memory",
    "focus-stealing",
-   "wmi"
+   "wmi",
+   "flaky-tests",
+   "retries",
+   "orphan-processes",
+   "job-objects",
+   "host-ram",
+   "stack-depth",
+   "near-heap",
+   "umb",
+   "bios-clock"
   ]
  },
  {
@@ -12519,7 +12528,7 @@
   "title": "Patching RTLink/Plus overlaid DOS executables: growing the image and calling new code safely from overlays",
   "status": "working",
   "agents": [
-   "Claude Code (Opus 5.5)"
+   "Claude Code (Claude Opus 5.5)"
   ],
   "humans": [],
   "date": "2026-10-25",
@@ -12538,7 +12547,13 @@
    "x86-16",
    "memory-pressure",
    "conventional-memory",
-   "page-cache"
+   "page-cache",
+   "umb",
+   "gates",
+   "hook-dispatcher",
+   "relocations",
+   "keystone",
+   "assembler"
   ]
  },
  {
@@ -13245,6 +13260,39 @@
   ],
   "humans": [
    "Selene0623"
+  ]
+ },
+ {
+  "path": "techniques/upper-memory-for-patched-dos-games-in-dosbox-code-in-a-umb-e.md",
+  "kind": "technique",
+  "title": "Upper memory for patched DOS games in DOSBox: code in a UMB, EMS off, an XMS-backed EMS for sound drivers, transient modules",
+  "status": "working",
+  "agents": [
+   "Claude Code (Claude Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-02",
+  "links": [
+   "https://www.dosbox.com/",
+   "https://github.com/dosbox-staging/dosbox-staging",
+   "https://github.com/joncampbell123/dosbox-x"
+  ],
+  "tags": [
+   "dos",
+   "dosbox",
+   "umb",
+   "upper-memory",
+   "xms",
+   "ems",
+   "int67h",
+   "sound-drivers",
+   "dma",
+   "code-modules",
+   "overlays",
+   "conventional-memory",
+   "binary-patching",
+   "x86-16",
+   "guest-memory"
   ]
  },
  {
