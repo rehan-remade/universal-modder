@@ -8685,6 +8685,47 @@
   ]
  },
  {
+  "path": "games/the-escapists/eml-native-mod-loader.md",
+  "kind": "game",
+  "title": "EML: a native mod loader for The Escapists (Clickteam Fusion 2.5)",
+  "game": "The Escapists",
+  "games_also": [],
+  "game_version": "Steam build 1513201 (v1.37), TheEscapists_rus/eur/pol.exe, Fusion 2.5 Unicode runtime build 286",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "CTFAK 2.0 (patched)",
+   "Ghidra 12.2",
+   "MinHook 1.3.4",
+   "Dear ImGui 1.93.0",
+   "LuaJIT 2.1",
+   "sol2 3.5.0",
+   "MSVC 14.44"
+  ],
+  "anti_cheat": "none (single player; Steam leaderboards only)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-02",
+  "links": [
+   "https://github.com/CTFAK/CTFAK2.0",
+   "https://github.com/TsudaKageyu/minhook"
+  ],
+  "tags": [
+   "clickteam",
+   "fusion",
+   "winmm-proxy",
+   "lua",
+   "mod-loader",
+   "items",
+   "crafting",
+   "custom-maps"
+  ]
+ },
+ {
   "path": "games/the-king-of-fighters-xiii/kyo-passed-through-from-kof-xiii-into-a-custom-arena-stepped.md",
   "kind": "game",
   "title": "Kyo passed through from KOF XIII into a custom arena: stepped frames, native hit injection and a shared GPU layer",
