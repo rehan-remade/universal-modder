@@ -1296,6 +1296,136 @@ def test_backup_diff_and_restore_round_trip(tmp_path, monkeypatch):
     assert backup.snapshots("t-pre-restore")  # the state before the restore was kept
 
 
+def test_backup_relative_source_restores_to_original_folder(tmp_path, backup_same_second, monkeypatch):
+    a, b = tmp_path / "a", tmp_path / "b"
+    make(a, {"saves/save.dat": "origin"})
+    make(b, {"saves/save.dat": "other cwd"})
+    monkeypatch.chdir(a)
+    zp = backup.create("saves", name="relative")
+    assert backup._manifest(zp)["source"] == str(a / "saves")
+    make(a, {"saves/save.dat": "new origin"})
+
+    monkeypatch.chdir(b)  # restore without --to from another working directory
+    assert backup.diff("relative")["changed"] == ["save.dat"]
+    backup.restore("relative", yes=True)
+    assert (a / "saves" / "save.dat").read_text() == "origin"
+    assert (b / "saves" / "save.dat").read_text() == "other cwd"
+
+
+def test_backup_expands_home_in_recorded_source(tmp_path, backup_same_second, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path / "home"))
+    make(tmp_path / "home", {"saves/save.dat": "origin"})
+    zp = backup.create("~/saves", name="home")
+    assert backup._manifest(zp)["source"] == str(tmp_path / "home" / "saves")
+
+
+def test_backup_symlinked_source_keeps_link_name(tmp_path, backup_same_second):
+    real = tmp_path / "d" / "real-saves"
+    make(real, {"save.dat": "origin"})
+    link = tmp_path / "Terraria"
+    try:
+        link.symlink_to(real, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlinks not available")
+    zp = backup.create(str(link))
+    assert zp.parent.name == "terraria"
+    assert backup._manifest(zp)["source"] == str(link)
+
+
+def test_backup_dotdot_after_symlink_follows_the_os(tmp_path, backup_same_second):
+    if os.name == "nt":
+        pytest.skip("Windows itself resolves .. lexically")
+    real = tmp_path / "d" / "real"
+    make(tmp_path / "d", {"real/keep.txt": "", "x/save.dat": "via link"})
+    make(tmp_path, {"x/save.dat": "lexical"})
+    link = tmp_path / "link"
+    try:
+        link.symlink_to(real, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlinks not available")
+    zp = backup.create(str(link / ".." / "x"), name="t")
+    with backup.zipfile.ZipFile(zp) as z:
+        assert z.read("save.dat") == b"via link"  # the folder the OS reaches, as before the fix
+
+
+def test_backup_dot_source_is_named_after_the_folder(tmp_path, backup_same_second, monkeypatch):
+    make(tmp_path / "Terraria", {"save.dat": "origin"})
+    monkeypatch.chdir(tmp_path / "Terraria")
+    zp = backup.create(".")
+    assert zp.parent.name == "terraria"  # not "", which put the zip in the backups root
+    assert backup._manifest(zp)["source"] == str(tmp_path / "Terraria")
+
+
+@pytest.mark.skipif(os.name == "nt", reason="WSL path conversion")
+def test_backup_wsl_windows_source_is_recorded_converted(tmp_path, backup_same_second, monkeypatch):
+    from um import common
+    monkeypatch.setattr(common, "is_wsl", lambda: True)
+    real = common.to_posix  # map /mnt/c to a temp folder so the converted path exists
+    monkeypatch.setattr(backup, "to_posix", lambda p: real(p).replace("/mnt/c/", f"{tmp_path}/c/", 1))
+    make(tmp_path / "c" / "Games" / "saves", {"save.dat": "origin"})
+    zp = backup.create("C:\\Games\\saves", name="w")
+    assert backup._manifest(zp)["source"] == f"{tmp_path}/c/Games/saves"
+    make(tmp_path / "c" / "Games" / "saves", {"save.dat": "changed"})
+    backup.restore("w", yes=True)
+    assert (tmp_path / "c" / "Games" / "saves" / "save.dat").read_text() == "origin"
+
+
+def _record_source(zp: Path, source: str):
+    """Rewrite a snapshot's manifest as one made before sources were stored absolute."""
+    with backup.zipfile.ZipFile(zp) as z:
+        members = {n: z.read(n) for n in z.namelist()}
+    manifest = json.loads(members["_um_manifest.json"])
+    manifest["source"] = source
+    members["_um_manifest.json"] = json.dumps(manifest).encode()
+    with backup.zipfile.ZipFile(zp, "w") as z:
+        for n, data in members.items():
+            z.writestr(n, data)
+
+
+def test_backup_legacy_home_source_restores_to_home(tmp_path, backup_same_second, monkeypatch):
+    home = tmp_path / "home"
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    make(home, {"saves/save.dat": "origin"})
+    zp = backup.create(str(home / "saves"), name="home")
+    _record_source(zp, "~/saves")
+    make(home, {"saves/save.dat": "changed"})
+    monkeypatch.chdir(tmp_path)
+    backup.restore("home", yes=True)
+    assert (home / "saves" / "save.dat").read_text() == "origin"
+    assert not (tmp_path / "~").exists()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="WSL path conversion")
+def test_backup_legacy_windows_source_still_works_under_wsl(tmp_path, backup_same_second, monkeypatch):
+    from um import common
+    src = tmp_path / "saves"
+    make(src, {"save.dat": "origin"})
+    _record_source(backup.create(str(src), name="legacy"), "C:\\Games\\saves")
+    monkeypatch.setattr(common, "is_wsl", lambda: True)
+    assert backup.diff("legacy")["target"] == "/mnt/c/Games/saves"  # converted before the absolute check
+
+
+def test_backup_legacy_relative_source_needs_explicit_folder(tmp_path, backup_same_second, monkeypatch, capsys):
+    src = tmp_path / "saves"
+    make(src, {"save.dat": "origin"})
+    _record_source(backup.create(str(src), name="legacy"), "saves")
+    other = tmp_path / "other"
+    make(other, {"saves/save.dat": "other cwd"})
+    monkeypatch.chdir(other)
+
+    for call in (lambda: backup.diff("legacy"), lambda: backup.restore("legacy", yes=True)):
+        with pytest.raises(SystemExit):
+            call()
+        assert "relative source (saves)" in capsys.readouterr().err
+    assert (other / "saves" / "save.dat").read_text() == "other cwd"
+    assert not backup.snapshots("legacy-pre-restore")
+    make(src, {"save.dat": "changed"})
+    backup.restore("legacy", to=str(src), yes=True)  # an explicit folder still works
+    assert (src / "save.dat").read_text() == "origin"
+
+
 # --------------------------------------------------------------------------- comfy
 
 from um import comfy  # noqa: E402
