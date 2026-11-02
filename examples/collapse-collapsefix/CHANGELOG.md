@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.1 (unreleased)
+- `heap_guard` (new, on by default): a crash while loading a save (`collapse.exe` access violation). When a block
+  of the game's memory became free, its allocator could hand part of it back to Windows, report a failure, then
+  write into the part it no longer had; it could also give back memory next to the block. Memory now goes back
+  to Windows only when all of the block can go, and never past it. Tested without the game on the game's own code
+  (`tools/heapguard_test.c`) and in play.
+
 ## 1.0.0 (2026-11-02): first public release
 Tested on the Steam build (`collapse.exe` PE 2008-10-13), Windows 11, NVIDIA RTX 3050 Ti Laptop and AMD Radeon
 iGPU, 1920×1080. The whole campaign was played through on this fix, then a release regression: every ini key on

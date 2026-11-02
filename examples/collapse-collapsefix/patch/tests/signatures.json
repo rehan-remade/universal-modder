@@ -49,7 +49,8 @@
     {"id": "label_filter", "regex": "6a016a056a008b1050ff92140100008b86840400006a016a066a00", "what": "must match exactly once in .text: hook_ui_scale() in collapsefix.c"},
     {"id": "nav_step", "regex": "0f84........b856555555899c24........f7eb8bca8b9424........8bc1c1e81f03c8898c24........f6048a010f85........", "what": "must match exactly once in .text: hook_nav_guard() in collapsefix.c"},
     {"id": "batch_free_init", "regex": "8b562852e8........83c404c74628000000008bcec7462400000000e8", "what": "must match exactly once in .text: hook_batch_release() in collapsefix.c"},
-    {"id": "batch_free_teardown", "regex": "8b462850e8........896e28896e24", "what": "must match exactly once in .text: hook_batch_release() in collapsefix.c"}
+    {"id": "batch_free_teardown", "regex": "8b462850e8........896e28896e24", "what": "must match exactly once in .text: hook_batch_release() in collapsefix.c"},
+    {"id": "heap_unmap", "regex": "83ec1c538b5c242c55568b7424305785db74..8b2d........8b3d........8d4424106a1c5056ffd585c074..8b4c24308b4424143b0175..8b54241c6800400000", "what": "must match exactly once in .text: hook_heap_guard() in collapsefix.c"}
   ],
   "constants": [
     {"va": "0x605298", "type": "f64", "value": 3.141592653589793, "what": "pi (FOV deg->rad)"},

@@ -1732,7 +1732,7 @@
  {
   "path": "games/collapse/collapse-2008-formats-memory-timing-and-8876086c.md",
   "kind": "game",
-  "title": "Collapse (2008): data formats, the init_heap fence, the engine's leaks and races, and the collapsefix 1.0.0 fix",
+  "title": "Collapse (2008): data formats, the init_heap fence, the engine's leaks and races, and the collapsefix 1.0.1 fix",
   "game": "Collapse",
   "games_also": [
    "Collapse: Devastated World"

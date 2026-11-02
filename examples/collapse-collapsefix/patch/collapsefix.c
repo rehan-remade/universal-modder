@@ -8,8 +8,8 @@
  *   - IDirectInput8::CreateDevice and the device's Acquire / GetDeviceState / GetDeviceData / SetCooperativeLevel,
  *     through dinput8's vtables (log only);
  *   - GetTickCount and CreateFileA, through the game's own import table (looked up by name);
- *   - call instructions and branches in memory (fov, ui_scale, nav_guard, release_batches), each found by a byte
- *     pattern that must match exactly once.
+ *   - call instructions and branches in memory (fov, ui_scale, nav_guard, release_batches) and the entry of the
+ *     allocator's unmap (heap_guard), each found by a byte pattern that must match exactly once.
  * Fixes (ini keys in [fix], 1 = on):
  *   borderless    C-05  fullscreen becomes a windowed device in a popup window over the monitor. In exclusive mode
  *                       every Alt+Tab makes the engine rebuild the device without releasing the old one, which
@@ -33,12 +33,14 @@
  *   nav_guard     C-54  a step limit on the navmesh walk (an endless loop in mark_castle).
  *   release_batches  C-55  release the level geometry buffers the renderer drops without releasing on each load.
  *   mouse_keeper  C-56  one extra system mouse device, never released, so dinput8's shared mouse state is never freed.
+ *   heap_guard    C-58  the game's allocator gives free memory back to Windows only when all of it can go, and never
+ *                       past the segment (a crash on a save load after a partly freed segment).
  * Build: build.ps1 (zig cc, x86-windows-gnu, kernel32 only, no CRT).
  */
 #include <windows.h>
 #include <d3d9.h>
 
-#define FIX_VERSION "1.0.0"
+#define FIX_VERSION "1.0.1"
 #define GAME_STAMP 0x48F36777u /* PE TimeDateStamp of the Steam exe (same in the ru and en depots) */
 #define MISSING 0x7FFF0123u
 
@@ -1138,6 +1140,87 @@ static void hook_batch_release(void) {
     put("OK\r\n");
 }
 
+/* C-58: the game's allocator hands a fully free segment back to Windows through its own unmap(res, p, n), which walks
+   the range region by region: pages inside the init_heap reservation (*res) are decommitted, other allocations must be
+   committed, start at their region and fit, and are released. It acts as it goes, so a check that fails on a later
+   region returns -1 with the start already gone; the allocator then puts the chunk back into its tree and writes into
+   memory it no longer has. A decommit takes the whole region VirtualQuery reports, which may run past the segment into
+   a neighbour's pages, and the unsigned count then wraps and the walk goes on. The replacement checks the whole range
+   first, keeps every step inside it, and frees only when all of it can go; otherwise it returns -1 with nothing freed,
+   which the allocator handles by keeping the segment. */
+static unsigned g_unmap_calls, g_unmap_notes;
+static void unmap_note(const char *what, void *p, unsigned n, MEMORY_BASIC_INFORMATION *m) {
+    if (++g_unmap_notes > 50 || !ev_begin()) return;
+    put("C-58 unmap "), put_hex((unsigned)p, 8), put(" size "), put_hex(n, 8), put(": "), put(what);
+    if (m)
+        put(", region "), put_hex((unsigned)m->BaseAddress, 8), put(" size "), put_hex(m->RegionSize, 8), put(" alloc "),
+            put_hex((unsigned)m->AllocationBase, 8), put(" state "), put_hex(m->State, 5);
+    ev_end();
+}
+/* One step of the walk from q with left bytes to go: how many bytes it covers and whether they are the reservation's
+   (decommit) or a whole allocation of their own (release). 0 means the range cannot be freed. */
+static unsigned unmap_step(void *res, unsigned char *q, unsigned left, int *decommit, MEMORY_BASIC_INFORMATION *m) {
+    unsigned char *end;
+    if (!VirtualQuery(q, m, sizeof *m) || (unsigned char *)m->BaseAddress != q) return 0;
+    if (m->AllocationBase == res) {
+        *decommit = 1;
+        return m->RegionSize < left ? m->RegionSize : left;
+    }
+    *decommit = 0;
+    if (m->AllocationBase != q || m->State != MEM_COMMIT) return 0;
+    for (end = q + m->RegionSize;; end += m->RegionSize) { /* MEM_RELEASE frees the whole allocation */
+        if ((unsigned)(end - q) > left) return 0;
+        if (!VirtualQuery(end, m, sizeof *m) || m->AllocationBase != q) break;
+    }
+    return end - q;
+}
+__attribute__((used)) int __cdecl game_unmap(void **res, unsigned char *p, unsigned n) {
+    MEMORY_BASIC_INFORMATION m;
+    unsigned char *q;
+    unsigned left, step;
+    int dec;
+    for (q = p, left = n; left; q += step, left -= step) {
+        if (!(step = unmap_step(*res, q, left, &dec, &m))) {
+            unmap_note("kept, a region cannot be freed whole", p, n, &m);
+            return -1;
+        }
+        if (dec && m.RegionSize > left) unmap_note("decommit kept to the segment (the game's would run past it)", p, n, &m);
+    }
+    for (q = p, left = n; left; q += step, left -= step) {
+        step = unmap_step(*res, q, left, &dec, &m);
+        if (!step) break; /* cannot happen under the allocator's lock; what is left stays mapped and unused */
+        if (dec ? !VirtualFree(q, step, MEM_DECOMMIT) : !VirtualFree(q, 0, MEM_RELEASE)) {
+            unmap_note("VirtualFree failed, the rest stays mapped", q, left, &m);
+            break;
+        }
+    }
+    if (++g_unmap_calls <= 3) unmap_note("OK", p, n, 0);
+    return 0;
+}
+static void hook_heap_guard(void) {
+    /* sub esp,1Ch; push ebx; mov ebx,[esp+2Ch]; push ebp; push esi; mov esi,[esp+30h]; push edi; test ebx,ebx; je ..;
+       mov ebp,[VirtualQuery]; mov edi,[VirtualFree]; lea eax,[esp+10h]; push 1Ch; push eax; push esi; call ebp;
+       test eax,eax; je ..; mov ecx,[esp+30h]; mov eax,[esp+14h]; cmp eax,[ecx]; jne ..; ... push 4000h (MEM_DECOMMIT) */
+    static const short pat[] = {0x83, 0xEC, 0x1C, 0x53, 0x8B, 0x5C, 0x24, 0x2C, 0x55, 0x56, 0x8B, 0x74, 0x24, 0x30, 0x57,
+                                0x85, 0xDB, 0x74, -1, 0x8B, 0x2D, -1, -1, -1, -1, 0x8B, 0x3D, -1, -1, -1, -1, 0x8D, 0x44,
+                                0x24, 0x10, 0x6A, 0x1C, 0x50, 0x56, 0xFF, 0xD5, 0x85, 0xC0, 0x74, -1, 0x8B, 0x4C, 0x24,
+                                0x30, 0x8B, 0x44, 0x24, 0x14, 0x3B, 0x01, 0x75, -1, 0x8B, 0x54, 0x24, 0x1C, 0x68, 0x00,
+                                0x40, 0x00, 0x00};
+    unsigned char *hit;
+    DWORD prot;
+    put("C-58 heap_guard (allocator unmap): ");
+    if (!(hit = find_once(pat, sizeof pat / sizeof pat[0]))) return;
+    if (!VirtualProtect(hit, 5, PAGE_EXECUTE_READWRITE, &prot)) {
+        put("SKIP, VirtualProtect failed\r\n");
+        return;
+    }
+    *(int *)(hit + 1) = (int)((unsigned char *)game_unmap - (hit + 5)); /* jmp, written before the opcode */
+    hit[0] = 0xE9;
+    VirtualProtect(hit, 5, prot, &prot);
+    FlushInstructionCache(GetCurrentProcess(), hit, 5);
+    put("OK\r\n");
+}
+
 static int game_is_expected(void) {
     unsigned char *base = (unsigned char *)GetModuleHandleW(NULL);
     IMAGE_NT_HEADERS32 *nt = (IMAGE_NT_HEADERS32 *)(base + ((IMAGE_DOS_HEADER *)base)->e_lfanew);
@@ -1232,6 +1315,7 @@ static void init_once(void) {
         put("ini: borderless="), put_dec(g_borderless), put("\r\n");
         if (key_int(L"fix", L"nav_guard", 1)) hook_nav_guard();
         if (key_int(L"fix", L"release_batches", 1)) hook_batch_release();
+        if (key_int(L"fix", L"heap_guard", 1)) hook_heap_guard();
         g_d3d_counts = key_int(L"log", L"d3d_counts", 0);
         g_alt_tab = key_int(L"fix", L"alt_tab", 1);
         g_display_mode = key_int(L"fix", L"display_mode", 1);

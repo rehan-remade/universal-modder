@@ -1,6 +1,6 @@
 ---
 kind: game
-title: 'Collapse (2008): data formats, the init_heap fence, the engine''s leaks and races, and the collapsefix 1.0.0
+title: 'Collapse (2008): data formats, the init_heap fence, the engine''s leaks and races, and the collapsefix 1.0.1
   fix'
 game: Collapse
 games_also: ['Collapse: Devastated World']
@@ -25,7 +25,7 @@ links:
   - "https://web.archive.org/web/20170623084809/http://forum.xentax.com/viewtopic.php?f=10&t=11253"
 tags: [creoteam, d3d9, vc6, table, package, dxt, init-heap, large-address-aware, gettickcount, frame-pacing, 8876086c, invalidcall, fov, setup-ini, frida]
 ---
-# Collapse (2008): data formats, the init_heap fence, the engine's leaks and races, and the collapsefix 1.0.0 fix
+# Collapse (2008): data formats, the init_heap fence, the engine's leaks and races, and the collapsefix 1.0.1 fix
 
 Collapse (Creoteam, Kyiv, 2008) runs on an unnamed in-house C++/D3D9 engine, and nobody had documented its data
 formats before. This note covers four things:
@@ -34,8 +34,8 @@ formats before. This note covers four things:
 - **Technical problems.** Static and dynamic RE of the Steam exe explains the game's crashes and stutter on
   modern PCs: the address-space crash on level loads, the "Cannot initialize video / 8876086c" error (a different
   cause than the community assumed), the GetTickCount judder, and, found in long play, a geometry-buffer leak, a
-  navmesh freeze and a mouse race inside Windows' `dinput8.dll`.
-- **What runs in the game.** collapsefix 1.0.0: a one-bit LAA patcher and a `dinput8.dll` proxy, in
+  navmesh freeze, a mouse race inside Windows' `dinput8.dll` and a bug in the game's own memory allocator.
+- **What runs in the game.** collapsefix 1.0.1: a one-bit LAA patcher and a `dinput8.dll` proxy, in
   `examples/collapse-collapsefix` (see Open questions for what it does and what is left).
 - **How it was verified.** Byte checks on the exe, a repeated decompile, launches without input measured with
   Frida and an external VirtualQueryEx sampler, a played session that reproduced the classic KERNELBASE
@@ -194,7 +194,8 @@ functions show this; the entropy of 6–7.6 that suggested compression is just D
   - the Controlled Folder Access warning appears when CFA is on.
 - **The whole campaign on LAA + collapsefix (2026-11-01/02, the human playing, about 10 hours in sessions of up to
   3 h):** no `out of virtual memory: map size`; it found a navmesh freeze, the geometry buffer leak, a crash in the
-  system `dinput8.dll` and a DLL bug with per-device vtables, all fixed (gotchas 17-20).
+  system `dinput8.dll` and a DLL bug with per-device vtables, all fixed (gotchas 17-20). A later replay of Maydan
+  crashed once in the game's allocator while loading a save; fixed in 1.0.1 (gotcha 22).
 - **Not verified yet:**
   - whether the player-reported station crash is the `dinput8.dll` crash (ours was at a `station_02` load);
   - whether the writer strips FOV when settings are saved in the menu;
@@ -288,6 +289,27 @@ functions show this; the entropy of 6–7.6 that suggested compression is just D
     Compatibility Assistant asks "This program might not have installed correctly" when it exits. **Fix:** embed a
     manifest with `requestedExecutionLevel asInvoker` and `supportedOS` entries (zig builds it from an `.rc` file).
 
+22. **The game's own `munmap` can free half a block and say it failed.** A crash on a save load wrote into
+    0x0B97001C inside `collapse.exe`: the dlmalloc-style allocator was putting a free segment back into its tree
+    after its unmap (`FUN_005E5BB0`) returned -1. That unmap walks the range region by region and acts as it goes,
+    so a check that fails on a later region leaves the start already freed. Worse, inside the `init_heap`
+    reservation it decommits the whole region `VirtualQuery` reports, which can include a live neighbour, and the
+    unsigned remainder then wraps. **Proof without the game:** map a copy of the exe with
+    `LoadLibraryEx(DONT_RESOLVE_DLL_REFERENCES)` at its base (it has no relocations), fill the two import slots it
+    uses, and call the function on made-up layouts (`tools/heapguard_test.c`). **Fix (`heap_guard`):** a jmp at its
+    entry to a version that checks the whole range first and frees only when all of it can go.
+23. **A save number names a place, not a stage.** In Maydan the menu's last save (14) put the player before
+    checkpoint 13, and replaying overwrote save 13. Level triggers in `channels\checkpoint.table` give
+    checkpoints 1-11; 12-14 come from the level script: three spots that can be cleared in any order each call
+    `SaveCheckpoint` with a fixed constant. The save data (after the JPEG) stores the position, so reading it showed
+    the real route 12 → 14 → 13. Not a bug; "Continue" picks the newest file by time.
+24. **Cutscene actors can outlive their cutscene.** After the cutscene with Helen two dead swordmen stay black
+    until the next load. They are the cutscene's own actors (no `id` binding in the developers' build report
+    `data\<scene>\actions\*.html`), their model instances point into the cutscene's package, and they lose their
+    textures when it ends: black in the normal view, flat untextured while aiming. The cutscene's machetes survive
+    because it re-points them with `setModel` to level models. Re-running `SetTexture` on the game thread did not
+    help (engine calls fail on Frida's thread: the allocator uses thread-local storage). Not fixed yet.
+
 ## Assets
 None.
 
@@ -300,11 +322,14 @@ whole campaign while the agent recorded and read the dumps.
 ## Open questions
 - The geometry buffer leak is fixed for 82 minutes of play; a session of 3 hours or more is not done. Live textures
   still grew (556 to 1307) while committed memory did not; cause not read.
+- The two black cutscene actors in the first level (gotcha 24): what drops their textures when the cutscene ends.
+- In some late calls the live call window swaps the two names (the call log is right); the English text calls the
+  professor "Professor Gorin" where the Russian has "Gorin". Both wait for a text patch.
 - The `dinput8.dll` crash is fixed by mechanism (gotcha 20); the crash itself was seen only once, so its absence
   in later sessions is weak evidence.
-- collapsefix 1.0.0, packaged with `laa_patch.exe` (MIT; not yet published) (a dinput8 proxy; it hooks the d3d9 vtables of every device, dinput8 vtables and the game's IAT by name, plus call
+- collapsefix 1.0.1 (1.0.0 packaged with `laa_patch.exe`; MIT; not yet published) (a dinput8 proxy; it hooks the d3d9 vtables of every device, dinput8 vtables and the game's IAT by name, plus call
   sites found by byte patterns that must match once) does borderless + DPI awareness, the display-mode fallback,
-  the refresh rate, an optional V-Sync, the QPC GetTickCount, save-write warnings, configurable FOV, input logging, a whole-interface scale, English key names, a navmesh step limit, the release of leaked geometry buffers and a kept extra mouse device.
+  the refresh rate, an optional V-Sync, the QPC GetTickCount, save-write warnings, configurable FOV, input logging, a whole-interface scale, English key names, a navmesh step limit, the release of leaked geometry buffers, a kept extra mouse device and a safe allocator unmap.
   - **FOV (tested in play):** replace the one call to the FOV blend function in the projection, run it with the stock
     angle, scale the tangent of the result. No setup.ini edit needed, and cutscene cameras widen by the same factor.
   - **Interface scale (tested in play at 1080p):** tell the scripts and the mouse the screen is smaller and stretch the

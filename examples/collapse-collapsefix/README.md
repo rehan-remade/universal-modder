@@ -1,4 +1,4 @@
-# collapsefix 1.0.0: a fix for Collapse (2008)
+# collapsefix 1.0.1: a fix for Collapse (2008)
 
 Fixes for **Collapse** (Creoteam, 2008; Steam 289620) on modern Windows. There are two parts:
 
@@ -111,6 +111,7 @@ nothing. Patch sites are found through the import table, the D3D9 and DirectInpu
 | `nav_guard` | 1 | Stops an endless loop in the game's navigation mesh code, which freezes the game with the mouse still moving. Tested by forcing the loop, not yet met in normal play. |
 | `release_batches` | 1 | Releases the level geometry buffers the game forgets on every level load and reload. Without it memory grows until the game runs out of address space after a few hours. |
 | `mouse_keeper` | 1 | Keeps one extra mouse device open. The game closes and reopens its mouse on every scene load, and when the last one closes, Windows' `dinput8.dll` frees a table that its own mouse thread may still be reading: a rare crash inside `dinput8.dll`. Nothing reads from the extra device. |
+| `heap_guard` | 1 | The game's memory allocator gives free memory back to Windows only when all of a block can go. Before, it could free part of a block, report a failure and write into the freed part: a rare crash while loading a save. |
 
 `[log] enabled=0` turns the log off. `[log] d3d_counts=1` writes the count of live D3D resources every 30 s, for testing.
 
@@ -156,8 +157,11 @@ nothing. Patch sites are found through the import table, the D3D9 and DirectInpu
 | Interface too small on large screens | **fixed** (`ui_scale=auto`; tested in play at 1080p on NVIDIA, one frame on AMD; 1440p and 4K not tried) |
 | Text still soft or small: `rr` in "barricades" merges, subtitle capitals are about 16 px at 1080p | open: the font images are small. New fonts and HUD art are planned as a separate stage |
 | Key hints show Cyrillic letters (`Press у`) on a Cyrillic layout | **fixed** (`english_keys=1`, tested on a Ukrainian layout). Named keys such as Space are not changed |
-| Two bodies stay solid black after a cutscene in the first level, swords of other bodies stay | open, cosmetic. Also happens without collapsefix and on both NVIDIA and AMD, so it looks like a bug in the game |
+| Crash while loading a save (access violation in `collapse.exe`) | **fixed** (`heap_guard=1`, 1.0.1): a bug in the game's memory allocator, proven on the game's own code; seen once |
+| Two bodies stay solid black after the cutscene with Helen in the first level | open, cosmetic, a bug in the game (also without collapsefix). They are the cutscene's own actors, which lose their textures when it ends; they are not saved, so reloading the last checkpoint removes them |
+| Load menu: in Maydan the last listed save (14) is not the latest progress | by design: checkpoints 12–14 belong to three places you can clear in any order. "Continue game" always loads the latest save |
 | No subtitles during phone calls: Russian voice, English text only in a brief afterwards | open, not known yet whether this is by design |
+| Call window: the two names swapped in some late calls (seen in "A failed attempt"); English shows "Professor Gorin" where the Russian has "Gorin" | open; the call log shows the same calls correctly. Planned with the text patch |
 | Gamepad: 24 % left stick threshold, no remapping | open; the threshold is read from the code, nothing changed yet |
 | English text with Russianisms and empty notes | planned, as a separate text patch |
 | Crash on the station level after the elite shooters (player reports) | possibly the `dinput8.dll` crash above, which we saw at a `station_02` load; not proven |
