@@ -365,6 +365,16 @@ def test_cli_prints_text_a_legacy_console_cannot_encode(tmp_path, monkeypatch):
     assert "The boon pool ≥ 3 → cached" in raw.getvalue().decode("utf-8")
 
 
+def test_kb_check_fails_without_a_knowledge_root(monkeypatch, capsys):
+    # a wheel install outside a clone has no knowledge/; "PASS: 0 notes checked" would turn a CI gate green
+    from um import cli, kb
+    monkeypatch.setattr(kb, "local_root", lambda: None)
+    with pytest.raises(SystemExit) as e:
+        cli.main(["kb", "check", "--index"])
+    assert e.value.code != 0
+    assert "PASS" not in capsys.readouterr().out
+
+
 def test_tool_exe_does_not_set_dotnet_engine(tmp_path):
     # Kenshi shape: the only managed binary is a tool (Forgotten Construction
     # Set); the big game binary is native, so the engine must not be dotnet.

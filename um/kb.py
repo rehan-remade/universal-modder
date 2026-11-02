@@ -463,7 +463,9 @@ def main(a):
         return
     if c == "check":
         root = Path(a.root) if a.root else local_root()
-        paths = [Path(x) for x in a.paths] or ([p for p, _, _ in notes(root)] if root else [])
+        if not root and not a.paths:
+            die("no local knowledge/ folder to check: run inside a clone of the repo, or pass --root or note paths")
+        paths = [Path(x) for x in a.paths] or [p for p, _, _ in notes(root)]
         bad = 0
         for p in paths:
             fails, warns = check_note(p, root)
