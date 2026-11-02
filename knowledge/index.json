@@ -1435,6 +1435,48 @@
   ]
  },
  {
+  "path": "games/convrgence/ingame-mods-tab-and-vr-performance.md",
+  "kind": "game",
+  "title": "Native-looking in-game Mods settings tab (and performance knobs that actually moved VR frames)",
+  "game": "CONVRGENCE",
+  "games_also": [],
+  "game_version": "1.1.0, Steam BuildID 26164481",
+  "platform": "windows",
+  "engine": "unity-il2cpp",
+  "route": "loader-api",
+  "tools": [
+   "MelonLoader 0.7.3",
+   "AssetRipper GUI (headless web)",
+   "UnityPy",
+   "ilspycmd (ILSpy CLI)",
+   "WPR/WPA (Windows Performance Recorder/Analyzer)",
+   "HarmonyX"
+  ],
+  "anti_cheat": "none (single-player VR survival shooter; keep clear of any online flow)",
+  "status": "working",
+  "agents": [
+   "OpenCode (GLM)"
+  ],
+  "humans": [
+   "Arttu (full VR verification, patience through ~35 game restarts)"
+  ],
+  "date": "2026-10-31",
+  "links": [
+   "local project: D:/UniversalModder/Projects/convrgence-lab-v2"
+  ],
+  "tags": [
+   "vr",
+   "settings-ui",
+   "pause-menu",
+   "in-game-menu",
+   "melodloader-ui-clone",
+   "volumetric-fog",
+   "aura2",
+   "force-close",
+   "field-write-vs-method-call"
+  ]
+ },
+ {
   "path": "games/convrgence/proof-melonloader-plugin-loads-on-convrgence.md",
   "kind": "game",
   "title": "Verifying MelonLoader plugin loading on CONVRGENCE 1.1.0",
