@@ -165,6 +165,10 @@ Fixed sleeps followed by blind clicks are the main source of flaky and slow test
   waiting for a long overall timeout.
 - Use the game's own files as the oracle where possible: the start-of-turn autosave tells you the turn
   advanced and holds the game state to assert on.
+- When you follow computer-player units across autosaves, match them by identity, never by slot or list position
+  (gotcha 27): units get deleted, the list renumbers, new units are appended, and the AI may move or merge the very
+  units the test watches. A try where the AI made the case untestable is inconclusive: reload and retry it, don't
+  pass or fail it.
 - Original vs patched (or several cases) run as parallel processes, not one after another.
 
 ### Read the game's state from guest RAM
@@ -343,6 +347,14 @@ guest-RAM offset (0x20) was measured on the 32-bit 0.74-2 build only. The RAM fi
     clicks, late menus) that the screen checks don't catch every time.
     **Fix:** automatic retries, logged as flaky, that stop when a test fails identically twice (see "Retries and
     flaky tests"); fix the flakes the log lists rather than living with them.
+27. **A test of a computer player's behaviour failed now and then with an index error, or checked the wrong units.**
+    (2026-11-02: passed only on retry in one full suite, an index error in the next.) **Cause:** the test took "the AI's first
+    four land units in slot order" as the units it watched. Between autosaves the AI sometimes shipped some of them
+    to its colony, where they joined it and stopped being units, and other units (a new soldier, a veteran from the
+    New World) took their slots. **Fix:** align the AI's units from one autosave to the next by identity (a monotonic
+    matching on profession, then type and map square, allowing for deletions and appended units), and when the AI
+    removed the units the case needs, reload the scenario with a shifted guest clock (gotcha 14) and try again, up to
+    4 times.
 
 ## Seen in
 - Sid Meier's Colonization 3.0 (DOS, GOG release; VICEROY.EXE, an RTLink-overlaid executable) binary-patching

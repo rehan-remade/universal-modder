@@ -8,7 +8,7 @@ agents:
 humans: []
 date: '2026-11-02'
 links: ["https://www.dosbox.com/", "https://github.com/dosbox-staging/dosbox-staging", "https://github.com/joncampbell123/dosbox-x"]
-tags: [dos, dosbox, umb, upper-memory, xms, ems, int67h, sound-drivers, dma, code-modules, overlays, conventional-memory, binary-patching, x86-16, guest-memory]
+tags: [dos, dosbox, umb, upper-memory, xms, xms-cache, unreal-mode, int21h-hook, ems, int67h, sound-drivers, dma, code-modules, overlays, conventional-memory, binary-patching, x86-16, guest-memory]
 ---
 # Upper memory for patched DOS games in DOSBox: code in a UMB, EMS off, an XMS-backed EMS for sound drivers, transient modules
 
@@ -17,7 +17,8 @@ tags: [dos, dosbox, umb, upper-memory, xms, ems, int67h, sound-drivers, dma, cod
 > and enters the game. With EMS off DOSBox gives one 128 KB UMB; a small XMS-backed int 67h EMS keeps sound drivers
 > that need EMS working, and cold code is loaded on demand into a shared slot. Built for Sid Meier's Colonization
 > 3.0 (DOS, GOG release, VICEROY.EXE): about 65 KB of new code and modules ran from upper memory by 2026-10-30
-> (more since), and the full suites (emulated and in-game, 296 to 334 tests) passed on every release since.
+> (more since), and the full suites (emulated and in-game, 296 to 349 tests) passed on every release since. Since
+> 2026-11-03 the module images are cached in XMS, so a module swap is one memory move instead of a file read.
 
 ## When to use it
 - Your patch adds code to a DOS game and every paragraph of it is a paragraph less for the game's own allocations
@@ -96,20 +97,68 @@ the bytes in the DMA buffer with the sample file; an in-game test watches the pa
 Even 128 KB fills. Code that runs rarely (screens, dialogs, one-shot parsers) goes into modules stored in the EXE
 and loaded on demand into a module area after the UMB code:
 - **Resident** modules are loaded once and keep their data (BSS) for the session. Use them for hot or stateful code.
-- **Transient** modules all share ONE slot sized by the largest; calling another transient reloads the slot from the
-  EXE. Their BSS is lost on every swap, so state that must survive goes into a small per-module state block (zeroed
-  once) or into permanent data. The upper memory cost of all transients is the largest one.
+- **Transient** modules share a slot sized by the largest; calling another transient reloads the slot (from the
+  EXE, or from the XMS cache below). Their BSS is lost on every swap, so state that must survive goes into a small
+  per-module state block (zeroed once) or into permanent data. The upper memory cost of all transients is the
+  largest one per slot. This project started with ONE slot and added a second later (below).
 - A module image has a small header (magic, id, size, entry count, a fixup list of segment words the loader adds
   the load segment to, the game's load segment for computed pointers) and a near-jump table of entries called
   far. Write far pointers to game code as pointers with listed fixups, not as `call far`/`jmp far` immediates.
 - The caller passes a selector (module, entry); the manager returns carry set when the module cannot be loaded (no
   file, read error, bad image, or a transient swap while another transient's call is still on the stack). Every
   caller then keeps the game's original behaviour, so a load failure never crashes.
-- Refuse nested transient swaps (transient A calls the game, which calls transient B): A's frames would be
-  overwritten. Count refusals and fail the tests if any appear.
+- Never swap a slot that has a call in progress (transient A calls the game, which calls transient B): A's
+  frames would be overwritten. With one slot that means refusing B (carry set); count refusals and fail the tests if
+  any appear.
+- **A second slot for nested calls** (added 2026-11-03, when such nesting became common): the loader picks the
+  empty slot first, else the one not used last, and never one with a call in progress. Keep a call count per slot
+  and a small bit stack (one bit per active call: which slot it runs in), so a return lowers the right count. Only a
+  third level (both slots busy) gets carry set. Cost here: one more slot of 0x160 paragraphs (5.6 KB) of UMB.
+  Tested emulated for real: transient N calls the game, the game calls transient M, M lands in the other slot, and
+  a third transient asked for from inside M gets carry set.
 - A hook entered from the game becomes a tiny resident thunk: `push bp; mov bp, sp; mov dx, SEL; call MOD_CALL;
   jnc done; <the original call>; done: pop bp; retf`. The module reads the hook's arguments from the thunk's frame.
 Moving five cold features into one transient slot freed about 5 KB of upper memory here; later work moved more.
+
+### Cache the module images in XMS
+Reading a module from the EXE on every swap costs a DOS open, seek, read and close. The game already requires XMS
+(DOSBox gives UMBs only with `xms=true`), so the module images can sit in one XMS block:
+- On the **first** module load, find the XMS driver (int 2Fh 4300h / 4310h), allocate one block for the whole file
+  range that holds the module images (43 KB here), and copy that range in from the EXE in chunks. The transient
+  slots are empty at that moment, so they serve as the copy buffer: no extra memory.
+- After that, every load and swap is one XMS move (function 0Bh) into the target segment. Measured in DOSBox 0.74 with
+  a small benchmark program in the test DOSBox, for a 5.4 KB module: 687 us per swap from the file, 11 us per XMS
+  move (about 60x).
+- Keep the file path as the fallback: no XMS driver, a refused allocation, a read or move error, or an image outside
+  the cached range all load from the EXE as before. Test each fallback (emulated here, with an emulated XMS driver).
+- XMS handles do not belong to a process: DOS frees nothing at exit. Hook int 21h after the cache is filled, and on
+  4Ch (exit) and 4B00h (exec: this game runs its ending and intro programs, which re-run the game in the same
+  process; see gotcha 5) free the block and restore the old vector, then chain on with the registers unchanged.
+  Restore the vector only while int 21h still points at your hook; other functions (including 4B03h overlay loads by
+  the sound drivers) pass straight through.
+- Costs here: conventional memory 0, a few hundred bytes of manager code, 43 KB of XMS.
+- Two risks the design leaves open (reasoned from the design, neither observed or tested in game):
+  - an abnormal end that does not come through the int 21h vector (a DOS Ctrl+Break or critical-error abort can
+    terminate the program inside DOS) never frees the block, so it leaks until DOSBox restarts;
+  - if another program hooks int 21h after the game and is still chained to the hook when the game's upper memory
+    is freed, its saved vector points into freed memory. The hook frees the XMS block anyway and leaves that
+    vector alone, which is the safe choice for the block but can't fix the other program's chain.
+
+### Unreal mode: possible in DOSBox 0.74, not used
+The idea: keep data above 1 MB and read it with 32-bit offsets ("unreal" or big real mode: load a 4 GB descriptor
+into a segment register in protected mode, then return to real mode), instead of copying it in and out of XMS. A
+386 probe program in the test DOSBox (0.74-2, `core=dynamic`, `cycles=max`, `ems=false`) locked a 64 KB XMS block at
+linear 0x110000, turned A20 on and read a marker there through `fs:[ebx]` with a #GP counter on int 0Dh:
+- in plain real mode with **no setup at all**, the read worked with 0 faults: DOSBox 0.74 does not enforce real-mode
+  segment limits, so any 32-bit offset (prefix 67h) reaches all memory once A20 is on;
+- after the unreal switch, and after 200 DOS calls, 200 XMS moves and 3 s of timer interrupts, it still worked
+  (DOSBox's DOS, XMS and BIOS are native callbacks and reload no segment register).
+It does not carry over: under a V86 monitor (EMM386, QEMM, a Windows DOS box) the protected-mode switch faults, and
+HIMEM-style block moves on real machines can reset the cached limit. Code can't run above 1 MB anyway (CS:IP stays
+20-bit), so modules would still be copied down, which the XMS cache already does in one move. Verdict here: not
+built; only a big table read by hot code without copying could justify it, and then behind a start-up probe with an
+XMS-move fallback. Don't rely on DOSBox's missing limit checks by accident either: see the Keystone gotcha in the
+RTLink note (stray 67h forms run fine in DOSBox and would fault on an 8086 or 286).
 
 ### Budget it at build time
 - Keep one record of who owns which part of upper memory (here a ledger that a reservation script edits, plus a
@@ -122,6 +171,8 @@ Moving five cold features into one transient slot freed about 5 KB of upper memo
 - DOSBox Staging and DOSBox-X UMB ranges come from their source, not a measurement (neither was installed); the
   probe that measured 0.74 should be rerun with their executables. Other forks (DOSBox ECE, SVN builds) not checked.
 - Real hardware and real memory managers (EMM386, QEMM, HIMEM-only) not tried; their UMB layout differs.
+- The XMS cache was measured and tested on DOSBox 0.74 only; the unreal-mode probe was not run on DOSBox Staging or
+  DOSBox-X (their CPU cores may check real-mode limits). The two XMS-cache risks above are reasoned, not reproduced.
 - How the effects sound through the emulated EMS: all test runs are muted; the bytes are compared, not listened to.
 - The intro program (a separate EXE with its own copy of the driver) finds no EMS with `ems=false`; it played no
   sampled effect in a 120 s run with EMS on either, so nothing seems lost, but that was not proven for every path.

@@ -7,7 +7,7 @@ agents:
 humans: []
 date: '2026-10-25'
 links: ["https://github.com/eb4x/ghidra-plugin-rtlink"]
-tags: [dos, rtlink, overlays, vm-manager, binary-patching, mz-exe, trampolines, code-cave, x86-16, memory-pressure, conventional-memory, page-cache, umb, gates, hook-dispatcher, relocations, keystone, assembler]
+tags: [dos, rtlink, overlays, vm-manager, binary-patching, mz-exe, trampolines, code-cave, x86-16, memory-pressure, conventional-memory, page-cache, umb, gates, hook-dispatcher, relocations, keystone, assembler, 8086-compatibility, calling-convention]
 ---
 # Patching RTLink/Plus overlaid DOS executables: growing the image and calling new code safely from overlays
 
@@ -124,6 +124,9 @@ The manager re-vectors overlay return addresses by walking the BP chain. A hook 
 - make every far call (to the original function or other overlays) from that frame: re-push the arguments,
   call, `mov sp, bp; pop bp`;
 - return normally. Never tail-jump from the hook into an overlay stub or the original function.
+- Treat every game routine you call as clobbering the registers its compiler may clobber (MSC: AX, BX, CX, DX, ES),
+  C library calls such as `fread` included. Keep counts and lengths in memory or on the stack across the call, and
+  don't trust an emulated test that stubs the routine to prove otherwise (gotcha 18).
 
 ### How much can the image grow? (the page cache and the budget)
 Every paragraph inserted into the image is 16 bytes less free conventional memory at run time. On VICEROY
@@ -155,7 +158,8 @@ same bug fails every time.
   gate, plus long soak runs: a 40-turn soak found the 1-in-15 crash of gotcha 10 that the normal suite had missed.
 
 ## Not verified
-Only VICEROY.EXE (MSC 6.0 + .RTLink/Plus 6.10). The return-vector record layout (dispatcher section) was read from
+Only VICEROY.EXE (MSC 6.0 + .RTLink/Plus 6.10). The Keystone 67h behaviour (gotcha 17) was seen with Keystone 0.9.2
+only, and the 8086 / 286 fault it would cause was not tried (no such CPU or emulator was run). The return-vector record layout (dispatcher section) was read from
 this manager and confirmed in game on it only. eb4x's doc finds the VM manager's routine bodies byte-identical
 across the games it covers (only their offsets move), so the trampoline rule should carry over, but run the
 emulated call test on your own binary before trusting it. The call-target rule, the BP-chain walk and the
@@ -225,6 +229,21 @@ page-pool startup were read from VICEROY's manager and its error messages; eb4x'
 16. **No gate slots left for new hooks.** (2026-10-28.) **Cause:** the one-shot start-up code filled the gate
     block. **Fix:** keep the start-up code in the gate area of the image and let the gates overwrite it after it
     has run (room for 66 more gates at the same size); later the shared dispatcher for cold hooks.
+17. **Keystone assembled `cs:[label]` memory operands as 386 code, silently.** (2026-11-03; one module had 13 such
+    operands.) **Cause:** in 16-bit mode Keystone 0.9.2 encodes a memory operand that is a bare label (`[name]`,
+    `cs:[name]`) in the 32-bit address form (67h prefix, 4-byte displacement) when it can't size the label on its
+    first pass (a label defined further down, for example). DOSBox emulates a 386-class CPU and every displacement
+    was small, so the code ran correctly and every in-game test passed; on an 8086 or 286 those instructions are not
+    valid. **Fix:** replace such labels by their numeric addresses before assembling (assemble once to learn the
+    addresses, substitute, repeat until they settle), then disassemble each whole assembled image (Capstone,
+    skipping data) and fail the build on any 0Fh, 66h or 67h opcode byte or prefix. A scan of the project's other
+    generated modules found about 320 such forms, harmless in DOSBox and left for later cleanup.
+18. **A saved chunk was read wrongly in game but correctly in the emulated test.** (2026-11-03.) **Cause:** module
+    code read a save-file chunk with the game's own `fread` and kept the chunk length in CX across the call. The
+    game's `fread` changes CX; the emulated test's stand-in for it did not, so the emulated test passed while the
+    first in-game run took every new-version chunk for the old version. **Fix:** keep the length in memory or on the
+    stack across the call. An emulated test can't catch this class of bug unless it runs the game's real routine or a
+    stand-in that clobbers every scratch register (which this project did not add).
 
 ## Seen in
 - Sid Meier's Colonization 3.0 (DOS, GOG release) binary-patching project (no public game note yet).

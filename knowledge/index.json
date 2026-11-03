@@ -12553,7 +12553,9 @@
    "hook-dispatcher",
    "relocations",
    "keystone",
-   "assembler"
+   "assembler",
+   "8086-compatibility",
+   "calling-convention"
   ]
  },
  {
@@ -13283,6 +13285,9 @@
    "umb",
    "upper-memory",
    "xms",
+   "xms-cache",
+   "unreal-mode",
+   "int21h-hook",
    "ems",
    "int67h",
    "sound-drivers",
