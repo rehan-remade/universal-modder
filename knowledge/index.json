@@ -1090,6 +1090,42 @@
   ]
  },
  {
+  "path": "games/beamng-drive/unpack-mod-before-editing.md",
+  "kind": "game",
+  "title": "Unpack a BeamNG.drive mod before editing: rebadge and taillights on an unpacked vehicle",
+  "game": "BeamNG.drive",
+  "games_also": [],
+  "game_version": "0.40.4.0.296339 (Steam)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "asset-only",
+  "tools": [
+   "Blender 4.5.10 (headless import/render)",
+   "PowerShell",
+   "XML editing of the .dae"
+  ],
+  "anti_cheat": "none known: offline single player, files edited in current\\mods\\unpacked (not audited)",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode"
+  ],
+  "humans": [],
+  "date": "2026-11-04",
+  "links": [],
+  "tags": [
+   "beamng",
+   "vehicle",
+   "dae",
+   "jbeam",
+   "materials",
+   "glowmap",
+   "unpack",
+   "blender",
+   "rebadge",
+   "taillights"
+  ]
+ },
+ {
   "path": "games/black-myth-wukong/reshade-depth-dead-end.md",
   "kind": "game",
   "title": "Black Myth: Wukong, Unreal 5.0: injection works, ReShade render depth does not",
