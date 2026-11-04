@@ -47,6 +47,8 @@ def create(src: str, name: str | None = None, note: str = "") -> Path:
         die(f"not a folder: {s}")
     name = name or s.name.replace(" ", "-").lower()
     files = _scan(s)
+    if "_um_manifest.json" in files:
+        die("folder contains reserved snapshot metadata file: _um_manifest.json")
     total = sum(f["size"] for f in files.values())
     if total > 20 << 30:
         die(f"{total / 2**30:.1f} GB - too big to snapshot casually; back up the specific subfolder you'll change")

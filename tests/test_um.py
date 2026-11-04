@@ -1296,6 +1296,17 @@ def test_backup_diff_and_restore_round_trip(tmp_path, monkeypatch):
     assert backup.snapshots("t-pre-restore")  # the state before the restore was kept
 
 
+def test_backup_rejects_reserved_manifest_file(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(backup, "_root", lambda name: (tmp_path / "snaps" / name).mkdir(parents=True, exist_ok=True)
+                        or tmp_path / "snaps" / name)
+    src = tmp_path / "src"
+    make(src, {"_um_manifest.json": "user data", "save.dat": "v1"})
+    with pytest.raises(SystemExit):
+        backup.create(str(src), name="t")
+    assert "reserved snapshot metadata file: _um_manifest.json" in capsys.readouterr().err
+    assert not (tmp_path / "snaps" / "t").exists()
+
+
 # --------------------------------------------------------------------------- comfy
 
 from um import comfy  # noqa: E402
