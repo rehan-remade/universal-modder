@@ -245,6 +245,17 @@ page-pool startup were read from VICEROY's manager and its error messages; eb4x'
     stack across the call. An emulated test can't catch this class of bug unless it runs the game's real routine or a
     stand-in that clobbers every scratch register (which this project did not add).
 
+19. **A popup opened from a correctly framed hook still stopped with "evm0012 ... Return address could not be found
+    on the BP chain".** (2026-11-03.) **Cause:** the hook was entered through the shared dispatcher, a plain
+    `call far` from overlay code into the UMB that does not pass through the manager's vector, so the manager never
+    recorded the call. The popup routine is resident, but it calls a code page through a vector; to protect the
+    caller's page the manager then looks for the resident call's return address on the BP chain, and that address
+    is in the hook's code, which it never saw. A BP frame doesn't help. Popups called by the game's own overlay code
+    work, and so do popups from hooks entered through a vectored entry. **Fix:** defer the work: the click hook only
+    sets a flag; a second hook on the screen's input loop (its `key ready` call, a site whose call is vectored)
+    checks the flag, opens the popup, redraws the panel and returns "no key". The emulated test checks the flag, the
+    deferred popup and the redraw.
+
 ## Seen in
 - Sid Meier's Colonization 3.0 (DOS, GOG release) binary-patching project (no public game note yet).
 - Related: `driving-dosbox-games-from-tests-background-input-parallel-sa.md` (the in-game test harness and the

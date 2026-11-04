@@ -356,6 +356,26 @@ guest-RAM offset (0x20) was measured on the 32-bit 0.74-2 build only. The RAM fi
     removed the units the case needs, reload the scenario with a shifted guest clock (gotcha 14) and try again, up to
     4 times.
 
+28. **One click in a test was missed now and then under a loaded suite, at a different click each time.**
+    (2026-11-03: 1 run in 3 of one test, in a full suite of 358.) **Cause:** a single 100 ms click while 4 DOSBoxes
+    shared the machine; the game polls the mouse only in its idle loop and sometimes didn't see the button down.
+    Run alone, 20 of 20 even shorter clicks registered. **Fix:** a `click_until` helper: click, wait for the
+    expected guest state, and click again (up to 3 times, 3 s each) only while that state is not reached. Use it
+    only for idempotent clicks; the end-state check still fails if the result is wrong.
+29. **Reference-screenshot tests failed after a feature changed how the map is drawn.** (2026-11-03: a fog of war
+    dimmed the ocean behind popups; 3 tests.) **Cause:** the reference shots were taken without the overlay, and
+    the differing pixels were outside the dialog being checked but inside the compared area. A fourth test failed
+    because its scenario's foreign units now stood out of sight and the fog rightly hid them. **Fix:** a helper
+    that turns the overlay off by its key and waits until its state byte in guest RAM reads off (no blind sleep;
+    it does nothing on the original EXE), called before the shot; give the scenario a unit next to the ones the
+    test must see.
+30. **After fixing a few failed tests, the runner refused to finish the full run with only those tests.**
+    (2026-11-03.) **Cause:** the run record keeps a hash of the test code; changed tests make the record stale, so
+    a rerun of the failed tests can't complete it and the whole suite (90 minutes) must run again. **Fix:** this is
+    the right rule (a test fix could hide a regression elsewhere), so gather every test fix from a failed full run
+    before starting the next one. Also cap paired variant runs (here an environment variable sets one variant job)
+    when rerunning a few tests next to another suite, so the DOSBox count stays in budget.
+
 ## Seen in
 - Sid Meier's Colonization 3.0 (DOS, GOG release; VICEROY.EXE, an RTLink-overlaid executable) binary-patching
   project (no public game note yet).

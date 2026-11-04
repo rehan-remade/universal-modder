@@ -167,6 +167,18 @@ RTLink note (stray 67h forms run fine in DOSBox and would fault on an 8086 or 28
 - Measure in game, read-only, from guest RAM: the MCB chain (the UMB owned by the game, the claim), module loads,
   swaps and refusals.
 
+### Two cheap ways to free resident room
+- **Templates into tables.** The start-up code built the 10-byte gates from a byte-for-byte template of all 90
+  gates (0x31B bytes) in the start-up window. A 2-byte entry per gate (the hook's target), expanded by the start-up
+  code, does the same in 0x1A6 bytes all told; check that the expanded gates are byte-identical to the old build's
+  in an emulated start-up.
+- **Cold resident code into transient modules.** Survey every resident block first (size, hot or cold, owner):
+  cold means rare dialogs, reports, one-off rules. Move the biggest cold bodies into transient modules and keep
+  only a thunk and the quick checks resident (here: a rule for abandoned colonies kept its per-site checks and
+  fallbacks; the body loads only when a move onto an empty colony happens). Never make a transient bigger than
+  the largest one, which sizes the transient slots; leave code that unmerged branches touch for after they merge.
+  Here three moves gave 0x6D paragraphs of resident room and 0x253 bytes of the start-up window.
+
 ## Not verified
 - DOSBox Staging and DOSBox-X UMB ranges come from their source, not a measurement (neither was installed); the
   probe that measured 0.74 should be rerun with their executables. Other forks (DOSBox ECE, SVN builds) not checked.
@@ -213,6 +225,15 @@ RTLink note (stray 67h forms run fine in DOSBox and would fault on an 8086 or 28
    (2026-11-01.) **Cause:** the first call reads the module from the EXE file, which is slower while many DOSBoxes
    share the machine. **Fix:** in tests, wait for the screen with a timeout that allows for the read (here up to
    10 s for that menu) instead of a short fixed one.
+
+9. **Raising the start of the upper-memory image (to give memory back) broke the build for most shifts.**
+   (2026-11-03.) **Cause:** the low code blocks lie over other code at the same offsets in another segment, and the
+   linker refuses true clashes (a call target or a trampoline that lands on an instruction start of the code
+   underneath). Moving every low block by the same amount moves all those clashes: shifts of 0x210 to 0x270
+   failed on a block with no slack; 0x280 fitted. A second trap: a generator that runs before the low-block
+   generators checked against their old offsets. **Fix:** give jump tables and fixed entry points a pad constant,
+   add nops automatically before labels that land on an instruction start, try the shifts in a loop, and shift the
+   stale low entries once so the first regeneration goes through.
 
 ## Seen in
 - Sid Meier's Colonization 3.0 (DOS, GOG release; VICEROY.EXE, MSC 6.0 + .RTLink/Plus) binary-patching project
