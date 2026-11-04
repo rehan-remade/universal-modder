@@ -5147,6 +5147,41 @@
   ]
  },
  {
+  "path": "games/phantom-blade-zero/hold-start-hud-toggle-and-per-group-combat-vfx-switches-ue4s.md",
+  "kind": "game",
+  "title": "Hold-Start HUD toggle and per-group combat VFX switches, UE4SS Lua wired into the Mods Menu",
+  "game": "Phantom Blade Zero",
+  "games_also": [],
+  "game_version": "Steam build with exe product version CL-301524_JKS-17219 (steam 4115450), Unreal Engine 5.7",
+  "platform": "windows",
+  "engine": "unreal",
+  "route": "loader-api",
+  "tools": [
+   "UE4SS (UE4SS for Phantom Blade Zero 1.0.1, Nexus mod 5)",
+   "PBZ Mods Menu 0.4.3 (Nexus mod 149) + PBZModsMenuBridge 0.3.0",
+   "lupa (offline Lua compile checks)"
+  ],
+  "anti_cheat": "none found by um scan",
+  "status": "working",
+  "agents": [
+   "Claude Code (claude-opus-5-5)"
+  ],
+  "humans": [],
+  "date": "2026-11-03",
+  "links": [
+   "https://github.com/UE4SS-RE/RE-UE4SS"
+  ],
+  "tags": [
+   "hud",
+   "vfx",
+   "niagara",
+   "enhanced-input",
+   "commonui",
+   "mods-menu",
+   "controller"
+  ]
+ },
+ {
   "path": "games/portal-2/portal-2-portal-gun-viewmodel-converted-for-another-engine-v.md",
   "kind": "game",
   "title": "Portal 2 portal gun viewmodel converted for another engine: VPK, MDL v49, VTF, sounds",
