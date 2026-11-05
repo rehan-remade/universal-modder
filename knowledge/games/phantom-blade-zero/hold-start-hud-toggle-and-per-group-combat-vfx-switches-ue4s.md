@@ -65,9 +65,20 @@ UE4SS Lua mods, each shipping a `<Mod>.modsmenu.json` descriptor (Mods Menu `FOR
   CommonGame-style primary layout with layers keyed by gameplay tag. The HUD is the `UI.Layer.Game` layer (read
   from the layout's `Layers` map). Menus, dialogs and the Mods Menu live on other layers
   (`UI.Layer.GameSystem` ...), so hiding the Game layer hides only the HUD. The HUD actor class is `BP_PBZHud_C`.
-- **Health bars and markers over characters** are `WidgetComponent`s in the world, not part of the layout.
-  `NotifyOnNewObject('/Script/UMG.WidgetComponent')` tracks them, and `SetHiddenInGame` hides them without
-  getting in the way of the game's own `SetVisibility` calls.
+- **Health bars and markers over characters** are `WidgetComponent`s in the world, not part of the layout
+  (two per `BP_Monster_*`). `NotifyOnNewObject('/Script/UMG.WidgetComponent')` tracks them, and
+  `SetHiddenInGame` hides them without getting in the way of the game's own `SetVisibility` calls. **Locking on
+  clears `bHiddenInGame` on the target's bar**, so hiding once is not enough: check every tracked component every
+  frame (`LoopInGameThreadAfterFrames(1, fn)` exists on this UE4SS) and hide it again whenever the game shows it.
+- **Popups share the HUD layer.** The item pickup screen (`W_pickupgear_C`) and others (`W_TeleportMap_C`,
+  `W_BellMenu_C`, `W_UpgradeActivatableWidget_V1_C`, `W_PlayerDead_C`, `W_AbilityWidget_C`) are pushed on
+  `UI.Layer.Game` and take menu input. To know one is up, ask the CommonUI router (`PBZUIActionRouterBase`) for
+  `GetActiveInputMode()` (Menu = 0) and `GetActiveWidget()`; if that widget is not in another layer's
+  `GetWidgetList()`, it is on the HUD layer. HUD Toggle hides the layer with `SetRenderOpacity(0)` (not Visibility
+  Hidden, which can't take focus) and shows it while such a screen has the input.
+- **Never set `AHUD::bShowHUD = false` on `BP_PBZHud_C`.** With it off, the pickup screen opens and then nothing
+  closes it (A, B and Start do nothing; the game keeps running). The pickup flow needs the HUD actor to draw. The
+  console command `showhud` sets it back and frees the screen.
 - **Combat VFX are Niagara**, mostly under `/PBZVFXPack/VFX/BattleFX/`. Many are spawned at a location (owner
   `WorldSettings`); others belong to the weapon or character actor. Name families seen (Chinese pinyin):
   - `PinDao*`: blade clash and parry. `PinDaoPerfect*` is the perfect parry, `PinDaoFinal*` the last parry of a
@@ -108,6 +119,9 @@ UE4SS Lua mods, each shipping a `<Mod>.modsmenu.json` descriptor (Mods Menu `FOR
   group each combat system fell into. The human confirmed in game: tapping Start opens the System menu, holding it
   toggles the HUD, the Mods Menu rows are editable, and hidden groups disappear in combat (blood, impacts, trails
   and the parry vanish all tried).
+- HUD Toggle 1.0.4, in a second play session of about an hour with the HUD hidden: lock-on and target switching
+  show no enemy HP bars, item pickups open and close normally, and the log shows the popup reveal for the pickup,
+  map, Bell, upgrade, death, ability, System menu and confirmation screens.
 - Not verified: keyboard-only play, the title screen, every boss's effects, performance with frame generation.
 
 ## Gotchas
@@ -126,13 +140,23 @@ UE4SS Lua mods, each shipping a `<Mod>.modsmenu.json` descriptor (Mods Menu `FOR
 5. **The parry-chain "red flash and vanish" isn't a parry-spark effect.** It is `NS_ShaQiEnd_*` on the player.
    The first build had put it with the special weapons by name; it needs its own switch.
 6. **Restarting a mod in place crashed the game** in another author's tests (PhantomTweaks notes), and UE4SS
-   keeps `NotifyOnNewObject` hooks across a restart. Test by restarting the game.
+   keeps `NotifyOnNewObject` hooks across a restart. Hot reload is off in this UE4SS config
+   (`EnableHotReloadSystem = 0`). Test by restarting the game.
+7. **Enemy HP bars flash on lock-on with the HUD hidden.** **Cause:** the game shows the target's bar again
+   (`bHiddenInGame` cleared). The first build re-checked markers every 0.5 s and never re-checked one it had
+   hidden. **Fix:** enforce the hidden state every frame.
+8. **Picking up an item with the HUD hidden soft-locked the game.** Two wrong guesses first: showing the layer
+   when the pickup screen is up, then hiding with opacity and refocusing; neither freed it. **Cause:** an
+   intermediate build also set `MyHUD.bShowHUD = false` to hide the bars. Typing `showhud` in the console freed
+   the stuck screen, which proved it. **Fix:** leave `bShowHUD` alone; the per-frame check hides the bars by
+   itself.
 
 ## Assets
 None.
 
 ## Cost and time
-One session: recon run, build, two in-game test runs by the human.
+Two days: recon run, build, two in-game test runs by the human, then four HUD Toggle fixes (1.0.1 to 1.0.4)
+from the human's play reports.
 
 ## Open questions
 - Radial blur and dodge afterimages never appeared as Niagara systems. They are probably post-process materials
