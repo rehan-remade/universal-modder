@@ -376,6 +376,16 @@ guest-RAM offset (0x20) was measured on the 32-bit 0.74-2 build only. The RAM fi
     before starting the next one. Also cap paired variant runs (here an environment variable sets one variant job)
     when rerunning a few tests next to another suite, so the DOSBox count stays in budget.
 
+31. **Integration conflicts in generated files that are committed to git.** (2026-11-04.) **Cause:** two branches
+    regenerated the same build output (the patch list, a generated game text file). **Fix:** never hand-merge
+    them: take either side and run the generator on the merged tree; check afterwards that the regenerated file
+    contains both branches' additions.
+32. **A cross-branch omission was caught at build time, not in the game.** (2026-11-05.) Two branches added
+    professions and a report page that lists professions; neither knew about the other. The report's generator
+    refused any build in which a profession in the game had no line in its table, so the integration build
+    stopped with the missing ids. **Fix / pattern:** for every data-driven table that must cover a growing set
+    (goods, professions, buildings), add a completeness check to its generator.
+
 ## Seen in
 - Sid Meier's Colonization 3.0 (DOS, GOG release; VICEROY.EXE, an RTLink-overlaid executable) binary-patching
   project (no public game note yet).

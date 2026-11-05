@@ -256,6 +256,26 @@ page-pool startup were read from VICEROY's manager and its error messages; eb4x'
     checks the flag, opens the popup, redraws the panel and returns "no key". The emulated test checks the flag, the
     deferred popup and the redraw.
 
+20. **A hook reached through the shared dispatcher crashed with evm0012 only after it opened a sub-screen.**
+    (2026-11-04.) **Cause:** the same as gotcha 19, but without any popup: the hook's module called resident
+    routines that made the overlay manager swap a page out, and the manager could not find the unvectored caller on
+    the BP chain. Any callee that can load or drop an overlay page counts, not only dialogs. **Fix:** give that hook
+    its own vectored gate (the game's call vector, not the dispatcher's plain far call). Rule of thumb: dispatcher
+    entry only for hooks whose whole call tree stays resident or in already-loaded pages.
+21. **A rule needed a new condition in a hot drawing path, and every hook option cost memory or a gate.**
+    (2026-11-05.) **Fix:** the target was a small leaf function (a 58-byte neighbour test with one caller) that
+    could be rewritten in place: the new condition (read one more bit of a map byte) assembled to 54 bytes. No
+    hook, no gate, no upper memory. Look for these: a decompilation's call graph tells you a function's callers and
+    its size; reassemble, check the size and the callers' expectations, and keep the original bytes as the test's
+    reference.
+22. **Pause and volume in a DOS General MIDI driver did not do what their names said.** (2026-11-05, Colonization's
+    GSOUND.)
+    **Cause:** the driver's pause call stopped the stream player but silenced only channels 2-10, and resume
+    restored the driver's own channel volumes rather than the song's; it had no master volume at all.
+    **Fix (planned):** pause silences every music channel and remembers each channel's last volume, resuming
+    resends them; volume is done by scaling every channel-volume (CC 7) message as the player sends it and
+    resending all channels on a change. The GM master-volume SysEx is ignored by some synths.
+
 ## Seen in
 - Sid Meier's Colonization 3.0 (DOS, GOG release) binary-patching project (no public game note yet).
 - Related: `driving-dosbox-games-from-tests-background-input-parallel-sa.md` (the in-game test harness and the

@@ -235,6 +235,13 @@ RTLink note (stray 67h forms run fine in DOSBox and would fault on an 8086 or 28
    add nops automatically before labels that land on an instruction start, try the shifts in a loop, and shift the
    stale low entries once so the first regeneration goes through.
 
+10. **The space ledger said 0x329 paragraphs of upper memory were free; the build had 0x179.** (2026-11-05.)
+    **Cause:** the ledger still counted reservations of branches that had already merged as separate claims
+    (status "reserved"), and some module growth on the integration branch was not booked. **Fix:** measure free
+    upper memory from the built image (the linker's own budget report), treat the ledger as the booking record,
+    and mark a merged branch's reservations merged right after promotion; the build check then caught the one
+    module whose booked size lagged its table entry.
+
 ## Seen in
 - Sid Meier's Colonization 3.0 (DOS, GOG release; VICEROY.EXE, MSC 6.0 + .RTLink/Plus) binary-patching project
   (no public game note yet).
