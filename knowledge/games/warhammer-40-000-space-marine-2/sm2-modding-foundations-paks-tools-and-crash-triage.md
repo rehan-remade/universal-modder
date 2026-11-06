@@ -30,12 +30,18 @@ The other SM2 notes build on this one, and each fact lives in one of them:
 [new enemies and Morpheme animation](sm2-new-enemies-npc-classes-and-morpheme-animation.md),
 [a new playable class](sm2-new-playable-class-on-character-mod-slot.md),
 [missions and the spawn director](sm2-missions-scenarios-faction-swaps-and-esd-spawning.md),
-[voices and Wwise audio](sm2-voices-talkers-and-wwise-audio.md) and
-[the Battle Barge hub](sm2-hub-battle-barge-thunderhawk-and-usables.md) (added 2026-10-29).
-Lines dated "(2026-10-2x)" were added after the first publication.
+[voices and Wwise audio](sm2-voices-talkers-and-wwise-audio.md) and, added 2026-10-29,
+[the Battle Barge hub](sm2-hub-battle-barge-thunderhawk-and-usables.md),
+[a new map with the Map Converter](sm2-building-a-new-map-with-the-map-converter.md),
+[every class on one armour constructor, and fast USF builds](sm2-one-constructor-for-every-class-and-fast-usf-builds.md),
+[active reload and cloned abilities](sm2-active-reload-and-cloned-abilities.md) and
+[porting content from other games](sm2-porting-assets-from-other-games.md).
+Dated lines such as "(2026-10-22)" were added after the first publication; the date is when the finding was made.
 
 ## Setup
-- Steam build 25799387 (Patch 15.1). Patch 14 -> 15 moved many files, so date your findings.
+- Steam build 25799387 (Patch 15.1). Patch 14 -> 15 moved many files, so date your findings. Hotfix 15.2 went live on
+  2026-10-20 (Steam build 26074365; the Mod Tools moved to build 25986312 on 10-19), and these notes don't record which
+  build the findings dated after that ran on.
 - Saber's official modding docs: <https://spacemarine2-modding.prismray.io/> (installing the Mod Editor, Model
   Converter and Map Converter references, uploading, playing with mods).
 - **Saber's mod rules (the docs' Legal Notice):** mods must not contain AI-generated or AI-assisted content, must
@@ -64,7 +70,10 @@ EasyAntiCheat blocks RenderDoc and live-memory tools, so all inspection is offli
 
 Modded play stays inside Saber's mod support. Its "Playing with Mods" page says that when mods are detected the
 game leaves public matchmaking, plays in private lobbies only (invite or code), shows a watermark, and keeps a
-progression separate from the official one. For quick iteration the docs also allow loose files in
+progression separate from the official one. A mod that changes shared state (missions, the hub flow, weapons, enemies)
+changes it for everyone in that lobby, so use it solo or in a lobby you host with friends who agreed. A build holding
+assets converted from other games stays on your machine, friends included (see the
+[porting note](sm2-porting-assets-from-other-games.md)). For quick iteration the docs also allow loose files in
 `client_pc/root/local/` (same relative paths; the game warns about corrupt files and loads slower, because loose
 files don't stream). Paks are what you ship.
 
@@ -237,7 +246,8 @@ the game loads today, so retiring the separate paks changes nothing in game.
 ### Auditing a cut-down build for a console release (2026-10-13 to 10-16)
 A large PC mod was trimmed into a smaller variant intended for a console release through Saber's official mod
 channels (retail player models, no custom maps or new weapon models: the author's scope, not a documented platform
-rule). What the audit had to catch, all offline; none of it has been tested on a console:
+rule; Saber's June 2026 community update promised console mod support in stages). What the audit had to catch, all
+offline; none of it has been tested on a console:
 - Library edits that only make sense with the full build's swapped models show retail leftovers or orphaned objects
   once those models are gone (armour regions pointing at objects only a custom constructor has; a pauldron edit that
   orphaned a shield plate onto every pauldron). Audit every class for orphans after removing a model swap.

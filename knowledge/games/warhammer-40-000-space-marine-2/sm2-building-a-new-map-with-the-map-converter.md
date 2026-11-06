@@ -25,9 +25,10 @@ tags: [space-marine-2, saber, swarm-engine, map, level, map-converter, furnace, 
 > walls and an animated ambient animal. The pipeline works end to end in game: test scenes and the full grey box load
 > and are walkable. Later builds of the same map were played and exposed the limits below. Some parts are still
 > untested in game; each one is labelled. The note also covers in-place edits of the retail hub scene (collision,
-> instanced props, trigger zones). It builds on [the foundations note](sm2-modding-foundations-paks-tools-and-crash-triage.md)
-> (paks, load order, ZIP_STORED, crash dumps), [the models note](sm2-models-tpl-format-modelconverter-and-textures.md)
-> (tpl format, shader cache, `.cdt`, scene static collision) and
+> instanced props, trigger zones). It builds on
+> [the foundations note](sm2-modding-foundations-paks-tools-and-crash-triage.md) (paks, load order, ZIP_STORED, crash
+> dumps), [the models note](sm2-models-tpl-format-modelconverter-and-textures.md) (tpl format, shader cache, `.cdt`,
+> scene static collision) and
 > [the missions note](sm2-missions-scenarios-faction-swaps-and-esd-spawning.md) (level file list, mission registration,
 > navmesh rebakes, the ESD spawn director).
 
@@ -46,8 +47,9 @@ tags: [space-marine-2, saber, swarm-engine, map, level, map-converter, furnace, 
 - Python 3 for our own glTF writer and patch scripts. Blender only for preview renders (back faces culled, see
   Gotchas). Plan on 60+ GB of free RAM plus page file for a big bake, and a free disk for `%TEMP%`.
 - Some building and vegetation meshes in our level were imported from other games the author owns. That route has its
-  own cross-game porting note in this folder. This note sticks to the SM2 side: what the map pipeline, the scene
-  files and the engine do with whatever meshes you feed in.
+  own [porting note](sm2-porting-assets-from-other-games.md), and a build holding them stays on your machine, friends
+  included. This note sticks to the SM2 side: what the map pipeline, the scene files and the engine do with whatever
+  meshes you feed in.
 
 ## Route and why
 Data / asset route: a new scene built by Saber's own offline tools, shipped as loose scene files plus tpls in a mod
@@ -117,7 +119,8 @@ writes the `.scn.resource` link lists. You pack `scenes/<map>.scn/**` (client an
   measured tilt + yaw.
 
 ### tpl_markup for map tpls (draw distance, shadows, navmesh)
-A map tpl has no `tpl_markup` by default. We wrote one per tpl between ModelConverter and Furnace (`<tpl>.tpl_markup`
+A map tpl has no LODs and no `tpl_markup` by default, so its hide distance defaults to 20 km and every instance feeds
+the navmesh. We wrote one per tpl between ModelConverter and Furnace (`<tpl>.tpl_markup`
 + its `.resource`, linked from `tpl.resource` `linkTplMarkup` / `tplMarkup`), copied in shape from a retail text
 markup such as `refrt_moss_grass_01`:
 - `lodInfo {hideDistance, disableSMshadows, densityLodDistance [..]}`: draw distance and density fade, the fix for
@@ -136,9 +139,9 @@ markup such as `refrt_moss_grass_01`:
 - The player marine's movement capsule (`pc_marine_base_authority.cls`, `prop_character_rigid_body_with_fsm`):
   radius 0.75, standing height 2.7, `maxStepHeight` 0.5 (0.61 absolute), `maxSupportSlope` 60 degrees (54 on moving
   or keyframed bodies). Foot IK is off on keyframed surfaces. The Hive Tyrant: radius 2, height 6, step 1. Haloed
-  backpacks reach 3.3 m, so interiors meant for marines need ~3.35 m of clearance, and doorways should be comfortably wider than the
-  1.5 m capsule (we used 2.4 m). Size
-  every walkable or blocking surface by these numbers before blaming a "wall".
+  backpacks reach 3.3 m, so interiors meant for marines need ~3.35 m of clearance, and doorways should be comfortably
+  wider than the 1.5 m capsule (we used 2.4 m). Size every walkable or blocking surface by these numbers before blaming
+  a "wall".
 - Furniture and other complex interiors: give them one hidden `*_cdt` box mesh rather than per-prop collision.
 - Trees: a hidden bark-core collision cylinder inside each trunk, not the render mesh.
 - **Hub collision is different:** in the hub, players walked straight through a hangar model's `.cdt` hit mesh but
@@ -254,8 +257,9 @@ markup such as `refrt_moss_grass_01`:
   same pattern as the hub's idle marine dolls. Clips bind to tpl bones by channel NAME, and channel 0
   `CharacterWorldSpaceTM` is identity in retail clips. The tpl_markup needs `objectInfos` animation roles (Trajectory
   = RIG_TRAJECTORY, CENTRE = RIG_CHARACTER_ROOT, animated bones RIG_INCLUDE). Keep CENTRE static and animate a child.
-  Place it with a custom prefab node. A `sound_actor_full` child can loop a sound bank event. We had to append the
-  animal's tpl to `scn.resource` `linksTpl` after Furnace.
+  Place it with a custom prefab node. A `sound_actor_full` child can loop a sound bank event (retail's setup; our
+  animal's sound is built but not confirmed in game). We had to append the animal's tpl to `scn.resource` `linksTpl`
+  after Furnace.
 - Level sequences autostart with `level_sequence_actor_client {desc = {type = {__type = "<xseq brand>"}; __type =
   "LevelSequenceDesc"}; isAutostart = true}`. They loop through markers or sections, not a flag.
 - **Friendly human NPCs (planned, not built):** the host is the retail friendly `npc_guardsman_server/client`
@@ -314,8 +318,9 @@ markup such as `refrt_moss_grass_01`:
 ## Verification
 - **In game (verified):** small test scenes and the full 800 m grey box load and are walkable (first loads are long).
   Layered ground materials, instanced imported houses and trees, card grass (badly at first: wrong UVs and pop-in),
-  the ambient animal loop, prefab fire and fountain effects all appeared. The directional light's default intensity and +Z travel were
-  confirmed. The native-water crash happened in game. The lwi missing-floor pattern (gotcha 4) was seen in game.
+  the ambient animal loop, prefab fire and fountain effects all appeared. The directional light's default intensity and
+  +Z travel were confirmed. The native-water crash happened in game. The lwi missing-floor pattern (gotcha 4) was seen
+  in game.
   Hub: physics boxes as walls, lwi hiding and a reshaped dom_list ready zone all behaved in game.
 - **Offline only:** the yaw mirror (bake output measured against the glTF; the fix checked to 6e-14 m over 26,977
   nodes), the 53-character and capital-letter failures, the two tpl copies, the navmesh effect of markup (AIConverter
@@ -362,7 +367,8 @@ markup such as `refrt_moss_grass_01`:
    ~0 % CPU, no dump.** **Cause:** a Saber tool asserted and is waiting on an INVISIBLE window titled `CRASH`.
    **Fix:** enumerate top-level windows titled CRASH (hidden ones too) and read the text of their edit controls
    (project, message, file, line, call stack). Check every minute during long bakes. A bake whose parent shell went
-   away also stalls; kill it and rerun from the Furnace step.
+   away also stalls; kill it and rerun from the Furnace step. Saber's troubleshooting page warns of the freeze too: stop
+   the child process and run the last command from MapBuilder's output by hand to get the log.
 8. **CRASH dialog "Error loading tpl descriptor <name>.tpl" during Furnace.** **Cause:** an external tpl used through
    `xTplName` was only in `local/tpl/`. **Fix:** put it in `mods_source/tpl/`.
 9. **AIConverterExe "No memory left!" at 63 GB commit, an hour into the bake; grass blocks the player; grass never
@@ -415,8 +421,9 @@ markup such as `refrt_moss_grass_01`:
 
 ## Assets
 - Buildings, props, vegetation, ground textures, animal and moon source art were imported from other games the author
-  owns, for personal use only and never distributed. The porting route is in the separate cross-game porting note in
-  this folder. SM2-side, every texture set was a renamed clone of a shader-safe retail td family.
+  owns, for personal use only and never distributed, friends included: anyone else builds those assets from their own
+  copies ([porting note](sm2-porting-assets-from-other-games.md)). SM2-side, every texture set was a renamed clone of a
+  shader-safe retail td family.
 - The sky: a retail night sky scaled down, with a moon rendered as a lit sphere and painted behind the clouds
   (additive light; the unlit side stays invisible), saved as linear HDR and converted to BC6H.
 - The level is personal use and not uploaded. Saber's mod rules also forbid AI-generated content in uploaded mods (see

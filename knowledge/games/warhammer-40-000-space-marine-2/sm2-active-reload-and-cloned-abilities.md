@@ -40,6 +40,9 @@ tags: [space-marine-2, saber, active-reload, reload, firearm, morpheme, animatio
   `firearm_base.cls` (`timePercentToReload`), the crosshair clip-bar and HUD screen `.sso` files, an own sound bank.
 - Oracle: a testing arena plus screen recordings stepped frame by frame; an on-screen `BlueprintNodeDrawModUiLog`
   line while wiring the blueprint.
+- **Multiplayer:** a modded game only plays in private lobbies (foundations note), and this changes the reload rules
+  (the commit point in `firearm_base.cls`) for whoever runs it, so use it solo or in a lobby you host with friends who
+  agreed. The build with the donor jam motion and stingers stays on your machine (Verification).
 
 ## Route and why
 The reload itself is compiled script (`reload_logic`): it starts the weapon's `RELOAD_FULL` and a timer, credits ammo at
@@ -85,11 +88,9 @@ dropped: perks are server-only and cannot share a blueprint with client input, H
 - The proven detector is a duration-event subscription's `OnDeactivate`: it fires when the clip is CUT, so "which
   window was active when the reload was interrupted" is the outcome. A window that ends naturally also deactivates;
   a busy/state check right after filters those. No pass/arm gating is needed once the windows tile the clip.
-- Nodes that never fired for this in the Marine client blueprint: `BlueprintNodeInputHold` (fires only after its hold
-  time), a body-state `OnExit` subscription, and logic on markers of the JAM clip itself (see Gotchas). Nodes proven:
-  Morpheme event and duration-event subscriptions, If, variables, set Morpheme parameter, `WaitOneFrame`, check body
-  state, `Delay`, `CommandReload`, story voice-over playback, `GetLocalPlayer` + `ActorsCompare` as a local-player guard,
-  `BlueprintNodeOverrideWidgetsVisibility`.
+- Which Marine client blueprint nodes fire and which don't is in the weapons note ("Input during actions"). Added here:
+  logic on markers of the JAM clip itself never fired (see Gotchas); `GetLocalPlayer` + `ActorsCompare` work as a
+  local-player guard, and `BlueprintNodeOverrideWidgetsVisibility` works.
 - Outcomes: gold sub-zone k -> `Debug_Float1` = 3..5 (tail clip k); fail -> 1 (jam) plus `wpn_reload_type` = 2 to
   re-enter the network's reload state, a voice line and a fail sound; late fail -> a cosmetic clean reload (the magazine
   is already full past the commit, so a real `CommandReload` is cancelled by the "clip full" check). Delays then reset
@@ -160,8 +161,7 @@ dropped: perks are server-only and cannot share a blueprint with client input, H
   Built with the clone; the clone itself worked in game, the recolour was not separately confirmed.
 - New sound events in an existing bank worked in game (event resource + `linksSound`, voices note). Earlier swapping the
   retail shout media also changed the shout for the retail class that shares it.
-- A clip-driven shout (a Morpheme duration event in the emote clip -> the Marine sound blueprint) can be muted for one
-  ability only with a `BlueprintNodeGate` opened/closed by `BlueprintNodeSubscribeOnAbility` OnActivated/OnDeactivated.
+- Muting a clip-driven shout for one ability is in the voices note (a `BlueprintNodeGate` on the ability's events).
 - One controller node can be overridden inside `ability_library` (retail precedent: a grenade). Swapping the ability's
   anim link to a new anim-table entry works only for ordinary clips: emotes play only through the smart / level-sequence
   path, and the war-cry controller leaves `OnFail` unwired, so a failed task hangs the cast. A `BlueprintTimeLibraryDelay`
@@ -188,11 +188,12 @@ dropped: perks are server-only and cannot share a blueprint with client input, H
   ammo; early press restarts the reload (first penalty design); gold slice on the ammo arc; jam routed through switch
   wrappers and ending on timers; seamless jam -> reload clip; voices cycling every time; red overlay aligned within
   ~1 px; team-status overlay with custom textures and fades ("look and fade OK"); appended network records loading; a
-  tester verdict of "seems ok" on the complete rifle loop.
+  play-test verdict of "seems ok" on the complete rifle loop.
 - Built, not confirmed in game: the all-weapon expansion (43 routes, per-clip float timers), the held-key fix, swap
   markers, the after-perfect pass, pistol alignment of the drawn slice (pistol windows end at clip 0.47).
-- Personal-use limit: the jam motion was retargeted from a donor clip outside SM2, so that build stays private. The
-  mechanic itself needs only retail assets (the clean retail reload works as the penalty; that is what pistols use).
+- Personal-use limit: the jam motion was retargeted from a donor clip outside SM2, so that build stays on the author's
+  machine, friends included. The mechanic itself needs only retail assets (the clean retail reload works as the
+  penalty; that is what pistols use).
 
 ## Gotchas
 1. **The wrapped jam never ends; the rifle stays raised everywhere.** **Cause:** the wrapper was a Blend2, which at
@@ -238,7 +239,7 @@ dropped: perks are server-only and cannot share a blueprint with client input, H
 ## Assets
 HUD textures (arc flash body and core, 92x22) were generated procedurally from the retail arc's shape. Clips were
 written with our own `.sani` writer from the live retail clips. The jam motion and the stinger sounds came from sources
-outside SM2, so builds containing them stay private; nothing from any game is attached to this note.
+outside SM2, so builds containing them stay on the author's machine; nothing from any game is attached to this note.
 
 ## Open questions
 - Why markers on the jam clip never arrive even under a Switch wrapper.

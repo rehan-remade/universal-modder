@@ -43,6 +43,8 @@ is in [the weapons note](sm2-weapons-skins-reloads-perks-vfx-and-sounds.md) and
 - The loading/travel cutscene is its own scene: `scenes/loading_scene.scn` in `client/default/scenes/loading_scene.pak`.
 - All edits ship in ZIP_STORED mod paks in `client_pc/root/mods/`; nothing is injected. Paks were swapped only with
   the game closed.
+- **Multiplayer:** a modded game only plays in private lobbies (foundations note), and these edits change the hub and
+  the launch flow for everyone in it, so use them solo or in a lobby you host with friends who agreed.
 - Oracle: load the hub, walk it, record a short video. Every "invisible wall" report came with a screenshot or sketch
   of where the player stopped; that position, measured in ship coordinates, is what finally pinned each source.
 

@@ -116,7 +116,8 @@ Prefer 1 for anything structural; prefer 2 when you only touch a few objects and
   - Weapons' LOD0 often uses an UNcompressed normal (3 x float32); there positions are quantised per axis to the full
     int16 range. ModelConverter's own decode of that normal is wrong (~89 deg off).
   - Skinned layout seen in constructors: stream A stride 20 (`int16 xyz`, 2-byte normal, 4 x u8 weights, 4 x u16 bone
-    indices), stream B stride 8 (4-byte tangent, u16 U, u16 V). Bone indices index the tpl's node-name table directly.
+    indices), stream B stride 8 (4-byte tangent, u16 U, u16 V). Bone indices are object-table ids (see the 2026-10-29
+    line below, which corrects "the node-name table" here).
   - (2026-10-22) **Only three of the four weight bytes are weights.** Retail characters never use a real 4th
     influence, ModelConverter always writes 255 into the 4th byte, and only `JOINTS_0` / `WEIGHTS_0` are read
     (`_1` sets are ignored). In the retail soldier constructor ~415k vertices have w1+w2+w3 < 255 and the shortfall
@@ -411,7 +412,9 @@ These apply to private builds only: Saber's mod rules don't allow AI-generated c
   inconsistent winding, duplicate triangles (z-fight hairlines), T-junctions from local subdivision and open boundary
   loops before export; a software preview hides all four.
 - Hi-poly and low-poly exports of the same generation are not at the same scale; align with an affine ICP before
-  transferring detail.
+  transferring detail. (2026-10-29) A 3x4 affine ICP got them to about 0.15 % of size. Then rasterise the high surface
+  along the plate normal, sample it in the low mesh's UV space, include every outward-facing low triangle, and match
+  roughness/metal levels over a feather ring.
 
 ### Textures (`.pct`)
 - Formats seen: 52 = BC7 colour, 51 = BC7 (spec and others), 36 = BC5 (normal maps; weapon spec is BC5 R metal /
@@ -469,7 +472,9 @@ These apply to private builds only: Saber's mod rules don't allow AI-generated c
   collision with player/AI/vehicles/camera) vs `cdt_high_res_geometry` (weapons/projectiles only). UsfExport bakes
   per-object flags into `.lods_base` (`collision = { plrMove = false ... __type = "tpl_markup_cdt_flags" }`).
   `geom.collisionLayerName` only picks a Havok layer and does NOT stop movement collision; a skinned prefab's movement
-  collision comes from `geom.cdtSkeleton` (`geom_cdt_skel_tpl`), which can be removed from the class.
+  collision comes from `geom.cdtSkeleton` (`geom_cdt_skel_tpl`), which can be removed from the class. (2026-10-15) The
+  hub differs: players walked through a hull's `.cdt` hit mesh and were stopped by its keyframed physics boxes (see the
+  [hub note](sm2-hub-battle-barge-thunderhawk-and-usables.md)).
 - **Level static collision** lives in the scene: `<scene>.cdt` is per-layer MOPP code over the geometry of
   `<scene>.lg` / `.lg_data` (no vertices of its own). The Map Converter guide says scenes can't be decompiled; reading
   them works anyway (the `.lg` is GeomManager-style chunks). Invisible walls are objects named
@@ -641,8 +646,8 @@ armoury dummy.
     meshes split hard between HIP_L / HIP_R tear once unsimulated. Fix: simulate them with vanilla's own figure cloth
     entries as templates (front / back); never the `_vest` template for hanging pieces (slow drifting strips).
 47. **The model the game loads is not the build you think (fixes missing, parts from older tests).** Cause:
-    first-sorting pak wins per file, so the game assembled one tpl family from several paks. Fix: ship and check the whole family
-    together.
+    first-sorting pak wins per file, so the game assembled one tpl family from several paks. Fix: ship and check the
+    whole family together.
 
 ## Assets
 Custom meshes came from AI 3D generation (Tripo) and from retail parts re-used inside the game's own tpls; textures

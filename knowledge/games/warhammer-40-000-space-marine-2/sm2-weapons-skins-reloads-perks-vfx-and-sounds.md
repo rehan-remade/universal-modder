@@ -139,7 +139,9 @@ network, which we patched in place (the engine loads an edited `primaris.nmb` fr
   declared in `ssl/main/user/honor_shop/honor_shop_library.sso` `items` (NOT in `orderedItemsByCategory`, which is the
   list the shop shows, so it is never on sale). With an unknown item uid the armoury tooltip falls back to an
   "unexpected" tooltip ("...") without the Equip button. Saves made while the lock was missing heal themselves (a lock
-  forces the purchased flag). Verified in game: the version became equippable and later test rounds used it.
+  forces the purchased flag). Verified in game: the version became equippable and later test rounds used it. This is
+  for versions you add yourself: an inverted lock on a retail heroic or a store item would hand out something the game
+  sells or makes you earn, which is the ownership bypass the KB keeps out (CONTRIBUTING).
 - The armoury version NAME and the four stat bars come from `ssl/abilities/ui/ui_abilities_library.sso`
   `<weapon>.versions."<ver>"` (`MeleeUiVersionData`: `versionName`, `strikePower`, `strikeSpeed`, `control`, `defense`
   BALANCED/BLOCK/FENCING), not from the skin's `MeleeUiSkinData`. Missing entry = "..." and odd bars.
@@ -533,11 +535,12 @@ sideEffects   =   [
 28. **Cross-weapon perk accepted?** Yes - a version's `perkUids` takes any perk; use it to get an exclusive flag.
 29. **New heroic version shows in the armoury but can't be selected or bought.** **Cause:** rarity != 0 with no lock means
     "not owned"; an honor-shop lock naming an item that doesn't exist gives a "..." tooltip with no Equip button. **Fix:**
-    inverted `HonorShopLockReason` + the item in `honor_shop_library` `items` (not in the shop's ordered list).
+    inverted `HonorShopLockReason` + the item in `honor_shop_library` `items` (not in the shop's ordered list), on your
+    own new versions only.
 30. **Version name "..." and wrong stat bars.** **Cause:** no `ui_abilities_library` `versions."<ver>"` entry (skin UI data
     is not used for this). **Fix:** add a `MeleeUiVersionData` entry.
-31. **Perks listed on a skin's version entry do nothing.** **Cause:** perks attach only from the version tier. **Fix:** put them on
-    the version that the loadout uses.
+31. **Perks listed on a skin's version entry do nothing.** **Cause:** perks attach only from the version tier. **Fix:**
+    put them on the version that the loadout uses.
 32. **Boot crash on a null `comboDesc` after a melee desc edit that parses fine.** **Cause:** the desc used actor-level
     blueprint node types no retail melee desc uses, and the whole brand loaded empty. **Fix:** only node types seen in retail
     melee descs; gate strikes with `CheckModifierFlag`.
@@ -553,8 +556,9 @@ sideEffects   =   [
     whoosh. **Fix:** a pre-mixed burst event for the shooter and remove the whoosh on that actor; judge on mono renders.
 38. **A reload/press binding fires instantly when the player holds the key.** **Cause:** `shouldCheckInputOnActivation =
     True` uses an already-held input on activation. **Fix:** set it False.
-39. **Hand reaches away from the gun / feet drag in a rebuilt clip that previews fine.** **Cause:** hand-hold and foot-target
-    helper joints moved off their joints, and always-on IK pulls the limbs onto them. **Fix:** re-pin helpers per frame by FK.
+39. **Hand reaches away from the gun / feet drag in a rebuilt clip that previews fine.** **Cause:** hand-hold and
+    foot-target helper joints moved off their joints, and always-on IK pulls the limbs onto them. **Fix:** re-pin helpers
+    per frame by FK.
 
 ## Assets
 Weapon models from AI 3D generation (Tripo) plus retail parts reused from the game's own tpls; textures baked or

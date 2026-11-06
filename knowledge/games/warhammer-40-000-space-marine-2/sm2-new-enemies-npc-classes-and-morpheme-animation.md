@@ -111,10 +111,11 @@ donor creature: everything is cloned, because the engine keys animations by name
   empty: the NPC was completely silent in game (proved by cross-correlating the recording against every source file).
   Before shipping a hand-built bank, simulate the load order and count empty containers (retail: zero).
 - Events with `prepareOrder <= 0` play straight from the loaded bank (correct for in-bank media; retail has hundreds,
-  NPCs included). Bank layout details for this Wwise version (v150): FX entries are 6 bytes; a random/sequence
-  container's child list is easiest found from the END of its body. Continuous loops use the continuous bit with loop
-  count 0; a per-hit chance = silent takes plus the weighted bit. The children-first rebuild of the same bank played in
-  game (verified).
+  NPCs included). Bank layout details for BKHD version 150 (wwiser's table calls that Wwise 2023.1, while the voices
+  note encodes with 2019.2, so read `BKHD` in your own files): FX entries are 6 bytes; a random/sequence container's
+  child list is easiest found from the END of its body. Continuous loops use the continuous bit with loop count 0; a
+  per-hit chance = silent takes plus the weighted bit. The children-first rebuild of the same bank played in game
+  (verified).
 
 ### How character animation is wired (everything by name)
 - Client `prop_morpheme_controller` (`animSet`, `nameBundle`) + `.cls.resource` `linksMr` pick
@@ -185,7 +186,7 @@ Decoded on the Tyranid Warrior network (3 sets, ~1200 nodes) while porting a hum
 for node definitions, attributes and state machines read all 44 retail networks cleanly.
 - Network asset: u32 at +168 = node count, u64 at +176 = offset of the node-offset table (0 = no record). Attribute
   handles are SELF-relative i64 offsets; per-set attributes are indexed `set * nSemantics + semantic`. Node type ids
-  follow Morpheme's public enums; attribute type ids differ (measure them).
+  follow Morpheme's runtime enums (104 is `NODE_TYPE_ANIM_EVENTS`); attribute type ids differ (measure them).
 - **Anim nodes (type 104) cache clip data per animation set:** anim-list index, set asset id, the clip DURATION, the
   number of discrete and duration event tracks and a CRC-32/BZIP2 hash of each track GUID (clip file order). The
   single-set Marine network keeps the same block at a fixed offset. Clips re-made with different timing or a different
@@ -343,7 +344,8 @@ constraint ends):
 - **But an attach inside a smart EMOTE did not move the player** (the sit played in place; tested). Retail
   player-moving sequences attach the initiator to SCENE object bones under a usable (anim mode NONE), and interaction /
   finisher smarts pause the character transform sync; finishers move the initiator with a root mover on the clip's
-  trajectory. Use a usable + level sequence for anything that must move the player.
+  trajectory. Use a usable + level sequence for anything that must move the player (recipe in the
+  [hub note](sm2-hub-battle-barge-thunderhawk-and-usables.md)).
 - Absolute scene references exist: `<scn>/<scene>__<layer>/a/b` names a scene object (`<layer>__a__b` in the cd_list).
 - **Sounds:** sound-track sections `{from, to, rowIndex, soundDesc{type{name, __type GameSound}, __type
   GameSoundDesc}}` on an `xc_track_actor` bound to a `sound_actor_full` actor. Every event must be listed in the
@@ -509,7 +511,9 @@ walks up to the squad, takes real bullet damage and fights with stomps, swipes a
 The boss mesh was AI-generated (Tripo) and repainted by the human in Substance Painter; motion is the retail
 creatures' own clips retargeted offline; eyes/teeth are retail parts reused by material name. Nothing from the game
 is attached to this note. Saber's mod rules forbid AI-generated content in mods (see the foundations note's Setup),
-so keep builds with the AI-generated boss private.
+so keep builds with the AI-generated boss private. The ported humanoid melee NPC in the 2026-10-15..16 sections is the
+Space Marine 1 Ork from the [porting note](sm2-porting-assets-from-other-games.md): its mesh, clips and sounds came
+from the author's own copy and stay on the author's machine, friends included; anyone else builds them from their own.
 
 ## Open questions
 - Wiring retargeted cross-creature moves into AI behaviour (kata trees, smarts) for a new boss.

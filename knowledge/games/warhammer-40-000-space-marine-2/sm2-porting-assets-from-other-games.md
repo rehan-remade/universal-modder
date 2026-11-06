@@ -3,17 +3,17 @@ kind: game
 title: "Porting owned content from other games into Space Marine 2 (personal use): Witcher 3 level kit, Space Marine 1 Orks, Gears of War E-Day, Elden Ring, Helldivers 2"
 game: "Warhammer 40,000: Space Marine 2"
 games_also: ["The Witcher 3", "Elden Ring", "Gears of War: E-Day", "Warhammer 40,000: Space Marine - Master Crafted Edition", "Helldivers 2", "Red Dead Redemption 2"]
-game_version: "SM2 Steam build 25799387 (Patch 15.1, Oct 2026), most work on Patch 14.x-15; Saber Mod Tools (Oct 2026: ModelConverter, UsfExporter, Map Converter + Furnace, TextureConverter). Sources: The Witcher 3 Remastered 5.01 (GOG), Space Marine Master Crafted Edition (Steam), Gears of War: E-Day (UE 5.5 IoStore build), Elden Ring + Shadow of the Erdtree (Steam), Helldivers 2 (Steam, Stingray)"
+game_version: "SM2 Steam build 25799387 (Patch 15.1, Oct 2026), most work on Patch 14.x-15; Saber Mod Tools (Oct 2026: ModelConverter, UsfExporter, Map Converter + Furnace, TextureConverter). Sources: The Witcher 3 Remastered 5.01 (GOG), Space Marine Master Crafted Edition (Steam), Gears of War: E-Day (UE 5.5 IoStore build; store and build id not recorded), Elden Ring + Shadow of the Erdtree (Steam), Helldivers 2 (Steam, Stingray)"
 platform: windows
 engine: unknown
 route: asset-only
 tools: ["Saber SM2 Mod Tools (ModelConverter --map_mode, UsfExporter, Furnace, TextureConverter)", "Blender (headless, isolated user profile)", "Witcher3-Blender-Tools (dingdio) Blender add-on", "own SpeedTree 7 .srt parser (Python)", "filediver v0.7.58 (Helldivers 2 extractor)", "own UE 5.5 IoStore + ACL v2.1 readers (Python)", "own Havok 2010.2 packfile reader (Python)", "Wwise 2019.2.15 WwiseConsole", "ffmpeg", "Python 3 (numpy, scipy)"]
-anti_cheat: "SM2 has EasyAntiCheat: every build here loads through Saber's official mods folder (Mods Detected, private lobbies), no injection. Source games with anti-cheat (Elden Ring EAC, Gears E-Day EAC, Helldivers 2 GameGuard) were never launched or patched for this work; their files were read offline from the author's own installs."
+anti_cheat: "SM2 has EasyAntiCheat: every build here loads through Saber's official mods folder (Mods Detected, private lobbies), no injection. Source games with anti-cheat (Elden Ring EAC, Gears E-Day EAC, Helldivers 2 GameGuard, EAC since 2026-10-20) were never launched or patched for this work; their files were read offline from the author's own installs."
 status: in-progress
 agents: ["Claude Code (Opus 5.5)"]
 humans: []
 date: 2026-10-29
-links: []
+links: ["https://github.com/dingdio/Witcher3-Blender-Tools", "https://github.com/xypwn/filediver", "https://github.com/nfrechette/acl"]
 tags: [space-marine-2, cross-game, port, asset-conversion, mashup, witcher-3, redengine, speedtree, map-converter, furnace, lwi, elden-ring, gears-of-war, unreal-5, iostore, acl, space-marine-1, havok, helldivers-2, stingray, wwise, opus, retarget, personal-use]
 ---
 
@@ -23,30 +23,38 @@ tags: [space-marine-2, cross-game, port, asset-conversion, mashup, witcher-3, re
 > wall and town kits, trees, grass, animals and their sounds for a custom 800 m level; the Space Marine 1 Ork Boy as a
 > new SM2 enemy; Gears of War: E-Day sounds, a reticle, animation decoding and a Siege-mode slice; Elden Ring
 > animation-donor research and a cape port; a Helldivers 2 flyer and pump-shotgun research. Route: offline asset
-> conversion (see `techniques/choosing-a-mashup-route.md`): source files are read from the owned install, converted to
-> glTF/WAV/clip data, and rebuilt with Saber's own tools into a mod pak. **All of it was for personal use, in private
-> lobbies; no assets are redistributed, and none of these paks goes to the Workshop.** Each claim below is labelled as
-> seen in game, built but untested, or rejected.
+> conversion (see [choosing a mashup route](../../techniques/choosing-a-mashup-route.md)): source files are read from
+> the owned install, converted to glTF/WAV/clip data, and rebuilt with Saber's own tools into a mod pak. **All of it is
+> for personal use: the paks stay on the author's machine and aren't shared, friends included (a private lobby doesn't
+> change that), and none of them goes to the Workshop. Anyone else builds them from their own copies of the games.**
+> Each claim below is labelled as seen in game, built but untested, or rejected.
 
 ## Setup
-- **Ownership and rules.** Every source game is a store copy the author bought. Read source files offline; never
-  launch, patch or inject a source game that has anti-cheat. CD PROJEKT RED's fan-content terms do not allow putting
-  their assets in other games, FromSoftware, Arrowhead/Sony, Microsoft and Rockstar own theirs, and Saber's mod rules
-  only accept Warhammer 40,000 IP on the Workshop. So: personal-use paks only, and this note describes methods, not
-  files. It does not cover opening encrypted archives; where a source's archives are encrypted, use its community's
-  established unpacker on your own copy, or skip that game.
+- **Ownership and rules.** Every source game is a store copy the author bought, expansions included where this note
+  uses them (Blood and Wine for the Toussaint kit, Shadow of the Erdtree). Read source files offline; never launch,
+  patch or inject a source game that has anti-cheat. CD PROJEKT RED's Fan Content Guidelines say fan content shouldn't
+  go into a third-party game and that a mod for another game using their content needs asking first; FromSoftware,
+  Arrowhead/Sony, Microsoft and Rockstar own theirs; and Saber's Legal Notice allows only Warhammer 40,000 content and
+  no third-party IP in mods. So: personal-use paks only, and this note describes methods, not files. It does not cover
+  opening encrypted archives; where a source's archives are encrypted, use its community's established unpacker on
+  your own copy, or skip that game.
 - SM2 Steam build 25799387 (Patch 15.1). SM2 side basics (pak layout, ZIP_STORED, load order, crash triage) are in
   [the foundations note](sm2-modding-foundations-paks-tools-and-crash-triage.md); the `.tpl` format, the converter
-  round trip and the shader-cache crash are in [the models note](sm2-models-tpl-format-modelconverter-and-textures.md).
-  This note only adds what is specific to bringing content in from elsewhere.
-- **The Witcher 3:** Remastered 5.01 (GOG). The dingdio Witcher3-Blender-Tools add-on (v1.1.0) reads meshes, materials,
-  rigs, animations, world layers, foliage and the sound cache straight from the game's bundles. Run it headless from an
-  **isolated Blender profile** (`BLENDER_USER_RESOURCES` pointing at a project folder) so it never touches the main
-  Blender install, and set its game path and uncook folder in the add-on preferences from your script.
+  round trip and the shader-cache crash are in [the models note](sm2-models-tpl-format-modelconverter-and-textures.md);
+  the level pipeline and its gotchas are in [the map note](sm2-building-a-new-map-with-the-map-converter.md). This note
+  only adds what is specific to bringing content in from elsewhere.
+- **The Witcher 3:** Remastered 5.01 (GOG). The dingdio
+  [Witcher3-Blender-Tools](https://github.com/dingdio/Witcher3-Blender-Tools) add-on (v1.1.0, GPL-3.0, needs Blender
+  4.5+) reads meshes, materials, rigs, animations, world layers, foliage and the sound cache straight from the game's
+  bundles. Run it headless from an **isolated Blender profile** (`BLENDER_USER_RESOURCES` pointing at a project folder)
+  so it never touches the main Blender install, and set its game path and uncook folder in the add-on preferences from
+  your script. The bundle and CR2W layouts are in
+  [the Witcher 3 note](../the-witcher-3/the-witcher-3-remastered-bundle-container-and-cr2w-decoded.md).
 - **Space Marine 1:** Master Crafted Edition from Steam. Animations are standard Havok 2010.2 x64 packfiles (the same
   generation Skyrim Special Edition uses); meshes are Relic `.dcm`.
 - **Gears of War: E-Day:** UE 5.5 IoStore containers (utoc v8), not encrypted, compressed with Oodle **Mermaid**.
-- **Helldivers 2:** Stingray bundles, extracted with filediver v0.7.58 (CLI; animations behind a flag).
+- **Helldivers 2:** Stingray bundles, extracted with [filediver](https://github.com/xypwn/filediver) v0.7.58
+  (BSD-3-Clause; CLI; animations behind a flag).
 - **Elden Ring:** the archives are packed; this note only records what was learned from the animation and cape data.
 - Wwise 2019.2.15 Authoring (WwiseConsole) for SM2 sound banks; ffmpeg for decoding.
 
@@ -61,28 +69,13 @@ Offline asset conversion into SM2's own formats. Nothing runs the source game. C
 ## How the game works (what we had to learn)
 
 ### SM2 side of a custom level built from imported kits
-- Pipeline (Saber's MapBuilder steps): ModelConverter `--map_mode <map>.gltf ... --install_lwi`, then
-  `furnace.exe scene` on a project layout (`.project`, `mods_source/`, `local/`). The glTF is Y-up, metres. A mesh node
-  without `xType` becomes its own tpl `sg_<map>_<node>_<node index>` with collision.
-- **Instancing:** any other node can reuse that tpl as an empty with extras `xType: static_geometry` and
-  `xTplName: <tpl name>`, written as an lwi instance with no new conversion. Keep instances yaw-only (see gotchas).
-  `xCollisionPreset: no_collision` writes a per-instance collision mask; for grass also delete the tpl's `.cdt`,
-  because the lwi type stays flagged as a collision actor while a `.cdt` exists.
-- **Map-mode tpls have no LODs and no markup**, so their hide distance defaults to 20 km and every instance feeds the
-  navmesh. Inject a small `tpl_markup` per tpl between ModelConverter and Furnace: `lodInfo` (hideDistance,
-  densityLodDistance) and `navMeshParams.enableNavMesh = False` for plants. Leave render, wind and LOD-transition params
-  out: they can create shader permutations the prebuilt cache lacks.
+The pipeline, instancing, `tpl_markup`, collision, prefabs and bake times are in
+[the map note](sm2-building-a-new-map-with-the-map-converter.md). What imported kits add:
 - **Materials:** every map-mode tpl gets one FVF and the submaterial `default`. The shader cache only holds the
   (FVF, material shape) pairs retail ships (see the models note), so imported textures go into **renamed clones of
   retail `.td` families that already pair with the map FVF**: a stone rock family with an MSCRGHAO spec, a worn-wood
   family, and a one-sided alpha-tested grass card family. Check every exported split against the retail pair list
   before baking: zero novel pairs was the rule that kept the level from crashing.
-- Furnace resolves `res://td|pct/<name>` and external `xTplName` tpls from `mods_source/` (or retail paks), never from
-  `local/`.
-- **Custom prefabs:** a node with `xType: prefab` + `xPrefab: <name>` instantiates a compile-time `.prefab` from
-  `mods_source/ssl/prefabs/`. Used for light + fire actors, an ambient animal and its sound actor.
-- Cost: an 800 m grey box baked in about 21 min (13 of them the navmesh); with ~44k instances and missing markup the
-  navmesh step ran out of memory (see gotchas).
 
 ### Witcher 3 meshes and textures
 - **Textures (measured):** building normal maps are already DirectX (green down) like SM2, with **roughness in the
@@ -154,10 +147,8 @@ Offline asset conversion into SM2's own formats. Nothing runs the source game. C
   rig, bake each clip onto the mesh rig with visual keying, remove the constraints, export glTF with one action per
   clip. A horse with four mesh rigs must first be joined into one rig (rename clashing bones first), or the glTF gets
   per-rig fragments.
-- SM2 side: a plain class-list `actor` with `prop_animation_controller` looping one baked `.sani` (the pattern the hub's
-  idle Marines use) plays skeletal animation with **no Morpheme network**. Clips bind to tpl bones by channel name;
-  channel 0 `CharacterWorldSpaceTM` is identity in retail clips. The tpl_markup needs animation roles (Trajectory,
-  CENTRE as character root, every animated bone included); keep CENTRE static and animate a child bone.
+- SM2 side: the [map note's](sm2-building-a-new-map-with-the-map-converter.md) ambient-animal recipe (a plain `actor`
+  looping one baked `.sani`, with **no Morpheme network**).
 - Axes: W3 animals face +Y; Blender (x, y, z) maps to SM2 (-x, z, y). SM2 tpls take three skin weights: keep the three
   heaviest bones and solve the weights by least squares over the clip (plain drop-the-smallest collapsed near-equal
   ties by up to 16 cm).
@@ -167,10 +158,10 @@ Offline asset conversion into SM2's own formats. Nothing runs the source game. C
 ### Witcher 3 audio into an own SM2 bank
 - Index: the add-on ships a sound-bank info table (events by name, streamed files by id, banks by id). Small sounds have
   no streamed `.wem`; their media sit inside the `.bnk` (read DIDX for id/offset/size into DATA).
-- **Next-gen W3 media are Wwise Opus** (fmt tag 0x3041), which `ww2ogg` cannot read. The fmt extra holds frame size
-  (960), total samples, packet count and pre-skip (312); the `seek` chunk lists u16 packet sizes that sum to `data`.
-  Re-wrapping the packets as a standard Ogg Opus stream (OpusHead, OpusTags, one packet per page, granule = samples,
-  standard Ogg CRC) lets ffmpeg decode it.
+- **Next-gen W3 media are Wwise Opus** (fmt tag 0x3041, `OPUSWW` in vgmstream's `wwise.c`), which `ww2ogg` cannot read.
+  The fmt extra holds frame size (960), total samples, packet count and pre-skip (312); the `seek` chunk lists u16 packet
+  sizes that sum to `data`. Re-wrapping the packets as a standard Ogg Opus stream (OpusHead, OpusTags, one packet per
+  page, granule = samples, standard Ogg CRC) lets ffmpeg decode it.
 - Re-encode with WwiseConsole 2019.2.15 into an own bank (fresh ids checked against every retail bank; the HIRC rules
   are in [the voices note](sm2-voices-talkers-and-wwise-audio.md)).
 - Level ambience: a prefab child `sound_actor_full` with `prop_initial_sound` naming the event (the retail setup),
@@ -202,8 +193,8 @@ Offline asset conversion into SM2's own formats. Nothing runs the source game. C
   off (it bakes the host's leg lengths), strikes re-timed on measured impacts, look-at baked into attack clips, and the
   Ork's own voice and effort sounds in an own bank.
 - **Seen in game:** the Boy spawns, fights and plays its own sounds. Executing it froze the player until a
-  pair-combat (finisher) entry existed, so executions were switched off for the time being. **Outcome: paused**: the
-  tester found SM1's 2011 animation too light and dated next to SM2's. That led to the donor research below.
+  pair-combat (finisher) entry existed, so executions were switched off for the time being. **Outcome: paused**: in
+  play, SM1's 2011 animation felt too light and dated next to SM2's. That led to the donor research below.
 
 ### Animation donors from other games (for the Ork)
 - **Elden Ring** (research + one built moveset): a shortlist per Ork type by body plan and weight, measured with
@@ -220,7 +211,8 @@ Offline asset conversion into SM2's own formats. Nothing runs the source game. C
   a Mermaid decoder was needed. No `.usmap` ships, so unversioned properties were decoded from the cooked
   UserDefinedStruct/Blueprint class property lists. Facts for this build: no array/map property-flags byte; property
   index order is most-derived class first; GameplayTagContainer = count + names; byte/enum values are raw ints.
-- **Animations:** ACL v2.1 (qvvf, drop-w quaternions, segments), decodable from ACL's MIT-licensed headers. The
+- **Animations:** [ACL](https://github.com/nfrechette/acl) v2.1 (qvvf, drop-w quaternions, segments), decodable from
+  ACL's MIT-licensed headers. The
   track-to-bone map indexes the **shared biped skeleton** (280 bones), not the hero character's 469-bone skeleton;
   default tracks are the skeleton's reference pose (double-precision transforms, centimetres). Prop IK bones snapping
   ~120 degrees mid-clip were genuine (magazine attach), not a decode error.
@@ -263,9 +255,10 @@ Offline asset conversion into SM2's own formats. Nothing runs the source game. C
   player avatar GLB. SM2 plays a reload as one clip (no per-shell loop), so a seven-shell reload is one long clip.
 
 ### Side notes
-- **Red Dead Redemption 2** (not a port; RDR2 modding through LML, using only files from installed community mods):
-  `.awc` containers (`ADAT`) hold a u16 chunk-index table, u32 stream infos (`chunks << 29 | id`), 8-byte chunk infos
-  (tag, size, offset) and a 32-byte stream format (samples, loop, rate, headroom, codec). Stream ids are
+- **Red Dead Redemption 2** (not a port; story-mode RDR2 modding through LML, never Red Dead Online, using only files
+  from installed community mods): `.awc` containers (`ADAT`) hold a u16 chunk-index table, u32 stream infos
+  (`chunks << 29 | id`), 8-byte chunk infos (tag, size, offset) and a 32-byte stream format (samples, loop, rate,
+  headroom, codec). The layout agrees with CodeWalker's `AwcFile.cs`. Stream ids are
   `joaat(lowercase name) & 0x1FFFFFFF`. Modding tools keep vanilla headroom per stream, which helped tell which streams
   belong to which firing mode. Ped component hashes are `joaat(drawable name)`, with an outfit token between ped and
   category name that defeats brute force. In-game result not recorded.
@@ -274,13 +267,9 @@ Offline asset conversion into SM2's own formats. Nothing runs the source game. C
   mesh UV Jacobian, size the new text to the old lettering's extent, and carve or paint it with per-letter jitter and
   wear (crisp pasted fonts looked like stickers). W3 shop signs often share one UV island for both sides, so one side
   reads mirrored. Signposts: split post from boards and turn each board toward its real destination.
-- **Detail transfer between two meshes of one object** (an AI generator's high- and low-poly exports): they differ in
-  scale; a 3x4 affine ICP aligns them to about 0.15 % of size. Rasterise the high surface along the plate normal,
-  sample it in the low mesh's UV space, include every outward-facing low triangle, and match roughness/metal levels
-  over a feather ring.
 
 ## Build steps
-1. Confirm a store install of the source game; read its files offline. Decide personal use only.
+1. Confirm a store install of the source game; read its files offline. Personal use only: the paks stay on your machine.
 2. **Level kit:** import each building with all its parts and the openings filled from the world layer; render it in
    the game look (opaque, back faces culled) and check openings, scale (1.5x if enterable) and missing pieces.
 3. Convert textures (flip SpeedTree green; MSCRGHAO spec as RGB metal/roughness/AO) into renamed clones of retail
@@ -296,9 +285,9 @@ Offline asset conversion into SM2's own formats. Nothing runs the source game. C
 
 ## Verification
 - **Seen in game:** custom scenes built by this pipeline load and are walkable; W3 houses render correctly; the
-  ambient W3 cow animates (jaw flaw found that way); SM1 Ork Boy spawns, fights and plays its own sounds (executions switched off); a Gears shot
-  sound mix was A/B-tested in game; a Helldivers-driven flyer loads and spawns; the Elden Ring cape displayed but its
-  cloth stayed rigid.
+  ambient W3 cow animates (jaw flaw found that way); SM1 Ork Boy spawns, fights and plays its own sounds (executions
+  switched off); a Gears shot sound mix was A/B-tested in game; a Helldivers-driven flyer loads and spawns; the Elden
+  Ring cape displayed but its cloth stayed rigid.
 - **Seen in game, cause measured afterwards:** wrong yaw on 25 of 58 wall pieces and many houses and lanterns (matched
   against all ~26.5k baked instance records); a later bake missing about 40 % of the map's single-instance objects
   (fix built, retest pending, so the 1,024-type explanation is still a hypothesis).
@@ -309,97 +298,78 @@ Offline asset conversion into SM2's own formats. Nothing runs the source game. C
   window fills; recoloured animal coats (the original coats were kept).
 
 ## Gotchas
-1. **Symptom.** Lanterns face the wrong way, wall joints gape and the wall walk floats, although every offline render
-   of the glTF is right. **Cause:** the Map Converter/Furnace bake mirrors any node yaw beyond +-90 degrees
-   (the converter writes Euler (180, 180 - t, 180); Furnace rebuilds it as a rotation by -t). Exactly +-90 bakes right.
-   **Fix:** never write |yaw| > 90: replace the mesh with a copy turned 180 degrees and use yaw -+ 180; for instances, add
-   a turned variant source tpl. Tilted nodes were not measured; test a few before relying on them.
-2. **Symptom.** Furnace runs all its steps for 30 minutes, then fails "can't find tpl file". **Cause:** capital
-   letters in glTF node names (W3 kit names have them) become tpl names the final resolver can't find. **Fix:**
-   lower-case node names and `xTplName`. On Windows, writing a lower-case name over an existing file keeps the old
-   capitals: move stale tpl folders out first.
-3. **Symptom.** About 40 % of a level missing in game (terrain, streets, two buildings), no crash. **Cause (strong
-   hypothesis):** single-instance lwi types sorted past index 1,024 (types are listed alphabetically by tpl name) do
-   not draw; multi-instance types past it did. **Fix:** merge small one-off pieces into blocks and keep the total lwi
-   type count under ~1,000; count types before every bake.
-4. **Symptom.** The bake's navmesh step dies "No memory left" about an hour in; grass is solid and draws to 20 km.
-   **Cause:** `--install_lwi` writes every instanced tpl twice (`local/tpl` and `mods_source/tpl`) and Furnace reads the
-   `mods_source` copy; markup had only been injected into `local`. **Fix:** write markup, its resource link and the
-   `.cdt` removal into both copies; check before Furnace.
-5. **Symptom.** A bake hangs with the log frozen and the converter at ~0 % CPU. **Cause:** a Saber tool asserted and
-   opened an invisible window titled CRASH. Here the error was "Error loading tpl descriptor" because LOD-tree tpls
-   lived only in `local/tpl`. **Fix:** enumerate CRASH windows and read their text controls; put external tpls in
-   `mods_source/tpl/`. Also: Furnace is a self-extracting bundle that unpacks into `%TEMP%` and dies in seconds when
-   that drive is full; point TEMP at a drive with space.
-6. **Symptom.** Imported houses have open doorways and see-through windows in game; the player walks into an empty
+The pipeline gotchas this work hit are in [the map note](sm2-building-a-new-map-with-the-map-converter.md) and
+aren't repeated here: the yaw mirror past +-90 degrees (its gotcha 5), capital letters in node names (2), the ~1,024
+lwi type limit (4), markup patched into only one of the two tpl copies (9), hidden CRASH windows and a full `%TEMP%`
+(7, 8, 1), and winding reversed by a layout transform (18).
+
+1. **Symptom.** Imported houses have open doorways and see-through windows in game; the player walks into an empty
    shell. **Cause:** W3 places doors and windows as separate level props, often off the building pivot, and some
    "windows" are fake light-volume effect quads. **Fix:** take the exact pieces W3 places in that opening from the world
    layer; doors only in ground-level doorways; drop effect materials; keep existing grilles, bars and lattices; where
    you can see through a closure, add the stem's own interior meshes. Generic best-fit fills (doors in upper windows,
    oversized double doors, stone surrounds on plaster) were rejected.
-7. **Symptom.** Glass panes visible in Blender previews are holes to the sky in game. **Cause:** SM2 draws the
+2. **Symptom.** Glass panes visible in Blender previews are holes to the sky in game. **Cause:** SM2 draws the
    converted materials opaque and single-sided, and the panes faced into the house, so they were culled; an
    orientation-blind ray test reported them closed. **Fix:** face closures outward or make them double-sided (opaque
    leaded glass in W3's own colour was chosen), clear custom normals on duplicated faces, and preview in a game look
    (diffuse + normal, opaque, back-face culling) with a back-face-aware see-through scan.
-8. **Symptom.** Streets invisible from above in a preview with culling on. **Cause:** the layout-to-glTF transform
-   `(x - c, z, c - y)` is a rotation (determinant +1), not a mirror, but one generator reversed the winding anyway.
-   **Fix:** keep layout winding; gate every bake on a triangle-winding vs vertex-normal check.
-9. **Symptom.** A fence run on a slope looks "diagonal", rails jump at every joint. **Cause:** map nodes must be pure
+3. **Symptom.** A fence run on a slope looks "diagonal", rails jump at every joint. **Cause:** map nodes must be pure
    yaw, so each section sits level. **Fix:** put pens on a flat pad and check the height step between neighbours, not
    only the gaps.
-10. **Symptom.** Wall sections leave 1.2 m slots and roof gaps; a gatehouse shows holes beside it. **Cause:** the W3
-    wall kit is hollow and open-ended, its flat outer face stops short of the piece ends, and one gate has no side
-    faces. **Fix:** lay sections face span to face span (overlapping, nudged a few cm against z-fighting) and close
-    gate sides with strips in the gate's own material and UVs.
-11. **Symptom.** Grass looked bad and popped in. **Cause:** the SpeedTree UVs were flipped like Blender UVs, so cards
-    sampled an opaque strip of the atlas; no hide distance. **Fix:** no V flip for glTF; flip only the normal map's
-    green; markup hide distance and density LODs.
-12. **Symptom.** Animal clips import with zero bone tracks ("Animation buffer has no properties"). **Cause:** the
-    add-on's set importers read only clip headers; the keys live in numbered `.buffer` sidecars. **Fix:** decode each
-    clip on its own with the single-clip loader, passing the rig.
-13. **Symptom.** The cow's tongue pokes out of its cheek, even in the Blender import. **Cause:** the add-on wires the
-    jaw with a child-of constraint plus an inverse matrix, a constant 27-degree offset; measuring the bind from the posed
-    import copied it. **Fix:** bind every bone, the jaw included, to the inverse of the mesh rig's rest (how W3 skins);
-    judge mouths against the bind mesh.
-14. **Symptom.** The animal slides about 1 m when clips crossfade. **Cause:** W3 animal clips keep Root at the origin
-    and carry travel in the pelvis (and a "walk_left" is a 180-degree U-turn). **Fix:** make Root ride the body's ground
-    frame every frame and blend Root's children relative to it; check loops for pops using the shorter quaternion arc.
-15. **Symptom.** `ww2ogg` fails on W3 sounds. **Cause:** next-gen media are Wwise Opus (fmt 0x3041). **Fix:** re-wrap
-    the packets as Ogg Opus and decode with ffmpeg. Separately, `ww2ogg`/`revorb` on Wwise Vorbis can add up to ~960
-    samples; the wem's fmt holds the true sample count.
-16. **Symptom.** Random one-shot ambience crossfades into itself. **Cause:** a reused bank builder forced the
+4. **Symptom.** Wall sections leave 1.2 m slots and roof gaps; a gatehouse shows holes beside it. **Cause:** the W3
+   wall kit is hollow and open-ended, its flat outer face stops short of the piece ends, and one gate has no side
+   faces. **Fix:** lay sections face span to face span (overlapping, nudged a few cm against z-fighting) and close
+   gate sides with strips in the gate's own material and UVs.
+5. **Symptom.** Grass looked bad and popped in. **Cause:** the SpeedTree UVs were flipped like Blender UVs, so cards
+   sampled an opaque strip of the atlas; no hide distance. **Fix:** no V flip for glTF; flip only the normal map's
+   green; markup hide distance and density LODs.
+6. **Symptom.** Animal clips import with zero bone tracks ("Animation buffer has no properties"). **Cause:** the
+   add-on's set importers read only clip headers; the keys live in numbered `.buffer` sidecars. **Fix:** decode each
+   clip on its own with the single-clip loader, passing the rig.
+7. **Symptom.** The cow's tongue pokes out of its cheek, even in the Blender import. **Cause:** the add-on wires the
+   jaw with a child-of constraint plus an inverse matrix, a constant 27-degree offset; measuring the bind from the posed
+   import copied it. **Fix:** bind every bone, the jaw included, to the inverse of the mesh rig's rest (how W3 skins);
+   judge mouths against the bind mesh.
+8. **Symptom.** The animal slides about 1 m when clips crossfade. **Cause:** W3 animal clips keep Root at the origin
+   and carry travel in the pelvis (and a "walk_left" is a 180-degree U-turn). **Fix:** make Root ride the body's ground
+   frame every frame and blend Root's children relative to it; check loops for pops using the shorter quaternion arc.
+9. **Symptom.** `ww2ogg` fails on W3 sounds. **Cause:** next-gen media are Wwise Opus (fmt 0x3041). **Fix:** re-wrap
+   the packets as Ogg Opus and decode with ffmpeg. Separately, `ww2ogg`/`revorb` on Wwise Vorbis can add up to ~960
+   samples; the wem's fmt holds the true sample count.
+10. **Symptom.** Random one-shot ambience crossfades into itself. **Cause:** a reused bank builder forced the
     cross-fade transition on every loop container. **Fix:** use the delay transition for random one-shots with gaps
     (what retail ambience uses).
-17. **Symptom.** SM1 Stormboy poses came out as the wrong moves. **Cause:** clip names paired with containers in file
+11. **Symptom.** SM1 Stormboy poses came out as the wrong moves. **Cause:** clip names paired with containers in file
     order. **Fix:** name clips from the hkCombinerTOC; verify with root motion.
-18. **Symptom.** SM1 mesh previews look broken (stretched UVs, inside-out faces, wrong texture). **Cause:** V stored as
+12. **Symptom.** SM1 mesh previews look broken (stretched UVs, inside-out faces, wrong texture). **Cause:** V stored as
     -1..0, clockwise triangles, and the plain diffuse set being an older UV layout. **Fix:** `1 + v`, flip winding, pair
     textures through the mesh node's material name.
-19. **Symptom.** A Python Kraken decompressor fails on every Gears E-Day chunk. **Cause:** the containers use Mermaid,
+13. **Symptom.** A Python Kraken decompressor fails on every Gears E-Day chunk. **Cause:** the containers use Mermaid,
     another Oodle codec. **Fix:** a Mermaid decoder (tANS and multi-array paths were not needed for this build).
-20. **Symptom.** Gears clip bones land on the wrong joints. **Cause:** track indices refer to the shared biped
+14. **Symptom.** Gears clip bones land on the wrong joints. **Cause:** track indices refer to the shared biped
     skeleton, not the character's own. **Fix:** resolve the skeleton through the clip's imported package names.
-21. **Symptom.** A borrowed gun shot sounds "out of place" though levelled to a vanilla gun. **Cause:** the donor's
+15. **Symptom.** A borrowed gun shot sounds "out of place" though levelled to a vanilla gun. **Cause:** the donor's
     baked tail/reverb and raw-RMS matching of a bright sound; offline renders also hid a treble excess that in-game
     captures showed. **Fix:** donor punch/body + host tail + host sub; fit EQ on the shot alone against the vanilla
     median; calibrate on in-game captures timed from muzzle flashes.
-22. **Symptom.** A multi-piece HUD element assembled wrong. **Cause:** cooked UE materials have no graph, so the
+16. **Symptom.** A multi-piece HUD element assembled wrong. **Cause:** cooked UE materials have no graph, so the
     layout was guessed. **Fix:** get a screenshot of the element before assembling it.
-23. **Symptom.** A level-sequence actor's clip plays at the wrong place. **Cause:** level-actor clips with a world-space
+17. **Symptom.** A level-sequence actor's clip plays at the wrong place. **Cause:** level-actor clips with a world-space
     root ignore the entity matrix. **Fix:** bake the move into clip copies and keep the entities at identity. Also:
     `.resource` list items need the YAML `- `, and the level's replicas manifest must list the client classes of
     replicated objects.
-24. **Symptom.** A ported cape looks wrong in game though fine in previews. **Cause:** previews used the default helmet
+18. **Symptom.** A ported cape looks wrong in game though fine in previews. **Cause:** previews used the default helmet
     and the shape had been stretched to cover armour. **Fix:** preview on the player's actual loadout, scale uniformly,
     and cover gaps with filler instead of warping the source shape.
-25. **Symptom.** A new donor moveset is rejected after a full build. **Cause:** feel problems (weight, weapon dragging)
+19. **Symptom.** A new donor moveset is rejected after a full build. **Cause:** feel problems (weight, weapon dragging)
     only show in motion. **Fix:** convert a few attacks, show them as a video, then commit.
 
 ## Assets
 All meshes, textures, animations and sounds came from the author's own copies of the games named above and stayed on
-the author's machine. Previews were Blender renders. Some unrelated SM2 parts of the same projects used AI-generated
-meshes (the detail-transfer side note); those, too, stay in personal builds under Saber's rules.
+the author's machine, friends included: anyone else builds them from their own copies. Previews were Blender renders.
+Some unrelated SM2 parts of the same projects used AI-generated meshes (see the models note's AI section); those, too,
+stay in personal builds under Saber's rules.
 
 ## Cost and time
 The level-kit work (buildings, vegetation, animals, audio) spanned about two weeks of sessions (16-29 Oct 2026);

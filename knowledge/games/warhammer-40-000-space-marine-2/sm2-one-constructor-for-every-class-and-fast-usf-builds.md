@@ -98,6 +98,9 @@ the soldier glTF, convert, export, ship the tpl family plus the edited library a
 - **Never split a region that a script or graph tests as a shared outfit part.** A helmet-off animation graph checked
   57 helmet regions with `IsGeomRegionVisible(isSharedOutfitPart = True)`; making those regions per-class broke it.
   Keep such regions shared (trim their meshes instead).
+- **Keep every lock.** A per-class copy carries the same `dlcLock` (or `honorShopLock`, `challengeLock`) as the item
+  it came from, so a piece from a paid pack stays behind the game's own ownership check on every class. Removing a
+  lock, or offering a paid piece through a new item without one, is an ownership bypass (CONTRIBUTING).
 - **Insert keys at the item's own level.** Adding `appearanceUids` "before the first `__type`" of an item block put
   it inside a nested lock struct (`dlcLock` and similar) on 16 items: duplicate offers in the menu.
 - **Hide passes run last.** A "hide everything a class does not own" pass that runs before later steps assign new
@@ -271,10 +274,10 @@ All-class constructor (one full build):
 6. Convert (splice, or the full converter; below), then UsfExport + CDTConverter in a private exporter project.
 7. Post passes on the tpl: all-zero stream check, unshrink, per-split `colorSetIdx` restore (decals -1), material
    check against RETAIL tpls only, any byte-level patches that must be re-applied after every rebuild.
-8. Text: library (per-class copies of shared items, hidden regions last, retail-unowned objects left unowned,
-   STORY untouched), class files of every class and the Siege NPCs (`nameTpl` + `.cls.resource` links, merged physics
-   entries), dummy factory entries + pruned `linksTpl`, markup (merged `objectInfos`, all customization groups), retail
-   `.tpl.resource` + your links.
+8. Text: library (per-class copies of shared items with their retail locks, hidden regions last, retail-unowned
+   objects left unowned, STORY untouched), class files of every class and the Siege NPCs (`nameTpl` + `.cls.resource`
+   links, merged physics entries), dummy factory entries + pruned `linksTpl`, markup (merged `objectInfos`, all
+   customization groups), retail `.tpl.resource` + your links.
 9. Pack the WHOLE tpl family + text as ZIP_STORED in one pak that sorts first.
 
 A text-only change (library, class files, markup) needs no conversion: rebuild the text and repack in ~2 min, with a
@@ -302,10 +305,10 @@ Fast mesh rebuild loop:
   - a full-size "add one head" splice exported cleanly with exactly the 7 new objects added and all 15,916 existing
     objects unchanged (engine ids masked).
 - **In game:** the all-class constructor loads, renders and plays across several builds, with per-class visibility
-  working (each class shows its own armour). Seen broken in game: a helmet-off feature (fixed, gotcha 5), the Techmarine-tab crash,
-  one head-hover crash, Bulwark robe / Sniper coat cloth exploding on the armoury figure, late-added pieces hidden by
-  an early hide pass (fixed in the text, not re-tested), a servo arm frozen by duplicate joint names (fix built, not
-  re-tested), a padlock floating off its chain (fix built, not re-tested).
+  working (each class shows its own armour). Seen broken in game: a helmet-off feature (fixed, gotcha 5), the
+  Techmarine-tab crash, one head-hover crash, Bulwark robe / Sniper coat cloth exploding on the armoury figure,
+  late-added pieces hidden by an early hide pass (fixed in the text, not re-tested), a servo arm frozen by duplicate
+  joint names (fix built, not re-tested), a padlock floating off its chain (fix built, not re-tested).
 - **Found by a read-only audit of the data, not seen in game** (fixed in the text before anyone hit them): the
   STORY_* and Siege NPC problems, the hidden Heavy backpacks, the duplicate shared-item offers, the lobby preload,
   the missing markup customization groups, the paint-mask stream without colours. Gotchas 2-4, 6, 10 and 11 are
@@ -317,17 +320,18 @@ Fast mesh rebuild loop:
 1. **The armoury servo arm sticks out straight over the head.** Cause: the servo-arm joints exist twice; the rig binds
    by name and the unused copy has the lower ids. Fix: rename/remove the duplicate joints (built, not yet re-tested in
    game); list duplicate joint names after every merge.
-2. **(audit) A class's backpacks and feed tubes would vanish (Heavy), likewise fists (Assault/Bulwark).** Cause: retail draws them
-   unowned and a blueprint/property toggles them; a hide pass put them in an `isHidden` region. Fix: keep exactly what
-   retail leaves unowned out of every hidden region.
-3. **(audit) Campaign squadmates would lose heads, fillers and backpacks.** Cause: `STORY_*` sections edited; campaign NPC marines
-   read them with their own `cc_sm_<c>_story` tpls. Fix: leave `STORY_*` and the factory's STORY entries retail.
-4. **(audit) Siege-mode NPC Sniper/Heavy would look wrong.** Cause: they read the edited PVE_PVP sections but still load their retail
-   tpl. Fix: retarget their client and interplay class files to the shared tpl.
+2. **(audit) A class's backpacks and feed tubes would vanish (Heavy), likewise fists (Assault/Bulwark).** Cause: retail
+   draws them unowned and a blueprint/property toggles them; a hide pass put them in an `isHidden` region. Fix: keep
+   exactly what retail leaves unowned out of every hidden region.
+3. **(audit) Campaign squadmates would lose heads, fillers and backpacks.** Cause: `STORY_*` sections edited; campaign
+   NPC marines read them with their own `cc_sm_<c>_story` tpls. Fix: leave `STORY_*` and the factory's STORY entries
+   retail.
+4. **(audit) Siege-mode NPC Sniper/Heavy would look wrong.** Cause: they read the edited PVE_PVP sections but still load
+   their retail tpl. Fix: retarget their client and interplay class files to the shared tpl.
 5. **A helmet-off feature stops working after the merge.** Cause: its graph tests helmet regions as shared outfit parts;
    the merge split them per class. Fix: keep regions that any graph checks with `isSharedOutfitPart` shared.
-6. **(audit) Every class is offered the same shared item twice.** Cause: the new `appearanceUids` list was inserted inside a
-   nested lock struct of the item. Fix: insert at the item's own `__type` level.
+6. **(audit) Every class is offered the same shared item twice.** Cause: the new `appearanceUids` list was inserted
+   inside a nested lock struct of the item. Fix: insert at the item's own `__type` level.
 7. **New pieces are invisible in their own class.** Cause: the global hide pass ran before the steps that assigned them.
    Fix: hide last, or unhide late objects' descendants in the owning section.
 8. **A merged build passes the shader check, then crashes on one armoury tab.** Cause: the reference set included an
@@ -337,8 +341,8 @@ Fast mesh rebuild loop:
    index width is harmless just because other materials survived it.
 10. **(audit) The lobby preloads ~2.5 GB of tpls no armoury entry uses.** Cause: the dummy factory `.resource` still
     links the retired class tpls and preloads them. Fix: prune `linksTpl` to the tpls the entries name.
-11. **(audit) Painted parts of the moved classes lose their colour options.** Cause: the soldier markup lacks those classes'
-    `materialCustomizations` groups. Fix: add `ANTENNA`, `MANIPULATOR`, `VANITY`, `JUMPPACK` (empty blocks).
+11. **(audit) Painted parts of the moved classes lose their colour options.** Cause: the soldier markup lacks those
+    classes' `materialCustomizations` groups. Fix: add `ANTENNA`, `MANIPULATOR`, `VANITY`, `JUMPPACK` (empty blocks).
 12. **A spliced USF is not what a full conversion gives.** Cause: groups reordered or inserted mid-list, or a bone map
     by leaf name in a skeleton with repeated names. Fix: append only; map bones by full path; refuse (fall back) on an
     ambiguous path.
