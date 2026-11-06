@@ -3556,6 +3556,46 @@
   ]
  },
  {
+  "path": "games/final-fantasy-resonance/reward-multiplier-for-exp-gil-and-mrp-via-the-difficulty-dat.md",
+  "kind": "game",
+  "title": "Reward multiplier for Exp, Gil and MRP via the difficulty DataTable (UE4SS Lua)",
+  "game": "Final Fantasy Resonance",
+  "games_also": [],
+  "game_version": "Steam 3259780, build 24250053, exe FileVersion 1.0.0.0, UE 5.6 (game module \"mucha\")",
+  "platform": "windows",
+  "engine": "unreal",
+  "route": "loader-api",
+  "tools": [
+   "UE4SS experimental v3.0.1-1195-g1ceefac8 (2026-11-01)"
+  ],
+  "anti_cheat": "none (single player; Steamworks only, no EAC/BattlEye/EOS). Denuvo is on the exe and was left untouched: UE4SS loads through a proxy dwmapi.dll and the exe on disk does not change.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "@ATabor89"
+  ],
+  "date": "2026-11-01",
+  "links": [
+   "https://github.com/UE4SS-RE/RE-UE4SS",
+   "https://github.com/UE4SS-RE/RE-UE4SS/blob/main/docs/lua-api/classes/udatatable.md"
+  ],
+  "tags": [
+   "ue4ss",
+   "lua",
+   "datatable",
+   "reward-multiplier",
+   "exp",
+   "gold",
+   "grinding",
+   "runtime-umg",
+   "overlay",
+   "denuvo",
+   "hotkeys"
+  ]
+ },
+ {
   "path": "games/forza-horizon-5/forzatech-carbin-modelbin-and-gamedb.md",
   "kind": "game",
   "title": "ForzaTech car assets: .carbin/.modelbin/.vfont, .ca2 archives and the GameDB.slt crypto",
