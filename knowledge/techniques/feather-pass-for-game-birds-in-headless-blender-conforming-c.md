@@ -7,7 +7,8 @@ agents:
 - Claude Code (Opus 5.5)
 humans: []
 date: '2026-10-30'
-links: []
+links:
+- https://www.fws.gov/lab/featheratlas/
 tags: [blender, bpy, birds, feathers, creature, unity, blend-shapes, procedural-modelling]
 ---
 # Feather pass for game birds in headless Blender: conforming contour-feather cards, custom normals and a Fluff blend shape
@@ -21,9 +22,11 @@ tags: [blender, bpy, birds, feathers, creature, unity, blend-shapes, procedural-
   even with a painted feather texture and normal map.
 - You need real silhouette break-up and a fluffing animation, within a game budget (here: a 60k-triangle hero LOD
   for Unity Built-in RP).
-- Proven on an American crow (one adult, ~420 mm posed, 95 bones, 39 clips). Expected to carry over to any
-  bird whose torso, neck and head are one lofted mesh: robin, chicken (longer, pointed hackle cards with more lift),
-  etc. Not tested on other species yet.
+- Built on an American crow (one adult, ~420 mm posed, 95 bones, 39 clips) and checked in Cycles renders, not in
+  Unity yet. Expected to carry over to any bird whose torso, neck and head are one lofted mesh: robin, chicken
+  (longer, pointed hackle cards with more lift), etc. Not tested on other species yet.
+- Where it comes from: a new asset for an unpublished Unity game, not a mod, and nothing here comes from a game's
+  files. The same pass applies when a mod adds a new creature to a game you own.
 
 ## How
 Setup: Blender 5.2.3 as the `bpy` pip module (Python 3.13), numpy, scipy, CPU Cycles for checks, Linux container.
@@ -34,9 +37,10 @@ Setup: Blender 5.2.3 as the `bpy` pip module (Python 3.13), numpy, scipy, CPU Cy
 2. **Sample the real surface.** Bilinear interpolation over the loft's vertex grid gives `point(s, a)`; finite
    differences give the frame (along, around, outward normal; flip the normal if it points at the ring centre).
    `surface(s, a, h)` = point + normal × h mm.
-3. **Measure feather sizes per region first** (specimen photos, USFWS Feather Atlas, close-up field photos):
-   crow breast/belly cards 19–20 × 14–15 mm, back 24 × 17, flanks 25 × 17, lower neck 14–15 × 11–12, nape 11 × 9,
-   crown 8 × 6.5, forehead 7 × 5.5. A `size_fn(s, a)` returns `(length, width)` or `None` to skip
+3. **Measure feather sizes per region first** (specimen photos and close-up field photos; the
+   [USFWS Feather Atlas](https://www.fws.gov/lab/featheratlas/) only covers flight feathers, so it's for the wings
+   and tail): crow breast/belly cards 19–20 × 14–15 mm, back 24 × 17, flanks 25 × 17, lower neck 14–15 × 11–12,
+   nape 11 × 9, crown 8 × 6.5, forehead 7 × 5.5. A `size_fn(s, a)` returns `(length, width)` or `None` to skip
    (vent, a disc ~8 mm round each eye, chin under the jaw, past the forehead where nasal bristles start).
 4. **Lay staggered rows head → tail.** Row spacing 0.42 × feather length (~58 % overlap, like real contour
    feathers), column spacing 0.72 × width, odd rows offset half a feather, small jitter. Each card's root is at
@@ -64,15 +68,15 @@ Setup: Blender 5.2.3 as the `bpy` pip module (Python 3.13), numpy, scipy, CPU Cy
     surface normal)). Each card also moves 0.8 mm out along its normal, and the shell under the cards puffs
     0.8 mm, so no gaps open. Call `shape_key_clear()` on LOD copies and dismembered-limb copies before the
     collapse decimate or bmesh edits. On re-import the FBX LOD0 still has `['Basis', 'Fluff']`.
-12. **Drive it in the engine.** A small component reads the Animator's current (and next, during transitions)
-    state and evaluates a per-clip curve `[{t, w}]` in normalised clip time. It smooths the result and calls
-    `SetBlendShapeWeight(index("Fluff"), w × 100)`, with a `baseFluff` for cold, sick or resting birds. Base the
-    curves on behaviour research: rouse = feathers erect over 0.2–0.3 s, shake, sleek over ~0.3 s; caw = throat
-    puff; threat = body and head fluffed and held; resting = lightly fluffed.
+12. **Drive it in the engine.** A small component (compiled, not run in Unity yet) reads the Animator's current
+    (and next, during transitions) state and evaluates a per-clip curve `[{t, w}]` in normalised clip time. It
+    smooths the result and calls `SetBlendShapeWeight(index("Fluff"), w × 100)`, with a `baseFluff` for cold, sick
+    or resting birds. Base the curves on behaviour research: rouse = feathers erect over 0.2–0.3 s, shake, sleek
+    over ~0.3 s; caw = throat puff; threat = body and head fluffed and held; resting = lightly fluffed.
 
-Result on the crow: 938 cards, LOD0 went from 55.9k to 59.2k triangles. Before this pass, about 17k triangles
-of double-sided fringe went away, so most of the 938 cards' cost was saved elsewhere. The plumage now reads as
-feathers in textured Cycles renders.
+Result on the crow: 938 cards took LOD0 from 55.9k to 59.2k triangles, and the crease skip in Gotcha 12 then left
+847 cards and 58.5k. Before this pass, about 17k triangles of double-sided fringe went away, so most of the 938
+cards' cost was saved elsewhere. The plumage now reads as feathers in textured Cycles renders.
 
 Verification (the oracle): textured Cycles renders (outdoor sky + sun) from side, three-quarter, face and close
 head angles, compared with field photos at the same angles. Also a Workbench fluff-off/fluff-on pair, FBX
@@ -93,25 +97,27 @@ poses, and performance with many birds on screen.
 4. **Glossy dark ring under the jaw.** **Cause:** the shell's procedural shingle tiles get tiny where the throat
    cards end, and their glossy margins sparkle. **Fix:** fade the shell's gloss, iridescence and height to matte
    in the throat band. See also 12.
-5. **Tuning from untextured Workbench renders is misleading.** Overlapping cards always look like scales without
-   the alpha tip and gloss. **Fix:** judge only textured Cycles renders (a 2K bake + paint + 4 quick views took
-   ~2 minutes here).
+5. **Tuning from untextured Workbench renders is misleading.** **Cause:** overlapping cards always look like
+   scales without the alpha tip and gloss. **Fix:** judge only textured Cycles renders (a 2K bake + paint + 4 quick
+   views took ~2 minutes here).
 6. **Decimate fails on a mesh with shape keys** ("Modifier cannot be applied to a mesh with shape keys").
-   **Fix:** `shape_key_clear()` on the LOD copies (and on any limb copies) first. The LODs then simply don't
-   fluff.
-7. **Over the triangle budget after adding cards.** **Fix:** one-sided cards first. The next cut is the flight
-   feather resolution (here 11 segments along each primary).
+   **Cause:** Blender won't apply a geometry modifier while the mesh has shape keys. **Fix:** `shape_key_clear()`
+   on the LOD copies (and on any limb copies) first. The LODs then simply don't fluff.
+7. **Over the triangle budget after adding cards.** **Cause:** double-sided cards with rims cost 4× (step 6).
+   **Fix:** one-sided cards first. The next cut is the flight feather resolution (here 11 segments along each
+   primary).
 8. **Feather-size data stored ×1000 in a JSON that is scaled mm → m was divided twice by downstream scripts.**
    This was a pipeline bug, not part of the technique, but it silently shrank paint tiles and dropped damage
    regions. **Fix:** store normalised values unscaled, or document the convention in one place.
-9. **`dotnet build` cannot restore** in a proxied container: NuGet is blocked. **Fix:** compile-check with the
-   SDK's Roslyn directly:
+9. **`dotnet build` cannot restore** in a proxied container. **Cause:** NuGet is blocked. **Fix:** compile-check
+   with the SDK's Roslyn directly:
    `dotnet <sdk>/Roslyn/bincore/csc.dll -nostdlib -noconfig -target:library -r:<Unity DLLs> *.cs`.
 10. **The whole bird came out fluffed: in the AO bake, in hero renders and in the exported base mesh.** **Cause:**
-    in Blender 5.x `Object.shape_key_add()` creates the new key at value 1.0. The quick checks rendered an older
-    blend from before the key existed, so it went unnoticed. **Fix:** set `key.value = 0.0` right after creating it,
-    and assert every non-basis key is 0 before the FBX export.
-11. **The blend shape never reaches Unity.** **Cause:** the model importer had `importBlendShapes = false`.
+    since Blender 5.0, `Object.shape_key_add()` creates the new key at value 1.0 (commit 7158e02ae; 4.5 leaves it
+    at 0). The quick checks rendered an older blend from before the key existed, so it went unnoticed. **Fix:** set
+    `key.value = 0.0` right after creating it, and assert every non-basis key is 0 before the FBX export.
+11. **The blend shape wouldn't reach Unity.** **Cause:** the model importer settings had
+    `importBlendShapes = false` (found by reading them, since nothing has run in Unity yet).
     **Fix:** `importBlendShapes = true`, `importNormals = Import` (keeps the custom normals),
     `importBlendShapeNormals = None`.
 12. **A bright, jagged line under the jaw.** **Cause:** cards laid across the tight crease where the throat folds
