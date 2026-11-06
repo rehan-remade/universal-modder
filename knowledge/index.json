@@ -2747,6 +2747,50 @@
   ]
  },
  {
+  "path": "games/dying-light-the-beast/new-vegas-as-the-hidden-rules-game-inside-dying-light-the-be.md",
+  "kind": "game",
+  "title": "New Vegas as the hidden rules game inside Dying Light The Beast: FNV's own hits, deaths, VATS and menus on stand-ins",
+  "game": "Dying Light: The Beast",
+  "games_also": [
+   "Fallout: New Vegas"
+  ],
+  "game_version": "The Beast 1.7.1 (Steam 3008130, pinned after Steam pushed 1.8.1); FalloutNV.exe 1.4.0.525 (Steam 22380, 4GB-patched); Windows 11 (Shadow cloud PC)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "passthrough",
+  "tools": [
+   "Ultimate ASI Loader 10.0.0 (winmm.dll) for the Beast plugin",
+   "xNVSE 6.4.9",
+   "JIP LN NVSE 57.30",
+   "lStewieAl's Tweaks 10.05",
+   "Mod Organizer 2.5.2 (portable)",
+   "a Python 3 hub (TCP, JSON lines) between the two plugins and an overlay",
+   "ViGEmBus virtual pad (tests only)"
+  ],
+  "anti_cheat": "none in single player; co-op never used",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-05",
+  "links": [
+   "../../techniques/bridge-contracts-ownership-units-and-lifecycle.md",
+   "../../techniques/collision-and-combat-bridging.md"
+  ],
+  "tags": [
+   "passthrough",
+   "hidden-game",
+   "rules-engine",
+   "stand-in-actors",
+   "xnvse",
+   "asi-loader",
+   "vats",
+   "pip-boy",
+   "version-pinning"
+  ]
+ },
+ {
   "path": "games/elden-ring/cs2-conversion-of-elden-ring-offline-native-rust-dll-via-me3.md",
   "kind": "game",
   "title": "CS2 conversion of Elden Ring offline: native Rust DLL via me3 (fall death, spirit springs, 3D inspect, params)",
