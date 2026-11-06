@@ -2939,6 +2939,46 @@
   ]
  },
  {
+  "path": "games/don-t-starve-together/lua-weapon-item.md",
+  "kind": "game",
+  "title": "Official Lua mod API: a new weapon item",
+  "game": "Don't Starve Together",
+  "games_also": [],
+  "game_version": "Steam app 322330 (exact build not yet pinned); Windows 11 10.0.26200",
+  "platform": "windows",
+  "engine": "native",
+  "route": "loader-api",
+  "tools": [
+   "Don't Starve Mod Tools (Steam app 245850; autocompiler, ModUploader)",
+   "Python + Pillow",
+   "image_gen.py (the author's own local A1111/ComfyUI text-to-image adapter, not published)"
+  ],
+  "anti_cheat": "none found by um scan; official Lua mod API + Steam Workshop are the sanctioned route. Online co-op and PvP game: an item mod belongs in a world or server you run, with friends who agreed",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (deepseek-v4-pro)"
+  ],
+  "humans": [],
+  "date": "2026-11-05",
+  "links": [
+   "https://github.com/kleientertainment/ds_mod_tools",
+   "https://kleiforums.com/forums/forum/79-dont-starve-together-mods-and-tools/",
+   "https://kleiforums.com/forums/topic/140881-documentation-new-recipe-system-functions-other-info/"
+  ],
+  "tags": [
+   "klei",
+   "lua",
+   "loader-api",
+   "mod-tools",
+   "workshop",
+   "weapon",
+   "item",
+   "tex",
+   "atlas",
+   "inventory-icon"
+  ]
+ },
+ {
   "path": "games/dragon-s-dogma-2/blink-strike-teleports-behind-the-target-reframework-lua-ski.md",
   "kind": "game",
   "title": "Blink Strike teleports behind the target (REFramework Lua skill rework)",
