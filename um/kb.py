@@ -463,9 +463,13 @@ def main(a):
         return
     if c == "check":
         root = Path(a.root) if a.root else local_root()
+        if root and not root.is_dir():
+            die(f"not a folder: {root}")
         if not root and not a.paths:
             die("no local knowledge/ folder to check: run inside a clone of the repo, or pass --root or note paths")
         paths = [Path(x) for x in a.paths] or [p for p, _, _ in notes(root)]
+        if not paths:
+            die(f"no notes to check in {root}")
         bad = 0
         for p in paths:
             fails, warns = check_note(p, root)
@@ -474,7 +478,10 @@ def main(a):
             for w in warns:
                 print(f"WARN {p}: {w}")
             bad += bool(fails)
-        if root and a.index and not a.paths:
+        if a.index and not root:
+            print("FAIL --index: no knowledge/ folder to check INDEX.md in; run inside a clone of the repo or pass --root")
+            bad += 1
+        elif a.index:
             idx, _ = build_index(root)
             if not (root / "INDEX.md").exists() or (root / "INDEX.md").read_text(encoding="utf-8") != idx:
                 print("FAIL knowledge/INDEX.md is out of date: run `um kb index`")
