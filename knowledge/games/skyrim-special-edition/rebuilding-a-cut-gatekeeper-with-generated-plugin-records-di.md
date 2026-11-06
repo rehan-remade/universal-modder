@@ -13,9 +13,9 @@ status: working
 agents:
 - Claude Code (Opus 5.5)
 humans: []
-date: '2026-10-18'
+date: '2026-10-24'
 links: []
-tags: [dialogue, quests, papyrus, force-greet, shared-info, voice-files, esl, cut-content, packages]
+tags: [dialogue, quests, papyrus, force-greet, shared-info, voice-files, esl, cut-content, packages, exclusive-branch, debugging, quest-priority, shouts]
 ---
 # Rebuilding a cut gatekeeper with generated plugin records: dialogue branches, shared voice lines, force-greets
 
@@ -24,7 +24,8 @@ tags: [dialogue, quests, papyrus, force-greet, shared-info, voice-files, esl, cu
 > one of First Lessons' five test spells (it must be read first), and can be persuaded or failed, in which case
 > Faralda takes over. There's also a Dragonborn route and an escort that lights the wells. All of it uses her
 > vanilla and cut recordings. The plugin is written by a Python script, not the Creation Kit, and every
-> behaviour below was tested in game over ~30 builds.
+> behaviour below was tested in game over ~68 builds. About half of them went on one bug: after the player
+> got in, Nirya never talked again (gotcha 19; read it before making any dialogue branch exclusive).
 
 ## Setup
 - Skyrim SE **1.7.104** (Steam), Creation Kit **1.7.99**, its `PapyrusCompiler.exe` with
@@ -61,11 +62,15 @@ stages, objectives and spell checks, vanilla packages, vanilla dialogue lines. R
   - *Blocking* = opens any conversation the player starts.
   - *Exclusive* = while in it, only its topics show.
   - Vanilla force-greet topics are mostly in blocking branches (283 of 339).
-  - 0x6 (blocking + exclusive, as the `dunMossMother*` branches use) is how to make an NPC open with your
-    topic and hide her others.
+  - **Use blocking only (0x2) for an NPC's greeting branch**, as vanilla Faralda's own bridge branches do,
+    and hide her other topics with a condition on those vanilla lines. We first used 0x6 (blocking +
+    exclusive, as the `dunMossMother*` branches do) to hide them, and it eventually muted Nirya for good
+    (gotcha 19).
   - Top-level + exclusive (0x5) only takes over while a force-greet package is running.
 - **Shared info (INFO DNAM) also requires the borrowed INFO's own conditions to pass**, and very likely its
-  quest to be running. Lines from `DialogueGeneric`'s shared and hello topics have none and are always safe.
+  quest to be running. Lines from `DialogueGeneric`'s shared and hello topics have no conditions, so they
+  play. We still made our *Goodbye* lines own copies rather than shares while chasing gotcha 19. It's
+  unproven that sharing them mattered (one run), but a copy rules it out for the cost of one `.fuz`.
 - **Voice file names:** `sound/voice/<plugin>/<voicetype>/<quest>_<topic>_<formid>_<n>.fuz`.
   - `<plugin>` is the record's file of *origin*, so an INFO re-created in your plugin (e.g. one deleted
     from Skyrim.esm) looks under your plugin's folder.
@@ -99,11 +104,19 @@ stages, objectives and spell checks, vanilla packages, vanilla dialogue lines. R
 
 ## Verification
 Oracle: the real game, a new character per build, console reads (`getstage MG01`, `getglobalvalue …`,
-`prid 50785` + `sv`), and a numbered checklist the human ticked per build. Verified: every behaviour in the
-summary, including voice and lip sync on copied lines, and both gatekeepers staying put mid-exam across a
-shift change (Nirya's note at night then waiting into day; Faralda's test by day then waiting into night).
-Less certain: Faralda's behaviour when her takeover starts at a spell stage (it worked, but was tried only a
-few times). Nirya's force-greets are still not 100% reliable (accepted).
+`prid 50785` + `sv`), and a numbered checklist the human ticked per build. Later, a dev-only **test power**: a
+lesser power the quest gives only while a debug global is 1. One key opens message-box menus that set up each
+test (put the gatekeeper on watch, give the note, count the spell as cast, Speech 100, let me in, the stage-30
+check, status, and a Dragonborn set-up). The Dragonborn button sets Elder Knowledge (MQ205) to stage 50 and
+teaches and equips Unrelenting Force. MQ205 has no start-up stage, so `SetStage(50)` on a new game only starts
+MGMainQuestBridge and completes two objectives. Message-box buttons are laid out side by side, so keep labels
+short and split them into small menus. A Papyrus user log names every line as it's said (begin fragments log the
+INFO, and a table written by the build maps IDs to text). Skyrim rotates user logs on every load, so do at most
+four runs between reads. Verified: every behaviour in the summary, including voice and lip sync on copied lines,
+and both gatekeepers staying put mid-exam across a shift change (Nirya's note at night then waiting into day;
+Faralda's test by day then waiting into night). Less certain: Faralda's behaviour when her takeover starts at a
+spell stage (it worked, but was tried only a few times). Nirya's force-greets: every run since gotchas 13 and 22
+were fixed worked, but that's a handful of runs.
 
 ## Gotchas
 1. **NPCs got stuck at the College gate at a shift change.** **Cause:** the gate is "requires key" with no
@@ -114,8 +127,9 @@ few times). Nirya's force-greets are still not 100% reliable (accepted).
    "(continue)" prompt. **Fix:** ENAM 0x40 (invisible continue), and the continuation topic has **no FULL**,
    like vanilla's.
 3. **Talking first got her vanilla opener ("It's lies…").** **Cause:** it's in a *blocking* branch, which wins
-   player-started conversations. **Fix:** override that INFO with a "First Lessons ≥ 40" condition, and make
-   your own greeting branch blocking + exclusive.
+   player-started conversations. **Fix:** override that INFO with a "First Lessons stage 30 done" condition
+   (`GetStageDone`, which survives the quest stopping), and give your own greeting a blocking branch with a
+   higher topic priority. Don't make it exclusive (gotcha 19).
 4. **Subtitle showed garbage ("xA…").** **Cause:** copied vanilla text fields held string-table IDs. **Fix:**
    delocalize on copy, and sweep the plugin for 4-byte text fields.
 5. **Re-created cut line silent.** **Cause:** the file must sit under *your* plugin's voice folder, with the
@@ -138,9 +152,16 @@ few times). Nirya's force-greets are still not 100% reliable (accepted).
     triggers).
 12. **Script-spoken lines (`Say()`) silent** (pass line, Shout reaction). **Fix:** make them dialogue opened
     by a force-greet, with the fragment doing the work.
-13. **Pass force-greet: the conversation shut at once / stayed open with "...".** Vanilla's pass line isn't
-    Goodbye. Ours had to be Goodbye *and* the walking block lifted; links to other topics showed "...".
-14. **End fragments on Goodbye lines didn't reliably set state.** **Fix:** use begin fragments.
+13. **Pass force-greet: she said her line, but no conversation opened (no camera lock; the player could
+    walk off).** **Cause:** her greeting was a single Goodbye INFO, and a Goodbye greeting is spoken like a
+    hello and never opens the dialogue. (Earlier, a plain line with no links stayed open with "...".)
+    **Fix:** vanilla Faralda's structure (0001F811 → 000B8119). The first line is a plain one with Invisible
+    Continue (ENAM 0x40), linking a promptless topic whose one line is the Goodbye, and the let-in goes in
+    that line's end fragment. A two-response vanilla line becomes two own-voice copies, one per response.
+14. **"End fragments on Goodbye lines don't fire" was wrong, and we believed it for weeks.** They fire:
+    Faralda's sale line has used one since, and a test build moved every Goodbye line of the bridge branch to
+    end fragments with all their effects intact. The early "it didn't fire" was most likely gotcha 19.
+    Vanilla mostly uses end fragments on Goodbye lines (686 end vs 113 begin in blocking branches).
 15. **Wells didn't light for Nirya's Magelight.** **Cause:** the vanilla well script checks for Faralda's
     alias. **Fix:** forced-ref aliases on the three collision markers, with our own OnHit doing the same for
     Nirya.
@@ -148,9 +169,71 @@ few times). Nirya's force-greets are still not 100% reliable (accepted).
     dialogue and Faralda's sale use `HealOther` (00012FD2, "Heal Other"). Healing Hands is 0004D3F2 (tome
     000A271E). The vanilla *cast* check is right (it uses Healing Hands' effect).
 17. **Exclusive branch hid her College topics during the escort, but "help me" still showed.** That's vanilla
-    `FreeformWinterholdCollegeA`, not a mod. A blocking + exclusive escort branch hides it too.
+    `FreeformWinterholdCollegeA`, not a mod. A blocking + exclusive escort branch hides it too. That escort
+    branch has no Goodbye lines and never caused gotcha 19; with Goodbye lines, prefer conditions.
 18. **Toggling an unrelated plugin "fixed" a bug.** It was coincidence: intermittent AI timing. Read the
     plugin's records before believing it.
+19. **After the pass, Nirya never talked again: hello barks only, no menu, not even "It's lies".** It
+    survived `stopquest` of our quest, save/load, `disable`/`enable` and `resetai`, and any save made after
+    the trigger carried it. Before the pass she seemed fine, because her bridge branch still opened.
+    - **Established, by single-variable tests on new games:**
+      - It needs her greeting branch to be **blocking + exclusive**. Set blocking only (0x2) and it never
+        happens. That's the fix.
+      - It needs a conversation in that branch to **end on a Goodbye line picked from her menu** ("It's all
+        in this note.", the successful persuasion). Leaving with Tab never triggered it, and neither did a
+        force-greet Goodbye greeting with no menu.
+      - There's a third ingredient specific to her branch: Faralda's takeover branch is also blocking +
+        exclusive with a menu-picked Goodbye line, and Faralda was fine. **Not found.**
+    - **Ruled out (each with exclusive on):** a link from the exclusive branch to another quest's topic (all
+      58 links that leave an exclusive branch in Skyrim.esm stay in their own quest, so it looked unique);
+      the scripted opening and its Invisible Continue line; begin vs end fragments; what the fragment does,
+      latent waits in it, or where its work runs; flags changing mid-conversation on their own.
+    - **The symptom shows long after the trigger.** The note conversation broke her; it only became visible
+      when the pass switched the branch off. For weeks we tested the pass.
+    - **How it was found:** bisect, not theories.
+      - Vanilla at the same stage (`setstage MG01 30`, mod off) talked.
+      - A fresh game with the mod, straight to stage 30, talked.
+      - Then one conversation step at a time from new games, with our quest stopped and First Lessons set
+        to 30 as the check.
+
+      About ten theory builds before that each fit part of the logs and were wrong.
+20. **The test itself can lie.** A save made after the trigger fails every test, whatever the build. And a
+    logging fragment we added to the "It's lies" override broke the very check that relied on that line.
+    Use new games only, and never instrument the thing your check depends on.
+21. **Papyrus timing traps.**
+    - `IsInDialogueWithPlayer()` already reads false while an NPC speaks a Goodbye line, or a greeting that
+      opened no conversation.
+    - `GetDialogueTarget()` stays on whoever she last spoke to (her hello barks set it too), so it's no "in
+      conversation" check.
+    - `RegisterForSingleUpdate` doesn't tick in menus, and a busy update takes far longer than its interval:
+      time things with `Utility.GetCurrentRealTime()`, not by counting ticks.
+    - A begin fragment on a shared line fires once per response.
+    - A type name can't be a variable name: `action`, `shout` (Action and Shout are types).
+22. **After the Shout she said "You do indeed have the power…", but nothing followed until the player talked
+    to her.** **Cause:** another quest's alias package won.
+    - Alias packages are ranked by quest priority.
+    - Vanilla MGMainQuestBridge (priority 80; Elder Knowledge's stage 50 starts it) has its own Nirya
+      force-greet for the shout, `MGMQBridgeNiryaForcegreet`, valid at its stage 5.
+    - That force-greet names no topic, so her greeting was spoken like a hello (as in gotcha 13).
+    - Ours, in a priority-75 quest, never ran.
+
+    **Fix:** override the vanilla package with one more condition, so it stands aside while ours is due (our
+    "Shout seen" global is 2). Nothing else in that quest's package stack for her applies at stage 5. When an
+    NPC says the line but nothing follows, check in the log which package actually started, and every quest
+    whose alias holds that NPC.
+23. **Detecting the Shout.**
+    - `OnSpellCast` passes the shout word's spell, so `akSpell as Shout` is never true.
+    - Vanilla's own check (`MG01ShoutUpdate`, a story-manager quest) waits 3 s before it flags the shout.
+      Vanilla's force-greet in gotcha 22 starts at once, so she could arrive before we knew.
+
+    **Fix:** the player's `GetVoiceRecoveryTime()` jumps up on a shout and otherwise only runs down. Record it
+    when the wait starts, and compare it on every `OnSpellCast` and every poll.
+24. **Once it all worked, every step felt slow.** The waits added while chasing gotcha 19 were no longer
+    needed: changes applied 2 s after a conversation, and the let-in 8 s after her last line.
+    - **Fix:** put the Goodbye lines' work in end fragments (they fire once she has finished speaking), then
+      wait 0.5 s and 1 s.
+    - **Walking speed:** a package's speed is PKDT flag 0x2000 ("preferred speed") plus byte 6 (0 walk, 1 jog,
+      2 run, 3 fast walk). Without the flag, byte 6 is ignored: 4386 vanilla packages hold 2 there and walk.
 
 ## Assets
 None generated. Voice: vanilla recordings copied from `Skyrim - Voices_en0.bsa` into the local mod folder
@@ -159,11 +242,19 @@ at install time instead of shipping them (build step 4). One lip file was genera
 for a `.fuz` that had none.
 
 ## Cost and time
-Two long sessions, about 30 test builds for segment 1. Most of the time went on dialogue-engine behaviour
-(gotchas 2–3 and 6–14).
+Several long sessions, about 68 test builds for segment 1. Most of the time went on dialogue-engine
+behaviour (gotchas 2–3 and 6–14), and the largest single share on gotcha 19.
 
 ## Open questions
-- Why Nirya's force-greets are still occasionally unreliable after gotchas 9–12.
+- Gotcha 19's third ingredient. Untested differences between Nirya's branch (breaks) and Faralda's (fine):
+  - her start topic also holds Goodbye greetings, while Faralda's holds one plain line;
+  - the same speaker has a second exclusive branch in the quest (the escort);
+  - hers is much bigger, with menu links fanning out to many topics.
+
+  Vanilla has 11 Goodbye lines in blocking + exclusive branches (Moss Mother, Karliah, Delphine…), and they
+  work.
+- Whether Nirya's force-greets are now fully reliable: every run since gotchas 13 and 22 were fixed worked,
+  but that's a handful of runs. The earlier "occasionally unreliable" may well have been those two.
 - The exact EDID shortening rule for quest + topic over 25 characters: a vanilla example with a 26–30
   character pair and a short quest name would settle it.
 - Whether shared info fails on the borrowed INFO's conditions only, or also on its quest not running

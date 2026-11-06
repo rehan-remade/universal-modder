@@ -13,6 +13,9 @@ Subcommands (see `um --help`):
   backup    snapshot and restore save folders before you touch them
   publish   lint a mod folder before sharing: game files, decompiled code, secrets, credits
   kb        the knowledge base: search prior field notes, write your own, check it, open a PR
+  fastfile  Call of Duty 4 / World at War: list and dump the rawfiles (GSC, CSC, menus) in your own .ff zones
+  iwi       Call of Duty 4 / World at War: PNG to IWI v6 textures (DXT1/DXT5) and back
+  weapon    Call of Duty 4 / World at War: read, edit, clone and diff weapon files
 """
 
 __version__ = "0.2.0"

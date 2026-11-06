@@ -7,14 +7,14 @@ game_version: "Steam appid 1715130, files on disk 2026-10-17 (Bin64\\CrysisRemas
 platform: windows
 engine: cryengine
 route: asset-only
-tools: ["Python 3.12 (uv), stdlib zipfile/struct + numpy + Pillow", "ffmpeg (MPEG-1 Layer II decode)", "Blender 5.1 (glTF import check)", "cgf-converter 2.0.0 (tried, see Gotcha 3)", "Ghidra 12 (exe section check only)"]
-anti_cheat: "none (single player). The exe is wrapped in Steam DRM with an encrypted .text; it was not unpacked or modified, and every value here comes from shipped plain-text files"
+tools: ["Python 3.12 (uv), stdlib zipfile/struct + numpy + Pillow", "ffmpeg (MPEG-1 Layer II decode)", "Blender 5.1 (glTF import check)", "cgf-converter 2.0.0 (tried, see Gotcha 3)", "Ghidra 12 (exe section check only)", "um win (WinDrive scanmode) for console input"]
+anti_cheat: "none (single player). The exe is wrapped in Steam DRM with an encrypted .text; it was not unpacked or modified. Values come from shipped plain-text files and from the running game's console"
 status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["ovROG"]
 date: 2026-10-18
 links: ["https://github.com/Markemp/Cryengine-Converter"]
-tags: [cryengine2, crysis, crysis-remastered, pak, zip, chr, cgf, cdf, mtl, chunk-file, skinning, morph-targets, gltf, split-dds, fsb4, fmod, cfx, shaders, nanosuit, cvars, lua]
+tags: [cryengine2, crysis, crysis-remastered, pak, zip, chr, cgf, cdf, mtl, chunk-file, skinning, morph-targets, gltf, split-dds, fsb4, fmod, cfx, shaders, nanosuit, cvars, console, lua]
 ---
 
 # Crysis Remastered data: paks, CryEngine 2 .chr 0x745, nanosuit shader modes and suit values
@@ -22,9 +22,9 @@ tags: [cryengine2, crysis, crysis-remastered, pak, zip, chr, cgf, cdf, mtl, chun
 > How to read Crysis Remastered's own files offline, from your own Steam install: the `.pak` archives, the
 > CryEngine 2 skinned-model chunk files (`.chr`, version 0x745) with bones, skin weights and facial morphs, split
 > DDS textures, the FSB4 sound banks and suit voice lines, how the nanosuit's mode looks are made (shader passes in
-> `Cloth.cfx`, not textures), and the suit's balance numbers from the shipped cfg/Lua. Use it when you want the
-> nanosuit (or any Crysis character, sound or texture) as source data for a mod, a converter or a port, without
-> touching the DRM-wrapped exe.
+> `Cloth.cfx`, not textures), and the suit's balance numbers from the shipped cfg/Lua and the running game's
+> console. Use it when you want the nanosuit (or any Crysis character, sound or texture) as source data for a mod,
+> a converter or a port, without touching the DRM-wrapped exe.
 
 ## When to use it
 - You want a Crysis Remastered character model as glTF (skinned, with UVs, materials and selected facial morphs).
@@ -149,10 +149,11 @@ replace fresnel by its hemisphere average (`FresnelBias + FresnelScale / (Fresne
 diffuse. Armor and cloak have to be emulated (a metallic sheen with an assumed environment colour; a cool
 blue-grey tint), since their real look comes from environment maps and the cloak layer.
 
-### Suit values from cfg and Lua
+### Suit values from cfg, Lua and the console
 The suit cvars are registered in code with their defaults, and that code is encrypted on disk (Gotcha 5). The
-plain-text cfg files set most of them at start-up or level load, so these are the values the player gets. Read
-from the shipped files:
+plain-text cfg files override some of them at start-up or level load; the rest keep their code defaults, which
+only the running game shows. Both sets were read from the running game's console (below), and every cfg-set
+value matched its file; the difficulty cfgs were only checked on Easy (Verification). Read from the shipped files:
 
 | Value | Source |
 |---|---|
@@ -161,18 +162,61 @@ from the shipped files:
 | Energy: full recharge in 4 s (also in armor, standing or moving) after a 2.5 s delay | `g_playerSuitEnergyRechargeTime*`, `g_playerSuitEnergyRechargeDelay` in `Engine\Config\common.cfg` |
 | Health: full regen in 6 s after a 5 s delay | `g_playerSuitHealthRegenTime`, `g_playerSuitHealthRegenDelay` in `common.cfg` |
 | Armor: a full bar soaks 125 HP (1.6 energy per HP); at least 30% of every hit is absorbed, even at 0 energy; armor mode drains 4 energy/s | `g_suitArmorHealthValue`, `g_suitArmorModeEnergyDrain` in `common.cfg`; the absorption rule in `SinglePlayer.lua` (mode 3 = armor) |
-| Speed sprint: 24 energy/s (20 on Fleet), ×3 speed (×1.8 when empty), ramp 3/s | `g_suitSpeedEnergyConsumption`, `g_suitSprintMultiplier_speedMode_*`, `g_suitSprintAcceleration` in `Game\Levels\LevelDefaults.cfg` and `Levels\fleet\level.cfg` |
+| Speed sprint: 24 energy/s, ×3 speed (×3 on low energy, ×1.8 when empty), ramp 3/s. Fleet sets 20 energy/s and ×2.5 / ×2.5 / ×1.1, which are the code defaults apart from the energy (22) | `g_suitSpeedEnergyConsumption`, `g_suitSprintMultiplier_speedMode_*`, `g_suitSprintAcceleration` in `Game\Levels\LevelDefaults.cfg` (applied on every level load) and `Levels\fleet\level.cfg` |
 | Power melee ×1.4 (full and low energy alike) | `g_suitPowerMeleeScaleDamageWhenFullEnergy` / `...LowEnergy` in `common.cfg` |
-| Cloak: 10 energy/s base drain for the player's cloak type 1 | `cloakEnergyCost` in `scripts/Entities/actor/BasicActor.lua`; the player picks type 1 in `player.lua` |
-| Cloak energy drained per damage taken: 33 (Normal, Hard), 1 (Easy), 50 (Delta) | `g_suitCloakEnergyDrainWhenDamaged` in `diff_*.cfg` (unit unclear, see Open questions) |
+| Cloak: `cloakEnergyCost` 10 for the player's cloak type 1; how that becomes energy per second is an open question | `cloakEnergyCost` in `scripts/Entities/actor/BasicActor.lua`; the player picks type 1 in `player.lua` |
+| Cloak energy drained per damage taken: 33 (Normal, Hard), 1 (Easy), 50 (Delta) | `g_suitCloakEnergyDrainWhenDamaged` in `diff_*.cfg`; its help text says energy per point of damage (see Open questions) |
 | AI cloak detection: Easy 2/4, Normal 2.5/4.5, Hard 3/5, Delta 3/5.5 m | `ai_CloakMinDist` / `ai_CloakMaxDist` in `diff_*.cfg` |
 | Base punch: 245 damage (player), 30 for AI | `scripts/Entities/Items/XML/Weapons/Fists.xml` |
 
 The cvar names and their help texts are plain strings in `.rdata`, which tells you what exists even where no
 value is set. Remastered has a `ClassicSuit` variant of several cvars (`cl_classicSuit = 0` in the default
-profile picks the new controls). Not in any cfg or Lua, so unknown: power-jump force and cost, power-melee cost,
-recoil cost in strength mode, the cloak drain adjuster and its moving factor, the non-speed sprint multipliers,
-and every classic-suit value.
+profile picks the new controls; help "Classic suit controls").
+
+#### Reading cvars from the console
+No file changes are needed. This is what worked:
+1. With Steam running, start `Bin64\CrysisRemastered.exe -devmode` from your own install (Steam DRM runs as
+   usual). The console wasn't tried without `-devmode`.
+2. Open the console with `~`. The game reads keyboard input by scan code, so an agent has to send scan codes
+   (WinDrive `scanmode on`, `~` = VK 0xC0 on a US layout, the key below Esc); virtual-key events are ignored
+   (Gotcha 10). WinDrive drives the real keyboard, so ask the human first, and not while they're typing.
+3. Type a cvar name and press Enter. The console and `Game.log` (install root) print `name = value [flags]`.
+   Several names on one line separated by `;` all print, so about 70 cvars fit in 9 lines. `name ?` prints
+   the help text. Read `Game.log` rather than screenshots.
+4. Read twice: once in the main menu (code defaults plus `Engine\Config\common.cfg`) and once in a loaded
+   level (`LevelDefaults.cfg`, the level's `level.cfg` and the difficulty cfg are applied by then, Gotcha 12).
+
+Values that no cfg or Lua sets, so these are the code defaults. They were the same in the main menu and in a
+level. Help texts are quoted short.
+
+| Value | Cvar = value (help) |
+|---|---|
+| Power jump: force ×4.7, costs 20 energy (classic suit 70) | `g_suitPowerJumpForceMultiplier` = 4.7 ("upwards force multiplier ... in any suit mode"), `g_suitPowerJumpEnergyConsumption` = 20, `...Classic` = 70 |
+| Power melee costs 20 energy | `g_suitPowerMeleeEnergyDrain` = 20 |
+| Firing in strength mode costs 7 energy per shot | `g_suitRecoilEnergyCost` = 7 ("subtracted energy when weapon is fired in strength mode") |
+| Cloak drain adjuster 0.73 | `g_suitCloakEnergyDrainAdjuster` = 0.73 ("multiplier for energy reduction in cloak mode"). How it combines with `cloakEnergyCost` 10 is not known (Open questions) |
+| Sprint in strength, armor and cloak modes ×1.25 | `g_suitSprintMultiplier_strengthMode`, `_defenseMode`, `_cloakMode` = 1.25 |
+| Speed-mode swimming ×2 (×0.9 when empty) | `g_suitSprintMultiplier_speedMode_swimmingGotFullEnergy` / `...GotLowEnergy` = 2, `...OutOfEnergy` = 0.9 |
+| Normal jump while super-sprinting: extra force 2.5 forward, 1 up | `g_suitSpeedJumpExtraForceInViewDirection_Horizontal` = 2.5, `_Vertical` = 1 |
+| Health regen while moving: 4 s (6 s standing); in armor mode 4 s standing and moving | `g_playerSuitHealthRegenTimeMoving` = 4, `g_playerSuitArmorModeHealthRegenTime` / `...Moving` = 4 |
+| Swimming "dolphin" jumps (Shift+jump) in speed or strength mode cost 50 energy; ×1 base, ×2.5 sprinting | `pl_swimJumpSpeedCost`, `pl_swimJumpStrengthCost` = 50; `pl_swimJump*BaseMul` = 1, `pl_swimJump*SprintMul` = 2.5 |
+| Zero-G: a dash costs 0.25, speed mode 0.15 (classic 0.5) | `pl_zeroGDashEnergyConsumption` = 0.25 ("percentage consumed when doing a dash"), `pl_zeroGSpeedModeEnergyConsumption` = 0.15, `...ClassicSuit` = 0.5. `Engine\Config\console*.cfg` set 0.07 on console platforms only |
+| EMP field: suit stays off 10 s after leaving it | `g_empNanosuitDowntime` = 10 |
+| Autoaim vs cloaked targets ×0.2; cloak fade speed 1 | `pl_aim_cloaked_multiplier` = 0.2, `ai_CloakIncrementMod` = 1 ("how fast cloak fades out") |
+| AI with a nanosuit (the Korean nanosuit soldiers): energy recharge 10 s, health regen 33.3 s, 20 s in armor mode, strength melee ×0.4 | `g_AiSuitEnergyRechargeTime`, `g_AiSuitHealthRegenTime`, `g_AiSuitArmorModeHealthRegenTime`, `g_AiSuitStrengthMeleeMult` |
+| Off by default: melee while sprinting, speed lean | `g_meleeWhileSprinting` = 0, `g_enableSpeedLean` = 0 |
+| Strength scale 1 | `cl_strengthscale` = 1 ("nanosuit strength scale") |
+
+Classic suit (`cl_classicSuit = 1`) values, also code defaults:
+
+| Value | Cvar = value |
+|---|---|
+| Energy: full recharge in 10 s (also in armor, standing or moving) after a 1 s delay | `g_playerSuitEnergyRechargeTime*ClassicSuit` = 10, `g_playerSuitEnergyRechargeDelayClassicSuit` = 1 |
+| Armor mode doesn't drain energy: −1, and a negative value makes the suit recharge instead (help text) | `g_suitArmorModeEnergyDrainClassicSuit` = −1 |
+| Speed sprint 110 energy/s | `g_suitSpeedEnergyConsumptionClassicSuit` = 110 |
+| Power jump 70 energy, zero-G speed mode 0.5 | see the table above |
+
+Multiplayer variants (`...Multiplayer`): energy recharge 20 s, speed 50 energy/s, `g_mpSpeedRechargeDelay` = 1.
 
 ## Gotchas
 1. **Python `zipfile` refuses every pak member** ("File name in directory ... and header ... differ").
@@ -191,9 +235,9 @@ and every classic-suit value.
 5. **The exe on disk can't be disassembled for cvar defaults.** **Cause:** it is wrapped in Steam DRM: the entry
    point sits in `.bind`, `.text` is encrypted on disk (byte frequencies are flat across the first 26 MB, no normal
    x64 prologue patterns, and no references to the 90 suit cvar name strings in `.rdata`). **Fix:** leave the file
-   as installed. Take the effective values from the shipped cfg/Lua (table above), and read what only lives in
-   code from the running game's console (Open questions). The code is readable in the running process, from
-   memory or a private dump kept outside any repo (CONTRIBUTING, DRM-wrapped executables); that wasn't tried here.
+   as installed. Take the effective values from the shipped cfg/Lua, and read the code defaults from the running
+   game's console (Reading cvars from the console). The code is readable in the running process, from memory or
+   a private dump kept outside any repo (CONTRIBUTING, DRM-wrapped executables); that wasn't tried here.
 6. **Holes or see-through patches in the converted suit.** **Cause:** diffuse alpha is a gloss/effect mask.
    **Fix:** drop alpha from the diffuse on export, except for the few materials with an `AlphaTest` or `Opacity`
    (teeth, eyeballs, lashes).
@@ -206,6 +250,18 @@ and every classic-suit value.
    sound.
 9. **An FSB4 sample isn't found by its full name.** **Cause:** names in the sample headers are cut to 29
    characters. **Fix:** match by prefix, or truncate your lookup names to 29 characters.
+10. **The console doesn't open, or typed text doesn't arrive, when an agent drives the game.** **Cause:** the
+    game reads the keyboard by scan code and ignores virtual-key events. **Fix:** send scan codes (WinDrive
+    `scanmode on`, then `key 0xC0` for `~`, `type ...`, `key 0x0D`). `type` sends Unicode characters in either
+    mode and the console takes them, so only `~` and Enter need scan codes. A human typing on the keyboard has
+    no such problem.
+11. **`Unknown command` for some names found in `.rdata`.** `g_playerSuitHealthRechargeTime`,
+    `...HealthRechargeTimeMoving` and `g_AiSuitHealthRechargeTime` are in the exe's strings but aren't cvars.
+    **Fix:** take names from the console's own reply; a name that prints `name = value` exists.
+12. **Main-menu values differ from what the player gets.** **Cause:** `LevelDefaults.cfg`, the level's
+    `level.cfg` and the difficulty cfg are applied when a level loads. In the menu `g_suitSpeedEnergyConsumption`
+    is 22 and the speed multipliers 2.5 / 2.5 / 1.1; in a level they are 24 and 3 / 3 / 1.8. **Fix:** read the
+    effective values in a loaded level; use the menu for code defaults.
 
 ## Seen in
 - Related CryEngine 2 notes: [Warhead build 711 static analysis and level PAK method 6](../games/crysis-warhead/build-711-static-analysis-and-level-pak-method-6.md)
@@ -222,17 +278,32 @@ and every classic-suit value.
 - **Audio and textures:** every WAV was checked for duration, peak and RMS. Joined split DDS files matched their
   expected size; icons were looked at.
 - **Mode bakes:** rendered on the model in Blender and checked by eye by a human.
+- **Suit values (2026-10-21, same exe as above):** 67 cvars read from the console of the running game, with
+  `-devmode`, once in the main menu and once after loading a save on Contact (`island`). The save was on Easy:
+  `g_difficultyLevel` = 1, and `ai_CloakMinDist` / `MaxDist` 2 / 4 and `g_suitCloakEnergyDrainWhenDamaged` 1
+  match `diff_easy.cfg`. In the level every value that a cfg sets matched the cfg (200, 4 / 4 / 4 / 2.5, 6 / 5,
+  125, 4, 1.4 / 1.4, 24, 3 / 3 / 1.8, 3). The values no cfg sets were the same in the menu and in the level.
+  Help texts were read with `name ?`. No file was changed and no cvar was set.
 - **Not verified:**
-  - the suit values in the running Crysis Remastered (nothing was probed live);
+  - Normal, Hard and Delta in the running game (a new game wasn't started, so the player's saves stayed as they
+    were); their values above come from the cfg files only;
+  - what the values do in play: nothing was measured (energy drain, jump height, sprint speed);
   - the inferred formulas (for example "recharge time = seconds for a full bar");
+  - the console without `-devmode`;
   - any other chunk types or versions (CompiledBones other than 0x800, physics, `.cga`, `.caf` animations);
   - paks over 700 MB, and whether Remastered's level paks use the same method 6 as Warhead.
 
 ## Open questions
-- Read the unset cvars from the running game's console (typing a cvar name prints its value; `name ?` prints its
-  help), with no file changes. That would settle power-jump force/cost, power-melee and recoil costs, the cloak
-  adjuster and the classic-suit values.
-- `g_suitCloakEnergyDrainWhenDamaged` = 33 per damage point would empty the bar on almost any hit, so its real
-  unit (perhaps a percentage) is unknown.
-- Whether the speed multiplier ×3 replaces or stacks with the base `sprintMultiplier` 1.5 in `player.lua`.
+- `g_suitCloakEnergyDrainWhenDamaged`: its help text says "how much suit energy is drained for every point of
+  damage taken when in cloak mode". At 33 on Normal, about 6 HP of damage would empty a full bar of 200, so a
+  hit breaks the cloak almost at once. That reading fits the help text but wasn't measured in play.
+- How `g_suitCloakEnergyDrainAdjuster` 0.73 combines with `cloakEnergyCost` 10 (for example 7.3 energy/s, or
+  only while moving). In the original Crysis's Mod SDK (`NanoSuit.cpp`), the drain per second is
+  `cloakEnergyCost × adjuster × (horizontal speed × 0.5)`, at least 1, and ×8 in free fall, so movement is the
+  moving factor there. Whether Remastered kept that formula wasn't checked; timing a full bar in cloak, standing
+  and moving, would settle it.
+- Whether the speed multiplier ×3 replaces or stacks with the base `sprintMultiplier` 1.5 in `player.lua`. The
+  help texts say "sprint speed multiplier when in ... mode", which suggests it replaces the base one; not
+  measured.
+- Whether the zero-G costs (0.25, 0.15) are fractions of the bar, as "percentage consumed" suggests.
 - A standalone public release of the reader.
