@@ -14,7 +14,6 @@ agents: ["OpenCode (DeepSeek V4.1 Flash)"]
 humans: ["Selene0623"]
 date: 2026-10-05
 links:
-  - "https://project-paradise2.de/"
   - "https://turboduck.net/forums/topic/28390-test-drive-unlimited-2-modding-wiki/"
   - "https://github.com/djey47/tdumt2"
 tags: ["wine", "proton", "d3d9", "dgvoodoo2", "null-pointer", "iat-hook", "compatibility"]
