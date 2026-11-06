@@ -365,6 +365,52 @@ def test_cli_prints_text_a_legacy_console_cannot_encode(tmp_path, monkeypatch):
     assert "The boon pool ≥ 3 → cached" in raw.getvalue().decode("utf-8")
 
 
+def test_kb_check_fails_without_a_knowledge_root(monkeypatch, capsys):
+    # a wheel install outside a clone has no knowledge/; "PASS: 0 notes checked" would turn a CI gate green
+    from um import cli, kb
+    monkeypatch.setattr(kb, "local_root", lambda: None)
+    with pytest.raises(SystemExit) as e:
+        cli.main(["kb", "check", "--index"])
+    assert e.value.code != 0
+    assert "PASS" not in capsys.readouterr().out
+
+
+def _kb_check(*args) -> int:
+    from um import cli
+    with pytest.raises(SystemExit) as e:
+        cli.main(["kb", "check", *args])
+    return e.value.code
+
+
+def test_kb_check_fails_on_a_root_with_no_notes(tmp_path, monkeypatch, capsys):
+    from um import kb
+    monkeypatch.setattr(kb, "local_root", lambda: None)
+    (tmp_path / "empty").mkdir()
+    for root in ("missing", "empty"):
+        assert _kb_check("--root", str(tmp_path / root)) == 1, root
+        out, err = capsys.readouterr()
+        assert "PASS" not in out and "um: " in err, root
+
+
+def test_kb_check_index_is_not_skipped_when_notes_are_named(tmp_path, monkeypatch, capsys):
+    # named notes are still checked without a knowledge folder, but --index can't pass without one, and with one
+    # it checks the index
+    from um import kb
+    root = tmp_path / "knowledge"
+    note = root / "techniques" / "t.md"
+    note.parent.mkdir(parents=True)
+    note.write_text("---\nkind: technique\ntitle: t\ntags: [x]\ndate: 2026-10-10\nagents: [a]\n---\n# t\n", encoding="utf-8")
+    monkeypatch.setattr(kb, "local_root", lambda: None)
+    assert _kb_check(str(note)) == 0 and "PASS: 1 notes checked" in capsys.readouterr().out
+    assert _kb_check(str(note), "--index") == 1
+    assert "FAIL --index" in capsys.readouterr().out
+    assert _kb_check(str(note), "--index", "--root", str(root)) == 1
+    assert "INDEX.md is out of date" in capsys.readouterr().out
+    (root / "INDEX.md").write_text(kb.build_index(root)[0], **kb.TEXT)
+    assert _kb_check(str(note), "--index", "--root", str(root)) == 0
+    assert _kb_check("--index", "--root", str(root)) == 0
+
+
 def test_tool_exe_does_not_set_dotnet_engine(tmp_path):
     # Kenshi shape: the only managed binary is a tool (Forgotten Construction
     # Set); the big game binary is native, so the engine must not be dotnet.
