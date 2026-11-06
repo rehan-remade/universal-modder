@@ -9,10 +9,10 @@ engine: unreal
 route: loader-api
 tools:
 - UE4SS experimental v3.0.1-1195-g1ceefac8 (2026-11-01)
-anti_cheat: 'none (single player; Steamworks only, no EAC/BattlEye/EOS). Denuvo is on the exe and was left untouched: UE4SS loads through a proxy dwmapi.dll and patches no code.'
+anti_cheat: 'none (single player; Steamworks only, no EAC/BattlEye/EOS). Denuvo is on the exe and was left untouched: UE4SS loads through a proxy dwmapi.dll and the exe on disk does not change.'
 status: working
 agents:
-- Claude Code
+- Claude Code (Opus 5.5)
 humans:
 - '@ATabor89'
 date: '2026-11-01'
@@ -36,6 +36,9 @@ tags: [ue4ss, lua, datatable, reward-multiplier, exp, gold, grinding, runtime-um
 - **Loader:** UE4SS experimental-latest `v3.0.1-1195-g1ceefac8`. Put `dwmapi.dll` plus `ue4ss/` next to
   `FFRS/Binaries/Win64/FFRS-Win64-Shipping.exe`. The default settings work: the first PS scan logs "Failed to
   find EngineVersion", the second succeeds, and UE4SS settles on engine 5.6. No game config override needed.
+- **Single player:** Steam lists no multiplayer and no leaderboards, so the multiplier only reaches your own save.
+  It also unlocks nothing from the paid packs: the Digital Deluxe Upgrade's Mastery Ring (an MRP boost) and the
+  early-purchase Blessed Cuirass (more Gil) stay items you would have to own.
 - **Mods enabled:** only the mod and `Keybinds`. The stock CheatManager/Console/BPModLoader mods were turned
   off in both `mods.txt` and `mods.json`; they aren't needed.
 - **Saves** are in `%LOCALAPPDATA%\FFRS\Steam\<steamid64>\GameSaveData{0,1,2}.sav`. Back them up
@@ -45,9 +48,9 @@ tags: [ue4ss, lua, datatable, reward-multiplier, exp, gold, grinding, runtime-um
 - **Taken: UE4SS Lua, writing the DataTable rows in memory.** Every reward rate is in one table, the Lua
   `UDataTable` API can write rows by reference, and toggling just writes the shipped values back.
 - **Not taken: UE4SS hooks on the rate getters.** They look perfect, but they never fire (Gotcha 1).
-- **Not taken: a pak override of the table.** It would work (the IoStore isn't encrypted; `retoc` repacks it),
-  but changing the multiplier means rebuilding the pak and restarting. A stale override also survives game
-  updates silently.
+- **Not taken: a pak override of the table.** It would work (the IoStore isn't encrypted;
+  [`retoc`](https://github.com/trumank/retoc) repacks it), but changing the multiplier means rebuilding the pak and
+  restarting. A stale override also survives game updates silently.
 
 ## How the game works (what we had to learn)
 - **Game module is `mucha`**, not `FFRS`: script paths look like `/Script/mucha.CPP_BFL_SaveDataPlayer`.
@@ -76,9 +79,12 @@ tags: [ue4ss, lua, datatable, reward-multiplier, exp, gold, grinding, runtime-um
    - **`main.lua`**, the table part:
      - Every 5 s (`LoopAsync` → `ExecuteInGameThread`), look in `FindAllOf("DataTable")` for the object whose
        `GetFName()` is `DT_GameDifficultyParam`. Re-find it if `IsValid()` fails or `GetAddress()` changes.
+       (`LoopAsync` still works on this build but is deprecated; `LoopInGameThreadWithDelay` replaces it, already
+       runs on the game thread and can be cancelled.)
      - The first time you find it, save each row's `ExpRate` / `MoneyRate` / `MRPointRate` from `ForEachRow`.
        Store them in UE4SS shared variables (`ModRef:SetSharedVariable`) keyed by the table address, and on
-       start reuse them if the address matches (Gotcha 7). Set `ModRef.OnUnload` to write them back.
+       start reuse them if the address matches (Gotcha 7). A shared variable holds a number, string, bool or
+       UObject, not a table, so use one key per row and field. Set `ModRef.OnUnload` to write them back.
      - **Apply:** `ForEachRow(function(name, row) row.ExpRate = original * mult ... end)`. Rows are references, so
        the write lands in the live table. When the mod is off, write the originals back.
    - **`overlay.lua`**, the status label, built from stock UMG classes, in this order:
@@ -93,7 +99,8 @@ tags: [ue4ss, lua, datatable, reward-multiplier, exp, gold, grinding, runtime-um
    - F8: cycle presets 1.5/2/3/5 (all three rates together).
    - F9: reload `config.lua`, keeping the current on/off state.
    - F6: show or hide the label.
-4. **Uninstall:** delete `dwmapi.dll` and `ue4ss/`. To disable just the mod, set `RewardMultiplier : 0`.
+4. **Uninstall:** delete `dwmapi.dll` and `ue4ss/`. To disable just the mod, delete its `enabled.txt` as well as
+   setting `RewardMultiplier : 0`: UE4SS starts any mod that has an `enabled.txt`, whatever `mods.txt` says.
 
 ## Verification
 - **Log oracle:** with `Debug = true`, the mod logs each row's before and after values on apply (e.g.
@@ -113,9 +120,10 @@ tags: [ue4ss, lua, datatable, reward-multiplier, exp, gold, grinding, runtime-um
    called through the script VM / ProcessEvent. **Fix:** change the data they read
    (`DT_GameDifficultyParam`) instead of their return values.
 2. **`dt:GetRowStruct():ForEachProperty(...)` errors with "attempt to call a TrivialObject value".**
-   **Cause:** `GetRowStruct()` returns a plain object wrapper without the UStruct methods. **Fix:** take its
-   path from `GetFullName()` and look it up again with `StaticFindObject(path)`; that one has
-   `ForEachProperty`. (Or just use the known field names.)
+   **Cause:** `GetRowStruct()` returns a plain object wrapper without the UStruct methods (`LuaUDataTable.cpp`
+   builds it with `UObject::construct`, though the docs list `UScriptStruct`). **Fix:** take its path from
+   `GetFullName()`, drop the leading `ScriptStruct ` type, and look it up again with `StaticFindObject(path)`;
+   that one has `ForEachProperty`. (Or just use the known field names.)
 3. **Set the table variable only after capturing the originals.** If capture throws after `tbl` is set, the
    "already found" check skips every later retry and nothing is ever applied. Capture first, then cache.
 4. **Hot reload (Ctrl+R) leaves the old label on screen.** **Cause:** the old widget stays in the viewport with
