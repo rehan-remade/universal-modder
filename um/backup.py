@@ -48,7 +48,8 @@ def create(src: str, name: str | None = None, note: str = "") -> Path:
     name = name or s.name.replace(" ", "-").lower()
     files = _scan(s)
     if "_um_manifest.json" in files:
-        die("folder contains reserved snapshot metadata file: _um_manifest.json")
+        die(f"{s} contains reserved snapshot metadata file: _um_manifest.json. Move or rename it, then run this "
+            "again (one left over from unzipping a snapshot can simply go)")
     total = sum(f["size"] for f in files.values())
     if total > 20 << 30:
         die(f"{total / 2**30:.1f} GB - too big to snapshot casually; back up the specific subfolder you'll change")
@@ -118,9 +119,11 @@ def restore(name: str, to: str | None = None, snapshot: str | None = None, clean
         create(str(t), name + "-pre-restore", note=f"automatic, before restoring {zp.name}")
     t.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(zp) as z:
+        # older snapshots of a folder with its own _um_manifest.json hold two members of that name: its file, then ours
+        first = {info.filename: info for info in reversed(z.infolist())}
         for rel in m["files"]:
             (t / rel).parent.mkdir(parents=True, exist_ok=True)
-            with z.open(rel) as src, open(t / rel, "wb") as dst:
+            with z.open(first[rel]) as src, open(t / rel, "wb") as dst:
                 dst.write(src.read())
     if clean:
         for rel in d["added"]:

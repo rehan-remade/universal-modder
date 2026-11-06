@@ -1264,6 +1264,63 @@ def test_backup_repeated_restores_keep_undo_snapshots(tmp_path, backup_same_seco
             assert z.read("save.dat") == state.encode()
 
 
+def test_backup_rejects_reserved_manifest_file(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(backup, "_root", lambda name: (tmp_path / "snaps" / name).mkdir(parents=True, exist_ok=True)
+                        or tmp_path / "snaps" / name)
+    src = tmp_path / "src"
+    make(src, {"_um_manifest.json": "user data", "save.dat": "v1"})
+    with pytest.raises(SystemExit):
+        backup.create(str(src), name="t")
+    assert "reserved snapshot metadata file: _um_manifest.json" in capsys.readouterr().err
+    assert not (tmp_path / "snaps" / "t").exists()
+
+
+def test_backup_restore_stops_at_a_reserved_manifest_file_in_the_folder(tmp_path, backup_same_second, capsys):
+    # the automatic snapshot before the restore can't take that folder either: nothing may change until it's moved
+    src = tmp_path / "src"
+    make(src, {"save.dat": "v1"})
+    backup.create(str(src), name="t")
+    make(src, {"save.dat": "v2", "_um_manifest.json": "{}"})
+    with pytest.raises(SystemExit):
+        backup.restore("t", yes=True)
+    assert f"{src} contains reserved snapshot metadata file" in capsys.readouterr().err
+    assert (src / "save.dat").read_text() == "v2"
+    (src / "_um_manifest.json").unlink()
+    backup.restore("t", yes=True)
+    assert (src / "save.dat").read_text() == "v1"
+
+
+def test_backup_keeps_a_nested_file_named_like_the_manifest(tmp_path, backup_same_second):
+    # only the top level collides with the snapshot's manifest
+    src = tmp_path / "src"
+    make(src, {"sub/_um_manifest.json": "user data"})
+    backup.create(str(src), name="t")
+    make(src, {"sub/_um_manifest.json": "changed"})
+    backup.restore("t", yes=True)
+    assert (src / "sub" / "_um_manifest.json").read_text() == "user data"
+
+
+def test_backup_older_snapshot_with_two_manifest_members_restores_the_users_file(tmp_path, backup_same_second):
+    # snapshots from before the refusal hold the folder's file first and the manifest last, under one name.
+    # Restoring the last one wrote the manifest over the user's file, and then blocked backing up the folder
+    import hashlib
+    import warnings
+    dest = tmp_path / "dest"
+    files = {"_um_manifest.json": b"ORIGINAL USER DATA", "save.dat": b"s"}
+    zp = backup._root("old") / "20260101-000000.zip"
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")  # the duplicate name
+        with backup.zipfile.ZipFile(zp, "w") as z:
+            for rel, data in files.items():
+                z.writestr(rel, data)
+            z.writestr("_um_manifest.json", json.dumps(dict(source=str(dest), created="20260101-000000", note="", files={
+                rel: dict(size=len(data), sha1=hashlib.sha1(data).hexdigest()) for rel, data in files.items()})))
+    assert set(backup._manifest(zp)["files"]) == set(files)
+    backup.restore("old", yes=True)
+    assert (dest / "_um_manifest.json").read_bytes() == b"ORIGINAL USER DATA"
+    assert (dest / "save.dat").read_bytes() == b"s"
+
+
 def test_backup_handles_pre_1980_timestamps(tmp_path, monkeypatch):
     import os
     monkeypatch.setattr(backup, "_root", lambda name: (tmp_path / "snaps" / name).mkdir(parents=True, exist_ok=True)
@@ -1294,17 +1351,6 @@ def test_backup_diff_and_restore_round_trip(tmp_path, monkeypatch):
     assert (src / "sub" / "cfg.ini").read_text() == "a=1"
     assert not (src / "extra.log").exists()
     assert backup.snapshots("t-pre-restore")  # the state before the restore was kept
-
-
-def test_backup_rejects_reserved_manifest_file(tmp_path, monkeypatch, capsys):
-    monkeypatch.setattr(backup, "_root", lambda name: (tmp_path / "snaps" / name).mkdir(parents=True, exist_ok=True)
-                        or tmp_path / "snaps" / name)
-    src = tmp_path / "src"
-    make(src, {"_um_manifest.json": "user data", "save.dat": "v1"})
-    with pytest.raises(SystemExit):
-        backup.create(str(src), name="t")
-    assert "reserved snapshot metadata file: _um_manifest.json" in capsys.readouterr().err
-    assert not (tmp_path / "snaps" / "t").exists()
 
 
 # --------------------------------------------------------------------------- comfy
