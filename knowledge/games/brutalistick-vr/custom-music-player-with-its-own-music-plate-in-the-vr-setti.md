@@ -1,7 +1,7 @@
 ---
 kind: game
 title: Custom music player with its own Music plate in the VR settings menu
-game: Brutalistick VR
+game: BRUTALISTICK VR
 games_also: []
 game_version: 'Steam app 2669380, Unity 6000.0.59f2 (IL2CPP x64), MelonLoader 0.7.3 Open-Beta / .NET 6'
 platform: windows
@@ -12,8 +12,9 @@ tools:
 - Il2CppDumper (dump.cs)
 - dotnet 6 SDK (net6.0 class library)
 - ffmpeg (generated test tones)
-- Thunderstore CLI-less flow: upload the zip by hand
-anti_cheat: none; single-player VR sandbox, nothing to bypass
+- NLayer 1.16.0 and NVorbis 0.10.5 (embedded decoders)
+- Thunderstore (zip uploaded by hand, no CLI)
+anti_cheat: none; single-player VR game, and Steam starts BrutalistickVR.exe directly
 status: released
 agents:
 - OpenCode (DeepSeek V4.1 Flash)
@@ -22,20 +23,29 @@ date: '2026-11-05'
 links:
 - https://github.com/Skibidi41Rizz/CustomMusic
 - https://thunderstore.io/c/brutalistick-vr/p/SkIbidiRizTEAM/CustomMusic/
+- https://github.com/LavaGang/MelonLoader
+- https://github.com/naudio/NLayer
+- https://github.com/NVorbis/NVorbis
+- https://github.com/Perfare/Il2CppDumper
 tags: [audio, music, mci, winmm, harmony, ui, settings-menu, melonloader, il2cpp, vr, thunderstore]
 ---
 # Custom music player with its own Music plate in the VR settings menu
 
 > A MelonLoader DLL that replaces the game's soundtrack with the player's own MP3/WAV/OGG files and adds a
 > **Music** plate to the VR settings menu: play/pause, prev/next, shuffle, loop modes, volume, and a paged
-> playlist. Built as a managed Harmony mod (route `loader-api`) because the IL2CPP build has no way to
-> construct an `AudioClip`; playback goes through Windows MCI instead. Verified in the real game — MelonLoader
-> logs show `MCI open ... type=waveaudio` with the position advancing — and live on Thunderstore as
-> `SkIbidiRizTEAM-CustomMusic` (1.0.7 live, 1.0.8 the cleaned-up build described here).
+> playlist. Built as a managed Harmony mod (route `loader-api`). The `AudioClip` creation methods it tried are
+> stripped from the IL2CPP build, so playback goes through Windows MCI instead. Verified in the real game —
+> MelonLoader logs show `MCI open ... type=waveaudio` with the position advancing — and live on Thunderstore as
+> `SkIbidiRizTEAM-CustomMusic` (1.0.8, the cleaned-up build described here, since 2026-11-04). It ships no music:
+> every track comes from the player's own folder.
 
 ## Setup
 
-- Game: BRUTALISTICK VR, Steam app **2669380**, Unity **6000.0.59f2**, IL2CPP x64, no anti-cheat.
+- Game: BRUTALISTICK VR, Steam app **2669380**, Unity **6000.0.59f2**, IL2CPP x64, no anti-cheat. The public
+  branch is build 24736798 (as of 2026-11-05); the build tested wasn't recorded.
+- Multiplayer: none in the game itself (Steam lists it as single-player, VR only). Community co-op mods exist on
+  Thunderstore (`BRUTALISTICKMP`, `BrutalistickCoop`). This mod has no network code and only plays audio on the
+  local PC, so nothing reaches other players.
 - Loader: **MelonLoader 0.7.3 Open-Beta**, .NET 6 runtime. The game folder gets `version.dll`
   (MelonLoader.Bootstrap) plus `MelonLoader\`, `Mods\`, `UserLibs\`, `UserData\`.
 - Reference assemblies: `MelonLoader\net6\{MelonLoader,0Harmony,Il2CppInterop.Runtime}.dll` and
@@ -55,9 +65,10 @@ tags: [audio, music, mci, winmm, harmony, ui, settings-menu, melonloader, il2cpp
 - **Asset bundle for the UI** (rejected): needs a Unity project matching 6000.0.59f2 plus the game's shader
   variants; cloning the game's own settings panel at runtime needs neither (see the technique note
   `techniques/an-in-game-settings-menu-in-an-il2cpp-unity-game-clone-the-g.md`).
-- **Unity audio** (rejected after testing): the shipped IL2CPP build has every `AudioClip` creation method
+- **Unity audio** (rejected after testing): the shipped IL2CPP build has the `AudioClip` creation methods
   stripped — `Create`, `Construct_Internal`, `CreateUserSound` all fail, so PCM cannot become a clip. This is
-  why earlier versions "worked" in the log and played nothing.
+  why earlier versions "worked" in the log and played nothing. `UnityWebRequestMultimedia.GetAudioClip`, where
+  Unity decodes the file itself, isn't recorded as tried.
 - **MCI (`winmm.dll`)** (chosen for playback): Windows plays the file itself, it survives scene loads and
   needs no game audio objects. Trade-off: volume handling is device-dependent and there is a disk cache.
 
@@ -81,10 +92,14 @@ The "no user tracks → allow stock" line is what keeps the mod from leaving a s
 
 **Audio.** MP3 and OGG are decoded in managed code (NLayer 1.16.0 and NVorbis 0.10.5, embedded as DLL
 resources and loaded through `AppDomain.AssemblyResolve`) into a 16-bit PCM WAV under
-`UserData\CustomMusicCache\<sha1 of path+size>.wav`; plain WAV files play directly. The MCI device:
+`UserData\CustomMusicCache\<sha1 of path, modified time and size>.wav`; 8/16-bit PCM WAV files with an ASCII path
+play directly. MP3s are decoded too because DirectShow fails on some of them with MCI error 277 (ID3v2.4, VBR,
+Unicode tags, per a comment in `AudioDecode.cs`). The MCI device:
 
-- `open "<path>" type mpegvideo alias cm_track` — DirectShow, also accepts `setaudio ... volume to 0..1000`;
-- `open "<path>" type waveaudio alias cm_track` — for cached WAVs; volume falls back to `waveOutSetVolume`;
+- `open "<path>" type waveaudio alias cm_track` — the default, for cached and plain WAVs; volume falls back to
+  `waveOutSetVolume`;
+- `open "<path>" type mpegvideo alias cm_track` — DirectShow, also accepts `setaudio ... volume to 0..1000`; in
+  1.0.8 only the fallback when `waveaudio` refuses a file;
 - `play`, `pause`, `resume`, `stop`, `seek ... to start`, `status ... mode|position|length`;
 - commands are synchronous and must run on the main thread; poll `mode`/`position` at most ~5 Hz.
 
@@ -92,11 +107,13 @@ resources and loaded through `AppDomain.AssemblyResolve`) into a 16-bit PCM WAV 
 `ChangeActiveTab(int)`, and the open panels `settingsTab`, `mainOptionsTab`, `cheatsTab`. Panels and tab
 buttons are ordinary prefab clones, labels are `TextMeshProUGUI`, and every click passes through
 `Button.OnPointerClick(PointerEventData)`. Adding a plate = clone `settingsTabs[0]` and
-`settingsTabButtons[0]`, append both to the arrays, postfix `ChangeActiveTab` to hide/show, and dispatch
-clicks by `Button.GetInstanceID()`. Full recipe with code in the technique note above.
+`settingsTabButtons[0]` under `settingsTab`, leave both arrays as they are, show the plate by hand (hide the
+stock panels, repaint their tabs), hide it from a `ChangeActiveTab` postfix or whenever a stock panel is active,
+and dispatch clicks by instance ID. Full recipe with code in the technique note above.
 
-**Config.** `MelonPreferences` writes `UserData\MelonPreferences.cfg`, section `[CustomMusic]`. A `Schema`
-entry lets a new default reach old configs; note that it does **not** overwrite the user's other values.
+**Config.** `MelonPreferences` writes `UserData\MelonPreferences.cfg`, section `[CustomMusic]`. A new default
+doesn't reach an existing config: `Cfg.Init` in 1.0.8 compares a `Schema` entry and logs "rewriting defaults", but
+only writes `Schema` back, so the user's values stay, old defaults included.
 
 **Where user files live.** `MelonEnvironment.UserDataDirectory` follows whatever launched MelonLoader: with
 TMM it is the profile folder, with a manual launch it is the game folder. `Application.dataPath` always
@@ -137,7 +154,10 @@ points at the *game* install, so it must not be used to find user files.
   names are used when available but are not required.
 - **Not verified**: OGG on a Windows install without the Vorbis codec (the decode path is ours, so it should
   be independent, but it was only run on one machine), `setaudio volume` on the `mpegvideo` device on other
-  systems, and behaviour when the same track is played from two mod profiles at once.
+  systems, behaviour when the same track is played from two mod profiles at once, and whether the
+  `waveOutSetVolume` fades also move the game's own sounds. Since Vista that call sets a
+  [per-session volume](https://learn.microsoft.com/en-us/archive/blogs/larryosterman/volume-in-windows-vista-part-2-types-of-volume-in-windows-vista),
+  and the mod runs in the game's process.
 
 ## Gotchas
 
@@ -147,7 +167,8 @@ points at the *game* install, so it must not be used to find user files.
    did not play audio at all while the README promised it. **Fix:** flat zip with one DLL, no audio, no writes
    outside `UserData\CustomMusic*`, README that matches the build, AI disclosure in README and
    `AssemblyMetadata`. Re-uploading an accepted mod under a second package name was flagged as an exact
-   reupload — bump the version inside the same package instead.
+   reupload — bump the version inside the same package instead. Those zips aren't public: Thunderstore lists only
+   1.0.7 and 1.0.8, neither has music in it, and neither does the GitHub history.
 2. **Music "works" in the log but nothing plays.** **Cause:** `AudioClip` creation is stripped in this build;
    the clip came back null. **Fix:** do not use Unity audio at all — play the file through MCI.
 3. **Disabling `MusicManager` did not stop the menu music.** **Cause:** music is started from a
@@ -162,7 +183,8 @@ points at the *game* install, so it must not be used to find user files.
 6. **The playlist looked shuffled even with an alphabetical library.** **Cause:** `Shuffle` defaulted to
    `true` and the config also had `Loop = 1` (repeat one), so consecutive numbers never matched; sorting also
    used the full path, not the file name. **Fix:** natural sort by file name (`2` before `10`), `Shuffle`
-   default `false`, document `Loop All` for sequential playback, and let the Shuffle button opt in.
+   default `false`, document `Loop All` for sequential playback, and let the Shuffle button opt in. An existing
+   config keeps its old `Shuffle` value (see Config).
 7. **The decoded WAVs show up as tracks.** **Cause:** the cache lives under `UserData` next to the music
    folder. **Fix:** skip any path containing `CustomMusicCache` in the scan.
 8. **A 14 MB MP3 becomes a 100 MB file.** **Cause:** the cache is 16-bit PCM WAV (~10× the compressed size);
@@ -180,8 +202,11 @@ points at the *game* install, so it must not be used to find user files.
 
 ## Assets
 
-- Cassette click SFX (`tape_insert.wav`, `tape_eject.wav`) synthesized as WAV and embedded as resources; they
-  are UI feedback for the play/pause animations, not music.
+- Cassette SFX (`tape_insert.wav`, `tape_eject.wav`), embedded as resources and written to
+  `UserData\CustomMusic\sfx` at startup: BigSoundBank's
+  [VCR: Cassette Insertion](https://bigsoundbank.com/vcr-cassette-insertion-s2690.html) and
+  [VCR: cassette output](https://bigsoundbank.com/vcr-cassette-output-s2694.html), both CC0, exported through
+  Premiere Pro. They are UI feedback for the play/pause animations, not music.
 - Icon: 256×256 PNG in the package root, as Thunderstore requires.
 - **No music is bundled.** The zip contains zero audio entries — that is exactly what the copyright rule
   requires, and the mod reads only files the user puts in `UserData\CustomMusic`.
