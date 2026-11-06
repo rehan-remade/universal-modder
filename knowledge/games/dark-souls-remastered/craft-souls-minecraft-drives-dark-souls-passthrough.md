@@ -8,12 +8,12 @@ platform: windows
 engine: fromsoft
 route: passthrough
 tools: ["ReShade 6.8 add-on API", "Minecraft 1.21.1 + Fabric", "Ghidra 12.1.4 (headless, JDK 21)", "REA MCP", "Python 3 (pefile, ReadProcessMemory)", "DSR-Gadget (offsets only)"]
-anti_cheat: "no client anti-cheat found by um scan; part of .text is encrypted on disk (protection); played offline only"
+anti_cheat: "no client anti-cheat found by um scan; part of .text is encrypted on disk (protection), left alone: the exe stays as installed and all patches are in memory; servers are live, so offline only (add-on removed before going online)"
 status: in-progress
-agents: ["Copilot SDK in VS Code", "Claude Code (Opus 5.5)"]
+agents: ["Copilot SDK in VS Code (model not recorded)", "Claude Code (Opus 5.5)"]
 humans: []
 date: 2026-11-02
-links: ["https://github.com/JKAnderson/DSR-Gadget", "https://soulsmodding.com/"]
+links: ["https://github.com/JKAnderson/DSR-Gadget", "https://soulsmodding.com/", "https://github.com/rehan-remade/universal-modder/tree/main/examples/minecraft-gta5-passthrough", "https://reshade.me", "https://fabricmc.net", "https://github.com/morluto/rea"]
 tags: [minecraft, passthrough, reshade-addon, depth-compositing, camera, havok, collision-geometry, game-thread-hook, event-scripts, params, fmg, live-memory-diff]
 ---
 
@@ -31,10 +31,17 @@ tags: [minecraft, passthrough, reshade-addon, depth-compositing, camera, havok, 
 Steam AppID 570940 at `C:\Program Files (x86)\Steam\steamapps\common\DARK SOULS REMASTERED`.
 `DarkSoulsRemastered.exe` x64, app 1.03.1, file version 1.0.0.0, 50,286,344 bytes, SHA-256
 `A45AAA36DD2F6CC151670A639EA5547043CF38EA79FF4178B963C6ED71F98D7B`, SizeOfImage `0x319b000`, image base
-`0x140000000` (no ASLR observed). ReShade 6.8.0.2155 (add-on build, API 20) is the install's `dxgi.dll`
+`0x140000000` (no ASLR observed). That size and hash match the Steam exe in the
+[portal gun note](portal-gun-prototype-via-dinput8-proxy-dll-player-camera-and.md) (build 10943698): it stays as installed,
+and every patch below is made in memory. ReShade 6.8.0.2155 (add-on build, API 20) is the install's `dxgi.dll`
 (a static import of the exe, so add-ons load before the game initialises). Guest: Minecraft 1.21.1, Fabric
 Loader 0.19.5, Fabric API 0.116.17+1.21.1, JDK 25, Loom 1.18.2. Native: MSBuild 18.10.1, Windows SDK
-10.0.26100.0, CMake. RE: Ghidra 12.1.4 on JDK 21 (headless), REA MCP 6.4. Offline only.
+10.0.26100.0, CMake. RE: Ghidra 12.1.4 on JDK 21 (headless), REA MCP 6.4.
+
+**Offline only.** DSR's PC servers are live. The add-on writes HP and stamina, calls the game's damage and warp functions
+and patches code in memory, and in an online session that would reach other players and can get the account soft-banned.
+It loads on every launch, so keep Steam in Offline Mode (or block `DarkSoulsRemastered.exe` in the firewall) while it's in
+the game folder, and remove it before playing online. This is the same rule as the portal gun note.
 
 All addresses below are **RVAs** from the image base on this build. Offsets are hex.
 
@@ -43,9 +50,18 @@ All addresses below are **RVAs** from the image base on this build. Offsets are 
 Passthrough: Minecraft stays the source of truth for blocks and its own simulation; Dark Souls supplies the
 scene, camera, depth, characters and collision. There is no community loader for DSR; the installed ReShade
 loads add-ons from the game folder, which gives D3D11 events (binds, draws, buffer writes, present) without
-replacing `dxgi.dll`. Everything gameplay-side is read from memory, plus a few small code redirects written
+replacing `dxgi.dll`. Everything gameplay-side goes through memory at runtime: reads, a few field writes (HP,
+stamina, latch bytes), calls to the game's own functions on its thread, and a few small code redirects written
 by the add-on (listed below). Content porting or a headless reimplementation would not give "Minecraft
 running inside Dark Souls".
+
+The shape is the one in this repo's [GTA V example](../../../examples/minecraft-gta5-passthrough/README.md) and
+[note](../gta-v/minecraft-passthrough.md): frame compositing for the picture, state exchange for collision and combat. See
+[choosing a mashup route](../../techniques/choosing-a-mashup-route.md),
+[frame compositing](../../techniques/frame-compositing-depth-and-pose-sync.md),
+[collision and combat bridging](../../techniques/collision-and-combat-bridging.md) and
+[bridge contracts](../../techniques/bridge-contracts-ownership-units-and-lifecycle.md). The portal gun note maps more of
+the same exe.
 
 ## How the game works (what we had to learn)
 
@@ -63,8 +79,8 @@ running inside Dark Souls".
 ### Protection and how the RE was done
 - About 2.1 MB of the first `.text` is encrypted on disk and decrypted at start; static tools on the file
   see garbage there (some entry points also jump into obfuscated stubs, e.g. the window procedure).
-  Analysis used a read-only memory dump of the user's own running game, never distributed. AOBs are
-  matched after the game has decrypted itself.
+  Analysis used a read-only memory dump of the user's own running game, kept private and outside any repo.
+  Nothing here strips or bypasses the protection. AOBs are matched after the game has decrypted itself.
 - Fast static loop: headless Ghidra on an already-analysed project with `-noanalysis -readOnly` and a
   20-line post-script (decompile / xrefs / listing) runs in ~10 s; re-importing through REA would redo a
   40-minute analysis. Script-API natives are found from their registration stubs (`lea r8, name;
@@ -159,26 +175,26 @@ running inside Dark Souls".
 
 ## Build steps
 
-From `craft-souls-passthrough`: guest `cd mc-bridge; .\gradlew.bat build`. Native: `vcvars64.bat` (VS 18
-Build Tools), `cmake -S native-bridge -B native-bridge\build`, `cmake --build native-bridge\build --config
-Release`; copy `craft_souls_compositor.addon64` beside the exe (delete it to uninstall). Code patches are
-written once per session with all other threads suspended, bytes verified first, all edits batched under
-one suspension (gotcha 13), and restored on unload.
+From `craft-souls-passthrough` (the author's project, not published): guest `cd mc-bridge; .\gradlew.bat build`.
+Native: `vcvars64.bat` (VS 18 Build Tools), `cmake -S native-bridge -B native-bridge\build`, `cmake --build
+native-bridge\build --config Release`; copy `craft_souls_compositor.addon64` beside the exe (delete it to uninstall).
+Code patches are written once per session with all other threads suspended, bytes verified first, all edits batched
+under one suspension (gotcha 13), and restored on unload.
 
 ## Verification
 
-- Offline oracles (fake host, WARP compositor with synthetic depth, follow / frame / input oracles) for the
-  bridge protocol and rendering math.
-- In game (user, screenshots and logs): occlusion pixel-exact; Minecraft under the HUD; building from inside
-  Dark Souls; drive mode; terrain from collision geometry ("practically perfect"); E-prompts (bonfire, pickup,
-  talk, fog walls); hits with flinch/aggro, kills, guard break ("shield broke"); NPCs hittable and turning
-  hostile; ladders up/down/slide; lifts and doors as moving terrain; breakables broken from Minecraft;
-  respawn at the last bonfire after a Minecraft death (New Londo → Firelink); rest detection at two
-  bonfires; HUD hidden/restored; boss name shown (Stray Demon).
+- Synthetic offline oracles (fake host, WARP compositor with synthetic depth, follow / frame / input oracles) for
+  the bridge protocol and rendering math. These test the protocol and the maths, not the game.
+- Real runs, with real Minecraft beside the real game (the user, screenshots and logs): occlusion that looked
+  pixel-exact in screenshots; Minecraft under the HUD; building from inside Dark Souls; drive mode; terrain from
+  collision geometry ("practically perfect"); E-prompts (bonfire, pickup, talk, fog walls); hits with flinch/aggro,
+  kills, guard break ("shield broke"); NPCs hittable and turning hostile; ladders up/down/slide; lifts and doors as
+  moving terrain; breakables broken from Minecraft; respawn at the last bonfire after a Minecraft death (New Londo →
+  Firelink); rest detection at two bonfires; HUD hidden/restored; boss name shown (Stray Demon).
 - Live RE oracles: read-only watchers diffing a structure while the human performs one action (focus switch,
   option toggle, ladder slide, lift ride, barrel break); each finding above marked "read live" came from one.
-- Not verified: other resolutions / aspect ratios, DLC areas beyond spot checks, lighting an unlit bonfire
-  (vs resting), shield/guard interplay when an enemy blocks a game-side hit, background audio.
+- Not verified: another machine, other resolutions / aspect ratios, DLC areas beyond spot checks, lighting an
+  unlit bonfire (vs resting), shield/guard interplay when an enemy blocks a game-side hit, background audio.
 
 ## Gotchas
 
@@ -224,8 +240,10 @@ one suspension (gotcha 13), and restored on unload.
 
 ## Assets
 
-No game files, extracted assets or decompiled code in the repository; in-game screenshots and logs stay in a
-gitignored `evidence/` folder. Minecraft-side visuals use vanilla assets.
+No game files, extracted assets or decompiled code in the project's repository; in-game screenshots and logs stay
+in a gitignored `evidence/` folder. Minecraft-side visuals use vanilla assets from the player's own Minecraft, and the
+terrain blocks are built on the player's machine from their own DSR install. Nothing from either game ships, and a
+Minecraft world saved with that terrain stays private.
 
 ## Cost and time
 
