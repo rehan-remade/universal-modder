@@ -4,10 +4,10 @@ title: 'Upper memory for patched DOS games in DOSBox: code in a UMB, EMS off, an
   modules'
 status: working
 agents:
-- Claude Code (Claude Opus 5.5)
+- Claude Code (Opus 5.5)
 humans: []
 date: '2026-11-02'
-links: ["https://www.dosbox.com/", "https://github.com/dosbox-staging/dosbox-staging", "https://github.com/joncampbell123/dosbox-x"]
+links: ["https://www.dosbox.com/", "https://github.com/dosbox-staging/dosbox-staging", "https://github.com/joncampbell123/dosbox-x", "https://github.com/unicorn-engine/unicorn"]
 tags: [dos, dosbox, umb, upper-memory, xms, xms-cache, unreal-mode, int21h-hook, ems, int67h, sound-drivers, dma, code-modules, overlays, conventional-memory, binary-patching, x86-16, guest-memory]
 ---
 # Upper memory for patched DOS games in DOSBox: code in a UMB, EMS off, an XMS-backed EMS for sound drivers, transient modules
@@ -26,8 +26,11 @@ tags: [dos, dosbox, umb, upper-memory, xms, xms-cache, unreal-mode, int21h-hook,
   "Measure free conventional memory").
 - The game runs in DOSBox (or you can require DOSBox-like settings from your players). On real hardware, upper
   memory depends on the player's memory manager; this note only covers DOSBox.
-- Setup used: DOSBox 0.74-2 (the build GOG bundles) for all measurements and tests; DOSBox Staging 0.83 and
-  DOSBox-X 2026.10 are supported in the shipped player confs but were checked only by reading their source.
+- Setup used: DOSBox 0.74-2 (the build GOG bundles) for all measurements and tests. The project's player confs also
+  target DOSBox Staging 0.83 and DOSBox-X 2026.10, but neither was run: those two were only read in source.
+- What can ship: a patched EXE is the game's own file with your code in it, so it stays on your machine. Anything
+  you release is a patch or patcher that builds it from the player's own copy
+  (`skills/mod-any-game/references/safety.md`).
 - If the game is an RTLink/Plus overlaid EXE, read
   [Patching RTLink/Plus overlaid DOS executables](patching-rtlink-plus-overlaid-dos-executables-growing-the-im.md)
   first: calls from overlay code into the UMB still need gates the overlay manager recognises.
@@ -35,8 +38,8 @@ tags: [dos, dosbox, umb, upper-memory, xms, xms-cache, unreal-mode, int21h-hook,
 ## How
 
 ### What DOSBox gives
-`[dos] umb=true` alone is not enough in DOSBox 0.74: UMBs exist only with `xms=true` too. The EMS page frame sits at
-E000-EFFF, so `ems` decides how big the one UMB is:
+`[dos] umb=true` alone is not enough in DOSBox 0.74: UMBs exist only with `xms=true` too (`xms.cpp` builds the chain
+after its `xms` check). The EMS page frame sits at E000-EFFF, so `ems` decides how big the one UMB is:
 
 | DOSBox | how we know | `ems=true` | `ems=false` |
 |---|---|---|---|
@@ -60,8 +63,8 @@ Make the patched EXE's entry point a small loader that runs before the game's ow
    same strategy) and print a second message, "turn EMS off", instead of the generic one.
 4. Read the code from the EXE file itself: store it after everything the loader of the game reads (here behind the
    overlay area, after a zero paragraph), open the EXE by the program path found after the environment block's
-   double NUL (the PSP comes from int 21h 62h), seek, read, close. Use your own file handle; don't move a handle
-   the game or its overlay manager already has open.
+   double NUL and a word count (the PSP comes from int 21h 62h), seek, read, close. Use your own file handle; don't
+   move a handle the game or its overlay manager already has open.
 5. Fix up the segment words in the loaded code (the UMB segment is only known now) and far-jump to the game's
    original entry point.
 
@@ -70,9 +73,9 @@ the loader fills). Keep those stubs small and count them: they are the conventio
 
 ### Claim the rest of upper memory if a manager would use it
 After its own block, the loader here allocates every remaining UMB (up to 4 blocks) and keeps them until exit. The
-game's overlay manager otherwise built a page heap in upper memory right under the EMS frame and crashed on segment
-arithmetic that ran past it (RTLink note, gotcha 10). Look at what your game's memory managers do with free UMBs
-before you leave any.
+game's overlay manager otherwise built a page heap in upper memory right under the EMS frame and crashed on its
+segment arithmetic there (RTLink note, gotcha 10). Look at what your game's memory managers do with free UMBs before
+you leave any.
 
 ### Turning EMS off when a sound driver needs EMS
 In this game the overlay manager uses EMS or XMS only as a small second-level page cache (the same size with
@@ -158,7 +161,7 @@ HIMEM-style block moves on real machines can reset the cached limit. Code can't 
 20-bit), so modules would still be copied down, which the XMS cache already does in one move. Verdict here: not
 built; only a big table read by hot code without copying could justify it, and then behind a start-up probe with an
 XMS-move fallback. Don't rely on DOSBox's missing limit checks by accident either: see the Keystone gotcha in the
-RTLink note (stray 67h forms run fine in DOSBox and would fault on an 8086 or 286).
+RTLink note (stray 67h forms run fine in DOSBox and aren't valid on an 8086 or 286).
 
 ### Budget it at build time
 - Keep one record of who owns which part of upper memory (here a ledger that a reservation script edits, plus a
@@ -188,6 +191,9 @@ RTLink note (stray 67h forms run fine in DOSBox and would fault on an 8086 or 28
 - How the effects sound through the emulated EMS: all test runs are muted; the bytes are compared, not listened to.
 - The intro program (a separate EXE with its own copy of the driver) finds no EMS with `ems=false`; it played no
   sampled effect in a 120 s run with EMS on either, so nothing seems lost, but that was not proven for every path.
+- Gotcha 5's "same PSP": DOSBox 0.74-2's 4B00h allocates a block and builds a new PSP there (`DOS_Execute`,
+  `SetupPSP`), so plain 4B00h doesn't explain why the next program owns the old blocks. How the C library's `exec`
+  gets there isn't pinned down in this note.
 
 ## Gotchas
 1. **No UMB although the conf says `umb=true`.** (2026-10-27, found while designing the loader.) **Cause:** DOSBox
@@ -201,8 +207,8 @@ RTLink note (stray 67h forms run fine in DOSBox and would fault on an 8086 or 28
    allocation fails, ask DOS for the largest UMB and print "turn EMS off" when one exists but is too small.
 3. **Sound effects silently gone with `ems=false`.** (2026-10-29, measured: the drivers' sample handle and frame
    stayed 0.) **Cause:** the sound drivers load their samples only into EMS and skip the digital set-up when the EMS
-   check fails; music, which doesn't use EMS, kept playing and the game ran normally, so nothing looked wrong. **Fix:** the int 67h emulation above. Before turning EMS off, search every driver and
-   helper EXE for `EMMXXXX0`.
+   check fails; music, which doesn't use EMS, kept playing and the game ran normally, so nothing looked wrong.
+   **Fix:** the int 67h emulation above. Before turning EMS off, search every driver and helper EXE for `EMMXXXX0`.
 4. **The emulated EMS played the wrong data.** (2026-10-30.) **Cause:** a merge had left a shift count of 0x14
    where the page-to-XMS-offset shift for 16 KB pages must be 14 (0xE); every load and play went to the wrong XMS
    offset. **Fix:** write shift counts in hex in the generator and check the assembled shifts; the build refuses an
@@ -225,7 +231,6 @@ RTLink note (stray 67h forms run fine in DOSBox and would fault on an 8086 or 28
    (2026-11-01.) **Cause:** the first call reads the module from the EXE file, which is slower while many DOSBoxes
    share the machine. **Fix:** in tests, wait for the screen with a timeout that allows for the read (here up to
    10 s for that menu) instead of a short fixed one.
-
 9. **Raising the start of the upper-memory image (to give memory back) broke the build for most shifts.**
    (2026-11-03.) **Cause:** the low code blocks lie over other code at the same offsets in another segment, and the
    linker refuses true clashes (a call target or a trampoline that lands on an instruction start of the code
@@ -234,7 +239,6 @@ RTLink note (stray 67h forms run fine in DOSBox and would fault on an 8086 or 28
    generators checked against their old offsets. **Fix:** give jump tables and fixed entry points a pad constant,
    add nops automatically before labels that land on an instruction start, try the shifts in a loop, and shift the
    stale low entries once so the first regeneration goes through.
-
 10. **The space ledger said 0x329 paragraphs of upper memory were free; the build had 0x179.** (2026-11-05.)
     **Cause:** the ledger still counted reservations of branches that had already merged as separate claims
     (status "reserved"), and some module growth on the integration branch was not booked. **Fix:** measure free
