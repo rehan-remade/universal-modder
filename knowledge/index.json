@@ -1127,6 +1127,47 @@
   ]
  },
  {
+  "path": "games/blur/blur-ds-exact-size-zip-splicing.md",
+  "kind": "game",
+  "title": "Exact-size zip splicing for Blur DS texture edits",
+  "game": "Blur",
+  "games_also": [],
+  "game_version": "Blur DS beta, Europe, unreleased; 64 MB NDS ROM, title BLUR, game code BBRP, maker code 36",
+  "platform": "console",
+  "engine": "unknown",
+  "route": "asset-only",
+  "tools": [
+   "Python 3 (struct, zlib)",
+   "melonDS 1.1",
+   "COLLADA .dae export (mesh comparison)"
+  ],
+  "anti_cheat": "none \u2014 unreleased offline beta",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash Free)"
+  ],
+  "humans": [
+   "@GameBreaker20XX"
+  ],
+  "date": "2026-10-21",
+  "links": [
+   "https://github.com/melonDS-emu/melonDS"
+  ],
+  "tags": [
+   "nds",
+   "zip",
+   "deflate",
+   "exact-size",
+   "splicing",
+   "texture",
+   "palette",
+   "firebrand",
+   "octane",
+   "blur",
+   "rom-patching"
+  ]
+ },
+ {
   "path": "games/borderlands-2/adding-a-radiation-element-to-borderlands-2-guns-gear-and-effects.md",
   "kind": "game",
   "title": "Adding a new element (radiation) to guns, grenades and shields in Borderlands 2",
