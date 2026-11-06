@@ -1,0 +1,2 @@
+// laa_patch.exe resources: the manifest (RT_MANIFEST, id 1) that keeps Windows from treating it as an installer.
+1 24 "laa_patch.manifest"
