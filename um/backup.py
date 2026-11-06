@@ -7,6 +7,8 @@
 
 Snapshots are zip files + a manifest (size + sha1 per file) in ~/.universal-modder/backups/<name>/.
 Snapshots created in the same second get numbered suffixes so earlier backups are never overwritten.
+restore without --to (and diff without TARGET) use the folder the snapshot was taken from, recorded as an absolute
+path; older snapshots that recorded a relative path need the folder named explicitly.
 restore first snapshots the current state (so a restore can itself be undone), then puts every file
 back and removes files that weren't in the snapshot only with --clean.
 Habit that saved the Terraria showcase: keep a pristine copy of any world/scenario a scripted take
@@ -16,6 +18,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import time
 import zipfile
 from pathlib import Path
@@ -42,7 +45,13 @@ def _scan(src: Path) -> dict:
 
 
 def create(src: str, name: str | None = None, note: str = "") -> Path:
-    s = Path(to_posix(src)).expanduser()
+    # Absolute, so a later restore or diff from another working directory finds the same folder.
+    # absolute(), not resolve() or abspath: keep a symlinked save folder's own name and path.
+    s = Path(to_posix(src)).expanduser().absolute()
+    if not s.is_absolute():  # drive-relative "C:saves" on Windows before Python 3.12
+        s = Path(os.path.abspath(s))
+    if ".." in s.parts:  # cwd/../saves would need that cwd to still exist; resolve() asks the OS what link/.. means
+        s = s.resolve()
     if not s.is_dir():
         die(f"not a folder: {s}")
     name = name or s.name.replace(" ", "-").lower()
@@ -73,7 +82,7 @@ def create(src: str, name: str | None = None, note: str = "") -> Path:
         with z:
             for rel in files:
                 z.write(s / rel, rel)
-            z.writestr("_um_manifest.json", json.dumps(dict(source=str(src), created=stamp, note=note, files=files), indent=1))
+            z.writestr("_um_manifest.json", json.dumps(dict(source=str(s), created=stamp, note=note, files=files), indent=1))
     except BaseException:
         out.unlink(missing_ok=True)  # don't leave an incomplete archive as the latest snapshot
         raise
@@ -90,12 +99,23 @@ def _manifest(zp: Path) -> dict:
         return json.loads(z.read("_um_manifest.json"))
 
 
+def _target(name: str, m: dict, override: str | None) -> Path:
+    if override:
+        return Path(to_posix(override)).expanduser()
+    t = Path(to_posix(m["source"])).expanduser()
+    if not t.is_absolute():
+        # Snapshots made before sources were stored absolute: the folder depends on the current directory.
+        die(f"snapshot records a relative source ({m['source']}); name the folder: "
+            f"`um backup restore {name} --to DIR` or `um backup diff {name} DIR`")
+    return t
+
+
 def diff(name: str, target: str | None = None, snapshot: str | None = None) -> dict:
     zp = Path(snapshot) if snapshot else (snapshots(name) or [None])[-1]
     if not zp:
         die(f"no snapshots for {name}")
     m = _manifest(zp)
-    t = Path(to_posix(target or m["source"]))
+    t = _target(name, m, target)
     now = _scan(t) if t.is_dir() else {}
     old = m["files"]
     res = dict(snapshot=str(zp), target=str(t),
@@ -109,7 +129,7 @@ def restore(name: str, to: str | None = None, snapshot: str | None = None, clean
     if not zp:
         die(f"no snapshots for {name}")
     m = _manifest(zp)
-    t = Path(to_posix(to or m["source"]))
+    t = _target(name, m, to)
     d = diff(name, str(t), str(zp))
     print(f"restore {zp.name} -> {t}: {len(d['changed'])} changed, {len(d['removed'])} missing, {len(d['added'])} new since"
           + (" (new files will be deleted: --clean)" if clean else " (new files kept)"))
