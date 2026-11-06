@@ -1091,6 +1091,51 @@
   ]
  },
  {
+  "path": "games/beamng-drive/unpack-mod-before-editing.md",
+  "kind": "game",
+  "title": "Unpack a BeamNG.drive mod before editing: rebadge and taillights on an unpacked vehicle",
+  "game": "BeamNG.drive",
+  "games_also": [],
+  "game_version": "0.40.4.0.296339 (Steam)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "asset-only",
+  "tools": [
+   "Blender 4.5.10 (headless import/render)",
+   "PowerShell",
+   "XML editing of the .dae"
+  ],
+  "anti_cheat": "none; offline single player only (BeamMP, the third-party multiplayer mod, was not used)",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [
+   "@Puneru"
+  ],
+  "date": "2026-11-04",
+  "links": [
+   "https://documentation.beamng.com/modding/mod-support/mod_packing/",
+   "https://documentation.beamng.com/modding/mod-support/overwritting/",
+   "https://documentation.beamng.com/modding/file_formats/materials/",
+   "https://documentation.beamng.com/modding/vehicle/sections/flexbodies/",
+   "https://beamng.com/game/support/policies/modding-guidelines/"
+  ],
+  "tags": [
+   "beamng",
+   "torque3d",
+   "vehicle",
+   "dae",
+   "jbeam",
+   "materials",
+   "glowmap",
+   "unpack",
+   "blender",
+   "rebadge",
+   "taillights"
+  ]
+ },
+ {
   "path": "games/black-myth-wukong/reshade-depth-dead-end.md",
   "kind": "game",
   "title": "Black Myth: Wukong, Unreal 5.0: injection works, ReShade render depth does not",
