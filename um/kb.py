@@ -16,6 +16,7 @@ requests: that's how one agent's hard-won gotchas reach the next one. Ask your h
 from __future__ import annotations
 
 import datetime as dt
+import http.client
 import json
 import os
 import re
@@ -23,7 +24,6 @@ import shutil
 import subprocess
 import sys
 import time
-import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -45,6 +45,8 @@ MAX_NOTE_KB, MAX_MEDIA_MB = 120, 1.5
 # Notes and the index are UTF-8 with \n line ends on every OS. Without this, Windows reads and writes them in its
 # ANSI code page with \r\n: the index's "·" separators come out as invalid UTF-8 and `um kb check --index` fails.
 TEXT = {"encoding": "utf-8", "newline": "\n"}
+# a failed sync: the network, a connection dropped mid-file (http.client's errors aren't OSErrors), a bad answer
+SYNC_ERRORS = (OSError, ValueError, http.client.HTTPException)
 
 
 # --------------------------------------------------------------------------- where the notes are
@@ -73,8 +75,9 @@ def _download(url: str, timeout: float) -> bytes:
 def sync(quiet: bool = False, *, timeout: float = 20, workers: int = 8) -> Path:
     """Mirror knowledge/ from GitHub into the cache (git tree API + raw files; no auth needed).
 
-    Downloads are bounded and concurrent. Progress goes to stderr so a caller parsing JSON from stdout is unaffected.
-    The previous cache is replaced only after every selected file has downloaded.
+    Downloads are bounded and concurrent. Progress goes to stderr so a caller parsing JSON from stdout is unaffected;
+    quiet only drops the closing line on stdout. The previous cache is replaced only after every selected file has
+    downloaded.
     """
     if timeout <= 0 or workers < 1:
         raise ValueError("timeout and workers must be positive")
@@ -82,38 +85,46 @@ def sync(quiet: bool = False, *, timeout: float = 20, workers: int = 8) -> Path:
     tree = json.loads(_download(api, timeout))
     paths = [t["path"] for t in tree.get("tree", []) if t["type"] == "blob" and t["path"].startswith("knowledge/")
              and t["path"].endswith((".md", ".json"))]
+    if not paths:  # a branch without knowledge/, say: don't replace the cache with nothing
+        raise ValueError(f"no knowledge files on {REPO}@{BRANCH}")
     root = cache_root()
     tmp = root.with_name("knowledge.tmp")
     shutil.rmtree(tmp, ignore_errors=True)
     tmp.mkdir(parents=True)
     completed = 0
+    live = sys.stderr.isatty()  # a counter for a terminal: a tool call or a CI log would keep every update
 
     def report():
-        if not quiet:
+        if live:
             print(f"\rknowledge sync: {completed}/{len(paths)}", end="", file=sys.stderr, flush=True)
 
+    if not live:
+        print(f"knowledge sync: {len(paths)} files...", file=sys.stderr, flush=True)
     report()
+    pool = ThreadPoolExecutor(max_workers=min(workers, len(paths)))
     try:
-        with ThreadPoolExecutor(max_workers=min(workers, len(paths) or 1)) as pool:
-            futures = {pool.submit(_download, f"https://raw.githubusercontent.com/{REPO}/{BRANCH}/{path}", timeout): path
-                       for path in paths}
-            for future in as_completed(futures):
-                path = futures[future]
-                destination = tmp / path[len("knowledge/"):]
-                destination.parent.mkdir(parents=True, exist_ok=True)
-                destination.write_bytes(future.result())
-                completed += 1
-                report()
+        futures = {pool.submit(_download, f"https://raw.githubusercontent.com/{REPO}/{BRANCH}/{path}", timeout): path
+                   for path in paths}
+        for future in as_completed(futures):
+            path = futures[future]
+            destination = tmp / path[len("knowledge/"):]
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(future.result())
+            completed += 1
+            report()
     except BaseException:
+        pool.shutdown(cancel_futures=True)  # on a stalled network each queued file would wait out its own timeout
         shutil.rmtree(tmp, ignore_errors=True)
-        if not quiet:
+        if live:
             print(file=sys.stderr)
         raise
+    pool.shutdown()
     shutil.rmtree(root, ignore_errors=True)
     tmp.rename(root)
     (root / ".synced").write_text(str(time.time()), **TEXT)
+    if live:
+        print(file=sys.stderr)
     if not quiet:
-        print(f"\rknowledge sync: {len(paths)}/{len(paths)}", file=sys.stderr)
         print(f"synced {len(paths)} files from github.com/{REPO} -> {root}")
     return root
 
@@ -132,9 +143,9 @@ def resolve_root(explicit: str | None = None, remote: bool = False) -> Path:
     if stale:
         try:
             return sync(quiet=True)
-        except (OSError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, ValueError) as e:
+        except SYNC_ERRORS as e:
             if root.exists():
-                print(f"knowledge sync failed ({e}); searching stale cache {root}", file=sys.stderr)
+                print(f"knowledge sync failed ({e}); using the stale cache {root}", file=sys.stderr)
             else:
                 die(f"no local knowledge/ and GitHub sync failed ({e}); clone https://github.com/{REPO}")
     return root
@@ -462,7 +473,10 @@ def open_pr(path: Path, yes: bool):
 def main(a):
     c = a.cmd
     if c == "sync":
-        sync()
+        try:
+            sync()
+        except SYNC_ERRORS as e:
+            die(f"GitHub sync failed: {e}")
         return
     if c == "search":
         root = resolve_root(a.root, a.remote)
