@@ -13,7 +13,7 @@ status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: []
 date: 2026-10-29
-links: []
+links: ["https://github.com/AITYunivers/NebulaFD", "https://github.com/CTFAK/CTFAK2.0", "https://github.com/fnmwolf/Anaconda"]
 tags: [clickteam-fusion, fusion-2.5, build-296, ccn, pamu, chunk-encryption, events, protection-checksum, nebulafd, conpty, data-mod, itch-io]
 ---
 
@@ -27,19 +27,22 @@ tags: [clickteam-fusion, fusion-2.5, build-296, ccn, pamu, chunk-encryption, eve
 
 ## Setup
 - **Game:** Padre Got A Gun V1.3, the DRM-free standalone build from jollyjack.itch.io/padre-got-a-gun, on
-  Windows 11. V1.2, the launch build, decodes the same way. The Nebula dump below was made from V1.2; V1.3
-  changed none of the images or sounds.
+  Windows 11. The full game costs $4.99 or more there; the free demo is a separate download with the first four
+  levels. V1.2, the launch build, decodes the same way. The Nebula dump below was made from V1.2; V1.3 changed
+  none of the images or sounds.
 - **Engine:** Clickteam Fusion 2.5, runtime build 296.9. `Modules\mmfs2.dll` has FileVersion 3.0.296.9, and the
   data header says build 296. The exe is 32-bit.
 - **Our tools:** Python 3, standard library only (`struct`, `zlib`, `ctypes`). No Fusion editor. CTFAK and
   Anaconda were read as references, never run.
 - **NebulaFD**, the "September 2026 Update" (CI build of commit a24d4d1, github.com/AITYunivers/NebulaFD), for the
   asset dump.
-  - It ran on the plain .NET 6 runtime (Microsoft.NETCore.App 6.0.16); the Desktop runtime wasn't needed.
+  - It ran on the plain .NET 6 runtime (Microsoft.NETCore.App 6.0.16). The release notes ask for the .NET 6
+    Desktop Runtime, but its projects target plain `net6.0`, and the Desktop Runtime wasn't needed.
   - It writes its config, logs and `Dumps\` next to itself, so keep it in a writable tools folder.
   - The event layouts come from its `Nebula.Core` readers. Their source is public on GitHub; we read them from the
     release build with ilspycmd.
-- Everything ran on a copy of the exe, the .dat and `Modules\`, never on the install.
+- Everything ran on a copy of the exe, the .dat and `Modules\`, never on the install. The Nebula dump and our
+  decoded event text stay private, outside any repo.
 
 ## Route and why
 `data`. The exe is Clickteam's stock runtime. The game itself (levels, objects and the event sheets that hold its
@@ -49,7 +52,9 @@ logic) is data in the .dat, so the mod edits the .dat.
 - **Rebuilding from Nebula's .mfa in the Fusion editor** depends on Nebula's build-296 event output, which its own
   notes list as imperfect (Gotcha 10). Patching the .dat changes only the bytes we touch.
 - **CTFAK 2.0** (archived Nov 2024) predates build 296. **Anaconda**'s README lists builds 284-293 and sends
-  Fusion 2.5+ games to Nebula. We used their source only as references for the cipher and the checksum.
+  Fusion 2.5+ games to Nebula. We used their source only as references for the cipher and the checksum. For older
+  builds, the [Five Nights at Balatro's note](../balatro/five-nights-at-balatros.md) runs CTFAK as an asset dumper
+  on FNaF 1 (build 284).
 
 ## How the game works (what we had to learn)
 **Fingerprint and layout**
@@ -81,7 +86,8 @@ logic) is data in the .dat, so the mod edits the .dat.
   `InitDecryptionTable`, `TransformChunk`, `DecodeMode3`.
 - Mode 3 (flags 3, compressed and encrypted) payloads:
   - a `u32 unpacked size`, then the encrypted bytes;
-  - for an odd chunk id, XOR the first encrypted byte with `(id & 0xFF) ^ (id >> 8)` before decrypting;
+  - for an odd chunk id, XOR the first encrypted byte with `(id & 0xFF) ^ (id >> 8)` before decrypting (CTFAK does
+    this for builds above 284);
   - the result is a `u32 packed size` plus a zlib stream.
 - Mode 3 covers every frame's header, palette, layers, instances and events, every object's header and
   properties, the frame-handle table and the serial number. Protection is flags 2 (encrypted, not compressed).
@@ -91,9 +97,11 @@ logic) is data in the .dat, so the mod edits the .dat.
 **Build-296 events** (per frame, sub-chunk 0x333D)
 - Tagged sections, in file order (all 80 frames): `ER>>` (header), `ERop`, `ERes`, `ERev` (a byte size, then the
   events), and `<<ER` right after the events, at the end of the chunk. `ERes` is easy to mistake for an event
-  count, but it holds the same byte size as `ERev` in all 80 frames. Update both when you add events.
+  count (Nebula and Anaconda both name it that), but it holds the same byte size as `ERev` in all 80 frames. Update
+  both when you add events.
 - Event header, 8 bytes: `i16 size` (stored negated; all 12,745 here), `u8 conditions`, `u8 actions`,
-  `u16 flags`, `u16 event id`. The id is unique within the frame.
+  `u16 flags`, `u16 event id`. Nebula skips that last field; we read it as an id because it is unique within each
+  frame here.
 - Condition and action header, in order:
   - `size` (i16 for conditions, u16 for actions), `i16 object type`, `i16 number`;
   - `u16 object-info handle`, **only** for object types ≥ 0 and the player (-7). Here 13,060 of the 47,246
@@ -149,6 +157,8 @@ def pame_checksum(data: bytes) -> int:
 
 - It matches the shipped V1.2 and V1.3 files, our patched file, and Dance of the Goatman, an earlier Fusion game
   (build 292) by the same developer. In all four files, no other chunk boundary works as a start point.
+- Anaconda's chunk writer uses the same range (`ChunkList.write` in `mmfparser/data/chunk.pyx`): it starts at the
+  0x222F chunk and checksums everything up to the Protection chunk. Its matching check on reading is commented out.
 - If the value is wrong, the runtime exits at once with code 0: no window and no message.
 
 **Save file**
@@ -280,14 +290,15 @@ dump, the decoder and the mod; the mod was tested in game at 00:55 on 2026-10-29
 
 ## Open questions
 - Does the Protection range hold for other Fusion games? So far it is checked on builds 292 and 296, both by this
-  developer.
+  developer; Anaconda's writer assumes it does.
 - Does the runtime ignore edits to the image and sound banks after Protection?
-- Unknown chunks, which Nebula also logs as unknown:
-  - 0x2251 holds 2057, probably the en-GB locale id;
-  - 0x224D, 0x225C and 0x225D are unidentified.
+- Unknown chunks, which Nebula also logs as unknown. Its chunk list (`ChunkList.cs`) names some of them in
+  comments, with no reader:
+  - 0x2251 holds 2057 (0x0809, the en-GB locale id); Nebula calls it `AppLanguage`;
+  - 0x224D is `CharEncoding` and 0x225D `PlayerControls` there, and 0x225C has no name.
 
   0x224F, which starts with the build number, is Nebula's `EngineVer`.
 - `um scan` could learn a `clickteam-fusion` key from `mmfs2.dll` with `.mfx` and `.sft` files.
 
 Credits: NebulaFD (AITYunivers) for the build-296 event layouts and the asset dump. CTFAK 2.0 for the cipher.
-Anaconda for the pame checksum.
+Anaconda for the pame checksum and its range.
