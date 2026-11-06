@@ -11,14 +11,16 @@ tools:
 - UE4SS (UE4SS for Phantom Blade Zero 1.0.1, Nexus mod 5)
 - PBZ Mods Menu 0.4.3 (Nexus mod 149) + PBZModsMenuBridge 0.3.0
 - lupa (offline Lua compile checks)
-anti_cheat: none found by um scan
+anti_cheat: 'none (single player; Steam lists no anti-cheat). Denuvo (Steam''s DRM notice) is on the exe and stays untouched: UE4SS loads through a proxy dwmapi.dll and no game file changes.'
 status: working
 agents:
-- Claude Code (claude-opus-5-5)
+- Claude Code (Opus 5.5)
 humans: []
 date: '2026-11-03'
 links:
 - https://github.com/UE4SS-RE/RE-UE4SS
+- https://www.nexusmods.com/phantombladezero/mods/5
+- https://www.nexusmods.com/phantombladezero/mods/44
 tags: [hud, vfx, niagara, enhanced-input, commonui, mods-menu, controller]
 ---
 # Hold-Start HUD toggle and per-group combat VFX switches, UE4SS Lua wired into the Mods Menu
@@ -31,9 +33,11 @@ flashes. The human tested both on a controller in the real game and reported tha
 Menu rows included.
 
 ## Setup
-- Steam app 4115450, Windows 11. The real exe is `PBZ\platform\steam\PBZ.exe` (about 511 MB); `PBZ\steam\PBZ.exe`
-  is a small launcher. UE4SS (`dwmapi.dll` + `ue4ss\`) belongs next to the big one. The UE4SS log reports
-  `EngineVersion: 5.7`.
+- Steam app 4115450, Windows 11. The real exe is `PBZ\platform\steam\PBZ.exe` (about 511 MB); `PBZ\steam\PBZ.exe`,
+  the one Steam launches, is a small launcher. UE4SS (`dwmapi.dll` + `ue4ss\`) belongs next to the big one. The
+  UE4SS log reports `EngineVersion: 5.7`.
+- **Single player only.** Steam lists no multiplayer, leaderboards or anti-cheat for it. Steam's DRM notice says
+  Denuvo: this route leaves the exe as installed, since `dwmapi.dll` is a proxy next to it and no game file changes.
 - Game logic is JavaScript on Puerts (`ProjectPBZ/Content/JavaScript/...`). The game pak is v12 with an
   AES-encrypted index and Oodle compression. Community "JS mods" are v11 paks in `Content\Paks\~mods` that
   replace one whole game script (the Mods Menu replaces `UI/Widget/DebugLoadServerGame.js`).
@@ -42,10 +46,12 @@ Menu rows included.
   `um scan` did not find them; Steam's `remotecache.vdf` for the app gave the path.
 
 ## Route and why
-UE4SS Lua mods, each shipping a `<Mod>.modsmenu.json` descriptor (Mods Menu `FOR-MOD-AUTHORS.md`, section 2).
-- The JS-pak route needs a game script you can replace. To pick one you would have to read the encrypted game pak
-  (pull the AES key from the exe), and two paks replacing the same script can't both load. The Lua route touches no
-  game file.
+UE4SS Lua mods, each shipping a `<Mod>.modsmenu.json` descriptor (Mods Menu `FOR-MOD-AUTHORS.md`, section 2). Built
+on RE-UE4SS, the community UE4SS build for this game (Nexus mod 5), the Mods Menu and its bridge (Nexus mod 149), and
+the notes in Phantom Tweaks (Nexus mod 44).
+- The JS-pak route needs a game script you can replace. To pick one you would have to read the encrypted game pak,
+  which needs its AES key, and two paks replacing the same script can't both load. The Lua route touches no game
+  file.
 - What the Lua route costs: on this UE4SS build the menu can write a Lua mod's settings only through the optional
   **PBZModsMenuBridge** UE4SS mod; without it the rows are read-only.
 
@@ -69,7 +75,8 @@ UE4SS Lua mods, each shipping a `<Mod>.modsmenu.json` descriptor (Mods Menu `FOR
   (two per `BP_Monster_*`). `NotifyOnNewObject('/Script/UMG.WidgetComponent')` tracks them, and
   `SetHiddenInGame` hides them without getting in the way of the game's own `SetVisibility` calls. **Locking on
   clears `bHiddenInGame` on the target's bar**, so hiding once is not enough: check every tracked component every
-  frame (`LoopInGameThreadAfterFrames(1, fn)` exists on this UE4SS) and hide it again whenever the game shows it.
+  frame (`LoopInGameThreadAfterFrames(1, fn)` exists on this UE4SS; it needs the EngineTick hook, so check
+  `EngineTickAvailable`) and hide it again whenever the game shows it.
 - **Popups share the HUD layer.** The item pickup screen (`W_pickupgear_C`) and others (`W_TeleportMap_C`,
   `W_BellMenu_C`, `W_UpgradeActivatableWidget_V1_C`, `W_PlayerDead_C`, `W_AbilityWidget_C`) are pushed on
   `UI.Layer.Game` and take menu input. To know one is up, ask the CommonUI router (`PBZUIActionRouterBase`) for
@@ -78,7 +85,7 @@ UE4SS Lua mods, each shipping a `<Mod>.modsmenu.json` descriptor (Mods Menu `FOR
   Hidden, which can't take focus) and shows it while such a screen has the input.
 - **Never set `AHUD::bShowHUD = false` on `BP_PBZHud_C`.** With it off, the pickup screen opens and then nothing
   closes it (A, B and Start do nothing; the game keeps running). The pickup flow needs the HUD actor to draw. The
-  console command `showhud` sets it back and frees the screen.
+  console command `showhud` toggles it back on and frees the screen.
 - **Combat VFX are Niagara**, mostly under `/PBZVFXPack/VFX/BattleFX/`. Many are spawned at a location (owner
   `WorldSettings`); others belong to the weapon or character actor. Name families seen (Chinese pinyin):
   - `PinDao*`: blade clash and parry. `PinDaoPerfect*` is the perfect parry, `PinDaoFinal*` the last parry of a
@@ -139,9 +146,10 @@ UE4SS Lua mods, each shipping a `<Mod>.modsmenu.json` descriptor (Mods Menu `FOR
    `remotecache.vdf` in `Steam\userdata\<id>\4115450\`. The paths there are relative to the install folder.
 5. **The parry-chain "red flash and vanish" isn't a parry-spark effect.** It is `NS_ShaQiEnd_*` on the player.
    The first build had put it with the special weapons by name; it needs its own switch.
-6. **Restarting a mod in place crashed the game** in another author's tests (PhantomTweaks notes), and UE4SS
-   keeps `NotifyOnNewObject` hooks across a restart. Hot reload is off in this UE4SS config
-   (`EnableHotReloadSystem = 0`). Test by restarting the game.
+6. **Restarting a mod in place crashed the game** in another author's tests (Phantom Tweaks notes; not tried here).
+   Hot reload is off in this UE4SS config (`EnableHotReloadSystem = 0`). Test by restarting the game. Whether
+   `NotifyOnNewObject` hooks survive a restart on this build wasn't tested; RE-UE4SS's current source removes a mod's
+   callbacks when it unloads (`LuaMod::uninstall`).
 7. **Enemy HP bars flash on lock-on with the HUD hidden.** **Cause:** the game shows the target's bar again
    (`bHiddenInGame` cleared). The first build re-checked markers every 0.5 s and never re-checked one it had
    hidden. **Fix:** enforce the hidden state every frame.
