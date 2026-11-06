@@ -11123,6 +11123,39 @@
   ]
  },
  {
+  "path": "games/wolfenstein-the-old-blood/wolfenstein-the-old-blood-id-tech-5-datamining-dmodel-bmvtr-.md",
+  "kind": "game",
+  "title": "Wolfenstein: The Old Blood: id Tech 5 datamining (dmodel, bmvtr subtitles, chapter/challenge decls, Wolf3D nightmare levels, map export)",
+  "game": "Wolfenstein: The Old Blood",
+  "games_also": [],
+  "game_version": "Steam app 350080, buildid 616161, WolfOldBlood_x64.exe 28,457,040 bytes (shippingretail, OpenGL)",
+  "platform": "windows",
+  "engine": "idtech",
+  "route": "asset-only",
+  "tools": [
+   "python 3.12 + numpy 2.x + Pillow",
+   "ffmpeg (H.264 re-encode)",
+   "three.js 0.160.0 (offline viewer)"
+  ],
+  "anti_cheat": "none (single-player, no online client)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-02",
+  "links": [],
+  "tags": [
+   "id-tech-5",
+   "datamining",
+   "unused-content",
+   "gltf",
+   "virtual-texture",
+   "subtitles",
+   "level-export"
+  ]
+ },
+ {
   "path": "games/world-of-warcraft/addon-development-335a.md",
   "kind": "game",
   "title": "Writing and fixing 3.3.5a addons: Lua 5.1 gaps, protected calls, the guild bank, macros and a test harness",
