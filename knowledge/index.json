@@ -1226,6 +1226,53 @@
   ]
  },
  {
+  "path": "games/brutalistick-vr/custom-music-player-with-its-own-music-plate-in-the-vr-setti.md",
+  "kind": "game",
+  "title": "Custom music player with its own Music plate in the VR settings menu",
+  "game": "BRUTALISTICK VR",
+  "games_also": [],
+  "game_version": "Steam app 2669380, Unity 6000.0.59f2 (IL2CPP x64), MelonLoader 0.7.3 Open-Beta / .NET 6",
+  "platform": "windows",
+  "engine": "unity-il2cpp",
+  "route": "loader-api",
+  "tools": [
+   "MelonLoader 0.7.3 Open-Beta",
+   "Il2CppDumper (dump.cs)",
+   "dotnet 6 SDK (net6.0 class library)",
+   "ffmpeg (generated test tones)",
+   "NLayer 1.16.0 and NVorbis 0.10.5 (embedded decoders)",
+   "Thunderstore (zip uploaded by hand, no CLI)"
+  ],
+  "anti_cheat": "none; single-player VR game, and Steam starts BrutalistickVR.exe directly",
+  "status": "released",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-11-05",
+  "links": [
+   "https://github.com/Skibidi41Rizz/CustomMusic",
+   "https://thunderstore.io/c/brutalistick-vr/p/SkIbidiRizTEAM/CustomMusic/",
+   "https://github.com/LavaGang/MelonLoader",
+   "https://github.com/naudio/NLayer",
+   "https://github.com/NVorbis/NVorbis",
+   "https://github.com/Perfare/Il2CppDumper"
+  ],
+  "tags": [
+   "audio",
+   "music",
+   "mci",
+   "winmm",
+   "harmony",
+   "ui",
+   "settings-menu",
+   "melonloader",
+   "il2cpp",
+   "vr",
+   "thunderstore"
+  ]
+ },
+ {
   "path": "games/call-of-duty-4-modern-warfare/cod4-iw3-vs-waw-t4-engine-architecture-and-modding.md",
   "kind": "game",
   "title": "Call of Duty 4: Modern Warfare (IW 3.0) vs World at War (Treyarch T4) Engine Architecture and Modding Comparison",
@@ -1730,6 +1777,51 @@
   ]
  },
  {
+  "path": "games/convrgence/ingame-mods-tab-and-vr-performance.md",
+  "kind": "game",
+  "title": "Native-looking in-game Mods settings tab (and which performance knobs moved VR frames)",
+  "game": "CONVRGENCE",
+  "games_also": [],
+  "game_version": "1.1.0, Steam BuildID 26164481",
+  "platform": "windows",
+  "engine": "unity-il2cpp",
+  "route": "loader-api",
+  "tools": [
+   "MelonLoader 0.7.3",
+   "AssetRipper GUI (headless web)",
+   "UnityPy",
+   "ilspycmd (ILSpy CLI)",
+   "WPR/WPA (Windows Performance Recorder/Analyzer)",
+   "HarmonyX"
+  ],
+  "anti_cheat": "none found (single-player VR extraction shooter, Steam starts CONVRGENCE.exe directly); it has Steam leaderboards, so keep modded runs off them",
+  "status": "working",
+  "agents": [
+   "OpenCode (GLM)"
+  ],
+  "humans": [
+   "Arttu (full VR verification, patience through ~35 game restarts)"
+  ],
+  "date": "2026-10-31",
+  "links": [
+   "https://github.com/LavaGang/MelonLoader",
+   "https://github.com/AssetRipper/AssetRipper",
+   "https://github.com/K0lb3/UnityPy",
+   "https://github.com/BepInEx/Il2CppInterop"
+  ],
+  "tags": [
+   "vr",
+   "settings-ui",
+   "pause-menu",
+   "in-game-menu",
+   "melonloader-ui-clone",
+   "volumetric-fog",
+   "aura2",
+   "force-close",
+   "field-write-vs-method-call"
+  ]
+ },
+ {
   "path": "games/crash-bandicoot-n-sane-trilogy/croc-inside-crash-n-sane-live-two-engine-mashup.md",
   "kind": "game",
   "title": "Croc inside Crash N. Sane: live two-engine mashup and native port",
@@ -1936,6 +2028,49 @@
    "r2modman",
    "thunderstore",
    "recon"
+  ]
+ },
+ {
+  "path": "games/cult-of-the-lamb/custom-motion-vectors-and-an-ngx-dlss-host-for-cult-of-the-l.md",
+  "kind": "game",
+  "title": "Custom motion vectors and an NGX DLSS host for Cult of the Lamb (Unity DX11, no native upscaler)",
+  "game": "Cult of the Lamb",
+  "games_also": [],
+  "game_version": "Steam build 25223484, v1.5.26.1058",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "native-hook",
+  "tools": [
+   "BepInEx 5.4.21",
+   "HarmonyX",
+   "ILSpy 8.2",
+   "RenderDoc 1.46",
+   "NVIDIA DLSS SDK (nvngx 310.x)",
+   "BepInEx.ConfigurationManager v19.1",
+   "MSVC 2022"
+  ],
+  "anti_cheat": "none (single player and local co-op; no online mode)",
+  "status": "working",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "https://github.com/NVIDIA/DLSS",
+   "https://renderdoc.org",
+   "https://github.com/BepInEx/BepInEx.ConfigurationManager",
+   "https://docs.bepinex.dev",
+   "https://thunderstore.io/c/cult-of-the-lamb/p/BepInEx/BepInExPack_CultOfTheLamb/"
+  ],
+  "tags": [
+   "cult-of-the-lamb",
+   "unity",
+   "motion-vectors",
+   "dlss",
+   "ngx",
+   "native-hook",
+   "upscaling"
   ]
  },
  {
@@ -9990,7 +10125,7 @@
    "Helldivers 2",
    "Red Dead Redemption 2"
   ],
-  "game_version": "SM2 Steam build 25799387 (Patch 15.1, Oct 2026), most work on Patch 14.x-15; Saber Mod Tools (Oct 2026: ModelConverter, UsfExporter, Map Converter + Furnace, TextureConverter). Sources: The Witcher 3 Remastered 5.01 (GOG), Space Marine Master Crafted Edition (Steam), Gears of War: E-Day (UE 5.5 IoStore build), Elden Ring + Shadow of the Erdtree (Steam), Helldivers 2 (Steam, Stingray)",
+  "game_version": "SM2 Steam build 25799387 (Patch 15.1, Oct 2026), most work on Patch 14.x-15; Saber Mod Tools (Oct 2026: ModelConverter, UsfExporter, Map Converter + Furnace, TextureConverter). Sources: The Witcher 3 Remastered 5.01 (GOG), Space Marine Master Crafted Edition (Steam), Gears of War: E-Day (UE 5.5 IoStore build; store and build id not recorded), Elden Ring + Shadow of the Erdtree (Steam), Helldivers 2 (Steam, Stingray)",
   "platform": "windows",
   "engine": "unknown",
   "route": "asset-only",
@@ -10006,14 +10141,18 @@
    "ffmpeg",
    "Python 3 (numpy, scipy)"
   ],
-  "anti_cheat": "SM2 has EasyAntiCheat: every build here loads through Saber's official mods folder (Mods Detected, private lobbies), no injection. Source games with anti-cheat (Elden Ring EAC, Gears E-Day EAC, Helldivers 2 GameGuard) were never launched or patched for this work; their files were read offline from the author's own installs.",
+  "anti_cheat": "SM2 has EasyAntiCheat: every build here loads through Saber's official mods folder (Mods Detected, private lobbies), no injection. Source games with anti-cheat (Elden Ring EAC, Gears E-Day EAC, Helldivers 2 GameGuard, EAC since 2026-10-20) were never launched or patched for this work; their files were read offline from the author's own installs.",
   "status": "in-progress",
   "agents": [
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
   "date": "2026-10-29",
-  "links": [],
+  "links": [
+   "https://github.com/dingdio/Witcher3-Blender-Tools",
+   "https://github.com/xypwn/filediver",
+   "https://github.com/nfrechette/acl"
+  ],
   "tags": [
    "space-marine-2",
    "cross-game",
@@ -11002,6 +11141,33 @@
    "worldgen",
    "multiplayer",
    "verification"
+  ]
+ },
+ {
+  "path": "techniques/an-in-game-settings-menu-in-an-il2cpp-unity-game-clone-the-g.md",
+  "kind": "technique",
+  "title": "An in-game settings menu in an IL2CPP Unity game: clone the game's own tab and drive it from Harmony",
+  "status": "working",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-11-05",
+  "links": [
+   "https://github.com/Skibidi41Rizz/CustomMusic",
+   "https://github.com/Skibidi41Rizz/CustomMusic/blob/main/MusicPanel.cs",
+   "https://github.com/BepInEx/Il2CppInterop"
+  ],
+  "tags": [
+   "unity",
+   "il2cpp",
+   "melonloader",
+   "harmony",
+   "ui",
+   "tmp",
+   "vr",
+   "settings-menu",
+   "prefab-clone"
   ]
  },
  {
@@ -12652,6 +12818,33 @@
   ],
   "links": [
    "https://www.tapatalk.com/groups/kottons_chop_shop/ti-scp-ti-sms-model-importer-t3217.html"
+  ]
+ },
+ {
+  "path": "techniques/motion-vectors-for-a-neural-upscaler-in-a-game-that-has-none.md",
+  "kind": "technique",
+  "title": "Motion vectors for a neural upscaler in a game that has none: a camera homography first, entities on demand",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "https://github.com/NVIDIA/DLSS",
+   "https://renderdoc.org",
+   "https://github.com/umar-afzaal/LumeniteFX"
+  ],
+  "tags": [
+   "motion-vectors",
+   "depth",
+   "dlss",
+   "ngx",
+   "upscaling",
+   "homography",
+   "unity",
+   "bepinex",
+   "validation"
   ]
  },
  {
