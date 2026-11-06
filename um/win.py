@@ -24,6 +24,7 @@ import hashlib
 import json
 import ntpath
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -214,13 +215,33 @@ def launch(target: str, args: list[str], steam: bool = False):
 # --------------------------------------------------------------------------- capture
 
 
+def _ff_value(v: str) -> str:
+    r"""An option value as it has to appear in an ffmpeg filtergraph (`-f lavfi -i <graph>`, no shell in between).
+
+    ffmpeg-filters, "Notes on filtergraph escaping": the graph parser splits on [ ] , ; and unescapes \ and '
+    once, then the filter's option parser splits on : and unescapes \ and ' again. So escape for the option
+    list first, then for the graph: "Halo: MCC" -> Halo\\: MCC, and C:\Games -> C\\:\\\\Games."""
+    v = re.sub(r"([\\':])", r"\\\1", v)               # first level: the filter's options
+    return re.sub(r"([\\'\[\],;])", r"\\\1", v)       # second level: the filtergraph
+
+
+def _exe_name(exe: str) -> str:
+    r"""--exe as gfxcapture (window_exe), Get-Process and the Auto HDR check see it: the file name. A full path
+    (C:\Games\foo.exe, \\server\share\foo.exe, /mnt/c/.../foo.exe) is cut to its file name; anything else is
+    left alone, because it's a regex (Game\.exe)."""
+    return ntpath.basename(exe) if re.match(r"[A-Za-z]:[\\/]|\\\\|/", exe) else exe
+
+
 def _source(exe=None, hwnd=None, title=None, cursor=False, crop=None) -> str:
+    # window_exe and window_title are regexes (std::regex, ECMAScript) that gfxcapture matches against the exe's
+    # file name and the window title. A ':' or '\' in them must be escaped for the filtergraph (issue #370).
     if hwnd:
         sel = f"hwnd={hwnd}"
     elif exe:
-        sel = f"window_exe={exe if exe.lower().endswith('.exe') else exe + '.exe'}"
+        exe = _exe_name(exe)
+        sel = "window_exe=" + _ff_value(exe if exe.lower().endswith(".exe") else exe + ".exe")
     elif title:
-        sel = f"window_title={title}"
+        sel = "window_title=" + _ff_value(title)
     else:
         die("give --exe, --hwnd or --title")
     c = ""
@@ -285,6 +306,7 @@ def warn_auto_hdr(exe=None):
 
 def shot(out: str, exe=None, hwnd=None, title=None, scale: float | None = None, timeout=20) -> str:
     """One frame of a game window -> PNG. Returns the (posix) path; with scale also writes <out>_small.png."""
+    exe = _exe_name(exe) if exe else exe
     ff = ffmpeg_win()
     warn_auto_hdr(exe)
     dst = Path(out).resolve()
@@ -313,6 +335,7 @@ class Recorder:
 
     def __init__(self, exe=None, out="take", hwnd=None, title=None, fps=30, audio=True, crop=None, max_width=None, cq=19, pid=None):
         self.pid = pid
+        exe = _exe_name(exe) if exe else exe
         self.exe, self.hwnd, self.title, self.fps, self.audio_on, self.crop, self.max_width, self.cq = exe, hwnd, title, fps, audio, crop, max_width, cq
         self.base = to_win(Path(out).resolve()) if is_wsl() and not (len(out) > 1 and out[1] == ":") else out
         self.video = self.audio = None
@@ -528,7 +551,8 @@ def register(sub):
             q.add_argument("--no-audio", action="store_true")
             q.add_argument("--crop", help="left:top:right:bottom px to cut (e.g. ultrawide -> centre 16:9)")
             q.add_argument("--pid", type=int, help="process to capture audio from, when --exe is ambiguous (e.g. two java.exe)")
-        q.add_argument("--exe", help="window's executable name, e.g. AoE2DE_s.exe (regex)")
+        q.add_argument("--exe", help="window's executable name, e.g. AoE2DE_s.exe (regex; a full path is cut to "
+                                     "its file name)")
         q.add_argument("--hwnd", type=int)
         q.add_argument("--title", help="window title regex")
         q.set_defaults(func=main)

@@ -12,7 +12,7 @@ anti_cheat: "EasyAntiCheat. Everything here uses Saber's official mods folder (c
 status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: []
-date: 2026-10-14
+date: 2026-10-15
 links: []
 tags: [space-marine-2, saber, new-class, character-mod, chaplain, mastery, perks, armoury, talker, constructor]
 ---
@@ -106,9 +106,10 @@ would need compiled code (a new brand crashes the boot), which is exactly what t
 ## Verification
 - In game (2026-10-03, user-confirmed): the class is selectable, the armoury and missions render it correctly, robes
   simulate in missions, perks and the ability work, the default voice drives the social wheel and chatter.
+- In game (2026-10-15, user-confirmed): the class's own melee weapon on `melee_mod_1` works, using the retail
+  one-handed hammer animations (see the weapons note).
 - Not verified: PvP use of the slot (we only filled the PvE side), and class behaviour in every operation's scripted
-  dialogue beyond the routes we patched. The class's own melee weapon isn't in the list above, and the weapons note
-  lists the Crozius-style weapon on a `melee_mod` slot as not verified in game, so treat that part as unconfirmed.
+  dialogue beyond the routes we patched.
 
 ## Gotchas
 Other traps hit while building the class are written up in their home notes: robes exploding on the armoury figure,
@@ -134,9 +135,11 @@ authority class and the boot crash from a voice-node class (voices note); the ab
 
 ## Assets
 The class armour, helmets and robes came from retail parts (the NPC Chaplain's body, other constructors' pieces) plus
-custom helmets (AI-generated base meshes, repainted). The voice was generated text-to-speech, converted to the game's
-Wwise format. Saber's mod rules forbid AI-generated content in mods (see the foundations note's Setup), so keep a
-build with the AI helmets and the TTS voice private.
+custom helmets (AI-generated base meshes, repainted). The voice was text-to-speech cloned from a real voice actor's
+original performance, converted to the game's Wwise format. Don't repeat that: cloning a real person's voice without
+their consent is off-limits even for private builds (see the voices note). Saber's mod rules forbid AI-generated
+content in mods (see the foundations note's Setup), so keep a build with the AI helmets private, and replace the
+cloned voice with a stock or designed TTS voice (private only) or recorded lines.
 
 ## Open questions
 - Whether slots 1 and 3 have any hard-coded differences from slot 2 (we only used slot 2).

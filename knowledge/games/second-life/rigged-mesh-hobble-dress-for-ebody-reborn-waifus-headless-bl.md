@@ -87,7 +87,9 @@ LSL script. Second Life is online; nothing about the viewer or protocol is touch
   PERMISSION_OVERRIDE_ANIMATIONS, which attachments get without a dialog. Whichever object set a state last
   wins, so an AO can take it back; re-applying on a timer works. Reset the overrides on detach.
 - **PBR materials** upload as a materials-only glTF (Build → Upload → Material). A material can't be applied
-  to a Local Mesh surrogate; that needs a real upload (Aditi).
+  to a Local Mesh surrogate; that needs a real upload (Aditi). How SL numbers a mesh's faces, and recoloring PBR
+  faces from a HUD with glTF overrides, are in the
+  [ballet boots note](rigged-wedge-ballet-boots-for-ebody-reborn-feet-with-a-pbr-c.md).
 
 ## Build steps
 1. Get the dev kit; pick the body variant object (here `RebornBody+Waifus`, parented to armature `Avatar`).

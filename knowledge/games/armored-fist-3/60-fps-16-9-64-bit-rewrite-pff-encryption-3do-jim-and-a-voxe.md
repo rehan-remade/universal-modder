@@ -294,8 +294,8 @@ accumulator), `AF3_RustStats.py` (named-mapping stats from the payload),
   wireframes, scene renders, material histograms).
 - **Later sessions (see Update):** vehicle composition from the typed AI
   manifests (wireframes for M1A2, BMP, BRDM, OLIFANT and 2S6M), and the 16:9
-  HUD in the 32-bit payload (window fit, strip text, minimap) with the 4:3 mode
-  gate still 27/27.
+  HUD in the 32-bit payload (window fit, strip text, minimap, vehicle/status
+  icon) with the 4:3 mode gate still 27/27.
 - **NOT verified:** 60 fps at 1080p in the 32-bit game (about 42 renders/s, see
   above); 2560x1440 in the 32-bit payload; 3DO/3DI scale against the engine's
   world units (Open question 3).
@@ -416,7 +416,8 @@ One long session (~6 h). Toolchain installs: rustup + WinLibs + gh via winget
 3. 3DO/3DI model orientation/scale calibration against the engine's world
    units (the rewrite normalises each model to a per-name target size).
 4. 16:9 in the 32-bit payload: **window fit and the doubled strip text are
-   done**, and so is the minimap (see the Update section); the SSE2 /
+   done**, and so are the minimap and the vehicle/status icon (see the Update
+   section); the SSE2 /
    multi-threaded terrain rasterizer for the 32-bit path is still open (18.35 ms
    at 1080p).
 5. The rewrite's HUD/cameras/simulation and mission loading from JIM (moot now
@@ -457,9 +458,16 @@ Verified wireframes for M1A2/BMP/BRDM/OLIFANT (typed) and 2S6M (plot routine).
   hooks that call, preserves CF, and rewrites x as
   `x*(4*height)/(3*pitch) + (3*pitch-4*height)/6`; at 4:3 it is a
   mathematical no-op. Verified: the minimap moves from `(12,686,580,261)` to
-  `(249,686,435,261)` - square, at the pillarbox edge; mode gate 27/27.
+  `(249,686,435,261)` - square, at the pillarbox edge - with the compass
+  letters and the player marker inside the square; mode gate 27/27.
   (The grid itself is decoded from a resource by `0x612FC2 -> 0x404A46`; the
   per-element rect transform avoids touching that pipeline.)
+- **Vehicle/status icon fixed at 16:9**: element id `0xFB`, bbox computed at
+  call site `0x542500` (calculator `0x56F818`), written to slot `+0x88`. It
+  gets the same x transform from its own cave at that call site
+  (`build_hud_rect.py` / `patch_hud_rect` build one cave per call site).
+  Verified: the icon moves from `(1761,963,147,110)` into its centred panel;
+  mode gate 27/27.
 
 **Batch tooling.** `AF3_Mod/scripts/AF3_ScenarioSheet.py` renders the showcase
 mission list headlessly (terrain map auto-resolved from each TRN prefix) and

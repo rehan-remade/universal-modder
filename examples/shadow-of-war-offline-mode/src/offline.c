@@ -12,6 +12,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <wchar.h>
+#include <time.h>
 #include "names.h"
 #include "agb.h"
 #include "responder.h"
@@ -77,6 +78,7 @@ static CRITICAL_SECTION cs;
 static Sess *sessions;
 static Fake *fakes;
 static FILE *logf;
+static volatile LONG net_started;   /* v0.12: set by the game's first WinHttpSendRequest (online layer is up) */
 static WCHAR blocked[32][64];
 static int nblocked;
 static BOOL emulate;
@@ -227,6 +229,7 @@ BOOL WINAPI WinHttpAddRequestHeaders(HINTERNET r, LPCWSTR hdr, DWORD len, DWORD 
 
 BOOL WINAPI WinHttpSendRequest(HINTERNET r, LPCWSTR hdr, DWORD hlen, LPVOID opt, DWORD olen, DWORD total, DWORD_PTR ctx)
 {
+    net_started = 1;
     Fake *f = find_fake(r);
     if (!f) return Real_WinHttpSendRequest(r, hdr, hlen, opt, olen, total, ctx);
     f->ctx = ctx;
@@ -428,6 +431,64 @@ static LONG CALLBACK crash_report(PEXCEPTION_POINTERS ep)
     return EXCEPTION_CONTINUE_SEARCH;
 }
 
+/* ---------- unique NPC GUIDs (v0.11, 2026-10-20) ----------
+ * The game names each Nemesis member "<prefix>_NPC_<n>" (id writer at exe+0x1B2F174, into member+0x3D0, only while empty), with
+ * <prefix> = a 32-hex session GUID at analytics-manager+0xA81 (set by exe+0x1B2F220 only when online) and n a global
+ * counter that restarts at 0 every launch. Offline the prefix stays empty, so every session hands out _NPC_0, _NPC_1...
+ * again: the 2026-10-20 save held 359 bare ids, _NPC_0 alone on 36 captains. A captain whose id is already taken fails
+ * the Garrison predicate HasNPCGUID ("You cannot send this Follower to the Garrison"). Fix: write a fresh random prefix
+ * (like the online session GUID) once the game's first request is out and the manager is stable (v0.12, below), and
+ * again whenever the game clears it.
+ * Manager = *(*(exe+0x26FFAA8) + 0x6D18) (Ghidra base 0x140000000). Ini [Offline] NpcGuidPrefix=0 turns it off. */
+static char npc_prefix[33];
+
+static BOOL readable(const void *p, size_t n) { return p && !IsBadReadPtr(p, n); }
+
+
+/* v0.12 (2026-10-20): v0.11 wrote as soon as the manager pointer existed (15:02:00, before any network call) and that
+ * session made no online requests at all -> Garrison locked. Now: wait for the first request, then 10 s; the manager
+ * pointer must be unchanged for 5 polls; the whole 64-byte prefix area must be zero; plain store (heap is writable,
+ * no VirtualProtect). Writes once per manager pointer; re-checks every 2 s in case the game clears it. */
+static DWORD WINAPI npc_guid_thread(LPVOID unused)
+{
+    ULONG_PTR exe = (ULONG_PTR)GetModuleHandleW(NULL);
+    ULONG_PTR *g = (ULONG_PTR *)(exe + 0x26FFAA8);
+    ULONG_PTR last = 0, done = 0; int stable = 0, writes = 0;
+    while (!net_started) Sleep(250);
+    Sleep(10000);
+    for (;; Sleep(1000)) {
+        if (!readable(g, 8) || !*g || !readable((void *)(*g + 0x6D18), 8)) { stable = 0; continue; }
+        ULONG_PTR mgr = *(ULONG_PTR *)(*g + 0x6D18);
+        if (!mgr || !readable((void *)(mgr + 0xA81), 64)) { stable = 0; continue; }
+        if (mgr != last) { last = mgr; stable = 0; continue; }
+        if (++stable < 5) continue;
+        char *pre = (char *)(mgr + 0xA81);
+        int empty = 1; for (int i = 0; i < 64; i++) if (pre[i]) { empty = 0; break; }
+        if (!empty) {
+            if (done != mgr) { logw(L"NPC GUID prefix present: %.32hs", pre); done = mgr; }
+            Sleep(1000);
+            continue;
+        }
+        memcpy(pre, npc_prefix, 33);
+        done = mgr; writes++;
+        logw(L"NPC GUID prefix written (%d): new captains get %hs_NPC_<n>", writes, npc_prefix);
+    }
+    return 0;
+}
+
+static void npc_guid_init(void)
+{
+    LARGE_INTEGER q; QueryPerformanceCounter(&q);
+    unsigned long long s = q.QuadPart ^ ((unsigned long long)GetTickCount64() << 21) ^ ((unsigned long long)GetCurrentProcessId() << 40)
+                           ^ (unsigned long long)time(NULL) * 0x9E3779B97F4A7C15ULL;
+    for (int i = 0; i < 32; i++) {
+        s ^= s << 13; s ^= s >> 7; s ^= s << 17;
+        npc_prefix[i] = "0123456789abcdef"[(s >> 11) & 15];
+    }
+    npc_prefix[32] = 0;
+    CreateThread(NULL, 0, npc_guid_thread, NULL, 0, NULL);
+}
+
 /* ---------- setup ---------- */
 static void load_config(HMODULE self)
 {
@@ -448,6 +509,7 @@ static void load_config(HMODULE self)
     responder_init(data, GetPrivateProfileIntW(L"Offline", L"GarrisonSize", 50, ini));
     logw(L"Shadow of War Offline Mode, mode=%ls. WB/Agora hosts never reach the network:", emulate ? L"emulate" : L"block");
     for (int i = 0; i < nblocked; i++) logw(L"  *.%ls", blocked[i]);
+    if (GetPrivateProfileIntW(L"Offline", L"NpcGuidPrefix", 1, ini)) npc_guid_init();
 }
 
 BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID res)

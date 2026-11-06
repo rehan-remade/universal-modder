@@ -67,9 +67,10 @@ def test_gamemaker_and_rpgmaker(tmp_path):
     assert engine_of(tmp_path / "b", {"www/js/rpg_core.js": "//", "Game.exe": b"MZ"})[0] == "rpgmaker-mvmz"
 
 
-def _pe(managed=True, arch=0x14C, pad=0):
+def _pe(managed=True, arch=0x14C, pad=0, dirs=16):
     # minimal PE (x86 PE32 by default, PE32+ for arch=0x8664), optionally with a CLR header
-    # directory entry, padded by `pad` bytes so tests can control file sizes
+    # directory entry, padded by `pad` bytes so tests can control file sizes. `dirs` is the
+    # declared NumberOfRvaAndSizes; the section table begins right after the declared directories.
     pe = bytearray(1024 + pad)
     pe[0:2] = b"MZ"
     struct.pack_into("<I", pe, 0x3C, 0x80)
@@ -77,6 +78,7 @@ def _pe(managed=True, arch=0x14C, pad=0):
     struct.pack_into("<H", pe, 0x84, arch)
     opt = 0x80 + 24
     struct.pack_into("<H", pe, opt, 0x20B if arch == 0x8664 else 0x10B)
+    struct.pack_into("<I", pe, opt + (108 if arch == 0x8664 else 92), dirs)
     if managed:
         struct.pack_into("<I", pe, opt + (112 if arch == 0x8664 else 96) + 14 * 8, 0x2000)
     return bytes(pe)
@@ -86,6 +88,18 @@ def test_managed_pe(tmp_path):
     p = tmp_path / "Game.exe"
     p.write_bytes(_pe())
     assert scan.pe_info(p) == {"arch": "x86", "managed": True}
+
+
+def test_short_data_directory_pe_is_not_managed(tmp_path):
+    # NumberOfRvaAndSizes may be fewer than 16; the section table then follows, and its
+    # bytes must not read as a CLR directory RVA - a native exe took the .NET route (#441).
+    # Bytes where the 15th slot would sit are section-table data, deliberately nonzero.
+    pe = bytearray(_pe(managed=False, arch=0x8664, dirs=6))
+    opt = 0x80 + 24
+    struct.pack_into("<I", pe, opt + 112 + 14 * 8, 0xDEADBEEF)  # section bytes, not a CLR RVA
+    p = tmp_path / "Game.exe"
+    p.write_bytes(bytes(pe))
+    assert scan.pe_info(p) == {"arch": "x64", "managed": False}
 
 
 @pytest.mark.parametrize("bin_dir", ["Win64_Shipping_Client", "Gaming.Desktop.x64_Shipping_Client"])
@@ -351,6 +365,52 @@ def test_cli_prints_text_a_legacy_console_cannot_encode(tmp_path, monkeypatch):
     assert "The boon pool ≥ 3 → cached" in raw.getvalue().decode("utf-8")
 
 
+def test_kb_check_fails_without_a_knowledge_root(monkeypatch, capsys):
+    # a wheel install outside a clone has no knowledge/; "PASS: 0 notes checked" would turn a CI gate green
+    from um import cli, kb
+    monkeypatch.setattr(kb, "local_root", lambda: None)
+    with pytest.raises(SystemExit) as e:
+        cli.main(["kb", "check", "--index"])
+    assert e.value.code != 0
+    assert "PASS" not in capsys.readouterr().out
+
+
+def _kb_check(*args) -> int:
+    from um import cli
+    with pytest.raises(SystemExit) as e:
+        cli.main(["kb", "check", *args])
+    return e.value.code
+
+
+def test_kb_check_fails_on_a_root_with_no_notes(tmp_path, monkeypatch, capsys):
+    from um import kb
+    monkeypatch.setattr(kb, "local_root", lambda: None)
+    (tmp_path / "empty").mkdir()
+    for root in ("missing", "empty"):
+        assert _kb_check("--root", str(tmp_path / root)) == 1, root
+        out, err = capsys.readouterr()
+        assert "PASS" not in out and "um: " in err, root
+
+
+def test_kb_check_index_is_not_skipped_when_notes_are_named(tmp_path, monkeypatch, capsys):
+    # named notes are still checked without a knowledge folder, but --index can't pass without one, and with one
+    # it checks the index
+    from um import kb
+    root = tmp_path / "knowledge"
+    note = root / "techniques" / "t.md"
+    note.parent.mkdir(parents=True)
+    note.write_text("---\nkind: technique\ntitle: t\ntags: [x]\ndate: 2026-10-10\nagents: [a]\n---\n# t\n", encoding="utf-8")
+    monkeypatch.setattr(kb, "local_root", lambda: None)
+    assert _kb_check(str(note)) == 0 and "PASS: 1 notes checked" in capsys.readouterr().out
+    assert _kb_check(str(note), "--index") == 1
+    assert "FAIL --index" in capsys.readouterr().out
+    assert _kb_check(str(note), "--index", "--root", str(root)) == 1
+    assert "INDEX.md is out of date" in capsys.readouterr().out
+    (root / "INDEX.md").write_text(kb.build_index(root)[0], **kb.TEXT)
+    assert _kb_check(str(note), "--index", "--root", str(root)) == 0
+    assert _kb_check("--index", "--root", str(root)) == 0
+
+
 def test_tool_exe_does_not_set_dotnet_engine(tmp_path):
     # Kenshi shape: the only managed binary is a tool (Forgotten Construction
     # Set); the big game binary is native, so the engine must not be dotnet.
@@ -564,6 +624,111 @@ def test_scan_warns_only_for_online_games(tmp_path):
         assert any("online competitive" in w for w in scan.scan(str(d))["warnings"]) == warned, name
 
 
+def _fake_host(monkeypatch, os_name, machine, wsl=False):
+    import platform
+    monkeypatch.setattr(scan, "is_mac", lambda: os_name == "macos")
+    monkeypatch.setattr(scan, "is_windows", lambda: os_name == "windows")
+    monkeypatch.setattr(scan, "is_wsl", lambda: wsl)
+    monkeypatch.setattr(platform, "machine", lambda: machine)
+
+
+def test_host_info_names_the_cpu_like_the_exes(monkeypatch):
+    # the host's `arch` must compare directly with an exe's `arch` in the report (x86, x64, arm64)
+    for machine, arch in [("x86_64", "x64"), ("AMD64", "x64"), ("arm64", "arm64"), ("aarch64", "arm64"),
+                          ("i386", "x86"), ("i686", "x86"), ("riscv64", "riscv64")]:
+        _fake_host(monkeypatch, "linux", machine)
+        assert scan.host_info()["arch"] == arch, machine
+
+
+def test_host_info_per_os_and_wsl(monkeypatch):
+    import platform
+    _fake_host(monkeypatch, "macos", "arm64")
+    monkeypatch.setattr(platform, "mac_ver", lambda: ("26.5.1", ("", "", ""), "arm64"))
+    h = scan.host_info()
+    assert h == dict(os="macos", os_version="26.5.1", arch="arm64", wsl=False, translated=False)
+    assert scan.host_line(h) == "macOS 26.5.1, arm64"
+
+    _fake_host(monkeypatch, "windows", "AMD64")
+    monkeypatch.setattr(platform, "version", lambda: "10.0.26100")
+    h = scan.host_info()
+    assert (h["os"], h["arch"], h["wsl"]) == ("windows", "x64", False)
+    assert scan.host_line(h) == "Windows 10.0.26100, x64"
+
+    _fake_host(monkeypatch, "linux", "x86_64")
+    monkeypatch.setattr(platform, "freedesktop_os_release", lambda: {"PRETTY_NAME": "Ubuntu 24.04.1 LTS"})
+    assert scan.host_line(scan.host_info()) == "Ubuntu 24.04.1 LTS, x64"
+    monkeypatch.setattr(platform, "freedesktop_os_release", lambda: (_ for _ in ()).throw(OSError("no os-release")))
+    monkeypatch.setattr(platform, "release", lambda: "6.8.0")
+    assert scan.host_line(scan.host_info()) == "Linux 6.8.0, x64"
+
+    # WSL is Linux to Python but a Windows host for games: the line must say so, and never suggest Proton territory
+    _fake_host(monkeypatch, "linux", "x86_64", wsl=True)
+    monkeypatch.setattr(platform, "freedesktop_os_release", lambda: {"PRETTY_NAME": "Ubuntu 22.04.5 LTS"})
+    h = scan.host_info()
+    assert h["wsl"] is True and scan.host_line(h) == "Windows via WSL (Ubuntu 22.04.5 LTS), x64"
+
+
+def test_host_info_sees_through_rosetta(monkeypatch):
+    import platform
+    import subprocess
+    monkeypatch.setattr(platform, "mac_ver", lambda: ("26.5.1", ("", "", ""), "x86_64"))
+
+    def sysctl(out=None, error=None):
+        def run(*a, **k):
+            if error:
+                raise error
+            return subprocess.CompletedProcess(a, 0, stdout=out, stderr="")
+        return run
+
+    _fake_host(monkeypatch, "macos", "x86_64")
+    monkeypatch.setattr(scan.subprocess, "run", sysctl("1\n"))
+    h = scan.host_info()                      # x86_64 Python translated on an Apple Silicon Mac
+    assert h["arch"] == "arm64" and h["translated"] is True
+    assert scan.host_line(h) == "macOS 26.5.1, arm64 (Python runs under Rosetta)"
+    for out, error in [("0\n", None), ("", None), (None, OSError("no sysctl"))]:   # a real Intel Mac, or no answer
+        monkeypatch.setattr(scan.subprocess, "run", sysctl(out, error))
+        h = scan.host_info()
+        assert h["arch"] == "x64" and h["translated"] is False
+
+
+def test_scan_report_starts_with_the_host(tmp_path):
+    d = tmp_path / "Some Game"
+    d.mkdir()
+    for i in range(6):
+        (d / f"f{i}.txt").write_text("x")
+    r = scan.scan(str(d))
+    assert set(r["host"]) == {"os", "os_version", "arch", "wsl", "translated"}   # the same keys on every host
+    assert json.loads(json.dumps(r))["host"] == r["host"]           # machine-readable for agents
+    lines = scan.format_report(r).splitlines()
+    assert lines[1].startswith("  path:") and lines[2].startswith("  host:      ")
+
+
+def test_scan_warns_when_windows_exes_meet_a_non_windows_host(tmp_path, monkeypatch):
+    def folder(name, exe):
+        d = tmp_path / name
+        d.mkdir()
+        for i in range(6):
+            (d / f"f{i}.txt").write_text("x")
+        (d / "game.exe" if exe else d / "game.x86_64").write_bytes(_pe(managed=False, arch=0x8664) if exe else b"\x7fELF")
+        return d
+
+    def host(os_name, wsl=False):
+        return dict(os=os_name, os_version="1.2", arch="arm64", wsl=wsl, translated=False)
+
+    def warning(h, d):
+        monkeypatch.setattr(scan, "host_info", lambda: h)
+        return next((w for w in scan.scan(str(d))["warnings"] if "not native" in w), None)
+
+    pe, native = folder("Windows build", True), folder("Native build", False)
+    for h in (host("macos"), host("linux")):
+        w = warning(h, pe)
+        assert w and scan.host_line(h) in w and "compatibility.md" in w, h       # one line, naming the host and where to read
+        assert "\n" not in w
+    assert warning(host("windows"), pe) is None
+    assert warning(host("linux", wsl=True), pe) is None                          # WSL counts as Windows
+    assert warning(host("macos"), native) is None                                # no PE exes: no claim
+
+
 def test_ffmpeg_download_is_checksummed(tmp_path, monkeypatch):
     import hashlib, io
     from um import win
@@ -745,6 +910,46 @@ def test_publish_check_mod_inside_game(tmp_path, capsys):
     assert "copied.bin" in out and "page.png" not in out
 
 
+def test_publish_check_mod_installed_in_loader_folder(tmp_path, capsys):
+    # a UMM mod repo installed to <game>/Mods/<Id>/ (and a BepInEx build in plugins/<dll>/) matched its own copy
+    info = '{"Id": "N7MassEffect", "AssemblyName": "N7MassEffect.dll"}'
+    make(tmp_path / "mod", {"src/N7/Info.json": info + " " * 64, "src/N7/Assets/n7.png": b"i" * 4096,
+                            "src/N7/bin/N7MassEffect.dll": b"d" * 4096, "README.md": "My mod"})
+    make(tmp_path / "game", {"Data/big.bin": b"x" * 4096, "Mods/N7MassEffect/Info.json": info + " " * 64,
+                             "Mods/N7MassEffect/Assets/n7.png": b"i" * 4096,
+                             "BepInEx/plugins/N7MassEffect/N7MassEffect.dll": b"d" * 4096,
+                             "Mods/SomeoneElse/theirs.bin": b"z" * 4096})
+    assert publish.check(str(tmp_path / "mod"), str(tmp_path / "game")) == 0
+    # genuine game files still fail, including another mod's files under Mods/
+    (tmp_path / "mod" / "copied.bin").write_bytes(b"x" * 4096)
+    (tmp_path / "mod" / "theirs.bin").write_bytes(b"z" * 4096)
+    assert publish.check(str(tmp_path / "mod"), str(tmp_path / "game")) == 1
+    out = capsys.readouterr().out.replace("\\", "/")
+    assert "copied.bin" in out and "Mods/SomeoneElse/theirs.bin" in out and "n7.png" not in out and "N7MassEffect.dll" not in out
+    assert "not compared, this mod's own installed copy: BepInEx/plugins/N7MassEffect/, Mods/N7MassEffect/" in out
+
+
+def test_publish_check_own_installed_copy_is_named_by_metadata_only(tmp_path, capsys):
+    # only the mod's own metadata names its installed folder; a DLL it merely bundles doesn't
+    csproj = "<Project><PropertyGroup><AssemblyName>N7</AssemblyName></PropertyGroup></Project>"
+    make(tmp_path / "mod", {"README.md": "My mod", "src/N7Plugin.csproj": csproj, "bin/N7.dll": b"n" * 4096,
+                            "lib/ModMenu.dll": b"m" * 4096, "lib/Foo.dll": b"f" * 4096,
+                            "lib/Assembly-CSharp.dll": b"g" * 4096})
+    make(tmp_path / "game", {"BepInEx/plugins/N7.dll": b"n" * 4096,         # this mod, flat in plugins/
+                             "BepInEx/plugins/N7/N7.dll": b"n" * 4096,      # this mod, in its own folder
+                             "Mods/ModMenu/ModMenu.dll": b"m" * 4096,       # another mod it references
+                             "Mods/Foo/Foo.dll": b"f" * 4096,               # a folder the game ships under Mods/
+                             "Game_Data/Managed/Assembly-CSharp.dll": b"g" * 4096,
+                             "BepInEx/plugins/N7/Assembly-CSharp.dll": b"g" * 4096})   # copied in by the build
+    assert publish.check(str(tmp_path / "mod"), str(tmp_path / "game")) == 1
+    out = capsys.readouterr().out.replace("\\", "/")
+    fails = [ln for ln in out.splitlines() if ln.startswith("FAIL ")]
+    assert len(fails) == 3 and not any("bin/N7.dll" in ln for ln in fails)
+    assert "lib/ModMenu.dll  (== Mods/ModMenu/ModMenu.dll)" in out and "lib/Foo.dll  (== Mods/Foo/Foo.dll)" in out
+    assert "lib/Assembly-CSharp.dll  (== Game_Data/Managed/Assembly-CSharp.dll)" in out
+    assert publish._own_names([tmp_path / "mod" / "src/N7Plugin.csproj"]) == {"n7"}
+
+
 @pytest.mark.parametrize("label,key", [
     # assembled at runtime so this file doesn't trip the toolkit's own publish check
     ("OpenAI key", "sk-" + "proj-" + "Ab3_dE-f" + "Gh1jK2lM3nO4pQ5rS6tU7vW8xY9z0" * 4),
@@ -752,6 +957,8 @@ def test_publish_check_mod_inside_game(tmp_path, capsys):
     ("OpenAI key", "sk-" + "Gh1jK2lM3nO4pQ5rS6tU7vW8xY9z0" * 2),
     ("GitHub token", "github" + "_pat_" + "11ABCDEFG0123456789abc" + "_" + "aB3dE5fG7hJ9kL1mN3pQ5rS7tU9vW1xY3zA5bC7dE9fG1hJ3kL5mN7pQ9rS1t"),
     ("GitHub token", "gh" + "p_" + "aB3dE5fG7hJ9kL1mN3pQ5rS7tU9vW1xY3z"),
+    ("Sprixen key", "spx_" + "live_" + "Gh1jK2lM3nO4pQ5rS6tU7vW8xY9z0" * 2),
+    ("Voidless key", "VOIDLESS_API_KEY=" + "void_" + "Gh1jK2lM3nO4pQ5rS6tU7vW8xY9z0"),
 ])
 def test_secret_patterns_catch_current_key_formats(label, key):
     rx = dict(publish.SECRET_PATTERNS)[label]
@@ -759,7 +966,8 @@ def test_secret_patterns_catch_current_key_formats(label, key):
 
 
 def test_secret_patterns_ignore_ordinary_text():
-    text = "sk-learn-style-kebab-case-identifiers-are-not-keys and github_pat_ alone"
+    text = ("sk-" + "learn-style-kebab-case-identifiers-are-not-keys and github_pat_ alone, "
+            "static void " + "void_" + "callback_handler_with_a_long_descriptive_name(void);")
     assert not [label for label, rx in publish.SECRET_PATTERNS if rx.search(text)]
 
 
@@ -903,7 +1111,25 @@ def test_kb_check_warns_on_links_to_missing_notes(tmp_path):
     sib.write_text(head + "Next to [real](real.md) and [gone](./gone.md).\n", encoding="utf-8")
     _, warns = kb.check_note(sib, root)
     assert [w for w in warns if "does not exist" in w] == [
-        "link to a note that does not exist: ./gone.md (links are relative to this note's folder)"]
+        "link to a note that does not exist: ./gone.md (links are relative to this note's folder; "
+        "if the file lives in another repo, link to it on GitHub instead)"]
+
+
+def test_kb_check_counts_numbered_gotchas_written_as_subheadings(tmp_path):
+    note = tmp_path / "n.md"
+    head = ("---\nkind: game\ntitle: t\ngame: X\nengine: unity-mono\nroute: managed-patch\nstatus: working\n"
+            "date: 2026-10-21\nagents: [a]\n---\n# t\n")
+    note.write_text(head + "\n## Gotchas\n\n1. **Symptom.** **Cause:** **Fix:**\n", encoding="utf-8")
+    _, warns = kb.check_note(note)
+    assert not [w for w in warns if "Gotchas" in w]
+    # a numbered subheading is a numbered item too
+    note.write_text(head + "\n## Gotchas\n\n### 1. Symptom\n\nCause and fix.\n", encoding="utf-8")
+    _, warns = kb.check_note(note)
+    assert not [w for w in warns if "Gotchas" in w]
+    # an unnumbered list still warns
+    note.write_text(head + "\n## Gotchas\n\n- Symptom, cause, fix.\n", encoding="utf-8")
+    _, warns = kb.check_note(note)
+    assert [w for w in warns if "Gotchas" in w] == ["Gotchas section has no numbered items"]
 
 
 def test_kb_check_rejects_secrets_and_dumps(tmp_path):
@@ -1084,6 +1310,63 @@ def test_backup_repeated_restores_keep_undo_snapshots(tmp_path, backup_same_seco
             assert z.read("save.dat") == state.encode()
 
 
+def test_backup_rejects_reserved_manifest_file(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(backup, "_root", lambda name: (tmp_path / "snaps" / name).mkdir(parents=True, exist_ok=True)
+                        or tmp_path / "snaps" / name)
+    src = tmp_path / "src"
+    make(src, {"_um_manifest.json": "user data", "save.dat": "v1"})
+    with pytest.raises(SystemExit):
+        backup.create(str(src), name="t")
+    assert "reserved snapshot metadata file: _um_manifest.json" in capsys.readouterr().err
+    assert not (tmp_path / "snaps" / "t").exists()
+
+
+def test_backup_restore_stops_at_a_reserved_manifest_file_in_the_folder(tmp_path, backup_same_second, capsys):
+    # the automatic snapshot before the restore can't take that folder either: nothing may change until it's moved
+    src = tmp_path / "src"
+    make(src, {"save.dat": "v1"})
+    backup.create(str(src), name="t")
+    make(src, {"save.dat": "v2", "_um_manifest.json": "{}"})
+    with pytest.raises(SystemExit):
+        backup.restore("t", yes=True)
+    assert f"{src} contains reserved snapshot metadata file" in capsys.readouterr().err
+    assert (src / "save.dat").read_text() == "v2"
+    (src / "_um_manifest.json").unlink()
+    backup.restore("t", yes=True)
+    assert (src / "save.dat").read_text() == "v1"
+
+
+def test_backup_keeps_a_nested_file_named_like_the_manifest(tmp_path, backup_same_second):
+    # only the top level collides with the snapshot's manifest
+    src = tmp_path / "src"
+    make(src, {"sub/_um_manifest.json": "user data"})
+    backup.create(str(src), name="t")
+    make(src, {"sub/_um_manifest.json": "changed"})
+    backup.restore("t", yes=True)
+    assert (src / "sub" / "_um_manifest.json").read_text() == "user data"
+
+
+def test_backup_older_snapshot_with_two_manifest_members_restores_the_users_file(tmp_path, backup_same_second):
+    # snapshots from before the refusal hold the folder's file first and the manifest last, under one name.
+    # Restoring the last one wrote the manifest over the user's file, and then blocked backing up the folder
+    import hashlib
+    import warnings
+    dest = tmp_path / "dest"
+    files = {"_um_manifest.json": b"ORIGINAL USER DATA", "save.dat": b"s"}
+    zp = backup._root("old") / "20260101-000000.zip"
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")  # the duplicate name
+        with backup.zipfile.ZipFile(zp, "w") as z:
+            for rel, data in files.items():
+                z.writestr(rel, data)
+            z.writestr("_um_manifest.json", json.dumps(dict(source=str(dest), created="20260101-000000", note="", files={
+                rel: dict(size=len(data), sha1=hashlib.sha1(data).hexdigest()) for rel, data in files.items()})))
+    assert set(backup._manifest(zp)["files"]) == set(files)
+    backup.restore("old", yes=True)
+    assert (dest / "_um_manifest.json").read_bytes() == b"ORIGINAL USER DATA"
+    assert (dest / "save.dat").read_bytes() == b"s"
+
+
 def test_backup_handles_pre_1980_timestamps(tmp_path, monkeypatch):
     import os
     monkeypatch.setattr(backup, "_root", lambda name: (tmp_path / "snaps" / name).mkdir(parents=True, exist_ok=True)
@@ -1114,6 +1397,308 @@ def test_backup_diff_and_restore_round_trip(tmp_path, monkeypatch):
     assert (src / "sub" / "cfg.ini").read_text() == "a=1"
     assert not (src / "extra.log").exists()
     assert backup.snapshots("t-pre-restore")  # the state before the restore was kept
+
+
+def test_backup_relative_source_restores_to_original_folder(tmp_path, backup_same_second, monkeypatch):
+    a, b = tmp_path / "a", tmp_path / "b"
+    make(a, {"saves/save.dat": "origin"})
+    make(b, {"saves/save.dat": "other cwd"})
+    monkeypatch.chdir(a)
+    zp = backup.create("saves", name="relative")
+    assert backup._manifest(zp)["source"] == str(a / "saves")
+    make(a, {"saves/save.dat": "new origin"})
+
+    monkeypatch.chdir(b)  # restore without --to from another working directory
+    assert backup.diff("relative")["changed"] == ["save.dat"]
+    backup.restore("relative", yes=True)
+    assert (a / "saves" / "save.dat").read_text() == "origin"
+    assert (b / "saves" / "save.dat").read_text() == "other cwd"
+
+
+def test_backup_expands_home_in_recorded_source(tmp_path, backup_same_second, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path / "home"))
+    make(tmp_path / "home", {"saves/save.dat": "origin"})
+    zp = backup.create("~/saves", name="home")
+    assert backup._manifest(zp)["source"] == str(tmp_path / "home" / "saves")
+
+
+def test_backup_symlinked_source_keeps_link_name(tmp_path, backup_same_second):
+    real = tmp_path / "d" / "real-saves"
+    make(real, {"save.dat": "origin"})
+    link = tmp_path / "Terraria"
+    try:
+        link.symlink_to(real, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlinks not available")
+    zp = backup.create(str(link))
+    assert zp.parent.name == "terraria"
+    assert backup._manifest(zp)["source"] == str(link)
+
+
+def test_backup_dotdot_after_symlink_follows_the_os(tmp_path, backup_same_second):
+    if os.name == "nt":
+        pytest.skip("Windows itself resolves .. lexically")
+    real = tmp_path / "d" / "real"
+    make(tmp_path / "d", {"real/keep.txt": "", "x/save.dat": "via link"})
+    make(tmp_path, {"x/save.dat": "lexical"})
+    link = tmp_path / "link"
+    try:
+        link.symlink_to(real, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlinks not available")
+    zp = backup.create(str(link / ".." / "x"), name="t")
+    with backup.zipfile.ZipFile(zp) as z:
+        assert z.read("save.dat") == b"via link"  # the folder the OS reaches, as before the fix
+
+
+def test_backup_dot_source_is_named_after_the_folder(tmp_path, backup_same_second, monkeypatch):
+    make(tmp_path / "Terraria", {"save.dat": "origin"})
+    monkeypatch.chdir(tmp_path / "Terraria")
+    zp = backup.create(".")
+    assert zp.parent.name == "terraria"  # not "", which put the zip in the backups root
+    assert backup._manifest(zp)["source"] == str(tmp_path / "Terraria")
+
+
+def test_backup_source_with_dotdot_does_not_need_the_cwd_later(tmp_path, backup_same_second, monkeypatch):
+    # recorded as cwd/../saves, deleting the folder it was typed from made diff report every file as removed,
+    # and restore skipped the pre-restore snapshot and recreated that folder
+    work = tmp_path / "work"
+    make(work, {"saves/save.dat": "origin", "mod/x.txt": ""})
+    monkeypatch.chdir(work / "mod")
+    zp = backup.create("../saves", name="t")
+    assert backup._manifest(zp)["source"] == str(work / "saves")
+    monkeypatch.chdir(tmp_path)
+    shutil.rmtree(work / "mod")
+    make(work, {"saves/save.dat": "changed"})
+    assert backup.diff("t")["changed"] == ["save.dat"]
+    backup.restore("t", yes=True)
+    assert (work / "saves" / "save.dat").read_text() == "origin"
+    assert backup.snapshots("t-pre-restore") and not (work / "mod").exists()
+
+
+def test_backup_dotdot_source_is_named_after_the_folder(tmp_path, backup_same_second, monkeypatch):
+    make(tmp_path / "Terraria", {"sub/save.dat": "origin"})
+    monkeypatch.chdir(tmp_path / "Terraria" / "sub")
+    zp = backup.create("..")
+    assert zp.parent.name == "terraria"  # not "..", which put the zip outside backups/
+    assert backup._manifest(zp)["source"] == str(tmp_path / "Terraria")
+
+
+def test_backup_to_and_target_expand_home(tmp_path, backup_same_second, monkeypatch):
+    # a shell leaves ~ alone when it's quoted, and cmd always does: this made a literal ./~ folder
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path / "home"))
+    monkeypatch.chdir(tmp_path)
+    make(tmp_path / "src", {"save.dat": "origin"})
+    backup.create(str(tmp_path / "src"), name="t")
+    backup.restore("t", to="~/x", yes=True)
+    assert (tmp_path / "home" / "x" / "save.dat").read_text() == "origin"
+    assert backup.diff("t", "~/x")["target"] == str(tmp_path / "home" / "x")
+    assert not (tmp_path / "~").exists()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="WSL path conversion")
+def test_backup_wsl_windows_source_is_recorded_converted(tmp_path, backup_same_second, monkeypatch):
+    from um import common
+    monkeypatch.setattr(common, "is_wsl", lambda: True)
+    real = common.to_posix  # map /mnt/c to a temp folder so the converted path exists
+    monkeypatch.setattr(backup, "to_posix", lambda p: real(p).replace("/mnt/c/", f"{tmp_path}/c/", 1))
+    make(tmp_path / "c" / "Games" / "saves", {"save.dat": "origin"})
+    zp = backup.create("C:\\Games\\saves", name="w")
+    assert backup._manifest(zp)["source"] == f"{tmp_path}/c/Games/saves"
+    make(tmp_path / "c" / "Games" / "saves", {"save.dat": "changed"})
+    backup.restore("w", yes=True)
+    assert (tmp_path / "c" / "Games" / "saves" / "save.dat").read_text() == "origin"
+
+
+def _record_source(zp: Path, source: str):
+    """Rewrite a snapshot's manifest as one made before sources were stored absolute."""
+    with backup.zipfile.ZipFile(zp) as z:
+        members = {n: z.read(n) for n in z.namelist()}
+    manifest = json.loads(members["_um_manifest.json"])
+    manifest["source"] = source
+    members["_um_manifest.json"] = json.dumps(manifest).encode()
+    with backup.zipfile.ZipFile(zp, "w") as z:
+        for n, data in members.items():
+            z.writestr(n, data)
+
+
+def test_backup_legacy_home_source_restores_to_home(tmp_path, backup_same_second, monkeypatch):
+    home = tmp_path / "home"
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    make(home, {"saves/save.dat": "origin"})
+    zp = backup.create(str(home / "saves"), name="home")
+    _record_source(zp, "~/saves")
+    make(home, {"saves/save.dat": "changed"})
+    monkeypatch.chdir(tmp_path)
+    backup.restore("home", yes=True)
+    assert (home / "saves" / "save.dat").read_text() == "origin"
+    assert not (tmp_path / "~").exists()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="WSL path conversion")
+def test_backup_legacy_windows_source_still_works_under_wsl(tmp_path, backup_same_second, monkeypatch):
+    from um import common
+    src = tmp_path / "saves"
+    make(src, {"save.dat": "origin"})
+    _record_source(backup.create(str(src), name="legacy"), "C:\\Games\\saves")
+    monkeypatch.setattr(common, "is_wsl", lambda: True)
+    assert backup.diff("legacy")["target"] == "/mnt/c/Games/saves"  # converted before the absolute check
+
+
+def test_backup_legacy_relative_source_needs_explicit_folder(tmp_path, backup_same_second, monkeypatch, capsys):
+    src = tmp_path / "saves"
+    make(src, {"save.dat": "origin"})
+    _record_source(backup.create(str(src), name="legacy"), "saves")
+    other = tmp_path / "other"
+    make(other, {"saves/save.dat": "other cwd"})
+    monkeypatch.chdir(other)
+
+    for call in (lambda: backup.diff("legacy"), lambda: backup.restore("legacy", yes=True)):
+        with pytest.raises(SystemExit):
+            call()
+        assert "relative source (saves)" in capsys.readouterr().err
+    assert (other / "saves" / "save.dat").read_text() == "other cwd"
+    assert not backup.snapshots("legacy-pre-restore")
+    make(src, {"save.dat": "changed"})
+    backup.restore("legacy", to=str(src), yes=True)  # an explicit folder still works
+    assert (src / "save.dat").read_text() == "origin"
+
+
+@pytest.fixture
+def um_home(tmp_path, monkeypatch):
+    home = tmp_path / "um-home"
+    monkeypatch.setenv("UM_HOME", str(home))
+    return home
+
+
+def _snapshot_of(home: Path, name: str, members: dict, source: str, files: dict | None = None) -> Path:
+    """A zip laid out like a snapshot, whatever it holds. files is the manifest's list, by default the members' sizes
+    and SHA-1s."""
+    import hashlib
+    zp = home / "backups" / name / "20260101-000000.zip"
+    zp.parent.mkdir(parents=True, exist_ok=True)
+    if files is None:
+        files = {rel: dict(size=len(data), sha1=hashlib.sha1(data).hexdigest()) for rel, data in members.items()}
+    with backup.zipfile.ZipFile(zp, "w", backup.zipfile.ZIP_DEFLATED) as z:
+        for rel, data in members.items():
+            z.writestr(rel, data)
+        z.writestr("_um_manifest.json", json.dumps(dict(source=source, created="20260101-000000", note="", files=files)))
+    return zp
+
+
+def _symlink(link: Path, target: Path):
+    try:
+        link.symlink_to(target, target_is_directory=target.is_dir())
+    except (OSError, NotImplementedError) as e:  # Windows without Developer Mode or admin
+        pytest.skip(f"can't create symlinks here: {e}")
+
+
+@pytest.mark.parametrize("member", ["../sibling/x", "sub/../../sibling/x", "..\\sibling\\x", "<absolute>", "C:/sibling/x",
+                                    "C:sibling"])
+def test_backup_restore_writes_only_inside_the_folder(tmp_path, um_home, member, capsys):
+    dest, sibling = tmp_path / "dest", tmp_path / "sibling"
+    make(dest, {"save.dat": "current"})
+    member = (sibling / "x").as_posix() if member == "<absolute>" else member
+    _snapshot_of(um_home, "t", {"save.dat": b"old", member: b"X"}, source=str(dest))
+    with pytest.raises(SystemExit):
+        backup.restore("t", yes=True)
+    assert "nothing was changed" in capsys.readouterr().err
+    assert (dest / "save.dat").read_text() == "current"  # refused before the first file, not at the bad one
+    assert [p.name for p in dest.iterdir()] == ["save.dat"] and not sibling.exists()
+    assert not backup.snapshots("t-pre-restore")
+
+
+@pytest.mark.parametrize("link", ["save.dat", "sub"])
+def test_backup_restore_does_not_write_through_links(tmp_path, um_home, link, capsys):
+    # a link in the folder, the file itself or a folder on the way, would put the snapshot's bytes somewhere else
+    dest, outside = tmp_path / "dest", tmp_path / "outside"
+    make(outside, {"save.dat": "not yours", "cfg.ini": "not yours"})
+    make(dest, {"sub/cfg.ini": "current"} if link == "save.dat" else {"save.dat": "current"})
+    _symlink(dest / link, outside / "save.dat" if link == "save.dat" else outside)
+    _snapshot_of(um_home, "t", {"save.dat": b"old", "sub/cfg.ini": b"old"}, source=str(dest))
+    with pytest.raises(SystemExit):
+        backup.restore("t", yes=True)
+    assert "symlink or junction" in capsys.readouterr().err
+    assert (outside / "save.dat").read_text() == "not yours" and (outside / "cfg.ini").read_text() == "not yours"
+    assert (dest / link).is_symlink()  # refused, not replaced
+    assert (dest / ("sub/cfg.ini" if link == "save.dat" else "save.dat")).read_text() == "current"
+    assert not backup.snapshots("t-pre-restore")
+
+
+def test_backup_restore_clean_does_not_delete_through_links(tmp_path, um_home, monkeypatch):
+    # --clean deletes what the scan found; on Windows the scan goes into junctions
+    dest, outside = tmp_path / "dest", tmp_path / "outside"
+    make(outside, {"keep.txt": "not yours"})
+    make(dest, {"save.dat": "current"})
+    _symlink(dest / "linked", outside)
+    backup.create(str(dest), name="t")
+    scanned = backup.diff
+    monkeypatch.setattr(backup, "diff", lambda *a: {**scanned(*a), "added": ["linked/keep.txt"]})
+    with pytest.raises(SystemExit):
+        backup.restore("t", clean=True, yes=True)
+    assert (outside / "keep.txt").read_text() == "not yours"
+
+
+def test_backup_restore_into_a_linked_folder(tmp_path, um_home):
+    # the folder itself may be a link (saves moved to another drive): only links below it are refused
+    real, dest = tmp_path / "other-drive" / "saves", tmp_path / "saves"
+    make(real, {"save.dat": "v1", "sub/cfg.ini": "a=1"})
+    _symlink(dest, real)
+    backup.create(str(dest), name="t")
+    make(real, {"save.dat": "v2", "sub/cfg.ini": "a=2"})
+    backup.restore("t", yes=True)
+    assert (real / "save.dat").read_text() == "v1" and (real / "sub" / "cfg.ini").read_text() == "a=1"
+    assert dest.is_symlink()
+    assert backup.snapshots("t-pre-restore")
+
+
+@pytest.mark.parametrize("members", [{"a.dat": b"old a", "b.dat": b"OLD B"},          # other bytes, same size
+                                     {"a.dat": b"old a", "b.dat": b"old b, longer"},  # other size
+                                     {"a.dat": b"old a"}])                            # missing
+def test_backup_restore_checks_every_member_first(tmp_path, um_home, members, capsys):
+    import hashlib
+    dest = tmp_path / "dest"
+    make(dest, {"a.dat": "current", "b.dat": "current"})
+    files = {rel: dict(size=len(data), sha1=hashlib.sha1(data).hexdigest()) for rel, data in
+             {"a.dat": b"old a", "b.dat": b"old b"}.items()}
+    _snapshot_of(um_home, "t", members, source=str(dest), files=files)
+    with pytest.raises(SystemExit):
+        backup.restore("t", yes=True)
+    assert "b.dat" in capsys.readouterr().err
+    assert (dest / "a.dat").read_text() == "current" and (dest / "b.dat").read_text() == "current"
+    assert not backup.snapshots("t-pre-restore")
+
+
+def test_backup_restore_refuses_a_damaged_archive(tmp_path, um_home, capsys):
+    src = tmp_path / "src"
+    make(src, {"save.dat": bytes(range(256)) * 20})
+    zp = backup.create(str(src), name="t")
+    with backup.zipfile.ZipFile(zp) as z:
+        info = z.getinfo("save.dat")
+    data = bytearray(zp.read_bytes())
+    data[info.header_offset + 30 + len(info.filename) + info.compress_size // 2] ^= 0xFF
+    zp.write_bytes(data)
+    make(src, {"save.dat": "current"})
+    with pytest.raises(SystemExit):
+        backup.restore("t", yes=True)
+    assert "size or SHA-1 differs" in capsys.readouterr().err
+    assert (src / "save.dat").read_text() == "current"
+
+
+def test_is_link_counts_reparse_points_that_lead_elsewhere(monkeypatch):
+    # Windows: a junction or another name-surrogate reparse point leads elsewhere; OneDrive's files on demand and
+    # deduplicated files are reparse points too, but writing to them stays in place
+    import stat
+    import types
+    from um import common
+    for tag, link in [(0xA0000003, True), (0xA000000C, True), (0xA000001D, True),  # junction, symlink, WSL symlink
+                      (0x9000601A, False), (0x80000013, False)]:                    # OneDrive cloud file, dedup
+        st = types.SimpleNamespace(st_mode=stat.S_IFREG, st_file_attributes=stat.FILE_ATTRIBUTE_REPARSE_POINT, st_reparse_tag=tag)
+        monkeypatch.setattr(common, "os", types.SimpleNamespace(lstat=lambda p: st))
+        assert common.is_link(Path("x")) is link, hex(tag)
 
 
 # --------------------------------------------------------------------------- comfy

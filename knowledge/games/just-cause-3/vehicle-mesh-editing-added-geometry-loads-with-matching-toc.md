@@ -3,17 +3,18 @@ kind: game
 title: 'Vehicle mesh editing: added geometry loads with a matching .ee.toc'
 game: Just Cause 3
 games_also: []
-game_version: 'Steam release build, JustCause3.exe timestamp 0x5787641c (2016); model files declare RBMDL v1.16.0'
+game_version: 'Steam build 20206564 (2025-12-17), JustCause3.exe timestamp 0x5787641c (2016); model files declare RBMDL v1.16.0'
 platform: windows
 engine: native
 route: asset-only
-tools: ["Gibbed.JustCause3.SmallUnpack", "Gibbed.JustCause3.SmallPack", "Gibbed.JustCause3.ConvertAdf", "Gibbed.JustCause3.ConvertProperty", "Gibbed.JustCause3.ConvertTexture", "Gibbed.HashName", "Blender 5.2 (headless decimation)", "custom Python RBM codec, PSKX importer, BC1/BC5 encoder, .toc writer (see Build steps)"]
+tools: ["Gibbed.JustCause3.SmallUnpack", "Gibbed.JustCause3.SmallPack", "Gibbed.JustCause3.ConvertAdf", "Gibbed.JustCause3.ConvertProperty", "Gibbed.JustCause3.ConvertTexture (tim42 fork)", "Gibbed.HashName", "UE Viewer (umodel)", "Blender 5.2 (headless decimation)", "custom Python RBM codec, PSKX importer, BC1/BC5 encoder, .toc writer (see Build steps)"]
 anti_cheat: 'none (single-player); no DRM bypass attempted or needed'
 status: working
 agents:
 - 'OpenCode (space-bunny-free)'
 - 'OpenCode (muse-spark-1.3)'
 - 'Claude Code (Opus 5.5)'
+- 'OpenCode (deepseek-v4.1-flash-free)'
 humans: ['@NotTrevino']
 date: '2026-10-12'
 links:
@@ -22,6 +23,7 @@ links:
 - https://github.com/aaronkirkham/jc3-console-thingy
 - https://github.com/Brooen/RBM-Exporter
 - https://github.com/PredatorCZ/ApexToolset
+- https://github.com/tim42/gibbed-justcause3-tools-fork
 - https://videogamemods.com/vgm/justcause3/mods/meme-vehicle-pack
 - https://videogamemods.com/u/lukejc3mp-0021
 tags: ['vehicles', 'mesh', 'rbm', 'avalanche-engine', 'havok', 'gibbed', 'reverse-engineering', 'toc', 'palette', 'pskx-pipeline', 'textures', 'materials', 'memory-budget', 'physics-stations']
@@ -57,9 +59,13 @@ tags: ['vehicles', 'mesh', 'rbm', 'avalanche-engine', 'havok', 'gibbed', 'revers
 ## Setup
 
 - Windows, hybrid graphics (Intel HD + GTX 1070) — which turned out to matter, see Gotcha 7.
-- Stock Steam install, no DLC manager, no loader, no anticheat.
+- Owned on Steam; the install matches Steam build 20206564 (2025-12-17), with the DLC under
+  `dlc_win64/` (list in the [fleet note](reading-the-vehicle-fleet-archives-rtpc-havok.md)). No
+  DLC manager, no loader, no anticheat.
 - Single player only; JC3MP is not covered by this note. Dropzone files load in any launch
-  of the game, so empty the dropzone before joining servers you don't run.
+  of the game, so empty the dropzone before joining servers you don't run. Keep a modded game in
+  offline mode too: when it's connected, JC3 reports stats such as kills and airtime to Square
+  Enix's leaderboards.
 - Gibbed.JustCause3 tools for archives and property files (`SmallUnpack`, `SmallPack`, `ConvertAdf`, `ConvertProperty`, `HashName`).
 - A custom Python RBM codec written from scratch: byte-exact decode/encode for the render
   block types the stock tooling does not cover. This is the load-bearing tool — see Build steps.
@@ -211,12 +217,27 @@ the same set sized to fit loaded. Budget from the game's own file: (hard − van
 build if the meshes exceed the model cap.
 
 **Textures.** A `.ddsc` is an Avalanche texture container (`AVTX`). The `ConvertTexture.exe`
-used here exported `x.ddsc` to `x.xml` + `x0.dds` (one standard DDS per element), and
-**`ConvertTexture.exe x.xml` imported** it back (round-trips byte-identically). That is
-not the public Gibbed source: its `ConvertTexture` (master, unchanged since 2018) only
-writes element 0 to a `.dds`, and `TextureFile.Serialize` is unimplemented, so which build
-does the import is an open question. PredatorCZ's archived `ApexToolset` (`ddscConvert`)
-converts AVTX and DDS both ways and can write a `.hmddsc` for JC3.
+used here exported `x.ddsc` to `x.xml` + `x0.dds` (one standard DDS of the largest
+element, element 0 here), and **`ConvertTexture.exe x.xml` imported** it back
+(round-trips byte-identically). It is not public Gibbed master — master's `ConvertTexture`
+(unchanged since 2018) only writes element 0 to a `.dds`, and its `TextureFile.Serialize`
+throws `NotImplementedException`. The build that imports is
+**`tim42/gibbed-justcause3-tools-fork`**, a fork of Gibbed's JC3 tools "as of revision 13"
+(changes by Timothée Feuillet) whose README lists "A texture serializer and deserializer
+that supports both `.ddsc` files and their `.hmddsc` counterparts". The README points to
+binaries at `justcause3mods.com/mods/modified-gibbeds-tools/`; that site answered HTTP 410
+Gone on 2026-10-20 (the Wayback Machine has a copy of the page from 2025-08-18), and the
+source is on GitHub. The binary used is `Gibbed.JustCause3.ConvertTexture.exe`, 14,336 B,
+assembly version 1.0.0.0, SHA-256
+`2A5A7A5915016A5B4C733E2F7005F464EA6674069A24BC7AE0FE86EF58065600`; whether it matches the
+binary that site published was not checked. Import is name-driven: it reads
+`<output-base>N.dds`, where N is the largest element (0 for the `.ee` car textures here),
+so the XML and the element DDS must share a base (`ConvertTexture.exe x.xml` with `x0.dds`
+beside it); passing a different output name fails with `FileNotFoundException` on
+`<name>0.dds`. Without a `.hmddsc` the fork's importer reads only that one element, and
+`write-to-hmddsc="True"` import threw here, so high mips stay blocked. PredatorCZ's
+archived `ApexToolset` (`ddscConvert`) converts AVTX and DDS both ways and can write a
+`.hmddsc` for JC3.
 
 Vanilla car textures keep only low mips in the `.ee` (element 0) and stream the high mips
 from `.hmddsc` in the archives — and at a vanilla path the `.hmddsc` wins, so `.ee`-only
@@ -548,9 +569,11 @@ container, 201k points, 300k faces, 19 materials, 180 bones) with UE material du
 `.tga` textures. An earlier version of this note called its unit scale "unknowable" and
 fitted it to the donor's wheelbase; that was wrong — it is real centimetres (tyre Ø1.37 m
 vs a 1.40 m reference), and fitting it to the donor is what forced the physics/visual split
-in Gotcha 15. Import at true scale and move the physics with it. It is another game's
-extracted asset, so builds that contain it stay private: what can be shared is the
-importer, its specs and the method, not the converted `.ee` or textures.
+in Gotcha 15. Import at true scale and move the physics with it. It was exported with
+`umodel` from the author's own installed copy of Batman: Arkham Knight
+(`BmGame/CookedPCConsole/Playable_Batmobile_SF.upk`, Ver 863/227, Game 800016). It is
+another game's extracted asset, so builds that contain it stay private: what can be shared
+is the importer, its specs and the method, not the converted `.ee` or textures.
 
 All geometry, material and texture work is one pass driven by the asset's own data
 (skeleton, weights, material parameters, texture files), plus an offline orthographic
@@ -567,7 +590,11 @@ dissolved under one re-measurement.
 
 ## Open questions
 
-- **Authoring Havok collision.** I know of no public tool that writes `.physicsc`.
+- **Authoring Havok collision.** Partly answered since: the project's own packfile reader now
+  writes `.physicsc`. It round-trips byte for byte and can remap, uniformly scale and replace the
+  donor's 54 existing hulls, but it cannot add a new one, and no written file has been loaded in
+  game yet ([fleet note](reading-the-vehicle-fleet-archives-rtpc-havok.md)). Before that, I knew
+  of no public tool that writes `.physicsc`.
   ApexMax is a weak lead at best: its README calls it an "Apex Engine importer for 3ds
   Max" (archived 2019). HavokMax is archived too, and HavokLib's supported classes are
   skeletons and animations, not hknp shapes, so neither looks able to produce one.
@@ -577,12 +604,17 @@ dissolved under one re-measurement.
   (0.235, 65536, 65536, 0), and the Window block's 41 + 16 static bytes (so glass opacity /
   reflectivity / roughness can't be set from the source yet).
 - **No CarPaintMM equivalents** for tiling micro-detail normals (could be baked into the
-  main normal map), anisotropic ramps and colour ramps; emissive needs CarLight blocks.
+  main normal map), anisotropic ramps and colour ramps; emissive needs CarLight blocks. Since
+  then, the 4,576 emissive faces have been cut into 8 lamp parts and written as 24 `CarLight`
+  RBMs (3 LODs each), and the body has been split into 11 moving parts along bone ownership. Both
+  are built and checked offline only, not yet loaded
+  ([translation note](translating-the-batmobile-row-ledger.md)).
 - **Channel semantics** of PropertyMap/TintMap are inferred from vanilla data; one in-game
   test with a known two-channel mask would confirm them.
-- **Which `ConvertTexture` build imports `.xml`.** Gibbed's public source can't write a
-  `.ddsc` (see Textures). Naming the build or fork used here, or redoing the import with
-  ApexToolset's `ddscConvert`, would make the texture route reproducible.
+- **High-mip import at vanilla paths.** The tim42 fork's `write-to-hmddsc="True"` import
+  threw (see Textures), so no `.hmddsc` was written; new paths with one full-chain element
+  work without one. ApexToolset's `ddscConvert`, which writes `.hmddsc`, is the untested
+  alternative.
 - **Reference for the custom-vehicle pipeline:** *Meme Vehicle Pack*
   (https://videogamemods.com/vgm/justcause3/mods/meme-vehicle-pack) by Luke JC
   (https://videogamemods.com/u/lukejc3mp-0021), which ships new models such as a Shrek

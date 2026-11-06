@@ -21,12 +21,16 @@ repo, they almost always want to **mod a game**, or to learn how a game was modd
     - `scan`: installed games, engine, anti-cheat, loaders, saves, routes
     - `fal`: sprites, textures, PBR, 3D, rigs, SFX, music, voice, video via fal's REST API
     - `comfy`: images from a local ComfyUI server, with no API key
+    - `sprixen`: 2D sprites, animation sheets and tiles via Sprixen's paid API (`SPRIXEN_API_KEY`)
+    - `voidless`: 2D sprites, 8-way turns and animation sets via Voidless's paid API (`VOIDLESS_API_KEY`)
     - `sprite` / `render3d`: art → engine-ready frames (`render3d` needs Blender on PATH or `BLENDER=...`)
     - `win`: launch, screenshot, input, record on Windows (also from WSL)
     - `video`: contact sheets and EDL showcase edits
     - `backup`: snapshot and restore saves
     - `publish`: pre-release lint
     - `kb`: the knowledge base
+    - `fastfile` / `iwi` / `weapon`: Call of Duty 4 and World at War: rawfiles out of your own `.ff` zones,
+      PNG ↔ IWI textures, weapon-file edits
 - **fal MCP server:** `https://mcp.fal.ai/mcp` with header `Authorization: Bearer $FAL_KEY`.
   - It's pre-configured per agent: `.mcp.json` (Claude Code), `.codex/config.toml` (Codex),
     `.cursor/mcp.json` (Cursor), `.vscode/mcp.json` (VS Code / Copilot), `gemini-extension.json`

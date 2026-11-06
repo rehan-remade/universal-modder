@@ -46,6 +46,10 @@ tags:
 > and frame generation interpolates whatever is on screen (DLSS or NR). A separate REFramework plugin adds Tobii
 > eye/head-tracked camera lean. It runs in the real game: the human verified image quality and motion at 2x
 > and 4x with NR on and off, and PresentMon measured 259 displayed fps at 4x from ~65 game fps.
+>
+> How the inputs were proven correct (development-DLL overlays, a jitter sweep) and how camera cuts reset the
+> history are in the technique note
+> [DLSS SR, frame generation and DLSS5 NR from a game's own depth and motion vectors](../../techniques/dlss-sr-frame-generation-and-neural-rendering-from-engine-motion-vectors.md).
 
 ## Setup
 Verified on:

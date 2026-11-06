@@ -46,6 +46,8 @@ const GROUPS = [
   { name: "scan", blurb: "find installed games and report engine, anti-cheat, loaders, saves and modding routes" },
   { name: "fal", blurb: "generate art through fal: sprites, textures, PBR maps, 3D models, rigs, SFX, music, voice, video" },
   { name: "comfy", blurb: "generate images on a local ComfyUI server, no API key (status / image / run)" },
+  { name: "sprixen", blurb: "2D sprites through Sprixen: one style per project, animation sheets, terrain tiles" },
+  { name: "voidless", blurb: "2D sprites through Voidless: 8-way turns and animation sets that keep one size" },
   { name: "sprite", blurb: "turn generated art into engine-ready sprites: trim, pixelate, palette, sheets and strips" },
   { name: "render3d", blurb: "render a 3D model to isometric, side-view or top-down sprite frames with Blender" },
   { name: "video", blurb: "build contact sheets and EDL-driven showcase video edits with ffmpeg" },
@@ -53,6 +55,9 @@ const GROUPS = [
   { name: "backup", blurb: "snapshot and restore a game's save files before a modded launch" },
   { name: "publish", blurb: "pre-release lint for a mod: no game files, no decompiled code, no leaked keys" },
   { name: "kb", blurb: "search, scaffold, check and index the field-note knowledge base (search / new / check / index)" },
+  { name: "fastfile", blurb: "list and dump the rawfiles (GSC, CSC, menus) in Call of Duty 4 / World at War fastfiles (.ff)" },
+  { name: "iwi", blurb: "convert and decode Call of Duty IWI v6 textures (png2iwi / iwi2png)" },
+  { name: "weapon", blurb: "inspect, edit, clone, and diff Call of Duty weapon files" },
 ]
 
 const GROUP_NAMES = new Set(GROUPS.map((group) => group.name))

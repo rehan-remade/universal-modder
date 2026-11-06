@@ -11,3 +11,5 @@ GarrisonSize=50
 BlockedDomains=wbagora.com,agoragames.com,wbgames.com,turbine.com,wbplay.com,wbidams.com
 ; 1 = write OfflineMode.log next to this file (stays on this PC).
 Log=1
+; 1 = give new captains unique Nemesis ids offline (needed for the Garrison). 0 = off.
+NpcGuidPrefix=1

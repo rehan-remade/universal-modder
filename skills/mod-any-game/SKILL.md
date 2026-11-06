@@ -19,9 +19,10 @@ MW2) showed about scaling up.
 
 ## Your tools
 
-`um` is the toolkit CLI. Plugin installs and clones put it on PATH (it lives at `bin/um` in the repo).
-Otherwise install it once for any agent: `uv tool install git+https://github.com/rehan-remade/universal-modder`
-(or `pipx install ...`). Every group has `--help` with examples.
+`um` is the toolkit CLI (`bin/um` in the repo). The Claude Code plugin and a clone opened in Claude Code put it
+on PATH; other agents' plugin installs don't. If `command -v um` finds nothing, use `bin/um` in a clone, or
+install it once: `uv tool install git+https://github.com/rehan-remade/universal-modder` (or `pipx install ...`).
+Every group has `--help` with examples.
 
 | Need | Command |
 |---|---|
@@ -56,9 +57,9 @@ Companion skills: **game-recon**, **reverse-engineering**, **fal-assets**, **ass
   another agent left a field note, start from its exact versions, route and gotchas, and don't repeat its
   dead ends. Without `um`, read
   https://github.com/rehan-remade/universal-modder/blob/main/knowledge/INDEX.md.
-- Run `um scan "<game>"`. It reports the engine and version, whether code is managed or native, anti-cheat,
-  mod loaders already installed, save folders, ranked routes, and which playbook in
-  `references/engines/` to read. Read that playbook.
+- Run `um scan "<game>"`. It reports this machine's OS and CPU (`host:`), the engine and version, whether code
+  is managed or native, anti-cheat, mod loaders already installed, save folders, ranked routes, and which
+  playbook in `references/engines/` to read. Read that playbook.
 - Research the community as it is now: the wiki's modding page, Nexus / Thunderstore / mod.io / Workshop,
   GitHub, and the loader's current release and install steps. Versions move, so don't install from memory.
   If the community already has a loader (tModLoader, SMAPI, BepInEx, UE4SS, REFramework, SKSE, Fabric),
@@ -179,6 +180,7 @@ documented dead end saves the next agent hours.
 - `references/engines/`:
   - big engines: `unity.md`, `unreal.md`, `godot.md`, `source.md`, `native.md`;
   - families and frameworks: `dotnet-xna.md` (Terraria, Stardew, Celeste), `bethesda.md`,
+    `iw-engine.md` (Call of Duty 4: Modern Warfare and World at War: IW 3.0/T4),
     `big-frameworks.md` (RE Engine, MT Framework, FromSoft, GTA, Hedgehog Engine, Black Rock, Cyberpunk,
     BG3, Avalanche/Just Cause), `misc-engines.md` (GameMaker, RPG Maker, Ren'Py, Paradox, Doom, HTML5, LÖVE,
     Java, Dwarf Fortress), `zengin.md` (Gothic 1/2: Daedalus scripts, Union, GD3D11);

@@ -1,0 +1,19 @@
+# .NET build outputs (dotnet build -c Release writes into the live OWML mods folder)
+ow/src/obj/
+ow/src/bin/
+
+# Python
+__pycache__/
+*.pyc
+
+# Build artifacts that must never be committed: they can contain game data
+build/
+*.dll
+*.pdb
+*.exe
+
+# Local test scaffolding and captures
+shots/
+dev_log.txt
+dev_commands.txt
+dev.enabled

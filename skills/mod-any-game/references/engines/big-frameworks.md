@@ -124,7 +124,9 @@ any Avalanche title. The other titles share the texture and archive family per A
 - **Tools:** Gibbed.JustCause3 (`Unpack` for `.tab`/`.arc` archives with `-f <regex>`, `SmallUnpack`/
   `SmallPack` for `.ee`, `ConvertAdf` for `.vmodc`/ADF modules, `ConvertProperty` for `.epe`/RTPC,
   `ConvertTexture` for `.ddsc`, `HashName`), Deca (browser), the Gibbed `*.filelist` name lists.
-  Gibbed's public `ConvertTexture` only exports (element 0 to `.dds`); ApexToolset's `ddscConvert`
+  Gibbed's public `ConvertTexture` only exports (element 0 to `.dds`); the
+  `tim42/gibbed-justcause3-tools-fork` build also imports `.ddsc` (round-trips byte-identically,
+  one element only; `write-to-hmddsc` import threw in the JC3 test), and ApexToolset's `ddscConvert`
   converts both ways and writes `.hmddsc`. `jc3-console-thingy` (an `xinput9_1_0.dll` proxy) spawns
   entities. JC Model Renderer v0.12.3 reads, renders and exports vehicle models but can't import into
   them (the `develop` rewrite has no vehicle blocks); `Brooen/RBM-Exporter` (Blender) writes plain

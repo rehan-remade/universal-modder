@@ -12,13 +12,13 @@ anti_cheat: "none. SteamStub/Denuvo on the exe is untouched: the mod is a proxy 
 status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["DeimozZarco"]
-date: '2026-10-12'
+date: '2026-10-20'
 links:
   - "examples/shadow-of-war-offline-mode"
   - "knowledge/games/middle-earth-shadow-of-war/goblin-tribe-a-new-nemesis-tribe-via-game-gamedb.md"
   - "https://www.nexusmods.com/middleearthshadowofwar/mods/99"
   - "https://www.nexusmods.com/middleearthshadowofwar/mods/49"
-tags: [offline, online-services, hydra, agora, winhttp, proxy-dll, garrison, nemesis, local-server, binary-protocol, reverse-engineering, testing-prerequisite]
+tags: [offline, online-services, hydra, agora, winhttp, proxy-dll, garrison, nemesis, local-server, binary-protocol, reverse-engineering, testing-prerequisite, npc-id, save-edit]
 ---
 # Offline mode and local Garrison: a winhttp stand-in for WB's Hydra server
 
@@ -57,7 +57,9 @@ tags: [offline, online-services, hydra, agora, winhttp, proxy-dll, garrison, nem
   - survivalizeed's loaders were present on the test PC but aren't used.
 
 ## Route and why
-- **Route:** `native-hook`, but only as a DLL search-order proxy. No game code is patched or hooked.
+- **Route:** `native-hook`, but only as a DLL search-order proxy. No game code is patched or hooked. Since v0.12
+  the DLL also writes one data field in the game's heap, the Nemesis id prefix (see How the game works);
+  `NpcGuidPrefix=0` turns that off.
   - `winhttp.dll` forwards all 70 WinHTTP exports to the System32 DLL. Assembly stubs and a `.def` file are
     generated from the real export list.
   - It intercepts only sessions, connects and requests whose host matches `BlockedDomains`: `wbagora.com`,
@@ -167,6 +169,23 @@ private image kept outside any repo.
 - **Menu gating:** the Market and Garrison need `StoreAvailable` (social available, not age-restricted), Act 2 or
   later, and no active quest.
   - Assigning from the Garrison also needs `Player:HasDominationAvailable`.
+- **Nemesis ids (added 2026-10-20, v0.12):** every faction member gets a string id at member+0x3D0, written only
+  while it's empty, as `"<prefix>_NPC_<n>"`. The prefix is a 32-hex session GUID at analytics-manager+0xA81
+  (manager = `*(*(exe+0x26FFAA8)+0x6D18)`, Ghidra base 0x140000000), and the manager only sets it when online.
+  `n` is a global counter that restarts at 0 each launch. The id is assigned when the member is created or first
+  reported in telemetry (the `NPCProfile` events carry it).
+  - Offline the prefix stays empty, so every session hands out `_NPC_0`, `_NPC_1`... again. One long offline save
+    had 359 bare ids, with `_NPC_0` on 36 captains.
+  - The Garrison's reassignment check (`Faction/Contracts/Failure:ReassignmentOrders_GUID`, predicate
+    `HasNPCGUID == False`) refuses a captain whose id another captain also has. Captains with a still-unique
+    number pass, which made the refusals look random.
+  - **Fix in the DLL:** after the game's first WinHttp request + 10 s, once the manager pointer has been stable for
+    5 s and the whole 64-byte prefix area is zero, write a random 32-hex prefix. New captains get
+    `<prefix>_NPC_<n>`, unique across sessions.
+  - **Fix for existing saves:** ids are 1-byte-length-prefixed strings in the decrypted save (see the
+    [save note](save-format-decrypt-and-collectible-quests.md)), and each id appears once per member. Rewriting
+    every duplicated `_NPC_<n>` to a unique same-length string (e.g. `_A0c_<n>`) made the affected captains
+    garrisonable again; the length must not change.
 
 ## Build steps
 1. **Build.** Run `examples/shadow-of-war-offline-mode/build.cmd`, with `GCC=` pointing at a MinGW-w64 `gcc.exe`.
@@ -234,6 +253,15 @@ private image kept outside any repo.
    log (`tools/log_to_object.py`). That script recovered orcs lost to Gotcha 7 from the logged POST, byte for byte.
 10. **Ghidra's headless `.bat` ate `=` in script arguments.** **Fix:** pass exact function entries as `e0x...`,
     with no `=`.
+11. **"You cannot send this Follower to the Garrison" on some captains, apparently at random** (added 2026-10-20).
+    **Cause:** duplicate offline Nemesis ids (see How the game works). It looked tied to modded tribes and to a
+    roaming-captains plugin, because new test captains were created in new sessions with low, colliding numbers.
+    **Fix:** v0.12's prefix + the save id rewrite. Check with the `NPCProfile` telemetry in the log: a bare
+    `_NPC_<n>` that another captain also has is the culprit.
+12. **The Garrison showed a red lock and the log stopped right after `WinHttpOpen`** (v0.11, 2026-10-20).
+    **Cause:** v0.11 wrote the id prefix (and called `VirtualProtect`) as soon as the manager pointer existed,
+    before the game's first request; that session made no online requests at all. **Fix:** v0.12 waits for the
+    first request, a stable pointer and an all-zero field, and uses a plain store.
 
 ## Assets
 None.

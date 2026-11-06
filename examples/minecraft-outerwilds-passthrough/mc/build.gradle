@@ -1,0 +1,47 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+repositories {
+	mavenCentral()
+}
+
+loom {
+	splitEnvironmentSourceSets()
+	mods {
+		"blockcraft" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+	runs {
+		// The window is a fixed 1280x720: smaller than the export's 1080p-ish budget, cheap for the
+		// host to upload every frame, and identical on every run so screenshots line up.
+		client {
+			programArgs "--width", "1280", "--height", "720"
+			vmArgs "--enable-native-access=ALL-UNNAMED"
+		}
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	// The host (an OWML mod under Proton) connects as a WebSocket client; this is the server side.
+	implementation "org.java-websocket:Java-WebSocket:1.6.0"
+	include "org.java-websocket:Java-WebSocket:1.6.0"
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+	filesMatching("fabric.mod.json") { expand "version": version }
+}
+
+tasks.withType(JavaCompile).configureEach { it.options.release = 25 }
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}

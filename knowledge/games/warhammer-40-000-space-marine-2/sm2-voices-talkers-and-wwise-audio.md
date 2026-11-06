@@ -12,7 +12,7 @@ anti_cheat: "EasyAntiCheat. Everything here uses Saber's official mods folder (c
 status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: []
-date: 2026-10-13
+date: 2026-10-15
 links: []
 tags: [space-marine-2, saber, voice, vo, talker, wwise, bnk, wem, media-bundle, subtitles, grunts, audio, chatter]
 ---
@@ -33,7 +33,8 @@ tags: [space-marine-2, saber, voice, vo, talker, wwise, bnk, wem, media-bundle, 
   `english.sound_localization.resource`) in `resources.pak`; subtitles in `texts/strings_english.str` (UTF-16LE).
 - Wwise 2019.2 (WwiseConsole) to encode `.wem`, with a mono Vorbis conversion setting; the game's banks come from the
   2019 generation, so we stayed on it.
-- wwiser to dump a bank's object tree; ww2ogg + revorb to extract retail lines for reference.
+- wwiser to dump a bank's object tree; ww2ogg + revorb to extract retail lines for reference (never as a sample to
+  clone a voice from).
 
 ## Route and why
 Data route. A voice is a talker (text data) whose events resolve to media in a bundle listed in the localization
@@ -144,10 +145,11 @@ sslbin + `.ssc.resource` + brand `.sso`) crashed at boot (reading 0x48, an objec
 - The emote chant has two alternating takes (`social_emote_chant_01` / `_02`); retail ships only `_01`, so add `_02`
   (or copy `_01` into it). The social wheel is six command lines with UI labels.
 - With AI TTS (private builds only: Saber's mod rules forbid AI-generated content, see the foundations note), use a
-  stock or designed voice, never a clone of a real person such as one of the game's voice actors. Generate the few
-  lines that contain hard proper nouns first and fix their spelling for pronunciation;
-  record two takes per line and pick; keep a lock on lines the human has approved so later re-voicing cannot change
-  them (assert byte equality at build time).
+  stock or designed voice, never a clone of a real person such as one of the game's voice actors. (The voices built
+  for these notes were cloned from a voice actor's original performance; that route is dropped, see Assets.) Generate
+  the few lines that contain hard proper nouns first and fix their spelling for pronunciation; record two takes per
+  line and pick; keep a lock on lines the human has approved so later re-voicing cannot change them (assert byte
+  equality at build time).
 
 ## Build steps
 1. Script -> recorded/selected lines -> loudness-normalise (~-27 LUFS) -> Wwise 2019.2 mono `.wem`.
@@ -193,8 +195,12 @@ sslbin + `.ssc.resource` + brand `.sso`) crashed at boot (reading 0x48, an objec
 
 ## Assets
 New lines were generated with an AI TTS service from scripts written for each voice and recorded/selected by the
-human; grunts were transformed retail grunts. No game audio is attached to this note. Saber's mod rules forbid
-AI-generated content in mods, so keep TTS voices in private builds; a released voice pack needs recorded lines.
+human. Disclosure (2026-10-15): the TTS voices used for these notes were cloned from a real voice actor's original
+performance, without their consent. That route is dropped: cloning a real person's voice without consent is out,
+even for private builds. The mechanics in this note are the same with a stock or designed TTS voice or with recorded
+lines. Grunts were transformed retail grunts. No game
+audio is attached to this note. Saber's mod rules forbid AI-generated content in mods, so keep TTS voices in private
+builds; a released voice pack needs recorded lines.
 
 ## Open questions
 - A data route for a per-class default CUSTOM talker (only base `talkerRef` was found).
