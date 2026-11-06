@@ -114,6 +114,23 @@ has a rule that would compete with FNV's decision (gore kills), that rule is swi
   ~6 s and Kyle's bar followed); with no Stimpak FNV refused and nothing healed.
 - **The Beast's medkit is hold-to-use:** hold H (or the pad's X) for about 2.4 s, through the animation; taps and
   short holds do nothing (`_ACTION_USE_CONSUMABLE` in `data0.pak` `scripts/inputs/inputs_keyboard.scr`).
+- **The Beast defers a grabbing enemy's death.** An enemy that holds the player in a grab (a sync action with the
+  tap-F escape) does not die at 0 HP; The Beast runs its death by itself the moment the grab ends (the player's escape,
+  UV light, or the player's death). To carry out an outside death mid-grab: hold that enemy's hits, then press The
+  Beast's own escape (`_ACTION_TAP_MINIGAME`, F / pad X) through the input hook; its kill follows ~1.2 s later.
+- **Damage categories (SDamageInfo +0x31):** a biter's bites 0, the player's melee 2/3, a rifleman's shots 4 (not 1);
+  a filter on "projectile = 1" missed every gunshot. Kicks are damage source 34, and the grab-escape push arrives at
+  the enemy's DamageModule::OnDamage (gamedll 0x14d23c0) with the player as attacker and no hit event.
+- **An NPC's shot, decided by FNV:** FNV has no to-hit roll for NPC fire outside VATS (only spread). Spawning the
+  attacker's own projectile (Projectile::Spawn 0x9BCA60; its init 0x9BBEF0 takes the shooter's weapon entry and ammo)
+  60 units in front of the target lets FNV's own impact (0x9C30D0 -> 0x899CB0) decide damage, location and limbs; the
+  reply arrived ~15-110 ms after the shot. Calling 0x9C30D0 directly also works, without a body part.
+- **First hits:** a stand-in created on the shooter's first hit faults FNV's hit code in the same call; placing
+  stand-ins from the host's enemy list (only enemies whose own target is the player) at least 1.2 s ahead makes
+  every first hit FNV's.
+- **FNV's HUD by capture:** cut FNV's own HUD pieces from its hidden window and key its amber colour
+  (smoothstep(0.12, 0.30, r - b)); the grey arena drops out. xNVSE's `GetUIFloatInherited "HUDMainMenu/<tile>/x"`
+  gives each tile's place by FNV's own locus rule.
 
 ## Build steps
 1. Pin The Beast (above) and install the ASI loader; deploy the Beast plugin plus flag files next to it.
@@ -133,7 +150,10 @@ has a rule that would compete with FNV's decision (gore kills), that rule is swi
 - Live (11-06): FNV's death dealt as the kill blow (DT-2); FNV's unarmed hit through the whole bridge; enemy melee
   hits on Kyle decided by FNV's own hit on the hidden Courier (bites at FNV's 20 per hit); a Beast medkit = one of
   the Courier's own Stimpaks, and none left = no heal.
-- NOT verified yet: ranged hits on Kyle, an enemy's very first hit and Kyle's kicks (still The Beast's numbers), food.
+- Live (11-06, later): an enemy FNV killed mid-grab dies through The Beast's own escape + kill; kicks and the
+  grab-escape push = FNV's unarmed attack (3.75 at level 1); every first bite FNV's; a host rifleman's shots = the
+  stand-in's own FNV gun (34 / 12 / 34), Kyle following; a soak with the combat pilot: no stuck deaths, no drift.
+- NOT verified yet: food (it heals through a different controller than medkits), grenades, bows.
 
 ## Gotchas
 1. **The plugin went passive one morning.** **Cause:** Steam auto-updated The Beast. **Fix:** `download_depot` the
@@ -175,9 +195,9 @@ has a rule that would compete with FNV's decision (gore kills), that rule is swi
     (The Beast's tap-F mini-game); while grabbed the player can't use items or shoot. **Fix:** test heals with no
     enemy (a developer-only op that sets the player's HP) and hold the medkit key through its animation.
 17. **An enemy FNV had killed kept biting at 0 HP.** **Cause:** FNV's death was dealt while the biter held the
-    player in a grab; the same single deal killed a biter that wasn't grabbing (The Beast's kill 17 ms later).
-    **Fix (in progress):** treat an enemy as dead only on The Beast's own kill, keep dealing until it comes, and
-    hold every hit from an attacker FNV says is dead.
+    player in a grab; The Beast defers a grabbing AI's death until the grab ends. **Fix:** count an enemy dead only
+    on The Beast's own kill, hold every hit from an attacker FNV says is dead, and press The Beast's own grab escape
+    for the player; the deferred death then runs (live: ~1.2 s).
 18. **An item given by the game's own quest-reward call never reached the quick slot.** **Cause:** it went to the
     player's stash. **Fix:** test with items the save already carries.
 
@@ -188,7 +208,6 @@ None: every menu, number and item is FNV's own; The Beast's art is untouched.
 Two days of sessions (11-04 to 11-06) with a main agent and up to three helper agents on a Pro plan.
 
 ## Open questions
-- Ending The Beast's grab from code (the path the player's tap-F break-free takes) so FNV's kill lands at once.
-- Ranged hits on Kyle: does FNV's stand-in carry its own gun for FNV's hit?
-- Food: does it reach `Heal()` through a different path than `SelfHealingController`?
+- Which other host hits arrive as category 4 (grenades?), and whether bows / shotguns can use FNV's own weapons.
+- FNV's UI units for the HUD tile rects (the menu root reports no width), so the capture can be cut at FNV's rects.
 - The D3D12 fatal after spawns: the spawned AI's streaming, or the cloud PC's GPU?
