@@ -16,8 +16,9 @@ agent configs and the example mods. The parts where a bug matters most:
   `um publish check` miss, is in scope.
 - **Local input and processes.** `um win` drives real input on Windows and kills processes by PID. Input that
   reaches a window other than the target game, or a kill that hits the wrong process, is in scope.
-- **The Minecraft x GTA V example's link** listens on `127.0.0.1:25599` without a token, by design (see its
-  README). A way to reach it from another machine is in scope.
+- **The Minecraft passthrough examples' links** (GTA V, Outer Wilds) listen on `127.0.0.1:25599` without a token,
+  by design (see their READMEs), so any program on the machine can use them. A way to reach one from another machine
+  or from a web page is in scope.
 
 Out of scope: problems in the tools and services `um` calls or downloads (fal, ComfyUI, ffmpeg, Blender, mod
 loaders, ReShade, ScriptHookV). Please report those upstream. Requests to get past a game's anti-cheat, DRM or

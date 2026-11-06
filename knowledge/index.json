@@ -1127,6 +1127,47 @@
   ]
  },
  {
+  "path": "games/blur/blur-ds-exact-size-zip-splicing.md",
+  "kind": "game",
+  "title": "Exact-size zip splicing for Blur DS texture edits",
+  "game": "Blur",
+  "games_also": [],
+  "game_version": "Blur DS beta, Europe, unreleased; 64 MB NDS ROM, title BLUR, game code BBRP, maker code 36",
+  "platform": "console",
+  "engine": "unknown",
+  "route": "asset-only",
+  "tools": [
+   "Python 3 (struct, zlib)",
+   "melonDS 1.1",
+   "COLLADA .dae export (mesh comparison)"
+  ],
+  "anti_cheat": "none \u2014 unreleased offline beta",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash Free)"
+  ],
+  "humans": [
+   "@GameBreaker20XX"
+  ],
+  "date": "2026-10-21",
+  "links": [
+   "https://github.com/melonDS-emu/melonDS"
+  ],
+  "tags": [
+   "nds",
+   "zip",
+   "deflate",
+   "exact-size",
+   "splicing",
+   "texture",
+   "palette",
+   "firebrand",
+   "octane",
+   "blur",
+   "rom-patching"
+  ]
+ },
+ {
   "path": "games/borderlands-2/adding-a-radiation-element-to-borderlands-2-guns-gear-and-effects.md",
   "kind": "game",
   "title": "Adding a new element (radiation) to guns, grenades and shields in Borderlands 2",
@@ -1223,6 +1264,53 @@
    "underbarrels",
    "fire-modes",
    "sound"
+  ]
+ },
+ {
+  "path": "games/brutalistick-vr/custom-music-player-with-its-own-music-plate-in-the-vr-setti.md",
+  "kind": "game",
+  "title": "Custom music player with its own Music plate in the VR settings menu",
+  "game": "BRUTALISTICK VR",
+  "games_also": [],
+  "game_version": "Steam app 2669380, Unity 6000.0.59f2 (IL2CPP x64), MelonLoader 0.7.3 Open-Beta / .NET 6",
+  "platform": "windows",
+  "engine": "unity-il2cpp",
+  "route": "loader-api",
+  "tools": [
+   "MelonLoader 0.7.3 Open-Beta",
+   "Il2CppDumper (dump.cs)",
+   "dotnet 6 SDK (net6.0 class library)",
+   "ffmpeg (generated test tones)",
+   "NLayer 1.16.0 and NVorbis 0.10.5 (embedded decoders)",
+   "Thunderstore (zip uploaded by hand, no CLI)"
+  ],
+  "anti_cheat": "none; single-player VR game, and Steam starts BrutalistickVR.exe directly",
+  "status": "released",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-11-05",
+  "links": [
+   "https://github.com/Skibidi41Rizz/CustomMusic",
+   "https://thunderstore.io/c/brutalistick-vr/p/SkIbidiRizTEAM/CustomMusic/",
+   "https://github.com/LavaGang/MelonLoader",
+   "https://github.com/naudio/NLayer",
+   "https://github.com/NVorbis/NVorbis",
+   "https://github.com/Perfare/Il2CppDumper"
+  ],
+  "tags": [
+   "audio",
+   "music",
+   "mci",
+   "winmm",
+   "harmony",
+   "ui",
+   "settings-menu",
+   "melonloader",
+   "il2cpp",
+   "vr",
+   "thunderstore"
   ]
  },
  {
@@ -1730,6 +1818,109 @@
   ]
  },
  {
+  "path": "games/collapse/collapse-2008-formats-memory-timing-and-8876086c.md",
+  "kind": "game",
+  "title": "Collapse (2008): data formats, the init_heap fence, the engine's leaks and races, and the collapsefix 1.0.1 fix",
+  "game": "Collapse",
+  "games_also": [],
+  "game_version": "Steam app 289620, build 222225, collapse.exe 2,392,108 B, SHA-256 3003600f\u2026bded283, PE timestamp 2008-10-13 (has the 1.1 AA option, no fullscreen-vsync path)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "Python 3 + pefile + capstone (via uv)",
+   "Ghidra 12.1.4 headless (full decompile to text, kept private; run twice to compare)",
+   "Frida 17.24.3 (spawn; the main probe hooks system DLLs only, the navmesh and gamepad tests also hook game code)",
+   "own .table reader/writer and package v8 extractor (Python)",
+   "Zig 0.17 (32-bit test host)",
+   "um win shot (ffmpeg gfxcapture)",
+   "WinDbg 1.2610 + ProcDump 12.02 (unhandled-exception dump)",
+   "Python minidump (dump triage)"
+  ],
+  "anti_cheat": "none. Single-player, no online mode. The Steam exe has no SteamStub and no steam_api (DRM-free); the LAA patcher sets one header bit on that exe only and refuses any other hash. Retail discs reportedly used StarForce (not checked).",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "wh1tem0nst3r"
+  ],
+  "date": "2026-10-28",
+  "links": [
+   "examples/collapse-collapsefix",
+   "https://web.archive.org/web/20250811064700/https://www.playground.ru/collapse/file/patch_collapse_v1_1-863187",
+   "https://web.archive.org/web/20251022211914/https://www.wsgf.org/dr/collapse/en",
+   "https://web.archive.org/web/20260709041135/https://www.pcgamingwiki.com/wiki/Collapse",
+   "https://web.archive.org/web/20081120161419/http://creoteam.com/forum/",
+   "https://steamcommunity.com/app/289620/discussions/0/540743128682268318/",
+   "https://web.archive.org/web/20170623084809/http://forum.xentax.com/viewtopic.php?f=10&t=11253",
+   "https://gee.cs.oswego.edu/pub/misc/malloc.c"
+  ],
+  "tags": [
+   "collapse-devastated-world",
+   "creoteam",
+   "d3d9",
+   "vc6",
+   "table",
+   "package",
+   "dxt",
+   "init-heap",
+   "large-address-aware",
+   "gettickcount",
+   "frame-pacing",
+   "8876086c",
+   "invalidcall",
+   "fov",
+   "setup-ini",
+   "frida"
+  ]
+ },
+ {
+  "path": "games/convrgence/ingame-mods-tab-and-vr-performance.md",
+  "kind": "game",
+  "title": "Native-looking in-game Mods settings tab (and which performance knobs moved VR frames)",
+  "game": "CONVRGENCE",
+  "games_also": [],
+  "game_version": "1.1.0, Steam BuildID 26164481",
+  "platform": "windows",
+  "engine": "unity-il2cpp",
+  "route": "loader-api",
+  "tools": [
+   "MelonLoader 0.7.3",
+   "AssetRipper GUI (headless web)",
+   "UnityPy",
+   "ilspycmd (ILSpy CLI)",
+   "WPR/WPA (Windows Performance Recorder/Analyzer)",
+   "HarmonyX"
+  ],
+  "anti_cheat": "none found (single-player VR extraction shooter, Steam starts CONVRGENCE.exe directly); it has Steam leaderboards, so keep modded runs off them",
+  "status": "working",
+  "agents": [
+   "OpenCode (GLM)"
+  ],
+  "humans": [
+   "Arttu (full VR verification, patience through ~35 game restarts)"
+  ],
+  "date": "2026-10-31",
+  "links": [
+   "https://github.com/LavaGang/MelonLoader",
+   "https://github.com/AssetRipper/AssetRipper",
+   "https://github.com/K0lb3/UnityPy",
+   "https://github.com/BepInEx/Il2CppInterop"
+  ],
+  "tags": [
+   "vr",
+   "settings-ui",
+   "pause-menu",
+   "in-game-menu",
+   "melonloader-ui-clone",
+   "volumetric-fog",
+   "aura2",
+   "force-close",
+   "field-write-vs-method-call"
+  ]
+ },
+ {
   "path": "games/crash-bandicoot-n-sane-trilogy/croc-inside-crash-n-sane-live-two-engine-mashup.md",
   "kind": "game",
   "title": "Croc inside Crash N. Sane: live two-engine mashup and native port",
@@ -1936,6 +2127,49 @@
    "r2modman",
    "thunderstore",
    "recon"
+  ]
+ },
+ {
+  "path": "games/cult-of-the-lamb/custom-motion-vectors-and-an-ngx-dlss-host-for-cult-of-the-l.md",
+  "kind": "game",
+  "title": "Custom motion vectors and an NGX DLSS host for Cult of the Lamb (Unity DX11, no native upscaler)",
+  "game": "Cult of the Lamb",
+  "games_also": [],
+  "game_version": "Steam build 25223484, v1.5.26.1058",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "native-hook",
+  "tools": [
+   "BepInEx 5.4.21",
+   "HarmonyX",
+   "ILSpy 8.2",
+   "RenderDoc 1.46",
+   "NVIDIA DLSS SDK (nvngx 310.x)",
+   "BepInEx.ConfigurationManager v19.1",
+   "MSVC 2022"
+  ],
+  "anti_cheat": "none (single player and local co-op; no online mode)",
+  "status": "working",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "https://github.com/NVIDIA/DLSS",
+   "https://renderdoc.org",
+   "https://github.com/BepInEx/BepInEx.ConfigurationManager",
+   "https://docs.bepinex.dev",
+   "https://thunderstore.io/c/cult-of-the-lamb/p/BepInEx/BepInExPack_CultOfTheLamb/"
+  ],
+  "tags": [
+   "cult-of-the-lamb",
+   "unity",
+   "motion-vectors",
+   "dlss",
+   "ngx",
+   "native-hook",
+   "upscaling"
   ]
  },
  {
@@ -2243,6 +2477,43 @@
    "add_aircraft",
    "entry.lua",
    "ejection-crash"
+  ]
+ },
+ {
+  "path": "games/dead-cells/decoupled-timed-door-scaling-environmental-rally-immunity-an.md",
+  "kind": "game",
+  "title": "Decoupled Timed Door Scaling, Environmental Rally Immunity, and HashLink State Storage in Dead Cells",
+  "game": "Dead Cells",
+  "games_also": [],
+  "game_version": "GOG v35 (clean release), Windows build (deadcells.exe) run under Wine 9.0 on Linux",
+  "platform": "proton",
+  "engine": "haxe",
+  "route": "managed-patch",
+  "tools": [
+   "hlbc",
+   "python3",
+   "Wine 9.0"
+  ],
+  "anti_cheat": "none (single-player); keep the patched exe out of the Daily Challenge, whose scores go on the leaderboards",
+  "status": "working",
+  "agents": [
+   "Antigravity (model not recorded)"
+  ],
+  "humans": [],
+  "date": "2026-10-28",
+  "links": [
+   "https://github.com/Gui-Yom/hlbc",
+   "https://github.com/HaxeFoundation/hashlink"
+  ],
+  "tags": [
+   "haxe",
+   "heaps",
+   "hashlink",
+   "bytecode",
+   "timed-doors",
+   "rally-mechanic",
+   "state-storage",
+   "dead-cells"
   ]
  },
  {
@@ -2630,6 +2901,48 @@
    "magick-archer",
    "attribution",
    "sdk-hook"
+  ]
+ },
+ {
+  "path": "games/dragon-s-dogma-2/pactblade-a-custom-vocation-on-vsb-recoloured-effects-own-so.md",
+  "kind": "game",
+  "title": "Pactblade: a custom vocation on VSB - recoloured effects, own sound banks, binds, warps and crash rules",
+  "game": "Dragon's Dogma 2",
+  "games_also": [],
+  "game_version": "dd2.exe 4.1.0.0 (post-DLC), Steam 2054970 build 25920212; REFramework (nightly, Oct 2026)",
+  "platform": "windows",
+  "engine": "re-engine",
+  "route": "loader-api",
+  "tools": [
+   "REFramework (Lua)",
+   "_DragonCore 1.2.0 + VSB (Vocation & Skill Builder) 1.1.0",
+   "REE-Lib (efx read/write; the author's local, unpublished patch for the DD2New efx version 5965310)",
+   "ree-pak-cli (pack), vgmstream, ffmpeg"
+  ],
+  "anti_cheat": "none found; single-player only (online / pawn-share side effects untested)",
+  "status": "released",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-24",
+  "links": [
+   "https://github.com/ntgoten/pactblade-scriptonly",
+   "https://github.com/praydog/REFramework",
+   "https://www.nexusmods.com/dragonsdogma2/mods/1916",
+   "https://www.nexusmods.com/dragonsdogma2/mods/1917",
+   "https://github.com/kagenocookie/RE-Engine-Lib",
+   "https://github.com/eigeen/ree-pak-rs",
+   "https://github.com/vgmstream/vgmstream"
+  ],
+  "tags": [
+   "custom-vocation",
+   "skills",
+   "effects",
+   "recolour",
+   "sound-banks",
+   "crashes",
+   "teleport"
   ]
  },
  {
@@ -4956,6 +5269,145 @@
   ]
  },
  {
+  "path": "games/middle-earth-shadow-of-war/map-import-shadow-of-mordor-udun-as-a-new-region.md",
+  "kind": "game",
+  "title": "Map import: Shadow of Mordor's Ud\u00fbn as a playable new region in Shadow of War",
+  "game": "Middle-earth: Shadow of War",
+  "games_also": [
+   "Middle-earth: Shadow of Mordor"
+  ],
+  "game_version": "Shadow of War Steam build 3095001 (exe 1.0.8874.0, public branch, unchanged since 2018-09-05), Windows 10 22H2; Shadow of Mordor Steam copy (public branch, build 7348332) as the map source",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Python 3.12 + numpy/Pillow (own SoM/SoW format readers, converters and writers)",
+   "C# GADB reader-writer (PowerShell Add-Type)",
+   "Recast v1.6.0 (recastnavigation, own CLI)",
+   "TagTools (Havok 2016 TAG0 reader/writer, ported to Python 3)",
+   "QuickBMS + aluigi shadow_of_mordor.bms 0.4",
+   "Ghidra 12.1.4 (headless, analysis only) + Temurin JDK 21",
+   "w64devkit GCC 16.2 (trace plugin, Recast CLI)",
+   "Shadow of War Dll Loader (Nexus 99, loads the diagnostic plugin)",
+   "texconv (DirectXTex)",
+   "Blender 4.2.3 (headless previews)"
+  ],
+  "anti_cheat": "none; single-player only. The mod is data (an extra .arch06 + game.gamedb), the exe file is untouched (SteamStub/Denuvo untouched). The diagnostic trace plugin hooks code in memory and is only installed for tests. Every test ran offline through the offline-mode DLL (never signed in to WB).",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "DeimozZarco"
+  ],
+  "date": "2026-10-29",
+  "links": [
+   "knowledge/games/middle-earth-shadow-of-war/map-import-toolkit-formats-and-tools.md",
+   "knowledge/games/middle-earth-shadow-of-war/offline-mode-and-local-garrison.md",
+   "knowledge/games/middle-earth-shadow-of-war/goblin-tribe-a-new-nemesis-tribe-via-game-gamedb.md",
+   "knowledge/games/middle-earth-shadow-of-war/save-format-decrypt-and-collectible-quests.md",
+   "https://github.com/recastnavigation/recastnavigation",
+   "https://github.com/blueskythlikesclouds/TagTools",
+   "https://www.nexusmods.com/middleearthshadowofwar/mods/99"
+  ],
+  "tags": [
+   "map-import",
+   "total-conversion",
+   "mashup",
+   "new-region",
+   "world-map",
+   "fast-travel",
+   "region-map",
+   "minimap",
+   "prefab-conversion",
+   "material-conversion",
+   "texture-conversion",
+   "havok",
+   "hknp",
+   "collision",
+   "navmesh",
+   "recast",
+   "hkai",
+   "parkour",
+   "terrain",
+   "army-screen",
+   "nemesis",
+   "faction",
+   "ai-spawns",
+   "quests",
+   "lua",
+   "trace-plugin",
+   "lithtech",
+   "firebird"
+  ]
+ },
+ {
+  "path": "games/middle-earth-shadow-of-war/map-import-toolkit-formats-and-tools.md",
+  "kind": "game",
+  "title": "Map import toolkit: Shadow of War / Shadow of Mordor file formats and the tools we wrote",
+  "game": "Middle-earth: Shadow of War",
+  "games_also": [
+   "Middle-earth: Shadow of Mordor"
+  ],
+  "game_version": "Shadow of War Steam build 3095001 (exe 1.0.8874.0), Windows 10 22H2; Shadow of Mordor Steam copy as the source",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Python 3.12 + numpy/Pillow",
+   "C# 5 GADB reader-writer via PowerShell Add-Type",
+   "Recast v1.6.0 core in an own CLI (w64devkit g++)",
+   "TagTools (TAG0 reader/writer, Python 3 port)",
+   "QuickBMS + aluigi shadow_of_mordor.bms 0.4",
+   "texconv (DirectXTex)",
+   "Ghidra 12.1.4 (analysis only)",
+   "w64devkit GCC 16.2 (trace plugin)",
+   "Blender 4.2.3 (headless previews)"
+  ],
+  "anti_cheat": "none; single-player, offline. Tools only read the user's own game files and write a mod archive + database; the exe file is never modified.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "DeimozZarco"
+  ],
+  "date": "2026-10-29",
+  "links": [
+   "knowledge/games/middle-earth-shadow-of-war/map-import-shadow-of-mordor-udun-as-a-new-region.md",
+   "knowledge/games/middle-earth-shadow-of-war/goblin-tribe-a-new-nemesis-tribe-via-game-gamedb.md",
+   "https://github.com/recastnavigation/recastnavigation",
+   "https://github.com/blueskythlikesclouds/TagTools"
+  ],
+  "tags": [
+   "toolkit",
+   "file-formats",
+   "ltar",
+   "bundles",
+   "objres",
+   "gadb",
+   "prfb",
+   "ltmi",
+   "texr",
+   "wdsc",
+   "terrain",
+   "havok",
+   "tag0",
+   "hknp",
+   "hkai",
+   "recast",
+   "cadb",
+   "volm",
+   "uiwd",
+   "uis",
+   "kit-copy",
+   "trace-plugin",
+   "map-import",
+   "lithtech",
+   "firebird"
+  ]
+ },
+ {
   "path": "games/middle-earth-shadow-of-war/offline-mode-and-local-garrison.md",
   "kind": "game",
   "title": "Offline mode and local Garrison: a winhttp stand-in for WB's Hydra server",
@@ -5122,7 +5574,12 @@
   "links": [
    "knowledge/games/middle-earth-shadow-of-war/falmer-tribe-a-skyrim-creature-as-a-nemesis-tribe.md",
    "knowledge/games/middle-earth-shadow-of-war/offline-mode-and-local-garrison.md",
-   "knowledge/games/middle-earth-shadow-of-war/save-format-decrypt-and-collectible-quests.md"
+   "knowledge/games/middle-earth-shadow-of-war/save-format-decrypt-and-collectible-quests.md",
+   "https://github.com/niftools/blender_niftools_addon",
+   "https://pypi.org/project/UnityPy/",
+   "https://github.com/ReaperAnon/Middle-Earth-Mod-Loader",
+   "https://www.nexusmods.com/middleearthshadowofwar/mods/278",
+   "https://github.com/LordMonstey/Monstey-Mesh-Publisher"
   ],
   "tags": [
    "nemesis",
@@ -5276,6 +5733,56 @@
    "client-side-projectiles",
    "config-toml",
    "benches"
+  ]
+ },
+ {
+  "path": "games/minecraft/factorio-style-belts-power-and-ore-patches-as-horizon-rust-m.md",
+  "kind": "game",
+  "title": "Factorio-style belts, power and ore patches as Horizon (Rust Minecraft 26.3) WebAssembly mods",
+  "game": "Minecraft",
+  "games_also": [
+   "Factorio"
+  ],
+  "game_version": "Horizon v0.2.94 (launcher 0.2.21) over Minecraft Java 26.3 resources; source at horizon-rust/horizon f66f66c (2026-10-28); mod API 0.2 (content) + 0.3 (server)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "loader-api",
+  "tools": [
+   "horizon-mod-sdk 0.1.0",
+   "cargo-horizon-mod 0.1.0",
+   "rustup stable-x86_64-pc-windows-gnu 1.99.1",
+   "wasm32-unknown-unknown",
+   "WinLibs mingw",
+   "wasmtime 48 (in the game)",
+   "Python 3.14 (texture/JSON generator)",
+   "Horizon launcher 0.2.21"
+  ],
+  "anti_cheat": "none: Horizon is an open-source client/server, mods are a supported feature; the game's own Mojang resources are fetched only for a signed-in Microsoft account that owns Java Edition (never bypassed)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Fable 5.1)"
+  ],
+  "humans": [],
+  "date": "2026-10-28",
+  "links": [
+   "https://github.com/horizon-rust/horizon",
+   "https://github.com/horizon-rust/horizon/blob/main/docs/mods.md",
+   "https://github.com/horizon-rust/horizon/blob/main/docs/modpacks.md",
+   "https://playhorizon.dev"
+  ],
+  "tags": [
+   "horizon",
+   "rust",
+   "webassembly",
+   "wasm-component",
+   "wit",
+   "server-mod",
+   "content-mod",
+   "factorio",
+   "conveyor",
+   "power-network",
+   "ore-generation",
+   "data-driven-blocks"
   ]
  },
  {
@@ -6024,6 +6531,49 @@
    "axis-verification",
    "oracle",
    "coordinate-mapping"
+  ]
+ },
+ {
+  "path": "games/padre-got-a-gun/fusion-2-5-build-296-decode-and-event-patch.md",
+  "kind": "game",
+  "title": "Decoding a Clickteam Fusion 2.5 (build 296) data file and patching its events",
+  "game": "Padre Got A Gun",
+  "games_also": [],
+  "game_version": "V1.3, itch.io standalone (V1.2 decoded too). Clickteam Fusion 2.5 runtime build 296.9 (Modules/mmfs2.dll 3.0.296.9), 32-bit exe",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "Python 3 (standard library only)",
+   "NebulaFD September 2026 Update (commit a24d4d1)",
+   "ilspycmd",
+   "um scan"
+  ],
+  "anti_cheat": "none: offline single-player, DRM-free. The .dat's Protection chunk holds only a 4-byte checksum of the event, object and frame data (Gotcha 6), with no key, serial or licence data, so it isn't DRM or an ownership check",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "https://github.com/AITYunivers/NebulaFD",
+   "https://github.com/CTFAK/CTFAK2.0",
+   "https://github.com/fnmwolf/Anaconda"
+  ],
+  "tags": [
+   "clickteam-fusion",
+   "fusion-2.5",
+   "build-296",
+   "ccn",
+   "pamu",
+   "chunk-encryption",
+   "events",
+   "protection-checksum",
+   "nebulafd",
+   "conpty",
+   "data-mod",
+   "itch-io"
   ]
  },
  {
@@ -7297,6 +7847,151 @@
    "il2cpp",
    "harmony",
    "single-player"
+  ]
+ },
+ {
+  "path": "games/skyrim-special-edition/cbbe-mesh-osd-tri-isolated-bodyslide-validation.md",
+  "kind": "game",
+  "title": "CBBE OSD/TRI validation, isolated BodySlide builds, and a tested morph/physics baseline",
+  "game": "Skyrim Special Edition",
+  "games_also": [],
+  "game_version": "Runtime test: 1.6.1170.0 with SKSE 2.2.6; separate inspected Steam executable metadata: 1.7.104.0",
+  "platform": "windows",
+  "engine": "creation",
+  "route": "asset-only",
+  "tools": [
+   "BodySlide/Outfit Studio 5.8.1.0",
+   "MO2 2.5.2",
+   "Node.js readers",
+   "RaceMenu AE 0.4.20.0",
+   "CBPC 1.6.2",
+   "local CBBE directory labelled 2.0.3",
+   "local XPMSSE directory labelled 5.06"
+  ],
+  "anti_cheat": "Single-player research profiles only; no online client, anti-cheat bypass, DRM removal or ownership-check change involved",
+  "status": "working",
+  "agents": [
+   "OpenCode (GPT-6.1 Sol)",
+   "OpenCode (GPT-6.1 Sol Fast)",
+   "OpenCode (GPT-6 Astra Fast)"
+  ],
+  "humans": [
+   "Kokuru"
+  ],
+  "date": "2026-10-28",
+  "links": [
+   "https://github.com/ousnius/BodySlide-and-Outfit-Studio/tree/v5.8.1",
+   "https://github.com/ousnius/BodySlide-and-Outfit-Studio/blob/38139d40f74bc675a093db705fe7f4c0151d01ec/src/components/DiffData.cpp",
+   "https://github.com/ousnius/BodySlide-and-Outfit-Studio/blob/38139d40f74bc675a093db705fe7f4c0151d01ec/src/files/TriFile.cpp",
+   "https://github.com/ousnius/nifly/blob/6cb15fb5da71527b33cea8ff7913be8790e1c633/src/Skin.cpp",
+   "https://github.com/ianpatt/skse64/blob/25b72352adb6543fa6d0bd3795780672b2e238e0/skse64/PluginAPI.h",
+   "https://github.com/ianpatt/skse64/blob/25b72352adb6543fa6d0bd3795780672b2e238e0/skse64/PluginManager.cpp",
+   "https://github.com/ousnius/BodySlide-and-Outfit-Studio/wiki/Conversion-references-and-using-them",
+   "https://github.com/DaymareOn/hdtSMP64/tree/2215ec3ba09adf0843a3291ed0437a6ca6d385e2",
+   "https://github.com/Acro748/CBPCSSE/tree/fabd56ce8f8ac10cde17325f0bd61ecc8cbcda20"
+  ],
+  "tags": [
+   "cbbe",
+   "bodyslide",
+   "osd",
+   "tri",
+   "nif",
+   "morphs",
+   "isolated-build",
+   "mo2",
+   "skse",
+   "physics-routing",
+   "verification"
+  ]
+ },
+ {
+  "path": "games/skyrim-special-edition/loot-detection-spell-papyrus-call-costs-and-lights.md",
+  "kind": "game",
+  "title": "A fast loot-detection spell with SKSE and po3: Papyrus call costs, threads, and lights on items",
+  "game": "Skyrim Special Edition",
+  "games_also": [],
+  "game_version": "Skyrim SE 1.7.104 (Steam 489830), SKSE64 2.3.1, powerofthree's Papyrus Extender 6.5.2",
+  "platform": "windows",
+  "engine": "creation",
+  "route": "loader-api",
+  "tools": [
+   "SKSE64 2.3.1",
+   "powerofthree's Papyrus Extender 6.5.2",
+   "Papyrus Compiler (Creation Kit)",
+   "Mod Organizer 2",
+   "own Python plugin and NIF writers"
+  ],
+  "anti_cheat": "none found by um scan",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-26",
+  "links": [
+   "https://github.com/ianpatt/skse64",
+   "https://github.com/powerof3/PapyrusExtenderSSE",
+   "https://en.uesp.net/wiki/Skyrim:Detect_Life",
+   "https://ck.uesp.net/wiki/Category:Non-delayed_Native_Function",
+   "https://ck.uesp.net/wiki/Papyrus_Compiler_Reference"
+  ],
+  "tags": [
+   "papyrus",
+   "skse",
+   "po3",
+   "performance",
+   "threading",
+   "art-object",
+   "visual-effect",
+   "effect-shader",
+   "nif",
+   "spell"
+  ]
+ },
+ {
+  "path": "games/skyrim-special-edition/posed-corpses-with-gear-on-them-and-a-script-placed-museum-d.md",
+  "kind": "game",
+  "title": "Posed corpses with gear on them, and a script-placed museum display, from generated plugin records",
+  "game": "Skyrim Special Edition",
+  "games_also": [],
+  "game_version": "1.7.104 (Steam), Creation Kit 1.7.99 for placement only, SKSE64 2.3.1, powerofthree's Papyrus Extender 6.5.2",
+  "platform": "windows",
+  "engine": "creation",
+  "route": "data",
+  "tools": [
+   "Python plugin writer (own)",
+   "own NIF reader and patcher (Python)",
+   "Creation Kit (layout plugins only)",
+   "Papyrus Compiler (Creation Kit)",
+   "Mod Organizer 2"
+  ],
+  "anti_cheat": "none (single-player)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "https://en.uesp.net/wiki/Skyrim:Under_Saarthal",
+   "https://en.uesp.net/wiki/Lore:Saarthal"
+  ],
+  "tags": [
+   "corpses",
+   "ragdoll",
+   "havok",
+   "nif",
+   "collision",
+   "mannequin",
+   "script-placed",
+   "papyrus",
+   "crosshair",
+   "dragon-font",
+   "message-box",
+   "dialogue",
+   "voice-files",
+   "copied-records",
+   "compatibility"
   ]
  },
  {
@@ -9080,6 +9775,64 @@
   ]
  },
  {
+  "path": "games/vampire-the-masquerade-bloodlines/longhair-outfit-proportions-from-skyrim-cbbe-3ba-source-data.md",
+  "kind": "game",
+  "title": "Bloodlines MDL2531 outfit transfer and native secondary motion: bind frames, pose provenance and receiver flags",
+  "game": "Vampire: The Masquerade - Bloodlines",
+  "games_also": [
+   "The Elder Scrolls V: Skyrim Special Edition"
+  ],
+  "game_version": "Local Version.inf 1.2; enabled Unofficial Patch Plus metadata 11.5.46.0; Fashionista portable MO2 profile",
+  "platform": "windows",
+  "engine": "source",
+  "route": "native-hook",
+  "tools": [
+   "Blender 4.5.15 LTS",
+   "BodySlide/Outfit Studio 5.8.1",
+   "SourceIO MDL2531/VTX107 readers",
+   "MO2 2.5.2",
+   "Zig 0.13.0 (x86)",
+   "Bullet 3.25",
+   "Python/NumPy",
+   "srctools"
+  ],
+  "anti_cheat": "Single-player Bloodlines instance; no anti-cheat signature found in bounded local scan, no multiplayer interaction or protection/ownership bypass",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (GPT-6.1 Sol)",
+   "OpenCode (GPT-6.1 Sol Fast)",
+   "OpenCode (GPT-6 Astra)",
+   "OpenCode (GPT-6 Astra Fast)"
+  ],
+  "humans": [
+   "Kokuru"
+  ],
+  "date": "2026-10-28",
+  "links": [
+   "https://github.com/REDxEYE/SourceIO/tree/fe24260b97ac03b899d9b5d4f0fd7b34772f3647",
+   "https://github.com/ousnius/BodySlide-and-Outfit-Studio/blob/59fca3a4787153e7349aa0fb01c716235f9f9b27/src/components/Automorph.cpp",
+   "https://github.com/ousnius/BodySlide-and-Outfit-Studio/wiki/Conversion-references-and-using-them",
+   "https://github.com/ousnius/BodySlide-and-Outfit-Studio/wiki/Making-a-new-conversion-reference-%28external-tools%29",
+   "https://github.com/ZeqMacaw/Crowbar/blob/0d46f3b6a694b74453db407c72c12a9685d8eb1d/Crowbar/Core/GameModel/SourceModel2531/SourceMdlFile2531.vb",
+   "https://github.com/c6-dev/vtmb-tweaks/blob/5d9ea803a35261fb2ad120737d8d2419ce893e72/vtmb-tweaks/dllmain.cpp",
+   "https://github.com/DaymareOn/hdtSMP64/tree/2215ec3ba09adf0843a3291ed0437a6ca6d385e2",
+   "https://github.com/bulletphysics/bullet3/tree/2c204c49e56ed15ec5fcfa71d199ab6d6570b3f5"
+  ],
+  "tags": [
+   "mdl2531",
+   "vtx107",
+   "source",
+   "body-proportions",
+   "conversion-carrier",
+   "animation",
+   "secondary-motion",
+   "native-hook",
+   "pose-provenance",
+   "mo2",
+   "verification"
+  ]
+ },
+ {
   "path": "games/victoria-2/south-central-gang-total-conversion.md",
   "kind": "game",
   "title": "South Central 1985: a Victoria 2 total conversion into an LA gang-territory game",
@@ -9166,6 +9919,147 @@
   ]
  },
  {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-active-reload-and-cloned-abilities.md",
+  "kind": "game",
+  "title": "Space Marine 2 active reload (press window, jam, HUD flash) and cloned abilities via enum extension",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026); built Oct 8-16 2026, ability work Oct 8-23 2026. Mod Tools app 3856330 build 25506153",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Saber SM2 Mod Tools (ModEditor docs, enum extension sample)",
+   "Python 3 (zipfile, struct, numpy, PyYAML)",
+   "own Morpheme .nmb patcher",
+   "own .sani clip writer and event-track codec",
+   "own Wwise bank writer",
+   "WwiseConsole 2019.2",
+   "own sslbin disassembler (reading compiled logic only)"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "active-reload",
+   "reload",
+   "firearm",
+   "morpheme",
+   "animation-network",
+   "action-controller",
+   "blueprint",
+   "hud",
+   "wwise",
+   "abilities",
+   "enum-extension",
+   "war-cry"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-building-a-new-map-with-the-map-converter.md",
+  "kind": "game",
+  "title": "A brand-new playable map in Space Marine 2 with Saber's Map Converter, plus hub scene edits",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026). Mod Tools app 3856330 build 25506153 (ModelConverter --map_mode, UsfExporter, Furnace, AIConverter, TerrainConverter, LightProbeConverter, resolve_scene_resources)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Saber SM2 Mod Tools (ModelConverter --map_mode, UsfExporter convert_tpl.py, furnace.exe, TextureConverter / convert_pct.py)",
+   "Saber's shipped converter source (ToolsSource: MapConverter.cs, MapBuilder)",
+   "Python 3 (own glTF writer, tpl_markup / lods_base patchers, lwi_container and dom_list readers)",
+   "Blender (preview renders with back-face culling, BC6H decode)",
+   "a small Win32 window-text reader for hidden crash dialogs"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "https://spacemarine2-modding.prismray.io/"
+  ],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "swarm-engine",
+   "map",
+   "level",
+   "map-converter",
+   "furnace",
+   "gltf",
+   "lwi",
+   "instancing",
+   "grass",
+   "collision",
+   "cdt",
+   "sky",
+   "lighting",
+   "shadows",
+   "prefab",
+   "water",
+   "hub",
+   "dom-list",
+   "navmesh"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-hub-battle-barge-thunderhawk-and-usables.md",
+  "kind": "game",
+  "title": "Space Marine 2 Battle Barge hub: replacing the hero Thunderhawk, a walk-in ramp with push-button seats, the launch countdown, hidden collision and usables",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026). Mod Tools app 3856330 build 25506153",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Saber SM2 Mod Tools (ModelConverter, UsfExporter)",
+   "Python 3 (struct, zipfile, numpy)",
+   "own cd_list / class_list / dom_list / lwi_container codecs",
+   "own .sani clip codec and Morpheme .nmb patcher",
+   "own sslbin disassembler",
+   "Blender (offline preview renders)"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "hub",
+   "battle-barge",
+   "thunderhawk",
+   "vehicle",
+   "usable",
+   "level-sequence",
+   "xseq",
+   "smart",
+   "collision",
+   "lwi",
+   "cd-list",
+   "dom-list",
+   "countdown",
+   "textures",
+   "banners"
+  ]
+ },
+ {
   "path": "games/warhammer-40-000-space-marine-2/sm2-missions-scenarios-faction-swaps-and-esd-spawning.md",
   "kind": "game",
   "title": "Space Marine 2 missions: scenario faction swaps, level files, the ESD spawn director and rebaking a navmesh with spawn points",
@@ -9188,7 +10082,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-13",
+  "date": "2026-10-29",
   "links": [],
   "tags": [
    "space-marine-2",
@@ -9230,7 +10124,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-15",
+  "date": "2026-10-29",
   "links": [
    "https://spacemarine2-modding.prismray.io/",
    "https://www.nexusmods.com/warhammer40000spacemarine2/mods/233"
@@ -9271,7 +10165,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-13",
+  "date": "2026-10-29",
   "links": [],
   "tags": [
    "space-marine-2",
@@ -9289,7 +10183,10 @@
    "custom-head",
    "ai-mesh",
    "collision",
-   "cloth"
+   "cloth",
+   "skin-weights",
+   "mml-cfg",
+   "parallax"
   ]
  },
  {
@@ -9316,7 +10213,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-15",
+  "date": "2026-10-29",
   "links": [],
   "tags": [
    "space-marine-2",
@@ -9334,7 +10231,13 @@
    "execution",
    "interplay",
    "xseq",
-   "spawning"
+   "spawning",
+   "bio-titan",
+   "boss-ai",
+   "melee-timing",
+   "gore",
+   "wwise",
+   "root-motion"
   ]
  },
  {
@@ -9370,6 +10273,116 @@
    "armoury",
    "talker",
    "constructor"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-one-constructor-for-every-class-and-fast-usf-builds.md",
+  "kind": "game",
+  "title": "Every Space Marine 2 class on one soldier armour constructor, and glTF-to-USF rebuilds in minutes instead of an hour",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026). Mod Tools app 3856330: game-folder ModelConverter v13.0.0, Mod Tools ModelConverter release + ToolsSource v14.0.0, UsfExporter, CDTConverter",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "asset-only",
+  "tools": [
+   "Saber SM2 Mod Tools (ModelConverter, UsfExporter convert_tpl.py, CDTConverter)",
+   "ModelConverter rebuilt from Saber's GPL ToolsSource (.NET 11 preview SDK, offline, against the shipped SharpGLTF/Newtonsoft DLLs)",
+   "Python 3 (json, hashlib, struct)",
+   "PowerShell build scripts"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "swarm-engine",
+   "tpl",
+   "usf",
+   "gltf",
+   "modelconverter",
+   "usfexport",
+   "constructor",
+   "armour",
+   "customization-library",
+   "build-speed",
+   "incremental-build",
+   "byte-identical",
+   "shader-cache"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-porting-assets-from-other-games.md",
+  "kind": "game",
+  "title": "Porting owned content from other games into Space Marine 2 (personal use): Witcher 3 level kit, Space Marine 1 Orks, Gears of War E-Day, Elden Ring, Helldivers 2",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [
+   "The Witcher 3",
+   "Elden Ring",
+   "Gears of War: E-Day",
+   "Warhammer 40,000: Space Marine - Master Crafted Edition",
+   "Helldivers 2",
+   "Red Dead Redemption 2"
+  ],
+  "game_version": "SM2 Steam build 25799387 (Patch 15.1, Oct 2026), most work on Patch 14.x-15; Saber Mod Tools (Oct 2026: ModelConverter, UsfExporter, Map Converter + Furnace, TextureConverter). Sources: The Witcher 3 Remastered 5.01 (GOG), Space Marine Master Crafted Edition (Steam), Gears of War: E-Day (UE 5.5 IoStore build; store and build id not recorded), Elden Ring + Shadow of the Erdtree (Steam), Helldivers 2 (Steam, Stingray)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "asset-only",
+  "tools": [
+   "Saber SM2 Mod Tools (ModelConverter --map_mode, UsfExporter, Furnace, TextureConverter)",
+   "Blender (headless, isolated user profile)",
+   "Witcher3-Blender-Tools (dingdio) Blender add-on",
+   "own SpeedTree 7 .srt parser (Python)",
+   "filediver v0.7.58 (Helldivers 2 extractor)",
+   "own UE 5.5 IoStore + ACL v2.1 readers (Python)",
+   "own Havok 2010.2 packfile reader (Python)",
+   "Wwise 2019.2.15 WwiseConsole",
+   "ffmpeg",
+   "Python 3 (numpy, scipy)"
+  ],
+  "anti_cheat": "SM2 has EasyAntiCheat: every build here loads through Saber's official mods folder (Mods Detected, private lobbies), no injection. Source games with anti-cheat (Elden Ring EAC, Gears E-Day EAC, Helldivers 2 GameGuard, EAC since 2026-10-20) were never launched or patched for this work; their files were read offline from the author's own installs.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "https://github.com/dingdio/Witcher3-Blender-Tools",
+   "https://github.com/xypwn/filediver",
+   "https://github.com/nfrechette/acl"
+  ],
+  "tags": [
+   "space-marine-2",
+   "cross-game",
+   "port",
+   "asset-conversion",
+   "mashup",
+   "witcher-3",
+   "redengine",
+   "speedtree",
+   "map-converter",
+   "furnace",
+   "lwi",
+   "elden-ring",
+   "gears-of-war",
+   "unreal-5",
+   "iostore",
+   "acl",
+   "space-marine-1",
+   "havok",
+   "helldivers-2",
+   "stingray",
+   "wwise",
+   "opus",
+   "retarget",
+   "personal-use"
   ]
  },
  {
@@ -9438,7 +10451,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-15",
+  "date": "2026-10-29",
   "links": [],
   "tags": [
    "space-marine-2",
@@ -9458,7 +10471,11 @@
    "sound",
    "crosshair",
    "hud",
-   "equipment"
+   "equipment",
+   "heroic-version",
+   "honor-shop",
+   "executions",
+   "ik"
   ]
  },
  {
@@ -9719,6 +10736,50 @@
    "vulkan",
    "sdl3",
    "porting"
+  ]
+ },
+ {
+  "path": "games/with-your-coworker/linux-kde-plasma-6-wayland-click-through-and-argb-transparen.md",
+  "kind": "game",
+  "title": "Linux KDE Plasma 6 Wayland click-through and ARGB transparency fix",
+  "game": "With Your Coworker",
+  "games_also": [],
+  "game_version": "Unity 6000.3.18f1 (Steam AppID 4564320, 2026-10 build)",
+  "platform": "proton",
+  "engine": "unity-il2cpp",
+  "route": "native-hook",
+  "tools": [
+   "objdump",
+   "clang",
+   "lld-link",
+   "llvm-dlltool",
+   "qdbus6"
+  ],
+  "anti_cheat": "none",
+  "status": "working",
+  "agents": [
+   "Antigravity (Claude Opus 4.6)"
+  ],
+  "humans": [
+   "ententeak"
+  ],
+  "date": "2026-10-28",
+  "links": [
+   "https://github.com/kirurobo/UniWindowController",
+   "https://github.com/ValveSoftware/wine/tree/experimental_11.0/dlls/winex11.drv"
+  ],
+  "tags": [
+   "linux",
+   "wayland",
+   "kde-plasma",
+   "proton",
+   "xwayland",
+   "uniwindowcontroller",
+   "libuniwinc",
+   "click-through",
+   "transparency",
+   "desktop-companion",
+   "proxy-dll"
   ]
  },
  {
@@ -10285,6 +11346,33 @@
    "worldgen",
    "multiplayer",
    "verification"
+  ]
+ },
+ {
+  "path": "techniques/an-in-game-settings-menu-in-an-il2cpp-unity-game-clone-the-g.md",
+  "kind": "technique",
+  "title": "An in-game settings menu in an IL2CPP Unity game: clone the game's own tab and drive it from Harmony",
+  "status": "working",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-11-05",
+  "links": [
+   "https://github.com/Skibidi41Rizz/CustomMusic",
+   "https://github.com/Skibidi41Rizz/CustomMusic/blob/main/MusicPanel.cs",
+   "https://github.com/BepInEx/Il2CppInterop"
+  ],
+  "tags": [
+   "unity",
+   "il2cpp",
+   "melonloader",
+   "harmony",
+   "ui",
+   "tmp",
+   "vr",
+   "settings-menu",
+   "prefab-clone"
   ]
  },
  {
@@ -11935,6 +13023,33 @@
   ],
   "links": [
    "https://www.tapatalk.com/groups/kottons_chop_shop/ti-scp-ti-sms-model-importer-t3217.html"
+  ]
+ },
+ {
+  "path": "techniques/motion-vectors-for-a-neural-upscaler-in-a-game-that-has-none.md",
+  "kind": "technique",
+  "title": "Motion vectors for a neural upscaler in a game that has none: a camera homography first, entities on demand",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "https://github.com/NVIDIA/DLSS",
+   "https://renderdoc.org",
+   "https://github.com/umar-afzaal/LumeniteFX"
+  ],
+  "tags": [
+   "motion-vectors",
+   "depth",
+   "dlss",
+   "ngx",
+   "upscaling",
+   "homography",
+   "unity",
+   "bepinex",
+   "validation"
   ]
  },
  {
