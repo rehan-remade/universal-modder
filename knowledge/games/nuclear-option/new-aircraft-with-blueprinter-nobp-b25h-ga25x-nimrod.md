@@ -2,12 +2,12 @@
 kind: game
 title: "Three new flyable aircraft in Nuclear Option with Blueprinter .nobp (B-25H, GA-25X, Hawker Nimrod)"
 game: "Nuclear Option"
-game_version: "Early Access 0.34.3 (Steam app 2168680)"
+game_version: "Early Access 0.34.3 (Steam app 2168680); still working on the later 0.34 patches (0.34.6 = public build 26327221)"
 platform: windows
 engine: unity-mono
 route: loader-api
 tools: ["Blueprinter 2.1.1 (NOBlueprinter-Editor project)", "Unity 2022.3.62f2 (batch mode)", "AssetRipper (stock prefab and script export, reference only)", "BepInEx 5.4.23.5", "HarmonyX", ".NET SDK 8.0.318", "Blender 5.2.2", "fal (nano-banana-2.1, image-to-3D)"]
-anti_cheat: "none found; single-player and the user's own sessions only"
+anti_cheat: "none found; played in single player only, and never for public servers (see Multiplayer in Setup)"
 status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: []
@@ -15,6 +15,10 @@ date: 2026-11-02
 links:
   - "https://github.com/nikkorap/NOBlueprinter-Releases"
   - "https://github.com/nikkorap/NOBlueprinter-Editor"
+  - "https://github.com/Combat787/NOMM"
+  - "https://github.com/KopterBuzz/NOMNOM"
+  - "https://github.com/AssetRipper/AssetRipper"
+  - "https://github.com/BepInEx/BepInEx"
 tags: ["aircraft", "new-unit", "blueprinter", "flight-model", "damage-model", "cockpit", "carrier", "taildragger", "biplane", "hud", "bombs"]
 ---
 
@@ -28,7 +32,18 @@ weapons, damage and break-up, cockpits, carrier hook landings and the HUD. An ea
 aircraft at runtime with a BepInEx plugin was rejected; Gotcha 1 explains why.
 
 ## Setup
-- **Game:** Nuclear Option 0.34.3 (Steam, Windows 11), Unity 2022.3.62f2 Mono, no anti-cheat.
+- **Game:** Nuclear Option 0.34.3 (Steam, Windows 11), Unity 2022.3.62f2 Mono, no anti-cheat. The addon was built
+  and tested there. The user reports (2026-11-07) that it keeps working on the later 0.34 patches: 0.34.5
+  (2026-10-27) and 0.34.6 (2026-10-30, public build 26327221). They expect 0.35.0 to move the game to a newer Unity
+  version, which will break this build until Blueprinter is updated for it.
+- **Multiplayer:** Nuclear Option has public servers and online PvP, and a new aircraft with its own flight model changes
+  the shared game. This work was single player only. Use it there, or in a private session you host where every player
+  runs the same build and agreed to it, and never on a public server (the same rule as the
+  [GHPC tanks note](ghpc-coop-survival-runtime-source-derived-integration-and-pe.md)).
+  - Blueprinter adds its own version and each `.nobp`'s name and version to the game's version string, which servers
+    advertise (`Patches/VersionGetter.cs`, "isolate from vanilla"). So a game with this addon doesn't match vanilla
+    servers or ones with a different mod set. That's a compatibility check and no more: a public server can run the same
+    set, and our separate BepInEx plugin isn't in the string.
 - **Loaders:** BepInEx 5.4.23.5 and Blueprinter 2.1.1. The user already had several community aircraft mods
   installed, and our addon coexists with them.
 - **Blueprinter editor project** (NOBlueprinter-Editor) opened with **Unity 2022.3.62f2 exactly**:
@@ -36,16 +51,21 @@ aircraft at runtime with a BepInEx plugin was rejected; Gotcha 1 explains why.
     batch mode fails with "No valid Unity Editor license found".
   - Batch command:
     `Unity.exe -batchmode -nographics -quit -projectPath <project> -executeMethod <Class.Method> -logFile <log>`.
-- **AssetRipper export** of the game, made by the user, kept outside every repo. It is the reference for stock
-  prefab values (YAML) and decompiled script bodies (to read how the game works). Nothing from it ships.
+- **AssetRipper export** of the game, made by the user, kept outside every repo. Blueprinter's `_donotship` placeholders
+  are imported from it, and it is the reference for stock prefab values (YAML) and decompiled script bodies (to read
+  how the game works). Nothing from it ships.
 - **Other tools:** Blender 5.2.2 for procedural models and bakes, and fal for paint textures, decals, cockpit
   art and a few image-to-3D props. A small BepInEx plugin of ours handles the things a prefab can't do; see
   "How the game works" below.
-- **Install layout:** `<game>\BepInEx\plugins\com.nikkorap.blueprinter\addons\<addon id>\` holds exactly one
-  `<Name>_<version>.nobp` plus a `meta.json`.
-  - The `meta.json` schema is the same as other addons: id, artifact fileName, version, gameVersion, the
-    `extends` entry for Blueprinter, and `hash` = `sha256:<nobp sha256>`.
-  - Copy the `meta.json` that the build writes. A stale version or hash in it confuses the loader.
+- **Install layout:** Blueprinter scans `BepInEx\plugins` and its subfolders for `.nobp` files, keeps the highest version
+  of a mod, and skips the mod if two copies tie, so keep one copy. The folder used here is the layout of
+  [NOMM](https://github.com/Combat787/NOMM), the community mod manager:
+  `<game>\BepInEx\plugins\com.nikkorap.blueprinter\addons\<addon id>\` holds `<Name>_<version>.nobp` plus a `meta.json`.
+  - The `meta.json` schema is the same as other addons (the artifact fields of
+    [NOMNOM's manifests](https://github.com/KopterBuzz/NOMNOM/blob/main/Docs/SCHEMA.md)): id, artifact fileName, version,
+    gameVersion, the `extends` entry for Blueprinter, and `hash` = `sha256:<nobp sha256>`.
+  - Copy the `meta.json` that the build writes. Blueprinter doesn't read it, but NOMM does, and a stale version or hash in
+    it confuses NOMM.
 
 ## Route and why
 - **First try: runtime morph** (BepInEx plugin, at `Encyclopedia.AfterLoad`):
@@ -124,7 +144,8 @@ Symbols are from 0.34.3; the behaviour is described in my own words.
 
 **Blueprinter placeholders**
 - Stock assets are referenced through Blueprinter's `*_PLACEHOLDER` assets (prefabs, `WeaponInfo`,
-  `AircraftParameters`, effects). They resolve to the real stock asset at load.
+  `AircraftParameters`, effects). They resolve to the real stock asset at load. Blueprinter leaves them out of the bundle
+  and writes a manifest (its editor's `GUIDE.md`), so a `.nobp` built this way carries no stock files.
 - A placeholder `NetworkIdentity` is a missing script: strip it and add the real component.
 
 ## Build steps
@@ -156,7 +177,8 @@ Symbols are from 0.34.3; the behaviour is described in my own words.
     the C# constants equal the stub constants.
 - **In game:**
   - A throwaway test-helper plugin driven by a command file: external camera, inputs, AI pilot, state logs.
-    Remove it after every session; left installed, it was the cause of a "lag" report.
+    Remove it after every session; left installed, it was the cause of a "lag" report. It's dev-only: it does whatever
+    its command file says, so it never goes in anything released.
   - The user's own test sessions with screenshots. Diagnostic log lines from our plugin, for example one line
     per bomb detonation with its height above the ground, proved the bomb fix.
 - **Not verified:** multiplayer sync of the plugin-side behaviours. Single player only.
@@ -253,8 +275,7 @@ Symbols are from 0.34.3; the behaviour is described in my own words.
 ## Assets
 - **Models:** Blender Python generators. Every part is built procedurally from a dimension spec and checked
   by script.
-- **Reference models:** a War Thunder rip was used as a *visual reference only*: proportions, comparison
-  renders and silhouette IoU. No geometry or texture from it ships.
+- **Proportions:** checked against historical photos of the real aircraft.
 - **fal art:**
   - paint and detail textures (`google/nano-banana-2.1`), projected in 3D by baking world position per texel
     so seams don't show;
@@ -262,8 +283,8 @@ Symbols are from 0.34.3; the behaviour is described in my own words.
   - HUD weapon icons drawn from our own models in the stock icon format (512 × 256, white line art on black).
 - **Bake gotcha:** a Cycles multi-object bake into one image applies the margin per object, so one object's
   margin overwrites another's islands. Bake with margin 0 and dilate afterwards.
-- **Cockpits:** kitbash the stock seat, stick, throttle and displays where the aircraft allows. Custom-model
-  only what's period-specific.
+- **Cockpits:** kitbash the stock seat, stick, throttle and displays where the aircraft allows, through the placeholders,
+  so no stock mesh or texture goes into the `.nobp`. Custom-model only what's period-specific.
 
 ## Cost and time
 - About 4 days of agent sessions (2026-10-30 to 2026-11-02).
@@ -272,5 +293,6 @@ Symbols are from 0.34.3; the behaviour is described in my own words.
 
 ## Open questions
 - Plugin-side behaviours (HUD fix, gear guard, gauges) in multiplayer: not tested.
+- 0.35.0 and its newer Unity: rebuild and re-test once Blueprinter supports it.
 - The exact trigger of the original every-landing gear break was never captured in a log. The stiffer gear
   fixed it before the diagnostic line fired.
