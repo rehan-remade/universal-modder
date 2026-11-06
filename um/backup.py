@@ -9,8 +9,10 @@ Snapshots are zip files + a manifest (size + sha1 per file) in ~/.universal-modd
 Snapshots created in the same second get numbered suffixes so earlier backups are never overwritten.
 restore without --to (and diff without TARGET) use the folder the snapshot was taken from, recorded as an absolute
 path; older snapshots that recorded a relative path need the folder named explicitly.
-restore first snapshots the current state (so a restore can itself be undone), then puts every file
-back and removes files that weren't in the snapshot only with --clean.
+restore first checks every file: it must stay inside the folder, go through no symlink or junction and
+match the manifest's size and sha1, or nothing changes. Then it snapshots the current state (so a
+restore can itself be undone), puts every file back and removes files that weren't in the snapshot
+only with --clean.
 Habit that saved the Terraria showcase: keep a pristine copy of any world/scenario a scripted take
 destroys, and restore it before each take.
 """
@@ -19,11 +21,13 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import time
 import zipfile
+import zlib
 from pathlib import Path
 
-from um.common import data_dir, die, to_posix
+from um.common import data_dir, die, inside, open_out, to_posix
 
 
 def _root(name: str) -> Path:
@@ -124,6 +128,48 @@ def diff(name: str, target: str | None = None, snapshot: str | None = None) -> d
     return res
 
 
+def _intact(z: zipfile.ZipFile, info: zipfile.ZipInfo, want: dict) -> bool:
+    """The member has the size and SHA-1 the manifest recorded for it (each one it recorded)."""
+    if "size" in want and info.file_size != want["size"]:
+        return False
+    if "sha1" not in want:
+        return True
+    h = hashlib.sha1()
+    try:
+        with z.open(info) as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+    except (zipfile.BadZipFile, zlib.error, EOFError):  # a bad CRC, deflate stream or length
+        return False
+    return h.hexdigest() == want["sha1"]
+
+
+def _check(zp: Path, z: zipfile.ZipFile, m: dict, root: Path, deletes: list[str]) -> dict:
+    """{file: its zip member}, or die before anything changes: every file restore writes or --clean deletes stays in
+    root and goes through no symlink or junction, and every member matches the manifest."""
+    def refuse(bad: list[str], why: str):
+        more = f"\n  ...and {len(bad) - 10} more" if len(bad) > 10 else ""
+        die(f"not restoring {zp.name}, nothing was changed:\n  " + "\n  ".join(bad[:10]) + more + "\n" + why)
+
+    bad = []
+    for rel in [*m["files"], *deletes]:
+        try:
+            inside(root, rel)
+        except ValueError as e:
+            bad.append(f"{rel}: {e}")
+    if bad:
+        refuse(bad, "restore writes only inside the folder, never through a symlink or junction (if the folder has one, "
+                    "remove it or restore --to an empty folder)")
+    # older snapshots of a folder with its own _um_manifest.json hold two members of that name: its file, then ours
+    first = {info.filename: info for info in reversed(z.infolist())}
+    members = {rel: first.get(rel) for rel in m["files"]}
+    bad = [f"{rel}: " + ("not in the snapshot" if info is None else "size or SHA-1 differs from the manifest")
+           for rel, info in members.items() if info is None or not _intact(z, info, m["files"][rel])]
+    if bad:
+        refuse(bad, "the snapshot is damaged, or was changed after um made it")
+    return members
+
+
 def restore(name: str, to: str | None = None, snapshot: str | None = None, clean: bool = False, yes: bool = False):
     zp = Path(snapshot) if snapshot else (snapshots(name) or [None])[-1]
     if not zp:
@@ -133,21 +179,21 @@ def restore(name: str, to: str | None = None, snapshot: str | None = None, clean
     d = diff(name, str(t), str(zp))
     print(f"restore {zp.name} -> {t}: {len(d['changed'])} changed, {len(d['removed'])} missing, {len(d['added'])} new since"
           + (" (new files will be deleted: --clean)" if clean else " (new files kept)"))
-    if not yes:
-        die("re-run with --yes to do it")
-    if t.is_dir():
-        create(str(t), name + "-pre-restore", note=f"automatic, before restoring {zp.name}")
-    t.mkdir(parents=True, exist_ok=True)
+    root = t.resolve()  # t may be a link (saves moved to another drive); nothing below it is followed
     with zipfile.ZipFile(zp) as z:
-        # older snapshots of a folder with its own _um_manifest.json hold two members of that name: its file, then ours
-        first = {info.filename: info for info in reversed(z.infolist())}
-        for rel in m["files"]:
-            (t / rel).parent.mkdir(parents=True, exist_ok=True)
-            with z.open(first[rel]) as src, open(t / rel, "wb") as dst:
-                dst.write(src.read())
+        members = _check(zp, z, m, root, d["added"] if clean else [])
+        if not yes:
+            die("re-run with --yes to do it")
+        if t.is_dir():
+            create(str(t), name + "-pre-restore", note=f"automatic, before restoring {zp.name}")
+        root.mkdir(parents=True, exist_ok=True)
+        for rel, info in members.items():
+            (root / rel).parent.mkdir(parents=True, exist_ok=True)
+            with z.open(info) as src, open_out(root / rel) as dst:
+                shutil.copyfileobj(src, dst, 1 << 20)
     if clean:
         for rel in d["added"]:
-            (t / rel).unlink(missing_ok=True)
+            (root / rel).unlink(missing_ok=True)
     print("restored", len(m["files"]), "files")
 
 

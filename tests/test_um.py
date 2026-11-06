@@ -1567,6 +1567,140 @@ def test_backup_legacy_relative_source_needs_explicit_folder(tmp_path, backup_sa
     assert (src / "save.dat").read_text() == "origin"
 
 
+@pytest.fixture
+def um_home(tmp_path, monkeypatch):
+    home = tmp_path / "um-home"
+    monkeypatch.setenv("UM_HOME", str(home))
+    return home
+
+
+def _snapshot_of(home: Path, name: str, members: dict, source: str, files: dict | None = None) -> Path:
+    """A zip laid out like a snapshot, whatever it holds. files is the manifest's list, by default the members' sizes
+    and SHA-1s."""
+    import hashlib
+    zp = home / "backups" / name / "20260101-000000.zip"
+    zp.parent.mkdir(parents=True, exist_ok=True)
+    if files is None:
+        files = {rel: dict(size=len(data), sha1=hashlib.sha1(data).hexdigest()) for rel, data in members.items()}
+    with backup.zipfile.ZipFile(zp, "w", backup.zipfile.ZIP_DEFLATED) as z:
+        for rel, data in members.items():
+            z.writestr(rel, data)
+        z.writestr("_um_manifest.json", json.dumps(dict(source=source, created="20260101-000000", note="", files=files)))
+    return zp
+
+
+def _symlink(link: Path, target: Path):
+    try:
+        link.symlink_to(target, target_is_directory=target.is_dir())
+    except (OSError, NotImplementedError) as e:  # Windows without Developer Mode or admin
+        pytest.skip(f"can't create symlinks here: {e}")
+
+
+@pytest.mark.parametrize("member", ["../sibling/x", "sub/../../sibling/x", "..\\sibling\\x", "<absolute>", "C:/sibling/x",
+                                    "C:sibling"])
+def test_backup_restore_writes_only_inside_the_folder(tmp_path, um_home, member, capsys):
+    dest, sibling = tmp_path / "dest", tmp_path / "sibling"
+    make(dest, {"save.dat": "current"})
+    member = (sibling / "x").as_posix() if member == "<absolute>" else member
+    _snapshot_of(um_home, "t", {"save.dat": b"old", member: b"X"}, source=str(dest))
+    with pytest.raises(SystemExit):
+        backup.restore("t", yes=True)
+    assert "nothing was changed" in capsys.readouterr().err
+    assert (dest / "save.dat").read_text() == "current"  # refused before the first file, not at the bad one
+    assert [p.name for p in dest.iterdir()] == ["save.dat"] and not sibling.exists()
+    assert not backup.snapshots("t-pre-restore")
+
+
+@pytest.mark.parametrize("link", ["save.dat", "sub"])
+def test_backup_restore_does_not_write_through_links(tmp_path, um_home, link, capsys):
+    # a link in the folder, the file itself or a folder on the way, would put the snapshot's bytes somewhere else
+    dest, outside = tmp_path / "dest", tmp_path / "outside"
+    make(outside, {"save.dat": "not yours", "cfg.ini": "not yours"})
+    make(dest, {"sub/cfg.ini": "current"} if link == "save.dat" else {"save.dat": "current"})
+    _symlink(dest / link, outside / "save.dat" if link == "save.dat" else outside)
+    _snapshot_of(um_home, "t", {"save.dat": b"old", "sub/cfg.ini": b"old"}, source=str(dest))
+    with pytest.raises(SystemExit):
+        backup.restore("t", yes=True)
+    assert "symlink or junction" in capsys.readouterr().err
+    assert (outside / "save.dat").read_text() == "not yours" and (outside / "cfg.ini").read_text() == "not yours"
+    assert (dest / link).is_symlink()  # refused, not replaced
+    assert (dest / ("sub/cfg.ini" if link == "save.dat" else "save.dat")).read_text() == "current"
+    assert not backup.snapshots("t-pre-restore")
+
+
+def test_backup_restore_clean_does_not_delete_through_links(tmp_path, um_home, monkeypatch):
+    # --clean deletes what the scan found; on Windows the scan goes into junctions
+    dest, outside = tmp_path / "dest", tmp_path / "outside"
+    make(outside, {"keep.txt": "not yours"})
+    make(dest, {"save.dat": "current"})
+    _symlink(dest / "linked", outside)
+    backup.create(str(dest), name="t")
+    scanned = backup.diff
+    monkeypatch.setattr(backup, "diff", lambda *a: {**scanned(*a), "added": ["linked/keep.txt"]})
+    with pytest.raises(SystemExit):
+        backup.restore("t", clean=True, yes=True)
+    assert (outside / "keep.txt").read_text() == "not yours"
+
+
+def test_backup_restore_into_a_linked_folder(tmp_path, um_home):
+    # the folder itself may be a link (saves moved to another drive): only links below it are refused
+    real, dest = tmp_path / "other-drive" / "saves", tmp_path / "saves"
+    make(real, {"save.dat": "v1", "sub/cfg.ini": "a=1"})
+    _symlink(dest, real)
+    backup.create(str(dest), name="t")
+    make(real, {"save.dat": "v2", "sub/cfg.ini": "a=2"})
+    backup.restore("t", yes=True)
+    assert (real / "save.dat").read_text() == "v1" and (real / "sub" / "cfg.ini").read_text() == "a=1"
+    assert dest.is_symlink()
+    assert backup.snapshots("t-pre-restore")
+
+
+@pytest.mark.parametrize("members", [{"a.dat": b"old a", "b.dat": b"OLD B"},          # other bytes, same size
+                                     {"a.dat": b"old a", "b.dat": b"old b, longer"},  # other size
+                                     {"a.dat": b"old a"}])                            # missing
+def test_backup_restore_checks_every_member_first(tmp_path, um_home, members, capsys):
+    import hashlib
+    dest = tmp_path / "dest"
+    make(dest, {"a.dat": "current", "b.dat": "current"})
+    files = {rel: dict(size=len(data), sha1=hashlib.sha1(data).hexdigest()) for rel, data in
+             {"a.dat": b"old a", "b.dat": b"old b"}.items()}
+    _snapshot_of(um_home, "t", members, source=str(dest), files=files)
+    with pytest.raises(SystemExit):
+        backup.restore("t", yes=True)
+    assert "b.dat" in capsys.readouterr().err
+    assert (dest / "a.dat").read_text() == "current" and (dest / "b.dat").read_text() == "current"
+    assert not backup.snapshots("t-pre-restore")
+
+
+def test_backup_restore_refuses_a_damaged_archive(tmp_path, um_home, capsys):
+    src = tmp_path / "src"
+    make(src, {"save.dat": bytes(range(256)) * 20})
+    zp = backup.create(str(src), name="t")
+    with backup.zipfile.ZipFile(zp) as z:
+        info = z.getinfo("save.dat")
+    data = bytearray(zp.read_bytes())
+    data[info.header_offset + 30 + len(info.filename) + info.compress_size // 2] ^= 0xFF
+    zp.write_bytes(data)
+    make(src, {"save.dat": "current"})
+    with pytest.raises(SystemExit):
+        backup.restore("t", yes=True)
+    assert "size or SHA-1 differs" in capsys.readouterr().err
+    assert (src / "save.dat").read_text() == "current"
+
+
+def test_is_link_counts_reparse_points_that_lead_elsewhere(monkeypatch):
+    # Windows: a junction or another name-surrogate reparse point leads elsewhere; OneDrive's files on demand and
+    # deduplicated files are reparse points too, but writing to them stays in place
+    import stat
+    import types
+    from um import common
+    for tag, link in [(0xA0000003, True), (0xA000000C, True), (0xA000001D, True),  # junction, symlink, WSL symlink
+                      (0x9000601A, False), (0x80000013, False)]:                    # OneDrive cloud file, dedup
+        st = types.SimpleNamespace(st_mode=stat.S_IFREG, st_file_attributes=stat.FILE_ATTRIBUTE_REPARSE_POINT, st_reparse_tag=tag)
+        monkeypatch.setattr(common, "os", types.SimpleNamespace(lstat=lambda p: st))
+        assert common.is_link(Path("x")) is link, hex(tag)
+
+
 # --------------------------------------------------------------------------- comfy
 
 from um import comfy  # noqa: E402
