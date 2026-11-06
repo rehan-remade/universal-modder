@@ -2325,6 +2325,53 @@
   ]
  },
  {
+  "path": "games/daggerfall-unity/arena-in-daggerfall-dfu-mod-builds-tests-and-arena-reference.md",
+  "kind": "game",
+  "title": "TES Arena in Daggerfall Unity: three-platform .dfmod builds, background tests, DOSBox reference",
+  "game": "Daggerfall Unity",
+  "games_also": [
+   "The Elder Scrolls: Arena"
+  ],
+  "game_version": "Daggerfall Unity 1.1.1 (portable), Unity 2019.4.40f1; Arena CD version (ACD.EXE) with its bundled DOSBox 0.74",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "loader-api",
+  "tools": [
+   "Unity 2019.4.40f1",
+   "Unity Hub 3.20 + Unity CLI 1.0.0-beta.13",
+   "UnityPy 1.25",
+   "DOSBox 0.74",
+   "um publish check"
+  ],
+  "anti_cheat": "none",
+  "status": "released",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-01",
+  "links": [
+   "https://github.com/Interkarma/daggerfall-unity",
+   "https://github.com/afritz1/OpenTESArena",
+   "https://github.com/K0lb3/UnityPy",
+   "https://store.steampowered.com/app/1812290/The_Elder_Scrolls_Arena/"
+  ],
+  "tags": [
+   "daggerfall-unity",
+   "dfmod",
+   "assetbundle",
+   "unity-2019",
+   "cross-platform",
+   "unity-cli",
+   "licensing",
+   "self-test",
+   "background-testing",
+   "dosbox",
+   "reference-oracle",
+   "bring-your-own-game"
+  ]
+ },
+ {
   "path": "games/dark-souls-ii/visible-arsenal-six-slot-cosmetics.md",
   "kind": "game",
   "title": "Visible Arsenal: all six equipped weapons shown on the character, through native cosmetic model parts",
