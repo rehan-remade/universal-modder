@@ -62,7 +62,11 @@ tags: ['umodel', 'pskx', 'ue3', 'cooked-packages', 'wwise', 'bank-extraction', '
   Just Cause 3 build that contains them are game content from your own install: they stay private,
   outside any repository, as the
   [JC3 note](../just-cause-3/vehicle-mesh-editing-added-geometry-loads-with-matching-toc.md)'s
-  Assets section says too. What can be shared is the method and your own tools.
+  Assets section says too. The grab records under "Beyond the mesh" follow the same rule: their full
+  value tables and key frames are the game's data in another encoding, so a public repository only
+  gets counts, digests and summaries (the
+  [fleet note](../just-cause-3/reading-the-vehicle-fleet-archives-rtpc-havok.md)'s Setup and Gotcha
+  12). What can be shared is the method and your own tools.
 
 umodel's directory scan of the install reports **4,260 game files (1,981 skipped) in 35 folders**.
 That does not mean 4,260 usable assets; it means umodel found that many package candidates and
@@ -214,9 +218,9 @@ The hash was calibrated on a serial whose name is in the export table:
 `0x102067E6`, was recorded under the short label `Transition_In`; the event's full name is
 `Play_Batmobile_Engine_Transition_In`, and FNV-1 of `play_batmobile_engine_transition_in` is exactly
 `0x102067E6` (the MK2 twin, `Play_Batmobile_MK2_Engine_Transition_In`, is `0xD7A391F3`). Hash the
-full event name, never a shortened label. In a bank, an event
-record is `id` + `u32 count` + the ids at `+8`. For `BML_Engine` this resolved **17/17 events to
-media**, and the extracted loops were auditioned by ear before being used.
+full event name, never a shortened label. In a bank, an event record is `id` + `u32 count` + the
+ids at `+8`. For `BML_Engine` this resolved **17/17 events to media**, and the extracted loops were
+auditioned by ear before being used.
 
 ### The package container, for when a tool cannot open a pack
 
@@ -277,14 +281,15 @@ really `AirControlYawTorqueFactorMax`; `AirControlTimeInAir` is at `0x4BC` and t
 `VehicleWeapons[0]` (referent `Weapons.Batmobile_Cannon_V2`); `0x2AC` is `DriftingBoostCooldown`;
 and `VehicleTransmission` is 112 bytes, not 92.
 
-**Residue, closed.** The first pass left 8 fields unnamed: bool and float residue in nested
-structs, where the flattened offset is ambiguous between `BMScreenShakeStruct` and its
+**Residue, closed.** The first pass counted 422 fields and left 8 unnamed: bool and float residue
+in nested structs, where the flattened offset is ambiguous between `BMScreenShakeStruct` and its
 `AdvancedOptions` child. They were closed by resolving against the **innermost** struct's own
-declaration and then reading the packed bool word bit by bit, so the count is now **423 of 423**.
-Separately, seven classes (`RBatmobileCannon`, `RBatmobileHeavyCannon`,
-`RBatmobileSonar`, `RBatmobileWinch`, `RVehicle`, `RVehicleBatmobileBase`, `RInventoryGadget`)
-cannot be regenerated from the *shipped* declaration — that copy is a different build. That does not
-affect the names, which come from absolute offsets in the dump.
+declaration and then reading the packed bool word bit by bit (read from the dump, not tested in
+game). The final count is **423 of 423**, one field more than the first pass counted. Separately,
+seven classes (`RBatmobileCannon`, `RBatmobileHeavyCannon`, `RBatmobileSonar`, `RBatmobileWinch`,
+`RVehicle`, `RVehicleBatmobileBase`, `RInventoryGadget`) cannot be regenerated from the *shipped*
+declaration — that copy is a different build. That does not affect the names, which come from
+absolute offsets in the dump.
 
 ### Beyond the mesh: the rest of the grab
 
@@ -385,9 +390,10 @@ What is **not** verified, and must not be claimed:
 
 - That any named handling, mass, damage or armour **value** behaves as its name in the destination
   game — the names are measured, the in-game behaviour is the port's still-open job.
-- Any value the files do not carry. G1-23 listed 71 such rows (5 weapon/damage, 61 mode fields
-  with no serialised value, 5 units the name does not document); there was no Arkham Knight footage
-  to measure them from, so each one is recorded as `UNKNOWN` with its reason, not estimated.
+- Any value the files do not carry. The grab's coverage record listed 71 such rows (5 weapon/damage,
+  61 mode fields with no serialised value, 5 units the name does not document); there was no Arkham
+  Knight footage to measure them from, so each one is recorded as `UNKNOWN` with its reason, not
+  estimated.
 - That the `BML_Battlemode` bank exists in a form reachable from shipped files at all.
 - That other Arkham Knight vehicles export as cleanly. Only the Batmobile package was worked.
 
@@ -485,16 +491,20 @@ What is **not** verified, and must not be claimed:
     align 4, and treat every `FInterpCurve` as 20 bytes; verify with a struct whose size you can check
     independently (`VehicleTransmission` is 112, not 92).
 20. **The dump disagrees with itself on bools — dozens of properties share an offset.** **Cause:** not
-    a mismatch: bools are packed into one bitfield word, and the generated accessor reports the
-    word's first bool for every sibling. **Fix:** compare the word, then order the bools by
-    declaration; a shared offset with the same word size is agreement, not drift.
+    a mismatch: bools are packed into one bitfield word, and every sibling's generated accessor reads
+    that same word and tests its own mask (`bSmoothRot` is `Ptr + 144` with `& 2`). **Fix:** compare
+    the word, then take each bool's bit from its mask; a shared offset with the same word size is
+    agreement, not drift.
 21. **Seven classes cannot be reproduced from the shipped declaration, so you start doubting the
     dump.** **Cause:** the copy of those classes in `BmGame.upk` is a different, smaller build than the
     one the engine linked. **Fix:** this affects re-derivation offline, not naming: the names come from
     absolute offsets in the running build's dump. Record the mismatch and move on.
-22. **`-lods` exports only LOD0.** **Cause:** `ExportMeshLods=false` in `umodel.cfg` overrides the
-    command-line flag without a warning. **Fix:** run umodel from a temporary folder with its own
-    config that sets `ExportMeshLods=true`, and leave the user's config alone.
+22. **`-lods` exports only LOD0.** **Cause:** the `ExportMeshLods` setting overrides the command-line
+    flag without a warning. At a0bfb46, `CExportSettings::Apply()` runs after the options are parsed
+    and sets `GExportLods` from it, and it defaults to false even with no line in `umodel.cfg`.
+    **Fix:** run umodel from a temporary folder with its own config that sets `ExportMeshLods=true`
+    (on Windows the config path is relative to the working directory), and leave the user's config
+    alone.
 23. **The camera distance reads 0, so you conclude it is native.** **Cause:** you read
     `DrivingCamConfig`, a zeroed template. The active configs are `DrivingCamConfig1`/`2`, at
     400 cm. **Fix:** find which config the archetype points at before you read one. A present value
@@ -552,10 +562,10 @@ closed from it. The missing input was a class declaration from the build that wa
 
 That is what a generated SDK is. BmSDK-AK's build reflects over the running game's `UClass` chain and
 writes every property with the offset the engine itself linked it to, so "the field at object+0x4A8"
-becomes a name without any struct walking. With it, **414 of the Batmobile fields resolved at
-once**, and the last eight (flattened screen-shake bools and floats) fell to the innermost struct's
-declaration plus the packed bool word: **423 of 423**. The slot
-rules could then be checked instead of fitted (native-class section above), which is how the
+becomes a name without any struct walking. With it, **414 of the 422 fields the first pass counted
+resolved at once**, and the last eight (flattened screen-shake bools and floats) fell to the
+innermost struct's declaration plus the packed bool word. The final count is **423 of 423**. The
+slot rules could then be checked instead of fitted (native-class section above), which is how the
 `AirControl*`, weapon-array and `0x318` errors were caught.
 
 What is still not established: the *values* are named but have not been driven in the destination

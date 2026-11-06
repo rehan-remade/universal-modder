@@ -28,9 +28,10 @@ tags: ['archives', 'rtpc', 'adf', 'rbm', 'havok', 'vehicles', 'reverse-engineeri
 > 77,611 render blocks decoded, and 35,499 Havok compound instances wired to 25,769 part
 > indices**. A second pass then read every vehicle *system* the port needed from the same files:
 > weapons, turrets, doors, audio, damage, water, interaction, spawning and registration ("Vehicle
-> systems, read from the same files"). It was built to answer "what is a good donor for a 7 m Batmobile, and what does its
-> handling actually do", so every table is fleet-wide and every script has a `check` that re-reads the
-> game and fails on drift. Nothing here writes a file or launches the game.
+> systems, read from the same files"). It was built to answer "what is a good donor for a 7 m
+> Batmobile, and what does its handling actually do", so every table is fleet-wide and every script
+> has a `check` that re-reads the game and fails on drift. Nothing here writes to the install or
+> launches the game, and no file from the `.physicsc` writer added later has been loaded in game.
 
 ## Setup
 
@@ -40,7 +41,11 @@ tags: ['archives', 'rtpc', 'adf', 'rbm', 'havok', 'vehicles', 'reverse-engineeri
   and Bavarium Sea Heist, plus the pre-order and bonus packs (`v0300_preorder`, `v0604_preorder`,
   `v1401_preorder`, `v0805_sportmech`, `w142_preorder`, `w163_preorder`, `w901_scorpiongun`,
   `skin_flame`). The DLC archives are only read for the fleet tables: a donor or part taken from a
-  DLC vehicle is only for players who own that DLC.
+  DLC vehicle is only for players who own that DLC. Being in the base archives doesn't make a part
+  free. Steam's Rocket Launcher Sports Car (app 388292) is only the 24 KB `v0300_preorder` unlock
+  under `dlc_win64/`, while the car's entity (`v0300_car_kensington_sportsmuscle_signature_preorder`)
+  and its weapon (`w618_sportsmuscle_missile`) sit in `archives_win64`, and a mod that names them
+  doesn't check ownership.
 - No loader, no anti-cheat, no online services. The work is **read-only**: archives and bundles are
   unpacked in memory or to a scratch folder, and nothing is written back.
 - [Gibbed's Just Cause 3 tools](https://github.com/tim42/gibbed-justcause3-tools-fork) for the
@@ -191,12 +196,13 @@ one to the AABB. The AABB and `pristine_index_count` above sit in bytes it leave
 
 The 374 framed blocks were decoded in a later pass: they are `General`, `GeneralJC3`,
 `BavariumShield`, `WaterDisplacementOverride` (`0xF99C72A1`, which the exporter calls "WaterHull"),
-`Prop` and one family known only by its hash, `0x90FE086C`. Name block types from the published
-enum, not from a word list.
+`Prop` and `WaterMask` (`0x90FE086C`). Name block types from the published enum (`RenderBlockType`
+in ava-format-lib's `render_block_model.h`, whose values are the lookup3 hashes of the names), not
+from a word list.
 
-First-pass totals: **77,237 decoded + 374 framed, 0 failed** (now 77,611 decoded, 0 framed), **20,797,479 vertices**, **19,197,927 triangles**,
-**806,529 material slots**. Decoded positions and indices are written per entity as float32 ×3 and
-u16/u32 pairs — outside the repository.
+First-pass totals: **77,237 decoded + 374 framed, 0 failed** (now 77,611 decoded, 0 framed),
+**20,797,479 vertices**, **19,197,927 triangles**, **806,529 material slots**. Decoded positions and
+indices are written per entity as float32 ×3 and u16/u32 pairs — outside the repository.
 
 ### Collision: Havok packfiles, not property files
 

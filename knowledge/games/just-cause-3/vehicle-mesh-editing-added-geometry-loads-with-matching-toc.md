@@ -63,7 +63,9 @@ tags: ['vehicles', 'mesh', 'rbm', 'avalanche-engine', 'havok', 'gibbed', 'revers
   `dlc_win64/` (list in the [fleet note](reading-the-vehicle-fleet-archives-rtpc-havok.md)). No
   DLC manager, no loader, no anticheat.
 - Single player only; JC3MP is not covered by this note. Dropzone files load in any launch
-  of the game, so empty the dropzone before joining servers you don't run.
+  of the game, so empty the dropzone before joining servers you don't run. Keep a modded game in
+  offline mode too: when it's connected, JC3 reports stats such as kills and airtime to Square
+  Enix's leaderboards.
 - Gibbed.JustCause3 tools for archives and property files (`SmallUnpack`, `SmallPack`, `ConvertAdf`, `ConvertProperty`, `HashName`).
 - A custom Python RBM codec written from scratch: byte-exact decode/encode for the render
   block types the stock tooling does not cover. This is the load-bearing tool — see Build steps.

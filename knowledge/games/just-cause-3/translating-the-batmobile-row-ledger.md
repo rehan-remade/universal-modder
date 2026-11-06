@@ -13,7 +13,12 @@ status: in-progress
 agents: ['Freebuff (DeepSeek V4.1 1017)', 'Claude Code (Opus 5.5)']
 humans: ['@NotTrevino']
 date: '2026-10-30'
-links: []
+links:
+- https://github.com/tim42/gibbed-justcause3-tools-fork
+- https://github.com/aaronkirkham/jc-model-renderer
+- https://github.com/gildor2/UEViewer
+- https://github.com/Team-BmSDK/BmSDK-AK
+- https://github.com/capstone-engine/capstone
 tags: ['porting', 'cross-game', 'vehicles', 'translation-ledger', 'batmobile', 'damage-model', 'weapons', 'audio', 'lights', 'collision', 'verification', 'agent-workflow']
 ---
 
@@ -22,10 +27,10 @@ tags: ['porting', 'cross-game', 'vehicles', 'translation-ledger', 'batmobile', '
 > Porting a vehicle between two engines is not one conversion; it is a few hundred small
 > decisions, each of which can be silently wrong. This project made every one of them a **row**:
 > a source value from Batman: Arkham Knight, a carrier in Just Cause 3, a transform, a
-> disposition and the file that proves it. The ledger holds **180 rows**: 126 resolved from
-> evidence, 1 assumed, 17 blocked, 43 out (JC3 has no system for them) and 8 superseded. **No row
-> has been verified in game yet**, so this note is about the method and what the files decided,
-> not about a finished car.
+> disposition and the file that proves it. The ledger holds **180 rows**. By disposition: 126
+> resolved from evidence, 1 assumed, 17 blocked, 43 out (JC3 has no system for them) and 8
+> superseded, which adds up to 195 (see Open questions). **No row has been verified in game yet**,
+> so this note is about the method and what the files decided, not about a finished car.
 
 ## Setup
 
@@ -37,6 +42,16 @@ tags: ['porting', 'cross-game', 'vehicles', 'translation-ledger', 'batmobile', '
   [mesh-editing note](vehicle-mesh-editing-added-geometry-loads-with-matching-toc.md).
 - The donor is the Serpente, `v0300_car_kensington_sportsmuscle_civilian_01`. Both games are owned
   by the user. Nothing from either game is in this repository.
+- **What ships:** nothing from either game. A build that carries the Batmobile's mesh, textures,
+  animation or audio holds Arkham Knight's content, converted from the author's own install, so it
+  stays private ([mesh-editing note](vehicle-mesh-editing-added-geometry-loads-with-matching-toc.md),
+  Assets). Anyone else builds their own from their own copies of both games. The ledger's rows carry
+  values from both games, which is the games' data in another encoding: if the project ever goes
+  public, the rows and the value tables behind them stay out, and only the generators, counts and
+  digests go in ([fleet note](reading-the-vehicle-fleet-archives-rtpc-havok.md), Setup and Gotcha 12).
+- **Single player, offline.** A build loads from the dropzone in any launch, so empty it before
+  joining servers you don't run. Keep a modded game in offline mode too: when it's connected, JC3
+  reports stats such as kills and airtime to Square Enix's leaderboards.
 - Work was split into cards (G1 = BmAK grab, G2 = JC3 grab, T = translate, B = build). The agents
   were Freebuff running DeepSeek V4.1 1017 and Claude Code, with one card per session and a
   journal entry before and after each card.
@@ -83,9 +98,14 @@ D-10 no JC3 gear mods, and JC3 functions may only be borrowed to make the car lo
   candidates differ by exactly the factor the probe tests.
 - **Weapons.** Each Batmobile weapon gets an existing JC3 carrier: heavy cannon →
   `w602_mediumtank_canon` on `main_weapon`; Vulcan → `w603_mediumtank_mgun` on the second driver
-  slot (`00568A74`); missiles → the donor's own `w618_sportsmuscle_missile`. The EMP missile is
-  blocked, because JC3's pulse has no "disable" member. Of 136 weapon aspects, 53 are `UNKNOWN`,
-  and they are named rather than guessed.
+  slot (`00568A74`); missiles → `w618_sportsmuscle_missile`, the rockets of the Serpente's signature
+  car. That car is paid DLC (Steam's Rocket Launcher Sports Car, app 388292, the `v0300_preorder`
+  pack), even though its files sit in the base archives
+  ([fleet note](reading-the-vehicle-fleet-archives-rtpc-havok.md), Setup). This install has the pack,
+  and Steam only installs it for an account that owns it. The new entity doesn't check ownership, so
+  this row is only for players who own that DLC. The EMP missile is blocked, because JC3's pulse has
+  no "disable" member. Of 136 weapon aspects, 53 are `UNKNOWN`, and they are named rather than
+  guessed.
 - **Moving parts.** 11 parts cut from the body by bone ownership (turret, cannon, Vulcan, riot
   suppressor, two missile pods, four aero flaps, jet). Every pivot agrees with the bone table to
   1.39e-5 m. Joint spans and rates are measured from the exported key frames. For example, the
@@ -139,7 +159,7 @@ can always be bisected to a row.
 - Built and read back: test-085 carries 35 values over 16 rows, read back through its `.toc`
   (35/35). Later batches are in test-089 (4 values) and test-090 (2 values), and test-090 is read
   back through the installed `.toc`. All of that is file level, not behaviour.
-- **Not verified:** any row's behaviour in game (0 of 180). Four rows have partial manoeuvre
+- **Not verified:** any row's behaviour in game (none yet). Four rows have partial manoeuvre
   measurements.
 
 ## Gotchas
@@ -159,8 +179,9 @@ can always be bisected to a row.
    decision; freeze a snapshot with its sha256 and point to the live row.
 5. **Hand-written prose rots.** **Cause:** numbers typed into Markdown next to a checked JSON.
    **Fix:** render every number from data, and diff the page byte for byte in `--check`.
-6. **Reviews find real bugs.** Every finished card was reviewed by a second agent session and
-   reworked against the data. Across the reworks, almost every issue was confirmed when re-checked,
+6. **A finished card still has real bugs.** **Cause:** the session that wrote a card checks it
+   against its own assumptions. **Fix:** have a second agent session review every finished card, then
+   rework it against the data. Across the reworks, almost every issue was confirmed when re-checked,
    and a few review claims were rejected with evidence. Re-check each issue before editing, and
    expect the reviewer's own numbers to be wrong sometimes.
 
@@ -182,9 +203,17 @@ of the two grabs. Most of the cost was rework: making every page generated and e
   and 18000.
 - **New collision hulls** for the 11 moving parts.
 - **The EMP missile's disable effect** has no carrier in JC3's data.
+- **The row count.** The dispositions in the summary add up to 195, not 180, so either some rows sit
+  under two dispositions or a total is stale.
 
 ## Related and credits
 
 - [Arkham Knight Batmobile scrape](../batman-arkham-knight/scraping-the-batmobile-umodel-pskx-wwise.md)
 - [JC3 fleet read](reading-the-vehicle-fleet-archives-rtpc-havok.md)
 - [JC3 vehicle mesh editing](vehicle-mesh-editing-added-geometry-loads-with-matching-toc.md)
+- The ledger stands on the two grabs' tools:
+  [Gibbed's Just Cause 3 tools](https://github.com/tim42/gibbed-justcause3-tools-fork) (Gibbed, fork
+  by Timothée Feuillet) and [jc-model-renderer](https://github.com/aaronkirkham/jc-model-renderer)
+  on the JC3 side, [UE Viewer](https://github.com/gildor2/UEViewer) (Gildor) and
+  [BmSDK-AK](https://github.com/Team-BmSDK/BmSDK-AK) (Eli Kramer / Team-BmSDK, MIT) on the Arkham
+  Knight side, and [Capstone](https://github.com/capstone-engine/capstone) for the store-site search.
