@@ -13,7 +13,7 @@ status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: []
 date: 2026-10-29
-links: ["valkia-khorne-subjugation-reusing-archaon-dilemmas.md"]
+links: ["knowledge/games/total-war-warhammer-iii/valkia-khorne-subjugation-reusing-archaon-dilemmas.md", "https://github.com/Frodo45127/rpfm", "https://github.com/Frodo45127/rpfm-schemas"]
 tags: [warscape, total-war, db-tables, variants, unit-scale, formation-spacing, compatibility-patch, generator, workshop]
 ---
 
@@ -21,10 +21,11 @@ tags: [warscape, total-war, db-tables, variants, unit-scale, formation-spacing, 
 
 Every unit model in battle (infantry, lords and their alternate looks, mounts, monsters, chariots, war
 machines) is drawn 1.75x bigger, and formation spacing is widened by the same factor so soldiers don't clip.
-Hitboxes, collision, mass and stats are unchanged. Because the result has to cover units from whatever mods
-the player has enabled, the mod is a small generator that reads the player's own vanilla DB plus every
-enabled mod and writes one patch pack. Confirmed in game by the human player: infantry, cavalry (riders
-seated correctly), monsters, Daemon Princes and units from Workshop mods.
+Hitboxes, collision, mass and stats aren't edited (collision and mass live in `battle_entities`, which the pack
+leaves alone), but the wider spacing does change battles (see Multiplayer in Setup). Because the result has to
+cover units from whatever mods the player has enabled, the mod is a small generator that reads the player's own
+vanilla DB plus every enabled mod and writes one patch pack. Confirmed in game by the human player: infantry,
+cavalry (riders seated correctly), monsters, Daemon Princes and units from Workshop mods.
 
 ## Setup
 - Total War: WARHAMMER III, Steam app 1142710, `Warhammer3.exe` 9.0.4.0, Steam build 25961564, Windows 11,
@@ -32,8 +33,14 @@ seated correctly), monsters, Daemon Princes and units from Workshop mods.
   `used_mods.txt`.
 - Python 3.14 via the `py` launcher. 3.14's standard library has `compression.zstd`, so reading CA's
   zstd-compressed packs needs no third-party package.
-- RPFM's schema file `schema_wh3.ron` (RPFM downloads it into its config folder). It gives every DB table's
-  field names and types per table version; the generator parses it with a few regexes.
+- [RPFM](https://github.com/Frodo45127/rpfm)'s schema file `schema_wh3.ron` (Frodo45127,
+  [rpfm-schemas](https://github.com/Frodo45127/rpfm-schemas), MIT; RPFM downloads it into its config folder). It
+  gives every DB table's field names and types per table version; the generator parses it with a few regexes.
+- **Multiplayer:** for single player, or a multiplayer battle or campaign with friends who all agreed and all run
+  the identical pack, each built from the same game version and mod list. The collision data stays as it was, but
+  the wider spacing is battle data too: it changes each unit's frontage and how many models an area attack can
+  catch. Keep it out of ranked and quick battles (the community's advice against random opponents is to play with
+  all mods off). Multiplayer wasn't tested.
 
 ## Route and why
 - **Data only:** two DB tables in one PFH5 mod pack. No script, no native code.
@@ -72,15 +79,21 @@ seated correctly), monsters, Daemon Princes and units from Workshop mods.
   `dismounted_loose_formation_spacing_` + `horizontal`/`vertical`/`variation`. `testudo_*` and
   `shield_wall_*` look like multipliers (0.85, 1.0) and were left alone, as were the `ship_*` rows. Side effect
   of scaling them: each unit's battle line is 1.75x wider.
-- **Override priority** (what decides the "winning" row): enabled mods in `used_mods.txt` order, then within
-  a pack the table files sorted by name (`!` sorts first), then vanilla `db.pack`; the first row for a key
-  wins. Naming both the pack and its table files with a long run of `!` puts the patch ahead of everything.
-  Some mod managers also generate merged patch packs named `!!!!...`; check that none of them carry the
-  tables you patch (here they carried `land_units`, `main_units`, `battle_entities`, but not `variants` or
-  `unit_spacings`).
-- **PFH5 layout, as used here:** `PFH5`, u32 flags (3 for a mod pack), u32 dependency count, u32 dependency
-  index size, u32 file count, u32 file index size, u32 timestamp (28 bytes; flag 0x100 adds 20 more). The
-  file index is, per file, u32 size, (u32 timestamp only if flag 0x40), u8 compressed, NUL-terminated
+- **Override priority** (what decides the "winning" row): the first row for a key wins, and DB tables are
+  ordered by **table file name**, not pack name (the
+  [modding wiki's load order section](https://tw-modding.com/wiki/Troubleshooting): scripts, UI and variant art
+  files go by pack name, DB and text by table name; `!` sorts first). RPFM's
+  [manual](https://frodo45127.github.io/rpfm/manual/tutorials/datacores.html) describes the same merge, with
+  `@...` tables as high-priority overrides, `z...` tables as low-priority ones and `data__` as vanilla. Naming both
+  the pack and its table files with a long run of `!` puts the patch ahead of everything. This generator walked
+  enabled mods in `used_mods.txt` order, each pack's table files by name, then vanilla `db.pack`. The only conflicts
+  it met were 15 mod rows over vanilla (see Verification), so two mods clashing, where pack order and table names
+  can disagree, wasn't put to the test. Some mod managers also generate merged patch packs named `!!!!...`; check
+  that none of them carry the tables you patch (here they carried `land_units`, `main_units`, `battle_entities`, but
+  not `variants` or `unit_spacings`).
+- **PFH5 layout, as used here:** `PFH5`, u32 type and flags (low 4 bits: 3 = mod pack), u32 dependency count,
+  u32 dependency index size, u32 file count, u32 file index size, u32 timestamp (28 bytes; flag 0x100 adds 20
+  more). The file index is, per file, u32 size, (u32 timestamp only if flag 0x40), u8 compressed, NUL-terminated
   backslash path. Data follows the index in the same order. Compressed entries are u32 uncompressed size +
   a zstd frame. Writing an uncompressed mod pack (compressed byte 0) loads fine.
 - **DB table binary:** optional GUID marker `FD FE FC FF` + u16 length + UTF-16 GUID, version marker
@@ -95,13 +108,15 @@ seated correctly), monsters, Daemon Princes and units from Workshop mods.
    `data\` or one of the `add_working_directory` folders), then vanilla `data\db.pack`. Skip your own output
    pack.
 3. For each `variants_tables` / `unit_spacings_tables` file, keep the first row seen per key. For each
-   referencing table above, collect the variant keys it uses.
+   referencing table above, collect the variant keys it uses. (To match the game when two mods clash, sort all the
+   mods' table files by file name first; see Override priority.)
 4. Write rows: every winning variant whose key is referenced, with `scale *= 1.75`, and every non-ship spacing
    row with its 12 distance columns `*= 1.75`. Rows from older table versions get their missing fields
    filled from the newest template. Encode with the newest version found (vanilla's) and keep its GUID.
 5. Write one PFH5 mod pack with `db\variants_tables\<!!!...name>` and
    `db\unit_spacings_tables\<!!!...name>` to `data\`, then enable it in the launcher or mod manager.
-6. **Re-run after any change to the mod list**, or new units stay normal size.
+6. **Re-run after any change to the mod list or a game patch.** Otherwise new units stay normal size, and the pack
+   keeps forcing its old rows over a patched table.
 
 ## Verification
 - **Offline:** both tables round-trip byte-for-byte against vanilla; the written pack re-reads with the
@@ -112,7 +127,8 @@ seated correctly), monsters, Daemon Princes and units from Workshop mods.
   units 1.75x bigger with wider formations, cavalry riders seated correctly, Daemon Princes correct, and
   Workshop units scaled.
 - **Not verified:** pathing of the wider formations in sieges and narrow maps; multiplayer (the pack changes
-  DB data, so every player would need the identical generated pack).
+  DB data, so every player would need the identical generated pack); whether the bigger models change anything in
+  battle beyond the look (projectile hits and melee contact weren't measured).
 
 ## Gotchas
 1. **A static pack misses mod units and can revert other mods.** **Cause:** DB rows override by key; a row
@@ -127,18 +143,24 @@ seated correctly), monsters, Daemon Princes and units from Workshop mods.
 4. **Daemon Prince parts look like they need their own scale.** They don't: armory parts follow the base
    body. Don't scale `armory_item_variants`.
 5. **`um scan` reports "unknown native engine".** **Cause:** no Warscape signature in the scanner. **Fix:**
-   ignore it; Warscape mods are packs (see the Valkia note linked above).
+   ignore it; Warscape mods are packs (see the
+   [Valkia note](valkia-khorne-subjugation-reusing-archaon-dilemmas.md)).
 6. **The toolkit CLI fails with `No module named 'numpy'` on a system Python without uv.** **Cause:** the CLI
-   imports every module at start. **Fix:** this route needs none of it; Python 3.14's stdlib reads zstd packs.
+   imports every module at start. **Fix:** run it through `bin/um` with `uv` on PATH, or
+   `pip install pillow numpy`. This route needs none of it; Python 3.14's stdlib reads zstd packs.
 7. **Not a mod bug, but it cost hours while testing:** after the player swapped a 1080p second monitor (left
    of the main one) for a second 2560x1440 one, the game drew its UI only in the right half of the main screen
    (menu and campaign HUD; the 3D view filled the screen). Disabling mods, windowed/fullscreen, restarting and
    AMD Eyefinity on/off didn't help (Eyefinity made it a 1024x1024 corner render). **Fix:** in Windows Display
-   settings, drag the second monitor to the other side, apply, then drag it back and apply. That rewrote the
-   saved monitor layout and the game has drawn correctly since. Check this before suspecting a UI mod.
+   settings, drag the second monitor to the other side, apply, then drag it back and apply. That presumably
+   rewrote the saved monitor layout (the cause wasn't pinned down), and the game has drawn correctly since. Check
+   this before suspecting a UI mod.
 
 ## Assets
-None. All meshes are the game's or the installed mods' own; only numbers change.
+None. All meshes are the game's or the installed mods' own; only numbers change. The generated pack copies each
+winning row, including other people's mods' rows (their mesh paths), so it stays in your own install: don't upload
+it to the Workshop or pass it around. What can be shared is the generator, which each player runs on their own mod
+list.
 
 ## Cost and time
 One session: about an hour from recon to an installed pack, then human playtesting. Most of the remaining
@@ -148,6 +170,7 @@ time went to gotcha 7.
 - Do 1.75x-wide formations path badly through settlement streets and gates? If so, a smaller spacing factor
   (for example 1.4 with models at 1.75) may be the better trade-off.
 - Should campaign-map figures be scaled to match? They were left out on purpose.
-- Scaling `battle_entities` collision as an option, for players who want "realistic" big units and accept the
-  balance change. Some mod managers ship their own merged `battle_entities` patch, so that would have to be
+- Scaling `battle_entities` collision as an option (`radius`, `height`, `combat_reaction_radius` and
+  `projectile_intersection_radius_ratio` in RPFM's schema), for players who want "realistic" big units and accept
+  the balance change. Some mod managers ship their own merged `battle_entities` patch, so that would have to be
   generated after theirs.
