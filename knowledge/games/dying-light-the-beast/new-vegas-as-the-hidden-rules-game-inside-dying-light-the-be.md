@@ -104,6 +104,16 @@ has a rule that would compete with FNV's decision (gore kills), that rule is swi
   set when a +0x36cc accumulator passes 300.0); focus loss, a pad unplug or another window in front never pause it.
 - **FNV's VATS only targets a stand-in in the Courier's view.** Place stand-ins where the host's enemies really
   are (a reader of the host's world feeding the placement); fixed spots ~40 deg off the facing never open VATS.
+- **Telling The Beast's medkit apart from other heals:** medkits, food and other consumables all reach the player's
+  `Heal()` from the same call site, and the healing tuples carry ids, not names. Logging the call stack in the heal
+  callback (`RtlCaptureStackBackTrace`, return addresses as gamedll RVAs) and naming each frame's function (its
+  `.pdata` bounds, then the RTTI class of any vtable slot that holds it) showed the medkit's path runs through
+  `SelfHealingController` (vtable slot 143), the only caller of the next frame down; everything below is the
+  generic item path with many callers. Two of those return addresses (1.7.1) are the medkit signature. Blocking that
+  heal and asking FNV instead, a medkit became one of the Courier's own Stimpaks (9 -> 8; Hardcore healed it over
+  ~6 s and Kyle's bar followed); with no Stimpak FNV refused and nothing healed.
+- **The Beast's medkit is hold-to-use:** hold H (or the pad's X) for about 2.4 s, through the animation; taps and
+  short holds do nothing (`_ACTION_USE_CONSUMABLE` in `data0.pak` `scripts/inputs/inputs_keyboard.scr`).
 
 ## Build steps
 1. Pin The Beast (above) and install the ASI loader; deploy the Beast plugin plus flag files next to it.
@@ -120,8 +130,10 @@ has a rule that would compete with FNV's decision (gore kills), that rule is swi
 - Dry run (11-06), on a copy of the player's profile: one-click start in 42 s; 59.9 fps with the plugin costing
   0.03-0.06 ms per frame; F2 -> FNV's Pip-Boy in 33 ms; stop wrote FNV's checkpoint in a new slot; the player's real
   profile hash-identical afterwards.
-- NOT verified yet: FNV's death dealt as the kill blow in a real fight; incoming damage decided by FNV (planned);
-  the unarmed path.
+- Live (11-06): FNV's death dealt as the kill blow (DT-2); FNV's unarmed hit through the whole bridge; enemy melee
+  hits on Kyle decided by FNV's own hit on the hidden Courier (bites at FNV's 20 per hit); a Beast medkit = one of
+  the Courier's own Stimpaks, and none left = no heal.
+- NOT verified yet: ranged hits on Kyle, an enemy's very first hit and Kyle's kicks (still The Beast's numbers), food.
 
 ## Gotchas
 1. **The plugin went passive one morning.** **Cause:** Steam auto-updated The Beast. **Fix:** `download_depot` the
@@ -159,6 +171,15 @@ has a rule that would compete with FNV's decision (gore kills), that rule is swi
     the session end waits for the player to close it (nothing of ours presses OK).
 15. **Byte-scanning FalloutNV.exe for known addresses found nothing.** **Cause:** the Steam exe's code is
     encrypted on disk. **Fix:** read code from the running process; don't strip the DRM.
+16. **Medkit presses and shots did nothing during a test fight.** **Cause:** a biter's repeated "bites" are a grab
+    (The Beast's tap-F mini-game); while grabbed the player can't use items or shoot. **Fix:** test heals with no
+    enemy (a developer-only op that sets the player's HP) and hold the medkit key through its animation.
+17. **An enemy FNV had killed kept biting at 0 HP.** **Cause:** FNV's death was dealt while the biter held the
+    player in a grab; the same single deal killed a biter that wasn't grabbing (The Beast's kill 17 ms later).
+    **Fix (in progress):** treat an enemy as dead only on The Beast's own kill, keep dealing until it comes, and
+    hold every hit from an attacker FNV says is dead.
+18. **An item given by the game's own quest-reward call never reached the quick slot.** **Cause:** it went to the
+    player's stash. **Fix:** test with items the save already carries.
 
 ## Assets
 None: every menu, number and item is FNV's own; The Beast's art is untouched.
@@ -167,7 +188,7 @@ None: every menu, number and item is FNV's own; The Beast's art is untouched.
 Two days of sessions (11-04 to 11-06) with a main agent and up to three helper agents on a Pro plan.
 
 ## Open questions
-- The unarmed hit through the whole bridge (Kyle's punch -> FNV's number on The Beast's enemy); so far checked
-  with FNV alone.
-- FNV deciding incoming damage: Beast hits on Kyle as FNV hits on the Courier, Kyle's health mirroring FNV's.
+- Ending The Beast's grab from code (the path the player's tap-F break-free takes) so FNV's kill lands at once.
+- Ranged hits on Kyle: does FNV's stand-in carry its own gun for FNV's hit?
+- Food: does it reach `Heal()` through a different path than `SelfHealingController`?
 - The D3D12 fatal after spawns: the spawned AI's streaming, or the cloud PC's GPU?
