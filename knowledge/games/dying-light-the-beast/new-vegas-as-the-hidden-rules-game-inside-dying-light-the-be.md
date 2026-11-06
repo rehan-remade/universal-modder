@@ -125,6 +125,12 @@ has a rule that would compete with FNV's decision (gore kills), that rule is swi
   attacker's own projectile (Projectile::Spawn 0x9BCA60; its init 0x9BBEF0 takes the shooter's weapon entry and ammo)
   60 units in front of the target lets FNV's own impact (0x9C30D0 -> 0x899CB0) decide damage, location and limbs; the
   reply arrived ~15-110 ms after the shot. Calling 0x9C30D0 directly also works, without a body part.
+- **A shotgun's pellets, decided by FNV:** FNV's own projectiles-per-shot getter (`TESObjectWEAP` 0x525B20, thiscall
+  `(perks, skip_ammo, actor)`, `ret 0xC`: the weapon's +0x11E or its ammo's own count, then the perk entry point) gives
+  the count; spawning that many of the shooter's own projectiles the way the single shot above is spawned lets FNV's
+  impact decide every pellet (live: a Caravan Shotgun, 7 of 7 pellets, 38 per shot). Calling FNV's own
+  `TESObjectWEAP::Fire` (0x523150) on the stand-in does not work for this: it takes the direction from a 3D node's
+  world transform (the gun's barrel in the animation), so turning the reference first doesn't aim the pellets.
 - **First hits:** a stand-in created on the shooter's first hit faults FNV's hit code in the same call; placing
   stand-ins from the host's enemy list (only enemies whose own target is the player) at least 1.2 s ahead makes
   every first hit FNV's.
@@ -153,7 +159,10 @@ has a rule that would compete with FNV's decision (gore kills), that rule is swi
 - Live (11-06, later): an enemy FNV killed mid-grab dies through The Beast's own escape + kill; kicks and the
   grab-escape push = FNV's unarmed attack (3.75 at level 1); every first bite FNV's; a host rifleman's shots = the
   stand-in's own FNV gun (34 / 12 / 34), Kyle following; a soak with the combat pilot: no stuck deaths, no drift.
-- NOT verified yet: food (it heals through a different controller than medkits), grenades, bows.
+- Live (11-06, evening): a stand-in carrying FNV's Caravan Shotgun hit the Courier with 7 of 7 FNV pellets per shot
+  (38 a shot); a scripted play session on a copy of the player's profile: all 46 hits on the player FNV's, none of
+  the host's numbers, FNV's XP for kills, its loot menu and VATS over the host, medkits as FNV Stimpaks.
+- NOT verified yet: food (it heals through a different controller than medkits), grenades, flamers, bows.
 
 ## Gotchas
 1. **The plugin went passive one morning.** **Cause:** Steam auto-updated The Beast. **Fix:** `download_depot` the
@@ -200,6 +209,20 @@ has a rule that would compete with FNV's decision (gore kills), that rule is swi
     for the player; the deferred death then runs (live: ~1.2 s).
 18. **An item given by the game's own quest-reward call never reached the quick slot.** **Cause:** it went to the
     player's stash. **Fix:** test with items the save already carries.
+19. **A scripted play session froze for 19 minutes.** **Cause:** FNV's DLC notices ("Dead Money Loaded") can open ~30 s
+    after a load, mid-play; the host stays frozen for FNV's menu, and the script pressed X / B on it. **Fix:** A (OK)
+    on FNV's message boxes, never X / B.
+20. **FNV's first VATS ignored the queue and fire presses.** **Cause:** FNV's one-time VATS tutorial opens on top
+    ~0.7 s after VATS. **Fix:** close it (B), then queue (RT) and fire (A).
+21. **The test pilot swung at air while a biter bit from behind.** **Cause:** a "swing at what's in front" goal, and
+    spawns placed "ahead" of a player who had since turned (into the residents' pen). **Fix:** aim at the spawned
+    enemy's id, and walk back to a known spot facing the open courtyard before each spawn.
+22. **An automated Esc (to close the host's idle pause) stopped the combat pilot.** **Cause:** the pilot halts on Esc,
+    taking it as a human taking over. **Fix:** re-arm it after an automated Esc.
+23. **Medkits used during a fight never healed.** **Cause:** The Beast cancels its medkit when the player is hit
+    while using it. **Fix:** heal away from attackers (in the player's notes too).
+24. **A respawn would rewrite the host's campaign save, which sits in Steam Cloud's synced folder.** **Fix:** tests
+    end the host by its exact PID before its own respawn, and check the save's hash after every run.
 
 ## Assets
 None: every menu, number and item is FNV's own; The Beast's art is untouched.
@@ -208,6 +231,7 @@ None: every menu, number and item is FNV's own; The Beast's art is untouched.
 Two days of sessions (11-04 to 11-06) with a main agent and up to three helper agents on a Pro plan.
 
 ## Open questions
-- Which other host hits arrive as category 4 (grenades?), and whether bows / shotguns can use FNV's own weapons.
+- Which other host hits arrive as category 4 (grenades?), and how explosions, fire and bows can be FNV's (FNV's own
+  explosion would also reach the stand-ins around the hidden Courier).
 - FNV's UI units for the HUD tile rects (the menu root reports no width), so the capture can be cut at FNV's rects.
 - The D3D12 fatal after spawns: the spawned AI's streaming, or the cloud PC's GPU?
