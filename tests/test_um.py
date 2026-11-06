@@ -1357,6 +1357,44 @@ def test_backup_dot_source_is_named_after_the_folder(tmp_path, backup_same_secon
     assert backup._manifest(zp)["source"] == str(tmp_path / "Terraria")
 
 
+def test_backup_source_with_dotdot_does_not_need_the_cwd_later(tmp_path, backup_same_second, monkeypatch):
+    # recorded as cwd/../saves, deleting the folder it was typed from made diff report every file as removed,
+    # and restore skipped the pre-restore snapshot and recreated that folder
+    work = tmp_path / "work"
+    make(work, {"saves/save.dat": "origin", "mod/x.txt": ""})
+    monkeypatch.chdir(work / "mod")
+    zp = backup.create("../saves", name="t")
+    assert backup._manifest(zp)["source"] == str(work / "saves")
+    monkeypatch.chdir(tmp_path)
+    shutil.rmtree(work / "mod")
+    make(work, {"saves/save.dat": "changed"})
+    assert backup.diff("t")["changed"] == ["save.dat"]
+    backup.restore("t", yes=True)
+    assert (work / "saves" / "save.dat").read_text() == "origin"
+    assert backup.snapshots("t-pre-restore") and not (work / "mod").exists()
+
+
+def test_backup_dotdot_source_is_named_after_the_folder(tmp_path, backup_same_second, monkeypatch):
+    make(tmp_path / "Terraria", {"sub/save.dat": "origin"})
+    monkeypatch.chdir(tmp_path / "Terraria" / "sub")
+    zp = backup.create("..")
+    assert zp.parent.name == "terraria"  # not "..", which put the zip outside backups/
+    assert backup._manifest(zp)["source"] == str(tmp_path / "Terraria")
+
+
+def test_backup_to_and_target_expand_home(tmp_path, backup_same_second, monkeypatch):
+    # a shell leaves ~ alone when it's quoted, and cmd always does: this made a literal ./~ folder
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path / "home"))
+    monkeypatch.chdir(tmp_path)
+    make(tmp_path / "src", {"save.dat": "origin"})
+    backup.create(str(tmp_path / "src"), name="t")
+    backup.restore("t", to="~/x", yes=True)
+    assert (tmp_path / "home" / "x" / "save.dat").read_text() == "origin"
+    assert backup.diff("t", "~/x")["target"] == str(tmp_path / "home" / "x")
+    assert not (tmp_path / "~").exists()
+
+
 @pytest.mark.skipif(os.name == "nt", reason="WSL path conversion")
 def test_backup_wsl_windows_source_is_recorded_converted(tmp_path, backup_same_second, monkeypatch):
     from um import common

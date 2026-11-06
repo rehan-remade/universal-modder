@@ -46,11 +46,12 @@ def _scan(src: Path) -> dict:
 
 def create(src: str, name: str | None = None, note: str = "") -> Path:
     # Absolute, so a later restore or diff from another working directory finds the same folder.
-    # absolute(), not resolve() or abspath: keep a symlinked save folder's own name and path, and leave
-    # "link/.." for the OS to resolve.
+    # absolute(), not resolve() or abspath: keep a symlinked save folder's own name and path.
     s = Path(to_posix(src)).expanduser().absolute()
     if not s.is_absolute():  # drive-relative "C:saves" on Windows before Python 3.12
         s = Path(os.path.abspath(s))
+    if ".." in s.parts:  # cwd/../saves would need that cwd to still exist; resolve() asks the OS what link/.. means
+        s = s.resolve()
     if not s.is_dir():
         die(f"not a folder: {s}")
     name = name or s.name.replace(" ", "-").lower()
@@ -97,7 +98,7 @@ def _manifest(zp: Path) -> dict:
 
 def _target(name: str, m: dict, override: str | None) -> Path:
     if override:
-        return Path(to_posix(override))
+        return Path(to_posix(override)).expanduser()
     t = Path(to_posix(m["source"])).expanduser()
     if not t.is_absolute():
         # Snapshots made before sources were stored absolute: the folder depends on the current directory.
