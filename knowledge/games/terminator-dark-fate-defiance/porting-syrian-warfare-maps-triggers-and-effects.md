@@ -3,7 +3,7 @@ kind: game
 title: "Syrian Warfare's maps, triggers, buildings and effects converted to run in Terminator: Dark Fate - Defiance"
 game: "Terminator: Dark Fate - Defiance"
 games_also: ["Syrian Warfare"]
-game_version: "TDF 1.09.1223 (Steam) with DefianceLoader 1.9.0; Syrian Warfare 2018 x86"
+game_version: "TDF 1.09.1223 (Steam) with DefianceLoader 1.9.0; Syrian Warfare x86, a 2018 build (released 2017, Steam app 485980)"
 platform: windows
 engine: unknown
 route: data
@@ -13,26 +13,29 @@ status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: []
 date: 2026-10-31
-links: []
+links: ["https://github.com/microsoft/DirectXTex", "https://github.com/recastnavigation/recastnavigation"]
 tags: [frontedge, cats-who-play, map-port, land-format, triggers, lua-bytecode, psyfx, mlms, detour]
 ---
 
 # Syrian Warfare's maps, triggers, buildings and effects converted to run in Terminator: Dark Fate - Defiance
 
-> Syrian Warfare (SW, 2018, x86) is the ancestor of the engine that runs Terminator: Dark Fate - Defiance (TDF). 28 SW maps
-> were converted to TDF with Python: landscapes, objects, triggers, 990 building models, lights and 307 particle effects;
-> units were replaced by TDF rows by role. All 28 maps load in the real game without a crash, and flag capture on one
-> mission was confirmed by playing it. Mission text was left out, and the converted effects have not been seen in the game
-> yet. See the [TDF engine note](defianceloader-plugins-data-mods-and-engine-facts.md) for mounting and tables.
+> Syrian Warfare (SW, released 2017, x86, a 2018 build here) is the ancestor of the engine that runs Terminator: Dark Fate -
+> Defiance (TDF). 28 SW maps were converted to TDF with Python, as a private build that hasn't been released: landscapes,
+> objects, triggers, 990 building models, lights and 307 particle effects; units were replaced by TDF rows by role. All 28
+> maps load in the real game without a crash, and flag capture on one mission was confirmed by playing it. Mission text was
+> left out, and the converted effects have not been seen in the game yet. See the
+> [TDF engine note](defianceloader-plugins-data-mods-and-engine-facts.md) for mounting and tables.
 
 ## Setup
-- TDF as in the engine note. SW's install was left unchanged, and its data was read from a work folder.
+- TDF as in the engine note, including its Multiplayer line: all of this is single player. SW's install was left unchanged,
+  and its data was read from a work folder. Use your own copy.
 - `texconv` for textures, TDF's `basis\scripts\effects\Luac.exe` for effects, and TDF's own map editor for `.path` files.
 
 ## Route and why
 `data`: every format is rewritten offline into what TDF already reads, with no plugin needed to load a map. The formats
 are close relatives, so a converter is far less work than a loader. Units, weapons and vehicles were deliberately not
-ported: each is mapped to an existing row by side and role.
+ported: each is mapped to an existing row by side and role. This is the asset and map conversion route from
+[choosing a mashup route](../../techniques/choosing-a-mashup-route.md): each player needs TDF and their own copy of SW.
 
 ## How the game works (what we had to learn)
 
@@ -144,8 +147,8 @@ degrees. SW's direction and colour come from the `.land` tail, ambient from `$bl
 13. **Particle errors `dszX` / `dszY`.** They come from 39 of TDF's own effect files, not from a port. Don't chase them.
 
 ## Assets
-No SW or TDF files are in this note. A map pack made this way carries SW's assets, so it needs its owner's permission
-before anyone else can get it. This port has not been released.
+No SW or TDF files are in this note. A map pack made this way is full of SW's assets, so it stays on your own machine and
+never ships, credited or not: anyone else runs a converter on their own copy of SW. This port has not been released.
 
 ## Cost and time
 Several long agent sessions, starting 2026-10-19, alongside the sibling notes.

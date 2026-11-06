@@ -3,13 +3,13 @@ kind: game
 title: "Native DefianceLoader plugins and data mods: engine facts, tables, lbox, multi-slot weapons, editors"
 game: "Terminator: Dark Fate - Defiance"
 games_also: []
-game_version: "1.09.1223 (Steam, the loader's steam-2026-10-07) with DefianceLoader 1.9.0, plugin ABI 5"
+game_version: "1.09.1223 (Steam app 1839950, the loader's steam-2026-10-07) with DefianceLoader 1.9.0, plugin ABI 5"
 platform: windows
 engine: unknown
 route: native-hook
 tools: ["DefianceLoader 1.9.0", "MSVC (Visual Studio 2022)", "IDA", "Python 3"]
-anti_cheat: "none seen; all of this is single player, and the plugins are marked as not multiplayer safe"
-status: released
+anti_cheat: "none seen; all of this is single player, and the plugins aren't marked multiplayer safe, so the loader blocks the game's online connection while they're active"
+status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: []
 date: 2026-10-31
@@ -27,11 +27,19 @@ tags: [frontedge, cats-who-play, leonardo, galileo, facets, plugins, spreadsheet
 > and [Syrian Warfare's maps](porting-syrian-warfare-maps-triggers-and-effects.md).
 
 ## Setup
-- **Game:** TDF, Steam, build 1.09.1223, with the Resistance DLC, on Windows 11 x64. Every RVA below belongs to this
-  build. Treat them as hints on anything else.
-- **Loader:** DefianceLoader 1.9.0 (loader 0.11.0, plugin ABI 5). Earlier work ran on 1.7.0 and 1.8.1. Settings live in
+- **Game:** TDF, Steam (app 1839950), build 1.09.1223, with the Uprising DLC (app 3650450, which installs as
+  `dlc\Resistance`), on Windows 11 x64. Every RVA below belongs to this build. Treat them as hints on anything else.
+- **Loader:** DefianceLoader 1.9.0 (loader 0.11.0, plugin ABI 5), a proxy `bin\dxgi.dll` beside `bin\trm.exe`, so the exe
+  isn't patched on disk. Earlier work ran on 1.7.0 and 1.8.1. Settings live in
   `DefianceLoader\config\settings.ini` since 1.9.0 (before that, one `.ini` per plugin group). Log:
   `DefianceLoader\logs\defiance-loader.log`, crash reports: `DefianceLoader\logs\crashes\`.
+- **Whose plugins:** `defiance.table-merge`, `defiance.cover-markers` and `defiance.performance` come with the loader. Every
+  other `defiance.*` plugin named in these three notes is ours and isn't part of the loader. The loader's docs ask for an
+  author's own ID namespace before publishing, so use one for yours.
+- **Multiplayer:** TDF has online PvP. These plugins don't declare `"multiplayer_safe": true`, so while any of them is active
+  the loader makes the game's connection to its lobby server fail, and skirmish and the campaign are unaffected. The loader's
+  docs say this guard keeps people out of desynced games and isn't anti-cheat. All of this was played in single player. Keep
+  data mods out of online matches too, unless the lobby is yours and everyone in it agreed and runs the same mods.
 - **Plugin build:** `cl /LD /O2 /MD /EHsc /std:c++17 /utf-8` from the Visual Studio 2022 tools, with the loader's C
   header `defiance.h`.
 - **Game logs:** `Documents\My Games\Terminator Dark Fate\logs\game.log`, minidumps in `...\FATAL\`.
@@ -88,9 +96,10 @@ other tables over the base ones, so rows meant for DLC maps must go into both.
 - **`defiance.table-merge`** is off by default: set `enabled = true` in its section of `settings.ini`. It reads
   `<table>.<mod folder in lower case>.patch.xml`:
   - exactly **one** patch per table per mod (a second is silently ignored);
-  - rows match on `sysname`;
+  - rows match on `sysname`, and a row the table lacks is added;
   - a cell is replaced whole, and a blank cell keeps the old value;
-  - `$empty` and `$delete` are reserved cell values (neither was needed here, so check the loader's docs for their reach);
+  - `$empty` in a cell clears it, and a `$delete` column with a non-empty cell removes the row (the plugin's README; neither
+    was needed here);
   - nothing appends to a list, so a patch has to repeat the stock list and add to it;
   - the first mod in `mods.json` wins;
   - it also works on `basis\locale\<t>` and `localization\ru\basis_ru\locale\<t>`.
@@ -168,7 +177,7 @@ plugin finds in the variant's slots. That path is the same in the mission, in th
   `AmmoRechargerFacet` from being created. The F4 supply mode switches on the first "recharger" facet of a vehicle.
 - Ammunition: `sub_180428EB0` (op 3, ADD) appends entries to `TransportScriptInfo`'s vector of `AmmunitionInfo` (16 bytes
   each).
-- TDF has no FMOD. The `*_fmod` columns are unused. Voices are in `scripts/voices/*.xml`, and `voice_state` of a vehicle
+- TDF has no FMOD, so `*_fmod` columns do nothing. Voices are in `scripts/voices/*.xml`, and `voice_state` of a vehicle
   picks a set (`on_abrams`, `on_m113`).
 
 ## Build steps
@@ -204,7 +213,7 @@ Oracles, strongest first:
 | `defiance.vehicle-skins` | 0.5.0 | yes |
 | `defiance.developer-tools` | 0.3.6 | yes: map and lbox editors open. The two crashes in Gotchas 7 and 8 were reproduced (a native test, a probe file with the bad name) and the fix held; not run on a truly packed install |
 | `defiance.morale-stamina` | 1.0.1 | yes |
-| `defiance.lbox-merge` | 1.0.0 | **no**: built and shipped in a bundle, never run |
+| `defiance.lbox-merge` | 1.0.0 | **no**: built into a release bundle, never run |
 | `defiance.support-vehicles` | 1.0.0 | **no** as a bundle. Its code comes from towing and supply plugins that did run, see the sibling note |
 
 Not verified anywhere: other game builds, multiplayer, and loader versions after 1.9.0.
@@ -232,9 +241,9 @@ Not verified anywhere: other game builds, multiplayer, and loader versions after
    once.
 7. **The map editor dies with RIP = RAX = RCX = 0, RDX = 0x86.** **Cause:** an ATL window thunk with cleared data gets
    `WM_NCACTIVATE(FALSE)` when focus moves during loading. Windows sends it from the kernel, so `__except` does not see
-   it. On Windows 11 24H2+ the thunks live in the system `atlthunk.dll`, so the return address is there and not in
-   `user32`. **Fix:** while a tool runs, a vectored handler answers calls to address 0 from either DLL for the window
-   (TRUE for `WM_NCACTIVATE`, else 0) and logs the message.
+   it. Seen on Windows 11 24H2: the thunks live in the system `atlthunk.dll` (Microsoft's `AtlThunk_*` API, which dates from
+   Windows 10), so the return address is there and not in `user32`. **Fix:** while a tool runs, a vectored handler answers
+   calls to address 0 from either DLL for the window (TRUE for `WM_NCACTIVATE`, else 0) and logs the message.
 8. **The map editor throws `std::system_error`, only for players with Western Windows.** **Cause:** the stock zip keeps a
    texture name with a Cyrillic letter in cp866, zfs reads names as UTF-8, and the letter becomes U+FFFD. `editor.dll`
    then converts the name with `WC_NO_BEST_FIT_CHARS` and fails. **Fix:** patch the tool DLL's `WideCharToMultiByte`
@@ -257,8 +266,8 @@ Not verified anywhere: other game builds, multiplayer, and loader versions after
     them off 4 of 4 starts were clean. Not retested on later versions. Isolate by exclusion before reading dumps.
 14. **`idat -S` with a relative script path silently does nothing.** Use an absolute path.
 15. **The game closes or relaunches during tests.** `--loadtm` through Steam asks to confirm custom parameters and may
-    open the game's launcher, whose button needs a click. Plan for both in automation, and watch for Steam restarting the
-    game after a test.
+    open the game's launcher, whose button needs a click. Plan for both in automation, ask the human before automating that
+    click (the game has an online mode, so not while they're typing), and watch for Steam restarting the game after a test.
 
 ## Assets
 Mod icons and panel images are drawn by the generators in the plugin folders. Nothing from the game is in this note.

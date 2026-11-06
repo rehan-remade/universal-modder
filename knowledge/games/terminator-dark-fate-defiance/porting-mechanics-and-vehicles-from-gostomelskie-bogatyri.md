@@ -2,8 +2,8 @@
 kind: game
 title: "Rebuilding mechanics of a sister engine branch as plugins: morale, stamina, towing, supply, vehicles"
 game: "Terminator: Dark Fate - Defiance"
-games_also: ["Gostomelskie bogatyri"]
-game_version: "TDF 1.09.1223 (Steam) with DefianceLoader 1.9.0; Gostomelskie bogatyri build of 2026-09-10"
+games_also: ["Ukrainian Warfare: Gostomel Heroes", "Gostomelskie bogatyri"]
+game_version: "TDF 1.09.1223 (Steam) with DefianceLoader 1.9.0; Gostomelskie bogatyri build of 2026-09-10 (update 1.2.634.5 of Ukrainian Warfare: Gostomel Heroes on Steam, app 3902520)"
 platform: windows
 engine: unknown
 route: reimplementation
@@ -19,14 +19,16 @@ tags: [frontedge, cats-who-play, sister-branch, morale, stamina, towing, trailer
 
 # Rebuilding mechanics of a sister engine branch as plugins: morale, stamina, towing, supply, vehicles
 
-> Gostomelskie bogatyri («Гостомельские богатыри», GB here) and Terminator: Dark Fate - Defiance (TDF) are two branches
-> of one engine. GB has morale, stamina, towing and more that TDF lacks. Swapping binaries is impossible, and machine code
-> cannot be copied, so GB's `logic.dll` served as a specification and each mechanic was rewritten as a TDF plugin. GB's
-> vehicles and buildings moved over as data. Morale, stamina, towing and supply ran in the real game. See the
+> Gostomelskie bogatyri («Гостомельские богатыри», GB here, sold on Steam as Ukrainian Warfare: Gostomel Heroes) and
+> Terminator: Dark Fate - Defiance (TDF) are two branches of one engine. GB has morale, stamina, towing and more that TDF
+> lacks. Swapping binaries is impossible, and machine code cannot be copied, so GB's `logic.dll` served as a specification
+> and each mechanic was rewritten as a TDF plugin. GB's vehicles and buildings moved over as data, which stays on your own
+> machine (see Assets). Morale, stamina, towing and supply ran in the real game. See the
 > [TDF engine note](defianceloader-plugins-data-mods-and-engine-facts.md) first.
 
 ## Setup
-- TDF as in the engine note. GB is a separate installed game, used read-only.
+- TDF as in the engine note, including its Multiplayer line: all of this is single player. GB is a separate installed game,
+  used read-only. Use your own copy.
 - Both databases in IDA, on copies of the DLLs. Decompiled output stayed private. This note describes logic in words.
 
 ## Route and why
@@ -36,6 +38,10 @@ tags: [frontedge, cats-who-play, sister-branch, morale, stamina, towing, trailer
 2. **Copy code:** impossible. Class layouts differ. An order object is 0x30 bytes with 19 slots in TDF, 0x1F8 with 23 slots
    in GB.
 3. **Read GB, write it again on TDF's objects:** chosen. Each mechanic becomes one reverse-engineering project.
+
+This is the rebuilt-mechanic route from [choosing a mashup route](../../techniques/choosing-a-mashup-route.md) and
+[rebuilt guest engine inside a host](../../techniques/rebuilt-guest-engine-inside-a-host.md). The plugins are our own code;
+anything converted from GB needs the player's own copy of GB (see Assets).
 
 Scoping was cheap and worth doing first: an RTTI and facet-name diff of the two `logic.dll` files (621 facets in TDF, 739
 in GB, 183 only in GB, 65 only in TDF) and a diff of table columns gave a feature table before any hook. Registration of
@@ -92,7 +98,8 @@ call in `sub_18044D7B0` at `+0x44D7C3`, which is the path for squads in combat. 
 - Relations: `sub_180546060` then slot 22 gives 0 own, 2 enemy, 4 neutral. An abandoned vehicle is neutral (4).
 
 ### Data differences
-- GB's tables have `*_fmod` columns and `openHatch` that TDF lacks. GB has FMOD, and TDF has the older sound system.
+- GB's tables have `*_fmod` columns, which do nothing in TDF, and `openHatch`, which TDF lacks. GB has FMOD, and TDF has the
+  older sound system.
 - GB effects with `ParticleLight` and lbox boxes `light_source_*` have no counterpart in TDF: effects without it were
   rebuilt with TDF's `Luac.exe`, and the boxes dropped.
 - GB covers are `pyramid` boxes with a `sector`. They become TDF `box` covers with `max_soldiers=1`.
@@ -147,8 +154,9 @@ call in `sub_18044D7B0` at `+0x44D7C3`, which is the path for squads in combat. 
    again one by one, and write down each difference.
 
 ## Assets
-The vehicles' models and textures come from GB and are not in this repository. A public mod built this way must credit
-GB and have the right to use them.
+The vehicles' models and textures, the reskinned soldiers and the rebuilt effects come from GB and are not in this
+repository. They stay on your own machine and never ship, credited or not. A public release carries only your own plugins,
+patches and scripts, and anyone else converts GB's files from their own copy of GB.
 
 ## Cost and time
 About three weeks of sessions together with the sibling notes. Each mechanic took several hours to a night.
