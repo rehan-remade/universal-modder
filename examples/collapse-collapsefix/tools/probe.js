@@ -43,7 +43,7 @@ function vaMap(tag) {
            free_hiMB: f(z.hi), largestBelow2GMB: f(largestBelow2G), reservedMB: f(reserved), committedMB: f(committed) };
 }
 
-// Reserve free address space until only CFG.leaveMB stays free (D1b provocation).
+// Reserve free address space until only CFG.leaveMB stays free (the 8876086A test).
 function eatTo(leaveMB) {
   const leave = leaveMB * MB;
   const G = 0x10000;  // reservations must start on the 64 KB allocation granularity
@@ -171,7 +171,7 @@ function hookPath(name, idx) {
     }
   });
 }
-if (CFG.ioLog) { hookPath('CreateFileA', 0); hookPath('CreateDirectoryA', 0); hookPath('FindFirstFileA', 0); }  // D0/D4 only
+if (CFG.ioLog) { hookPath('CreateFileA', 0); hookPath('CreateDirectoryA', 0); hookPath('FindFirstFileA', 0); }  // file tests only
 
 // 6) Threads.
 Interceptor.attach(exp('CreateThread'), { onEnter(a) { out({ ev: 'thread', start: a[2].toString(), from: this.returnAddress.toString() }); } });

@@ -117,7 +117,7 @@ def main():
     ap.add_argument('--close', action='store_true', help='end with WM_CLOSE (game saves setup.ini), kill only as fallback')
     ap.add_argument('--dump', action='store_true', help='attach ProcDump: full dump on an unhandled exception')
     ap.add_argument('--maps', action='store_true', help='log mapped package files (level loads) with each VA sample')
-    ap.add_argument('--probe', default='probe.js', help='Frida script in tools/ (savetrace.js for D12)')
+    ap.add_argument('--probe', default='probe.js', help='Frida script in tools/ (savetrace.js for the torn-save test)')
     a = ap.parse_args()
     out = os.path.join(RUNS, a.tag); os.makedirs(out, exist_ok=True)
     exe_sha = hashlib.sha256(open(a.exe, 'rb').read()).hexdigest()
@@ -147,7 +147,7 @@ def main():
         sc = sess.create_script(src)
         def on_msg(m, d):
             e = m['payload'] if m['type'] == 'send' else {'ev': 'script_error', 'msg': m}
-            if e.get('ev') == 'kill_now':   # D12: the writer thread is parked in the hook; end the process by exact PID
+            if e.get('ev') == 'kill_now':   # torn-save test: the writer thread is parked in the hook; end the process by exact PID
                 h = k32.OpenProcess(0x0001, False, pid)          # PROCESS_TERMINATE
                 e['terminated'] = bool(h and k32.TerminateProcess(h, 0xD12)); k32.CloseHandle(h)
             emit(e)
@@ -180,7 +180,7 @@ def main():
 
     shots = sorted(float(s) for s in a.shots.split(',') if s)
     taken = []
-    arm_flag = os.path.join(out, 'ARM')   # D12: create this file (content: N) to arm the kill switch once
+    arm_flag = os.path.join(out, 'ARM')   # torn-save test: create this file (content: N) to arm the kill switch once
     while time.time() - t0 < a.secs and not is_dead():
         if not a.no_probe and os.path.exists(arm_flag):
             try: n = int(open(arm_flag).read().strip() or 2)

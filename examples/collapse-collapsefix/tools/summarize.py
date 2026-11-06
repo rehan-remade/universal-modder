@@ -5,7 +5,7 @@
 import glob, json, os, sys
 from collections import Counter
 
-RUNS = r'D:\collapse-re\runs'
+RUNS = os.environ.get('COLLAPSE_RUNS', r'D:\collapse-re\runs')
 prefix = sys.argv[1] if len(sys.argv) > 1 else 'D1_'
 LAA = '767cb5ec39b1a9fafed38ffad08c4f84ea23b7a53721455d26cc4fa65e6829cc'
 

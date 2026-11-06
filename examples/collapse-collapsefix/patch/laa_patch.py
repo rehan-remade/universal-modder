@@ -1,7 +1,7 @@
 """Set the Large Address Aware flag on the user's own collapse.exe (Collapse, 2008, Steam 289620).
 
 Why: the engine's init_heap reserves all free address space below 0x70000000 before WinMain, leaving
-~256 MB for the D3D driver, file mappings and DLLs. LAA gives the process 2 GB more above 0x80000000.
+little for the D3D driver, file mappings and DLLs. LAA gives the process 2 GB more above 0x80000000.
 
 Changes exactly one bit (IMAGE_FILE_LARGE_ADDRESS_AWARE, 0x20 in the COFF Characteristics) and nothing
 else. The PE checksum of this exe is 0 and stays 0 (the loader doesn't check it for .exe files).
@@ -39,7 +39,7 @@ def main():
         b = open(bak, 'rb').read()
         if sha(b) not in KNOWN: raise SystemExit('backup hash is not a known original, refusing: %s' % sha(b))
         if not a.dry_run: shutil.copy2(bak, exe)
-        print('restored %s from %s (%s)' % (exe, bak, KNOWN[sha(b)])); return
+        print('%srestored %s from %s (%s)' % ('would be ' if a.dry_run else '', exe, bak, KNOWN[sha(b)])); return
 
     data = bytearray(open(exe, 'rb').read())
     off = char_offset(data)

@@ -1,11 +1,12 @@
 """ST7: an independent Ghidra re-analysis finds the same functions the RE notes rely on.
 
     python st7_ghidra.py <st7_funcs.txt> [first_run_decomp.c]
-st7_funcs.txt comes from ListFuncs.java (one "addr name size" per line) on a fresh headless import.
+st7_funcs.txt comes from a small Ghidra script, not included (one "addr name size" per line), on a fresh headless
+import. first_run_decomp.c is the first run's private decompile, kept outside any repo.
 """
 import re, sys
 
-KEY = {  # entry -> role (RE_NOTES.md)
+KEY = {  # entry -> role
     0x5e5840: 'init_heap', 0x5e5780: 'free-region finder', 0x5e5ab0: 'engine allocator',
     0x414150: 'package map', 0x4db940: 'Direct3DCreate9 loader', 0x4dc460: 'device setup/reset',
     0x5e6b90: 'database_init', 0x462aa0: 'save enumeration', 0x57d400: 'setup.ini reader',

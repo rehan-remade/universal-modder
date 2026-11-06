@@ -1,5 +1,5 @@
 {
-  "_about": "Single source of truth for byte checks on collapse.exe (Steam 289620). Used by st_a.py (ST4) and, later, to generate game_is_expected() in the DLL (ST12). VAs assume image base 0x400000.",
+  "_about": "Single source of truth for byte checks on collapse.exe (Steam 289620), used by st_a.py. The patterns are the ones in collapsefix.c. VAs assume image base 0x400000.",
   "exe": {
     "sha256": "3003600f506e4c1e9388716cc395fb958ef2d729ec8d291138b3f57f3bded283",
     "sha256_laa": "767cb5ec39b1a9fafed38ffad08c4f84ea23b7a53721455d26cc4fa65e6829cc",

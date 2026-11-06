@@ -1,4 +1,4 @@
-// D12 save trace (Frida 17). Hooks only kernel32/kernelbase exports, never the game's .text.
+// Save trace for the torn-save test, gotcha 15 in the note (Frida 17). Hooks only kernel32/kernelbase exports, never the game's .text.
 // Logs every open/write/flush/truncate/close of files under Creoteam Collapse\ (saves, profile, ini).
 // Kill switch: after run.py posts {type:'arm', n:N}, the N-th WriteFile into the next *.jpg save is held in
 // its hook and run.py terminates the process by exact PID, leaving a save cut at the bytes written before it.

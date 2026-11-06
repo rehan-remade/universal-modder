@@ -58,7 +58,8 @@ disabled page file), not addresses. LAA does not help there: set the page file t
 
 ## Install
 Needs the Steam build of the game (`collapse.exe` 2,392,108 bytes, SHA-256 `3003600f…bded283`; the Russian and
-English Steam depots share this exe).
+English Steam depots share this exe). That exe has no DRM wrapper, which is why a patch on disk is fine here. The
+patcher refuses any other file, so other builds (retail discs reportedly used StarForce) stay untouched.
 
 1. Close the game. Back up `Documents\Creoteam Collapse\saveGame\`.
 2. Unzip `dinput8.dll`, `collapsefix.ini` and `laa_patch.exe` into the game folder, next to `collapse.exe`
@@ -87,8 +88,8 @@ forwards `DirectInput8Create` to the system `dinput8.dll`, so the game's input w
 
 The DLL checks the exe's PE timestamp (0x48F36777). On any other exe it stays a plain proxy and changes
 nothing. Patch sites are found through the import table, the D3D9 and DirectInput vtables, and, for `fov`,
-`ui_scale`, `nav_guard` and `release_batches`, byte patterns that must match exactly once (otherwise the log says
-`SKIP`), not through fixed addresses. Those change instructions in memory; the exe on disk stays as it is.
+`ui_scale`, `nav_guard`, `release_batches` and `heap_guard`, byte patterns that must match exactly once (otherwise the
+log says `SKIP`), not through fixed addresses. Those change instructions in memory; the exe on disk stays as it is.
 
 ## Settings (`collapsefix.ini`)
 1 = on, 0 = off.
@@ -100,7 +101,7 @@ nothing. Patch sites are found through the import table, the D3D9 and DirectInpu
 | `alt_tab` | 1 | Exclusive fullscreen only: no background re-init loop while the game is not in front. |
 | `display_mode` | 1 | Exclusive fullscreen only: a `Resolution` the monitor does not support falls back to the desktop mode, instead of an endless `CreateDevice returned 8876086c` retry. |
 | `refresh` | 0 | Exclusive fullscreen refresh rate: 0 = same as the desktop, -1 = the game's own choice, or a number in Hz. |
-| `vsync` | 0 | V-Sync. The game never enables it on its own. |
+| `vsync` | 0 | V-Sync. The game's fullscreen never enables it on its own (its windowed mode does, and this key leaves that alone). |
 | `timer` | 1 | The game measures time with `GetTickCount` (15.6 ms steps; the menu judders at 31/47 ms frames). This gives it 1 ms steps. |
 | `save_log` | 1 | Logs every save file the game fails to create (the game itself shows "game saved" anyway). |
 | `fov` | auto | Field of view. `auto` keeps the 4:3 vertical view and adds width (90° at 16:9). `0` = the game's own, including a `FOV:` line in `setup.ini`. A number = horizontal degrees, 40–150. Engine cutscenes widen by the same factor; pre-rendered videos do not change. |
@@ -126,7 +127,7 @@ nothing. Patch sites are found through the import table, the D3D9 and DirectInpu
 |---|---|---|
 | "Load" is grey, no saves after death, `Documents\Creoteam Collapse` is missing or empty | **Controlled Folder Access** (Windows Security → Ransomware protection) blocks the game from Documents. The game then writes into a path that does not exist and says nothing. | Allow `collapse.exe` under "Allow an app through Controlled folder access". collapsefix detects this at start and shows a message. |
 | Hero under the floor or falling through the level after loading a checkpoint, then a crash | a save with a bad game state (reported in Mark's Castle, checkpoints 3–4). A half-written save is not the cause: the game skips it and loads the previous checkpoint. | Delete the newest `NN_level_K.jpg` in `saveGame\profile.<name>\` (back it up first). |
-| `STOP: hardware acceleration not available` on RTX 40 / 50 series | not resolved yet. Starts fine on an RTX 3050 Ti. | Use DXVK (`d3d9.dll` from a DXVK release, 32-bit) next to the exe. |
+| `STOP: hardware acceleration not available` on RTX 40 / 50 series | reported by players, not resolved yet. Starts fine on an RTX 3050 Ti. | The reported workaround is [DXVK](https://github.com/doitsujin/dxvk) (the 32-bit `d3d9.dll` from a release, next to the exe). Not tried here, with or without collapsefix. |
 | `out of virtual memory: alloc size` | page file too small or off | Page file: "System managed size". |
 | `d3dx9_31.dll` not found | old DirectX runtime missing | Install the DirectX End-User Runtime (June 2010). |
 | Monitor says "out of range", sound plays | exclusive mode at a refresh rate the panel cannot show | `refresh=0` (default) or `borderless=1`. |
@@ -148,7 +149,7 @@ nothing. Patch sites are found through the import table, the D3D9 and DirectInpu
 | Stutter and judder | **fixed** (`timer=1`; A/B play test: the stock timer judders visibly, the fix removes it) |
 | QTE does not work (Sentinel, Wormboss) | **works**: Sentinel in every mode tested, uncapped FPS included; through the whole campaign (many Wormboss fights and several unique bosses) every QTE worked. Press **W/A/S/D** when the "Action!" icon lights up; the on-screen arrows mean those keys, not the arrow keys. The Anchor boss works differently: its QTE is a mouse click, and it worked too. The Sentinel fight felt harder with `timer=0 vsync=0` (first impression, not counted) |
 | V-Sync | **works** (`vsync=1`, tested in borderless at 144 Hz) |
-| RTX 40 / 50 start failure | open, waits for a test on such a GPU; DXVK works around it |
+| RTX 40 / 50 start failure | open, waits for a test on such a GPU; DXVK is the reported workaround, not tried here |
 | Freeze with the mouse still moving, seen in Mark's Castle | **guarded** (`nav_guard=1`), tested by forcing the loop |
 | Memory grows until the game runs out of address space after some hours, faster with many reloads | **fixed** (`release_batches=1`): the game did not free its level geometry buffers between loads. In an 82-minute run to the end of the campaign with 44 loads memory stayed at about 1.1 GB, where it used to pass 2.2 GB within an hour. Not yet tested over several hours |
 | Crash in the system `dinput8.dll` during a level load | **fixed** (`mouse_keeper=1`). Seen once in 3 hours; the cause was measured directly: without the fix the shared mouse table is freed several times a minute, with it never |
@@ -173,11 +174,16 @@ profile with a Cyrillic name.
 
 ## For developers
 - How the engine works (formats, memory, timing, device setup, saves), how each fix was found and verified,
-  and 21 gotchas: the field note `knowledge/games/collapse/collapse-2008-formats-memory-timing-and-8876086c.md`
+  and 24 gotchas: the field note `knowledge/games/collapse/collapse-2008-formats-memory-timing-and-8876086c.md`
   in the universal-modder repository.
-- `patch/tests/` holds the byte checks (`st_a.py`, `st16_laa.py`). `tools/` holds the measuring harness (set
-  `COLLAPSE_DIR` to your game folder and `COLLAPSE_RUNS` to a folder for raw data outside the repo):
+- `C-nn` in the ini, the log and the comments are this project's own issue numbers.
+- `patch/tests/` holds the byte checks (`st_a.py`, `st16_laa.py`) and `st7_ghidra.py`, which compares a Ghidra function
+  list with the key functions (the small script that writes the list isn't included).
+- `tools/` holds the measuring harness (set `COLLAPSE_DIR` to your game folder and `COLLAPSE_RUNS` to a folder for raw
+  data outside the repo; `pad.js` has its own path to edit). `probe.js`, `navtest.js`, `navcall.js` and `pad.js` use
+  this exe's fixed addresses and don't check the build, so run them on this exe only:
   - `run.py`: external address-space and commit sampler, mapped-file and DLL log, ProcDump on crash;
+  - `summarize.py`: a table of those runs;
   - `probe.js`: a Frida probe that hooks system DLLs only;
   - `savetrace.js`: a Frida trace of save-file writes;
   - `pad.js`: a simulated gamepad through a hook on `XInputGetState`;
@@ -185,7 +191,9 @@ profile with a Cyrillic name.
   - `gpumem.ps1`: the game's dedicated and shared GPU memory every 2 s, read from outside through WMI;
   - `regress.py`: regression part A, the game started to the menu once per ini variant, no input;
   - `mouseref.c`, `mouseref_watch.py`: read the shared mouse count in Windows' `dinput8.dll` (offsets of one
-    Windows build, `dbcea407`; they refuse any other) to test `mouse_keeper`.
+    Windows build, `dbcea407`; they refuse any other) to test `mouse_keeper`;
+  - `heapguard_test.c`: calls the game's allocator unmap and `heap_guard`'s replacement on made-up memory layouts,
+    from a copy of the exe, without running the game.
 - No game files, extracted assets or decompiled code are included.
 
 ## Credits

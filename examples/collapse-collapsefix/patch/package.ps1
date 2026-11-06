@@ -1,10 +1,10 @@
 # Make the release zip from a build.ps1 output folder: the files a player unzips into the game folder, plus the
 # README, CHANGELOG and the universal-modder repository's LICENSE. The version comes from FIX_VERSION in collapsefix.c.
-# usage: powershell -ExecutionPolicy Bypass -File package.ps1 -Build D:\collapse-re\build-1.0.0 -Out D:\collapse-re\release
+# usage: powershell -ExecutionPolicy Bypass -File package.ps1 -Build <build folder> -Out <release folder>
 param([Parameter(Mandatory = $true)][string]$Build, [Parameter(Mandatory = $true)][string]$Out)
 $ErrorActionPreference = 'Stop'
 $project = Split-Path $PSScriptRoot -Parent
-$repo = Split-Path (Split-Path $project -Parent) -Parent  # projects/collapse or examples/collapse-collapsefix
+$repo = Split-Path (Split-Path $project -Parent) -Parent  # examples/collapse-collapsefix
 if (-not (Test-Path "$repo\LICENSE")) { throw "the repository's LICENSE is not at $repo" }
 $m = Select-String -Path "$PSScriptRoot\collapsefix.c" -Pattern '#define FIX_VERSION "([^"]+)"'
 if (-not $m) { throw 'FIX_VERSION not found' }

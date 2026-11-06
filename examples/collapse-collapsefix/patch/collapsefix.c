@@ -5,8 +5,8 @@
  * DirectInput8Create it hooks:
  *   - IDirect3D9::CreateDevice through the vtable found by creating our own IDirect3D9, and the TestCooperativeLevel /
  *     Present of every device it creates (each device has its own vtable copy, C-57);
- *   - IDirectInput8::CreateDevice and the device's Acquire / GetDeviceState / GetDeviceData / SetCooperativeLevel,
- *     through dinput8's vtables (log only);
+ *   - IDirectInput8::CreateDevice (mouse_keeper) and the device's GetProperty (english_keys) and Acquire /
+ *     GetDeviceState / GetDeviceData / SetCooperativeLevel (log only), through dinput8's vtables;
  *   - GetTickCount and CreateFileA, through the game's own import table (looked up by name);
  *   - call instructions and branches in memory (fov, ui_scale, nav_guard, release_batches) and the entry of the
  *     allocator's unmap (heap_guard), each found by a byte pattern that must match exactly once.
@@ -14,12 +14,12 @@
  *   borderless    C-05  fullscreen becomes a windowed device in a popup window over the monitor. In exclusive mode
  *                       every Alt+Tab makes the engine rebuild the device without releasing the old one, which
  *                       other engine resources keep alive (~80-90 MB per Alt+Tab, then "Cannot initialize video");
- *                       a windowed device is never lost, so the rebuild never happens (D14: memory flat). The
- *                       resources were the leaked batch buffers: with release_batches the old device dies (RB_2).
+ *                       a windowed device is never lost, so the rebuild never happens (memory stayed flat). The
+ *                       resources were the leaked batch buffers: with release_batches the old device dies.
  *   dpi_aware     C-25  SetProcessDpiAwarenessContext before the game creates its window (the exe has no manifest).
  *   alt_tab       C-05  exclusive mode only: no device is created while the game is in the background (stops the
  *                       re-init loop), a live device is Reset and reused when possible, DEVICELOST is "OK, wait".
- *                       With release_batches the old device is released on each Alt+Tab (84 tested, RB_2-RB_4).
+ *                       With release_batches the old device is released on each Alt+Tab (84 tested).
  *   display_mode  C-11  a fullscreen Resolution the adapter does not list (CreateDevice 8876086c, endless retry)
  *                       is replaced by the desktop mode.
  *   refresh       C-12  0 = desktop refresh rate (default), -1 = keep the game's choice, N = N Hz if listed.
@@ -28,6 +28,8 @@
  *   save_log      C-04  log saves the game failed to create (the engine skips them silently).
  *   fov           C-40/41  0 = the game's FOV, auto = Hor+ for the screen's aspect ratio, N = N degrees horizontal.
  *                       Cutscene cameras are widened by the same factor.
+ *   ui_scale      C-42  100 = the game's, auto = fit the resolution, N = N percent: the whole interface grows together.
+ *   english_keys  C-53  key names in hints stay English whatever the keyboard layout at launch.
  *   input         C-14  log what DirectInput reports for the mouse and keyboard (changes nothing).
  *   pad_camera_deadzone  C-44  0 = the game's 13.3 %, N = N percent for the right stick (camera).
  *   nav_guard     C-54  a step limit on the navmesh walk (an endless loop in mark_castle).
@@ -187,7 +189,7 @@ static DWORD WINAPI h_tick(void) {
 }
 
 /* ---- C-04: with Windows Controlled Folder Access on, the game can't write to Documents at all: no profile, no saves,
-   no log, no message (D4). Probe once at start and tell the player how to allow the game. ---- */
+   no log, no message. Probe once at start and tell the player how to allow the game. ---- */
 static void check_documents_writable(void) {
     typedef HRESULT(WINAPI * GetFolderW)(HWND, int, HANDLE, DWORD, LPWSTR);
     HMODULE sh = LoadLibraryW(L"shell32.dll"), u32 = GetModuleHandleW(L"user32.dll");
@@ -202,7 +204,7 @@ static void check_documents_writable(void) {
     if (!get) return;
     hr = get(NULL, 0x8005 /* CSIDL_PERSONAL | CSIDL_FLAG_CREATE, as the game asks */, NULL, 0, p);
     if (hr != S_OK) {
-        /* D4: with CFA on the game's own SHGetFolderPathA fails too and it falls back to "<exe path>\Creoteam Collapse",
+        /* With CFA on the game's own SHGetFolderPathA fails too and it falls back to "<exe path>\Creoteam Collapse",
            a path that can't exist, so every profile, save and log write fails */
         put("C-04 Documents folder not available, SHGetFolderPathW ");
         put_hex((unsigned)hr, 8);
@@ -625,7 +627,7 @@ static HRESULT WINAPI h_di_prop(void *dev, REFGUID prop, void *hdr) {
 }
 /* C-56: the game releases its mouse device and makes a new one on every scene load. All system mouse devices share one
    state in dinput8 whose table of fields is freed when the last of them is released, while dinput8's own mouse thread
-   may be reading that table for a mouse move: a crash inside dinput8 (seen once, L2). One more mouse device, created
+   may be reading that table for a mouse move: a crash inside dinput8 (seen once). One more mouse device, created
    with the game's first and never released, keeps that count above zero. It is never acquired and reads nothing. */
 static int g_mouse_keeper;
 static void *g_mouse_kept;
@@ -913,7 +915,7 @@ static void hook_device_vtable(IDirect3DDevice9 *dev) {
         }
     }
 }
-/* C-05 (0.2): D14 showed the engine re-running its display init every 1-4 s while the game is in the background;
+/* C-05 (0.2): logs showed the engine re-running its display init every 1-4 s while the game is in the background;
    each run ends in a successful CreateDevice that replaces the previous device without releasing it (30 devices
    alive after three Alt+Tabs). Two guards: no device is created while the game window is not in front (the engine
    gets DEVICELOST and retries later), and when the previous device is still alive it is Reset and handed back
@@ -1374,7 +1376,9 @@ static void init_once(void) {
                 hook_pad_zone();
             }
         }
-        if (g_alt_tab || g_display_mode || g_refresh >= 0 || g_vsync || g_fov < 0 || g_ui_pct != 100) hook_d3d9();
+        if (g_borderless || g_d3d_counts || g_alt_tab || g_display_mode || g_refresh >= 0 || g_vsync || g_fov < 0 ||
+            g_ui_pct != 100)
+            hook_d3d9();
         if (key_int(L"fix", L"timer", 1)) {
             QueryPerformanceFrequency(&g_qf);
             g_t0 = GetTickCount();

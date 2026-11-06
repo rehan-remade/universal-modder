@@ -1,6 +1,6 @@
 # Build collapsefix (dinput8.dll proxy) with zig: 32-bit, kernel32 only, no CRT. Also laa_patch.exe (console, bcrypt).
-# usage: powershell -ExecutionPolicy Bypass -File build.ps1 [-Out D:\collapse-re\build-0.1]
-param([string]$Out = 'D:\collapse-re\build-0.1')
+# usage: powershell -ExecutionPolicy Bypass -File build.ps1 [-Out <folder>]   (default: build\ next to patch\)
+param([string]$Out = "$PSScriptRoot\..\build")
 $ErrorActionPreference = 'Stop'
 New-Item -ItemType Directory -Force $Out | Out-Null
 Copy-Item "$PSScriptRoot\collapsefix.c", "$PSScriptRoot\dinput8.def", "$PSScriptRoot\collapsefix.ini", "$PSScriptRoot\laa_patch.c", "$PSScriptRoot\laa_patch.rc", "$PSScriptRoot\laa_patch.manifest" $Out -Force

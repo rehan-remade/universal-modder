@@ -1,5 +1,5 @@
 # gpumem.ps1 -ProcId <pid> -Out <out.csv> : every 2 s, the process's dedicated and shared GPU memory (MB) summed over
-# adapters, until the process exits. Reads WMI perf counters from outside; nothing is injected. Used for C-05b (RB_4).
+# adapters, until the process exits. Reads WMI perf counters from outside; nothing is injected. Used to test the exclusive-mode Alt+Tab leak.
 #   powershell -ExecutionPolicy Bypass -File gpumem.ps1 -ProcId 1234 -Out D:\collapse-re\runs\x_gpumem.csv
 param([int]$ProcId, [string]$Out)
 "t,dedicatedMB,sharedMB" | Set-Content -Encoding ascii $Out

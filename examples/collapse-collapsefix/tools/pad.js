@@ -5,7 +5,7 @@
 //   {"id":3,"seq":[{"name":"rx","ms":1500,"rx":8192}]}  play steps, neutral between them, one 'pad_step' event per step
 // Step fields: b (buttons), lt, rt, lx, ly, rx, ry. The addresses are retail ones and this is a local test tool only.
 const CFG = /*CFG*/{}/*CFG*/;
-const CMD = 'D:\\collapse-re\\runs\\pad_cmd.json';
+const CMD = 'D:\\collapse-re\\runs\\pad_cmd.json'; // edit: your own runs folder (run.py doesn't fill this in)
 const GAP = 500;
 
 const main = Process.mainModule;

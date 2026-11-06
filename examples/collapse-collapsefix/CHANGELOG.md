@@ -7,7 +7,7 @@
   to Windows only when all of the block can go, and never past it. Tested without the game on the game's own code
   (`tools/heapguard_test.c`) and in play.
 
-## 1.0.0 (2026-11-02): first public release
+## 1.0.0 (2026-11-02): first release version
 Tested on the Steam build (`collapse.exe` PE 2008-10-13), Windows 11, NVIDIA RTX 3050 Ti Laptop and AMD Radeon
 iGPU, 1920×1080. The whole campaign was played through on this fix, then a release regression: every ini key on
 and off, exclusive mode with 84 Alt+Tabs, a virtual gamepad, and a clean install from Steam by the README.
