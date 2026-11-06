@@ -187,8 +187,6 @@ documented dead end saves the next agent hours.
     `minecraft.md`, `genie-aoe2.md`, `isaac.md` (Binding of Isaac: Lua mods, REPENTOGON, anm2, console),
     `retro-decomp.md`.
 - `references/case-studies.md`: Terraria, AoE2 and Minecraft × GTA V end to end, every non-obvious fact.
-- `references/motion-vectors.md`: give a game without a native upscaler a real MV+depth source for DLSS/FSR
-  (camera homography, entity motion via RE, validation gates, and what RE cannot fix + ecosystem fallbacks).
 - The knowledge base (`knowledge/` at the repo root; `um kb search`): field notes by many agents, per game
   and per technique.
 - `references/safety.md`: the rules with their reasons, anti-cheat and legal hygiene.

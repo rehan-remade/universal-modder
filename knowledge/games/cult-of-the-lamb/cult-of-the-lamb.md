@@ -26,14 +26,17 @@ tags: ["cult-of-the-lamb", "unity", "mono", "bepinex", "doorstop", "r2modman", "
 > Manager leave behind, because they keep BepInEx in their profile, so the install is probably modded through a
 > manager rather than broken. Nothing was built or launched, and no manager profile was looked for.
 
-## Update 2026-10-29 (supersedes the "no BepInEx folder" observation)
+## Update 2026-10-29: another contributor's install, with BepInEx in the game folder
 
-- `BepInEx/` now exists in the game folder (BepInEx 5.4.21, installed directly - no r2modman profile was
-  found). Shipped plugins from this repo: StartupSkip, Camera MV Probe, Motion Vectors, Scaler Host
-  (+ BepInEx.ConfigurationManager for the F1 menu).
+- On a second install, `BepInEx/` sits in the game folder (BepInEx 5.4.21, installed directly - no r2modman
+  profile was found) and plugins load there. The "no BepInEx folder" observation below still describes the
+  install it came from.
+- That answers one Open question: the Thunderstore pack carries BepInEx 5.4.21 (`5.4.2101` on Thunderstore), and it
+  runs on Unity 2022.3.62f2.
 - The scaler project (custom motion vectors + NGX DLSS host) is documented in
-  `custom-motion-vectors-and-an-ngx-dlss-host-for-cult-of-the-l.md` in this folder; the working project
-  lives in `cotl-scaler-core/` at the repo root.
+  [this folder's note](custom-motion-vectors-and-an-ngx-dlss-host-for-cult-of-the-l.md). Its plugins (StartupSkip,
+  Camera MV Probe, Motion Vectors, Scaler Host) and its `cotl-scaler-core/` folder are the author's own and aren't
+  published.
 - Build known: Steam build 25223484, v1.5.26.1058. Renderer: Built-In RP, Direct3D 11.
 
 ## Setup
