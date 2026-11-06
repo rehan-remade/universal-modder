@@ -1,48 +1,56 @@
 ---
 kind: game
-title: 'New wheel models for Sprocket without a loader: cloned Addressables bundles, binary catalog.bin keys and IconAtlas
-  icons on Unity 6000.3 IL2CPP'
+title: 'New wheel models for Sprocket, by patching game data or from a BepInEx plugin: cloned Addressables bundles, binary
+  catalog.bin keys and part icons on Unity 6000.3 IL2CPP'
 game: Sprocket
 games_also: []
-game_version: "Steam 1674170: stable buildid 25392405 and experimental buildid 25910892, both Unity 6000.3.21f1 IL2CPP, metadata v39, Addressables 2.9.1"
+game_version: "Steam 1674170: stable 0.2.55.5 (buildid 25392405) and experimental 0.2.56.x (buildid 25910892), both Unity 6000.3.21f1 IL2CPP, metadata v39, Addressables 2.9.1"
 platform: windows
 engine: unity-il2cpp
 route: loader-api
 tools: ["BepInEx 6 be.788", "Sprocket Mod Loader 1.2.3", "HarmonyX", "UnityPy 1.25.4", "AddressablesTools (nesrak1) @3dbc8210", "Blender 5.2 (bpy, Cycles bake)", ".NET 8 SDK", "Python 3.12"]
-anti_cheat: none found by um scan; editor/sandbox only, no game code touched
-status: released
+anti_cheat: "none found by um scan (single-player); editor/sandbox only. Data route: no game code touched. Plugin route: Harmony postfixes at run time, no game file changed"
+status: working
 agents:
 - Claude Code (Opus 5.5)
 humans: ["J1ND3R9"]
 date: '2026-10-29'
-links: ["https://github.com/nesrak1/AddressablesTools", "https://github.com/Hans21223/Sprocket-Quality-of-Life"]
+links: ["https://github.com/nesrak1/AddressablesTools", "https://github.com/K0lb3/UnityPy", "https://github.com/Hans21223/Sprocket-Mod-Loader", "https://github.com/Hans21223/Sprocket-Quality-of-Life"]
 tags: [vehicle-parts, wheels, engines, addressables, binary-catalog, unitypy, spriteatlas, icons, procedural-models, blender, bepinex, harmony, il2cpp-interop]
 ---
-# New wheel models for Sprocket without a loader: cloned Addressables bundles, binary catalog.bin keys and IconAtlas icons on Unity 6000.3 IL2CPP
+# New wheel models for Sprocket, by patching game data or from a BepInEx plugin: cloned Addressables bundles, binary catalog.bin keys and part icons on Unity 6000.3 IL2CPP
 
-> Six new track wheels (Tiger II, T-72, M1 Abrams road wheels; BTR-152, BTR-90, Osa-AKM tyred wheels) for the
-> tank designer Sprocket, selectable under Tracks → Wheels with their own part icons. No mod loader: the mod clones
-> the game's own wheel bundles with UnityPy, swaps in procedural Blender geometry and textures, adds keys to the
-> binary Addressables `catalog.bin`, adds part JSON + localisation, and patches the part icon pack in
-> `sharedassets0.assets`. Verified in the real game (editor, sandbox, photo mode) and shipped as install.bat/uninstall.bat.
+> Seven new track wheels (Tiger II, T-72 and M1 Abrams road wheels; BTR-152, BTR-90, Osa-AKM and M1128 Stryker tyred
+> wheels) for the tank designer Sprocket, selectable under Tracks → Wheels with their own part icons. No mod loader:
+> the mod clones the game's own wheel bundles with UnityPy, swaps in procedural Blender geometry and textures, adds
+> keys to the binary Addressables `catalog.bin`, adds part JSON + localisation, and patches the part icon pack in
+> `sharedassets0.assets`. Verified in the real game (editor, sandbox, photo mode) and packaged as
+> install.bat/uninstall.bat.
 >
 > **Update 2026-10-30:** the same wheels now also run as a BepInEx plugin that changes no game file, built on the patched
 > Sprocket Mod Loader, on the experimental branch. See "Moving to a BepInEx plugin" below. The data route above remains
 > valid if you don't want a loader. The engine notes in this file are for experimental, where engines changed.
 
 ## Setup
-- Sprocket, Steam app 1674170, buildid 25392405, Windows 11 x64. Unity **6000.3.21f1**, IL2CPP,
-  `global-metadata.dat` version **39**, Addressables **2.9.1** with a **binary** catalog (`aa/catalog.bin`;
-  `aa/settings.json` stays JSON). No anti-cheat, no loader installed.
+- Sprocket, Steam app 1674170, Windows 11 x64: stable 0.2.55.5 (buildid 25392405, the public branch since 2026-09-21)
+  for the data route; experimental buildid 25910892 (the branch's build since 2026-10-13; 0.2.56.2 going by Quality of
+  Life's changelog) for the plugin. Unity **6000.3.21f1**, IL2CPP, `global-metadata.dat` version **39**, Addressables
+  **2.9.1** with a **binary** catalog (`aa/catalog.bin`; `aa/settings.json` stays JSON). No anti-cheat; the data route
+  installs no loader.
+- **Multiplayer:** Sprocket has none at these builds (its Steam page lists Single-player only; small-scale multiplayer
+  is on the developer's roadmap), so the mod only changes the user's own game. A design that uses the new wheels needs
+  the mod wherever it's opened, community multiplayer mods included (not tested).
 - UnityPy 1.25.4 (+ numpy, Pillow, etcpak for DXT/BC7), Blender 5.2 (`-b --factory-startup`), .NET 8 SDK for a small
-  C# catalog tool referencing nesrak1's AddressablesTools source (commit 3dbc8210; the same code is on NuGet as
-  `AssetsTools.NET.Addressables`, MIT).
+  C# catalog tool referencing nesrak1's AddressablesTools source at commit 3dbc8210 ("add bin v3", 2026-08-09, which
+  adds binary catalog version 3). The library is also on NuGet as `AssetsTools.NET.Addressables` (MIT per its
+  nuspec), but the newest release there, 3.0.2 (2025-11-02), predates that commit: if it rejects a catalog with "Only
+  versions 1 and 2 are supported", build from source.
 - Game data: `Sprocket_Data/StreamingAssets/Parts/*.json` (≈259 open JSON part definitions),
   `StreamingAssets/Localization/en-UK/Parts/<name>.xml` (UTF-16), `StreamingAssets/aa/StandaloneWindows64/*.bundle`.
   Logs: `%USERPROFILE%/AppData/LocalLow/HD/Sprocket/Player.log`.
 
 ## Route and why
-- **Asset-only.** BepInEx 6 / Il2CppInterop were known-broken on metadata v39 / Unity 6000.3 at the time
+- **Asset-only first.** BepInEx 6 / Il2CppInterop were known-broken on metadata v39 / Unity 6000.3 at the time
   (BepInEx issues #1266/#1274, Il2CppInterop #283); the community QoL kit (Hans21223) notes the official be.788 freezes
   Sprocket 0.2.55.5 at the main menu and points to its own patched "Sprocket Mod Loader". A plugin for new wheels would
   still have to load extra bundles, register parts and add icons at runtime — the same work as the data route plus a
@@ -50,7 +58,13 @@ tags: [vehicle-parts, wheels, engines, addressables, binary-catalog, unitypy, sp
   2026-10-30, build 25910892: in practice the plugin turned out simpler to keep working than patching game files, because
   a game update no longer overwrites the mod. Pick it if your users accept installing the loader.
 - Only-JSON (new part pointing at existing `meshGuid`s) gives no new models; replacing an existing wheel's bundle
-  replaces instead of adds. Adding catalog keys is what makes truly new parts possible.
+  replaces instead of adds. Adding catalog keys is what makes truly new parts possible. Sprocket's own mod support
+  covers part definitions, eras and technology limits so far; meshes, textures, audio and scripting are still to come
+  (the developer's Roadmap Update #3, 2025-11-05). Once those land, the official route replaces this one.
+- Not tried: [SprocketSDK](https://github.com/Neemogudmen/SprocketSDK) (MIT), another BepInEx kit, builds `VehicleMesh`,
+  `Mesh` and `Texture2D` objects at run time from a mod's own `.obj` and `.png` files and serves them through a custom
+  Addressables provider, so no cloned bundle is involved (its `docs/assets.md` and `docs/how-sprocket-works.md`; checked
+  by its author on 0.2.55.5). Worth a look first for anything you plan to share (see "What ships").
 
 ## How the game works (what we had to learn)
 - **Wheel part JSON** (`Parts/*.json`): tag `trackWheel` = road wheel palette (`sprocketWheel` = drive sprockets).
@@ -81,9 +95,10 @@ tags: [vehicle-parts, wheels, engines, addressables, binary-catalog, unitypy, sp
   triangle order, `w = loop.bitangent_sign`) — no axis swap or winding flip needed for this game's wheel space.
 
 ## Engines (experimental build 25910892)
-Stable and experimental differ here. On stable the model sits inside `combustionEnginePart.json` and is chosen through
-`enginePartGuid` on the `powertrain` parts (a new `powertrain` part appears in Powertrain > System at once; JSON
-`width`/`height` act as divisors of a size the game computes). On experimental neither applies:
+Stable and experimental differ here: 0.2.56.1 added the inline and radial layouts (its Steam post). On stable the
+model sits inside `combustionEnginePart.json` and is chosen through `enginePartGuid` on the `powertrain` parts (a new
+`powertrain` part appears in Powertrain > System at once; JSON `width`/`height` act as divisors of a size the game
+computes). On experimental neither applies:
 - The model is its own part: `vEngineModel.json`, `inlineEngineModel.json`, `radialEngineModel.json`, component `engineModel`
   with `layout`, `materialGuid`, `cylinderSegmentMeshGuid`, `startMeshGuid`, `outputMeshGuid`, `baseCylinderCount`,
   `cylindersPerSegment`, `maxCylinderCount`, `cylinderDisplacement`, the three segment lengths, `output*Offset` and
@@ -96,18 +111,25 @@ Stable and experimental differ here. On stable the model sits inside `combustion
 - The engine is selected in the editor with X-ray on, then right mouse on it; the layout control is in its side panel.
 
 ## Moving to a BepInEx plugin
-**Loader.** The official BepInEx be.788 hangs on this Unity version. Install be.788, then copy the Patch folder of
-[Sprocket Mod Loader](https://github.com/Hans21223/Sprocket-Mod-Loader) 1.2.3 over it before the first start. It was declared
-for 0.2.55.5-0.2.56.1 but also ran on experimental 25910892: interop generated (261 assemblies), `Chainloader startup complete`,
-menu and sandbox fine, no errors, normal frame rate. Plugins target net6.0 and compile against `BepInEx/core` and
-`BepInEx/interop`.
+**Loader.** The official BepInEx be.788 crashes or hangs on Sprocket's Unity 6000.3.21f1 native code (the loader's
+`WHY-THE-OLD-LOADER-FAILED.md`). Install be.788 (`BepInEx-Unity.IL2CPP-win-x64-6.0.0-be.788+5b766a3`), then copy the
+Patch folder of [Sprocket Mod Loader](https://github.com/Hans21223/Sprocket-Mod-Loader) 1.2.3 (LGPL-3.0, with source;
+five DLLs for `BepInEx/core`) over it before the first start. Its README says it supports Sprocket builds on Unity
+6000.3.21f1, finds its hook targets at each start and was tested on 0.2.55.5, 0.2.56.0 and 0.2.56.1. It also ran on
+experimental 25910892: interop generated (261 assemblies), `Chainloader startup complete`, menu and sandbox fine, no
+errors, normal frame rate. Plugins target net6.0 and compile against `BepInEx/core` and `BepInEx/interop`. Renaming
+`winhttp.dll` to `winhttp.dll.disabled` turns the loader off.
 
 **Plugin layout** (`BepInEx/plugins/<mod>/`), and how each piece reaches the game:
+- `aa/`: the cloned bundles from build step 2. They're still clones of the game's bundles: see "What ships".
 - `catalog.bin`: a catalog holding only the mod's keys, made by cloning the stock entries. Bundle InternalIds use
   `{UnityEngine.AddressableAssets.Addressables.RuntimePath}\..\..\..\BepInEx\plugins\<mod>\aa\<file>`, so no
   `InternalIdTransformFunc` is needed. Give it its own `LocatorId`, and set Crc 0 on the shared `*_monoscripts_*.bundle`
-  dependency so a rebuild of that bundle doesn't invalidate the catalog. Loaded with `Addressables.LoadContentCatalogAsync`
-  inside the parts postfix below; status `Succeeded`, and the game's own key lookups find the assets.
+  dependency so a rebuild of that bundle under the same file name doesn't invalidate the catalog (see Open questions).
+  Loaded with `Addressables.LoadContentCatalogAsync` inside the parts postfix below; status `Succeeded`, and the game's
+  own key lookups find the assets. The
+  [Etrian Odyssey 2 HD note](../etrian-odyssey-2-hd/etria-inside-eo2-bepinex-protected-il2cpp.md) loads a second catalog
+  with the same call on Unity 2020.3 IL2CPP.
 - Parts: postfix on `PartDefinitionIO.LoadAllPartDefinitions`, deserialize with `DeserializePartDefinitionJSON(text, __1)` and
   append to `__result`. Appending keeps stock parts first, so defaults don't change.
 - Names: `PartLocalizationIO.GetPartLocalization` never fires. Postfix `Localizations.GetLocalizationFilePath` (return your XML)
@@ -144,16 +166,31 @@ build. Fired: `LoadAllPartDefinitions` (once), `GameIcons.AddIcons`, `GetOrDefau
    copy bundles/JSON/XML, record sha1s of the patched files; if the game later replaces a file (update/verify), treat
    the new file as the original instead of restoring the old backup.
 
+**What ships.** A cloned bundle is the game's own bundle file with our meshes and textures written in: everything we
+don't overwrite (the `VehicleMesh` and `VehicleMaterialConfiguration` objects, the `Roadwheel_Collider` that
+`interactionMesh` points at, `m_MeshLodInfo`) is still the 6-hole wheel's. So the clones stay on the machine they were
+built on and aren't shared, friends included, like the patched `catalog.bin` and `sharedassets0.assets` and their
+`*.orig` backups. That goes for the plugin's `aa/` folder too, and for engine models cloned from the game's engine
+bundles, even with their own collider. The clones built for this note stayed on the author's machine and in their
+private repository (public for about four minutes on 2026-10-29, with no downloads), so nobody else got them. A shared
+installer or plugin carries only our own data (the npz arrays, textures, icons, part JSON and XML) and builds the
+bundles from the player's own install (step 2), the way the installer already rebuilds the catalog and the icon pack,
+or skips bundles altogether as SprocketSDK does.
+`um publish check` won't catch a clone: it fails only files byte-identical to the game's, and warns only about engine
+archives over 5 MB.
+
 ## Verification
 - Oracle: the running game. Sandbox (Flat) → Tracks → right-click a road wheel (selects the track) → Wheels tab →
-  pick each wheel; screenshots via `um win shot`, Player.log checked for exceptions (none). All six wheels load and
-  render on the track; the game pairs road wheels itself (Per axle); icons show in the palette; photo mode (P) for
-  outline-free close-ups. The user checked camouflage paint and wheel rotation in their own session.
+  pick each wheel; screenshots via `um win shot`, Player.log checked for exceptions (none). All six wheels of the first
+  build (the M1128 Stryker wheel came later) load and render on the track; the game pairs road wheels itself (Per
+  axle); icons show in the palette; photo mode (P) for outline-free close-ups. The user checked camouflage paint and
+  wheel rotation in their own session.
 - Offline oracles: catalog round-trip dump diff; winding/tangent statistics vs the game's meshes; texture channels
   sampled at the game mesh's UVs; installer uninstall → byte-identical originals; `um publish check` PASS.
-- Not verified: battles/physics with the new wheels beyond the editor; other game builds.
+- Not verified: battles/physics with the new wheels beyond the editor; other game builds; a design with the new wheels
+  opened without the mod.
 - Plugin (2026-10-30, experimental 25910892): the human checked parts, models, names, icons and a saved vehicle in game;
-  the log showed the catalog `Succeeded` and all seven parts added. Not verified: the plugin on the stable branch.
+  the log showed the catalog `Succeeded` and all seven wheels added. Not verified: the plugin on the stable branch.
 
 ## Gotchas
 1. **Wheels look hollow, tyres show only their tread.** **Cause:** triangle winding inverted (I reversed it assuming
@@ -183,13 +220,14 @@ build. Fired: `LoadAllPartDefinitions` (once), `GameIcons.AddIcons`, `GetOrDefau
     a real mouse move over the viewport; orbit is middle-drag (WinDrive has no middle button — use a tiny
     `mouse_event` helper); photo mode (P) hides selection outlines.
 11. **White icons after writing to `GameIcons.lookup` from a plugin.** `lookup[key] = new GameIcons.Icon {...}` raises the
-    dictionary count, but `GetOrDefault` returns null, even for a stock sprite. **Cause:** `Icon` is a struct and the interop
-    write doesn't store it correctly in the native generic dictionary. **Fix:** don't write; postfix `GetOrDefault`/`TryGet`.
-    Giving one part a stock sprite separated "lookup broken" from "my sprite broken" in a single run.
-12. **`AsyncOperationHandle<T>` won't compile as a struct.** In interop it's a class: no `?`, no `.Value`.
-13. **Parts doubled or stale after switching routes.** Remove the patched-files install before the first plugin run.
-14. **`git push` / `gh` occasionally failed with `schannel: failed to receive handshake` / GraphQL `EOF`.** Transient;
-    a plain retry worked.
+    dictionary count, but `GetOrDefault` returns null, even for a stock sprite. **Cause (not pinned down):** probably the
+    interop write: `Icon` is a struct, and it doesn't seem to reach the native generic dictionary intact.
+    **Fix:** don't write; postfix `GetOrDefault`/`TryGet`. Giving one part a stock sprite separated "lookup broken" from
+    "my sprite broken" in a single run.
+12. **`AsyncOperationHandle<T>` won't compile as a struct.** **Cause:** in interop it's a class.
+    **Fix:** no `?`, no `.Value`.
+13. **Parts doubled or stale after switching routes.** **Cause:** the patched-files install is still in place.
+    **Fix:** remove it before the first plugin run.
 
 ## Assets
 All geometry procedural (bpy/bmesh): lathe profiles, lofted tread rows, hex nuts, radial ribs, boolean holes.
@@ -198,11 +236,13 @@ metal from the 6-hole wheel, rubber from the air-tyre wheel), plus light noise; 
 Blender, cropped, contrast-stretched and colour-matched to the mean colour of the game's wheel icons.
 
 ## Cost and time
-One long session (recon to release, three feedback rounds from the human).
+One long session (recon to the installer, three feedback rounds from the human).
 
 ## Open questions
 - A game update overwrites `catalog.bin` and `sharedassets0.assets` on the data route; the installer rebuilds from the new
   files, but a format change (Addressables/Unity version) would need the tools updated. The plugin route avoids this.
+- The plugin's catalog names the game's `*_monoscripts_*.bundle` by file name. Crc 0 covers a rebuild under the same
+  name; if an update changes the hash in that name, the catalog needs the new name. Not tested.
 - A fourth engine layout from a plugin is untested. The options array has a setter and `GetLayoutFromKey` can be patched, but
   the enum value must also survive `GetLayoutKey`, `GetTechID`, `GetLayoutIndex` and the model lookup, and those may be
   inlined. Fallback: replace the meshes of an existing layout from the plugin.
