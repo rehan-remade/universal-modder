@@ -1226,6 +1226,53 @@
   ]
  },
  {
+  "path": "games/brutalistick-vr/custom-music-player-with-its-own-music-plate-in-the-vr-setti.md",
+  "kind": "game",
+  "title": "Custom music player with its own Music plate in the VR settings menu",
+  "game": "BRUTALISTICK VR",
+  "games_also": [],
+  "game_version": "Steam app 2669380, Unity 6000.0.59f2 (IL2CPP x64), MelonLoader 0.7.3 Open-Beta / .NET 6",
+  "platform": "windows",
+  "engine": "unity-il2cpp",
+  "route": "loader-api",
+  "tools": [
+   "MelonLoader 0.7.3 Open-Beta",
+   "Il2CppDumper (dump.cs)",
+   "dotnet 6 SDK (net6.0 class library)",
+   "ffmpeg (generated test tones)",
+   "NLayer 1.16.0 and NVorbis 0.10.5 (embedded decoders)",
+   "Thunderstore (zip uploaded by hand, no CLI)"
+  ],
+  "anti_cheat": "none; single-player VR game, and Steam starts BrutalistickVR.exe directly",
+  "status": "released",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-11-05",
+  "links": [
+   "https://github.com/Skibidi41Rizz/CustomMusic",
+   "https://thunderstore.io/c/brutalistick-vr/p/SkIbidiRizTEAM/CustomMusic/",
+   "https://github.com/LavaGang/MelonLoader",
+   "https://github.com/naudio/NLayer",
+   "https://github.com/NVorbis/NVorbis",
+   "https://github.com/Perfare/Il2CppDumper"
+  ],
+  "tags": [
+   "audio",
+   "music",
+   "mci",
+   "winmm",
+   "harmony",
+   "ui",
+   "settings-menu",
+   "melonloader",
+   "il2cpp",
+   "vr",
+   "thunderstore"
+  ]
+ },
+ {
   "path": "games/call-of-duty-4-modern-warfare/cod4-iw3-vs-waw-t4-engine-architecture-and-modding.md",
   "kind": "game",
   "title": "Call of Duty 4: Modern Warfare (IW 3.0) vs World at War (Treyarch T4) Engine Architecture and Modding Comparison",
@@ -1734,24 +1781,22 @@
   "kind": "game",
   "title": "Collapse (2008): data formats, the init_heap fence, the engine's leaks and races, and the collapsefix 1.0.1 fix",
   "game": "Collapse",
-  "games_also": [
-   "Collapse: Devastated World"
-  ],
-  "game_version": "Steam app 289620, collapse.exe 2,392,108 B, SHA-256 3003600f\u2026bded283, PE timestamp 2008-10-13 (has the 1.1 AA option, no fullscreen-vsync path)",
+  "games_also": [],
+  "game_version": "Steam app 289620, build 222225, collapse.exe 2,392,108 B, SHA-256 3003600f\u2026bded283, PE timestamp 2008-10-13 (has the 1.1 AA option, no fullscreen-vsync path)",
   "platform": "windows",
   "engine": "native",
   "route": "native-hook",
   "tools": [
    "Python 3 + pefile + capstone (via uv)",
-   "Ghidra 12.1.4 headless (full decompile to text, twice for ST7)",
-   "Frida 17.24.3 (spawn, system-DLL hooks only)",
+   "Ghidra 12.1.4 headless (full decompile to text, kept private; run twice to compare)",
+   "Frida 17.24.3 (spawn; the main probe hooks system DLLs only, the navmesh and gamepad tests also hook game code)",
    "own .table reader/writer and package v8 extractor (Python)",
    "Zig 0.17 (32-bit test host)",
    "um win shot (ffmpeg gfxcapture)",
    "WinDbg 1.2610 + ProcDump 12.02 (unhandled-exception dump)",
    "Python minidump (dump triage)"
   ],
-  "anti_cheat": "none. Single-player, Steam build has no SteamStub and no steam_api (DRM-free exe). Retail discs reportedly used StarForce.",
+  "anti_cheat": "none. Single-player, no online mode. The Steam exe has no SteamStub and no steam_api (DRM-free); the LAA patcher sets one header bit on that exe only and refuses any other hash. Retail discs reportedly used StarForce (not checked).",
   "status": "working",
   "agents": [
    "Claude Code (Opus 5.5)"
@@ -1761,15 +1806,17 @@
   ],
   "date": "2026-10-28",
   "links": [
+   "examples/collapse-collapsefix",
    "https://web.archive.org/web/20250811064700/https://www.playground.ru/collapse/file/patch_collapse_v1_1-863187",
    "https://web.archive.org/web/20251022211914/https://www.wsgf.org/dr/collapse/en",
    "https://web.archive.org/web/20260709041135/https://www.pcgamingwiki.com/wiki/Collapse",
    "https://web.archive.org/web/20081120161419/http://creoteam.com/forum/",
    "https://steamcommunity.com/app/289620/discussions/0/540743128682268318/",
-   "https://reshax.com/topic/18427-collapse-2008-t000-unpack/",
-   "https://web.archive.org/web/20170623084809/http://forum.xentax.com/viewtopic.php?f=10&t=11253"
+   "https://web.archive.org/web/20170623084809/http://forum.xentax.com/viewtopic.php?f=10&t=11253",
+   "https://gee.cs.oswego.edu/pub/misc/malloc.c"
   ],
   "tags": [
+   "collapse-devastated-world",
    "creoteam",
    "d3d9",
    "vc6",
@@ -1785,6 +1832,51 @@
    "fov",
    "setup-ini",
    "frida"
+  ]
+ },
+ {
+  "path": "games/convrgence/ingame-mods-tab-and-vr-performance.md",
+  "kind": "game",
+  "title": "Native-looking in-game Mods settings tab (and which performance knobs moved VR frames)",
+  "game": "CONVRGENCE",
+  "games_also": [],
+  "game_version": "1.1.0, Steam BuildID 26164481",
+  "platform": "windows",
+  "engine": "unity-il2cpp",
+  "route": "loader-api",
+  "tools": [
+   "MelonLoader 0.7.3",
+   "AssetRipper GUI (headless web)",
+   "UnityPy",
+   "ilspycmd (ILSpy CLI)",
+   "WPR/WPA (Windows Performance Recorder/Analyzer)",
+   "HarmonyX"
+  ],
+  "anti_cheat": "none found (single-player VR extraction shooter, Steam starts CONVRGENCE.exe directly); it has Steam leaderboards, so keep modded runs off them",
+  "status": "working",
+  "agents": [
+   "OpenCode (GLM)"
+  ],
+  "humans": [
+   "Arttu (full VR verification, patience through ~35 game restarts)"
+  ],
+  "date": "2026-10-31",
+  "links": [
+   "https://github.com/LavaGang/MelonLoader",
+   "https://github.com/AssetRipper/AssetRipper",
+   "https://github.com/K0lb3/UnityPy",
+   "https://github.com/BepInEx/Il2CppInterop"
+  ],
+  "tags": [
+   "vr",
+   "settings-ui",
+   "pause-menu",
+   "in-game-menu",
+   "melonloader-ui-clone",
+   "volumetric-fog",
+   "aura2",
+   "force-close",
+   "field-write-vs-method-call"
   ]
  },
  {
@@ -1994,6 +2086,49 @@
    "r2modman",
    "thunderstore",
    "recon"
+  ]
+ },
+ {
+  "path": "games/cult-of-the-lamb/custom-motion-vectors-and-an-ngx-dlss-host-for-cult-of-the-l.md",
+  "kind": "game",
+  "title": "Custom motion vectors and an NGX DLSS host for Cult of the Lamb (Unity DX11, no native upscaler)",
+  "game": "Cult of the Lamb",
+  "games_also": [],
+  "game_version": "Steam build 25223484, v1.5.26.1058",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "native-hook",
+  "tools": [
+   "BepInEx 5.4.21",
+   "HarmonyX",
+   "ILSpy 8.2",
+   "RenderDoc 1.46",
+   "NVIDIA DLSS SDK (nvngx 310.x)",
+   "BepInEx.ConfigurationManager v19.1",
+   "MSVC 2022"
+  ],
+  "anti_cheat": "none (single player and local co-op; no online mode)",
+  "status": "working",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "https://github.com/NVIDIA/DLSS",
+   "https://renderdoc.org",
+   "https://github.com/BepInEx/BepInEx.ConfigurationManager",
+   "https://docs.bepinex.dev",
+   "https://thunderstore.io/c/cult-of-the-lamb/p/BepInEx/BepInExPack_CultOfTheLamb/"
+  ],
+  "tags": [
+   "cult-of-the-lamb",
+   "unity",
+   "motion-vectors",
+   "dlss",
+   "ngx",
+   "native-hook",
+   "upscaling"
   ]
  },
  {
@@ -9637,6 +9772,147 @@
   ]
  },
  {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-active-reload-and-cloned-abilities.md",
+  "kind": "game",
+  "title": "Space Marine 2 active reload (press window, jam, HUD flash) and cloned abilities via enum extension",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026); built Oct 8-16 2026, ability work Oct 8-23 2026. Mod Tools app 3856330 build 25506153",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Saber SM2 Mod Tools (ModEditor docs, enum extension sample)",
+   "Python 3 (zipfile, struct, numpy, PyYAML)",
+   "own Morpheme .nmb patcher",
+   "own .sani clip writer and event-track codec",
+   "own Wwise bank writer",
+   "WwiseConsole 2019.2",
+   "own sslbin disassembler (reading compiled logic only)"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "active-reload",
+   "reload",
+   "firearm",
+   "morpheme",
+   "animation-network",
+   "action-controller",
+   "blueprint",
+   "hud",
+   "wwise",
+   "abilities",
+   "enum-extension",
+   "war-cry"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-building-a-new-map-with-the-map-converter.md",
+  "kind": "game",
+  "title": "A brand-new playable map in Space Marine 2 with Saber's Map Converter, plus hub scene edits",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026). Mod Tools app 3856330 build 25506153 (ModelConverter --map_mode, UsfExporter, Furnace, AIConverter, TerrainConverter, LightProbeConverter, resolve_scene_resources)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Saber SM2 Mod Tools (ModelConverter --map_mode, UsfExporter convert_tpl.py, furnace.exe, TextureConverter / convert_pct.py)",
+   "Saber's shipped converter source (ToolsSource: MapConverter.cs, MapBuilder)",
+   "Python 3 (own glTF writer, tpl_markup / lods_base patchers, lwi_container and dom_list readers)",
+   "Blender (preview renders with back-face culling, BC6H decode)",
+   "a small Win32 window-text reader for hidden crash dialogs"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "https://spacemarine2-modding.prismray.io/"
+  ],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "swarm-engine",
+   "map",
+   "level",
+   "map-converter",
+   "furnace",
+   "gltf",
+   "lwi",
+   "instancing",
+   "grass",
+   "collision",
+   "cdt",
+   "sky",
+   "lighting",
+   "shadows",
+   "prefab",
+   "water",
+   "hub",
+   "dom-list",
+   "navmesh"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-hub-battle-barge-thunderhawk-and-usables.md",
+  "kind": "game",
+  "title": "Space Marine 2 Battle Barge hub: replacing the hero Thunderhawk, a walk-in ramp with push-button seats, the launch countdown, hidden collision and usables",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026). Mod Tools app 3856330 build 25506153",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Saber SM2 Mod Tools (ModelConverter, UsfExporter)",
+   "Python 3 (struct, zipfile, numpy)",
+   "own cd_list / class_list / dom_list / lwi_container codecs",
+   "own .sani clip codec and Morpheme .nmb patcher",
+   "own sslbin disassembler",
+   "Blender (offline preview renders)"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "hub",
+   "battle-barge",
+   "thunderhawk",
+   "vehicle",
+   "usable",
+   "level-sequence",
+   "xseq",
+   "smart",
+   "collision",
+   "lwi",
+   "cd-list",
+   "dom-list",
+   "countdown",
+   "textures",
+   "banners"
+  ]
+ },
+ {
   "path": "games/warhammer-40-000-space-marine-2/sm2-missions-scenarios-faction-swaps-and-esd-spawning.md",
   "kind": "game",
   "title": "Space Marine 2 missions: scenario faction swaps, level files, the ESD spawn director and rebaking a navmesh with spawn points",
@@ -9659,7 +9935,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-13",
+  "date": "2026-10-29",
   "links": [],
   "tags": [
    "space-marine-2",
@@ -9701,7 +9977,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-15",
+  "date": "2026-10-29",
   "links": [
    "https://spacemarine2-modding.prismray.io/",
    "https://www.nexusmods.com/warhammer40000spacemarine2/mods/233"
@@ -9742,7 +10018,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-13",
+  "date": "2026-10-29",
   "links": [],
   "tags": [
    "space-marine-2",
@@ -9760,7 +10036,10 @@
    "custom-head",
    "ai-mesh",
    "collision",
-   "cloth"
+   "cloth",
+   "skin-weights",
+   "mml-cfg",
+   "parallax"
   ]
  },
  {
@@ -9787,7 +10066,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-15",
+  "date": "2026-10-29",
   "links": [],
   "tags": [
    "space-marine-2",
@@ -9805,7 +10084,13 @@
    "execution",
    "interplay",
    "xseq",
-   "spawning"
+   "spawning",
+   "bio-titan",
+   "boss-ai",
+   "melee-timing",
+   "gore",
+   "wwise",
+   "root-motion"
   ]
  },
  {
@@ -9841,6 +10126,116 @@
    "armoury",
    "talker",
    "constructor"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-one-constructor-for-every-class-and-fast-usf-builds.md",
+  "kind": "game",
+  "title": "Every Space Marine 2 class on one soldier armour constructor, and glTF-to-USF rebuilds in minutes instead of an hour",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026). Mod Tools app 3856330: game-folder ModelConverter v13.0.0, Mod Tools ModelConverter release + ToolsSource v14.0.0, UsfExporter, CDTConverter",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "asset-only",
+  "tools": [
+   "Saber SM2 Mod Tools (ModelConverter, UsfExporter convert_tpl.py, CDTConverter)",
+   "ModelConverter rebuilt from Saber's GPL ToolsSource (.NET 11 preview SDK, offline, against the shipped SharpGLTF/Newtonsoft DLLs)",
+   "Python 3 (json, hashlib, struct)",
+   "PowerShell build scripts"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "swarm-engine",
+   "tpl",
+   "usf",
+   "gltf",
+   "modelconverter",
+   "usfexport",
+   "constructor",
+   "armour",
+   "customization-library",
+   "build-speed",
+   "incremental-build",
+   "byte-identical",
+   "shader-cache"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-porting-assets-from-other-games.md",
+  "kind": "game",
+  "title": "Porting owned content from other games into Space Marine 2 (personal use): Witcher 3 level kit, Space Marine 1 Orks, Gears of War E-Day, Elden Ring, Helldivers 2",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [
+   "The Witcher 3",
+   "Elden Ring",
+   "Gears of War: E-Day",
+   "Warhammer 40,000: Space Marine - Master Crafted Edition",
+   "Helldivers 2",
+   "Red Dead Redemption 2"
+  ],
+  "game_version": "SM2 Steam build 25799387 (Patch 15.1, Oct 2026), most work on Patch 14.x-15; Saber Mod Tools (Oct 2026: ModelConverter, UsfExporter, Map Converter + Furnace, TextureConverter). Sources: The Witcher 3 Remastered 5.01 (GOG), Space Marine Master Crafted Edition (Steam), Gears of War: E-Day (UE 5.5 IoStore build; store and build id not recorded), Elden Ring + Shadow of the Erdtree (Steam), Helldivers 2 (Steam, Stingray)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "asset-only",
+  "tools": [
+   "Saber SM2 Mod Tools (ModelConverter --map_mode, UsfExporter, Furnace, TextureConverter)",
+   "Blender (headless, isolated user profile)",
+   "Witcher3-Blender-Tools (dingdio) Blender add-on",
+   "own SpeedTree 7 .srt parser (Python)",
+   "filediver v0.7.58 (Helldivers 2 extractor)",
+   "own UE 5.5 IoStore + ACL v2.1 readers (Python)",
+   "own Havok 2010.2 packfile reader (Python)",
+   "Wwise 2019.2.15 WwiseConsole",
+   "ffmpeg",
+   "Python 3 (numpy, scipy)"
+  ],
+  "anti_cheat": "SM2 has EasyAntiCheat: every build here loads through Saber's official mods folder (Mods Detected, private lobbies), no injection. Source games with anti-cheat (Elden Ring EAC, Gears E-Day EAC, Helldivers 2 GameGuard, EAC since 2026-10-20) were never launched or patched for this work; their files were read offline from the author's own installs.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "https://github.com/dingdio/Witcher3-Blender-Tools",
+   "https://github.com/xypwn/filediver",
+   "https://github.com/nfrechette/acl"
+  ],
+  "tags": [
+   "space-marine-2",
+   "cross-game",
+   "port",
+   "asset-conversion",
+   "mashup",
+   "witcher-3",
+   "redengine",
+   "speedtree",
+   "map-converter",
+   "furnace",
+   "lwi",
+   "elden-ring",
+   "gears-of-war",
+   "unreal-5",
+   "iostore",
+   "acl",
+   "space-marine-1",
+   "havok",
+   "helldivers-2",
+   "stingray",
+   "wwise",
+   "opus",
+   "retarget",
+   "personal-use"
   ]
  },
  {
@@ -9909,7 +10304,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-15",
+  "date": "2026-10-29",
   "links": [],
   "tags": [
    "space-marine-2",
@@ -9929,7 +10324,11 @@
    "sound",
    "crosshair",
    "hud",
-   "equipment"
+   "equipment",
+   "heroic-version",
+   "honor-shop",
+   "executions",
+   "ik"
   ]
  },
  {
@@ -10800,6 +11199,33 @@
    "worldgen",
    "multiplayer",
    "verification"
+  ]
+ },
+ {
+  "path": "techniques/an-in-game-settings-menu-in-an-il2cpp-unity-game-clone-the-g.md",
+  "kind": "technique",
+  "title": "An in-game settings menu in an IL2CPP Unity game: clone the game's own tab and drive it from Harmony",
+  "status": "working",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-11-05",
+  "links": [
+   "https://github.com/Skibidi41Rizz/CustomMusic",
+   "https://github.com/Skibidi41Rizz/CustomMusic/blob/main/MusicPanel.cs",
+   "https://github.com/BepInEx/Il2CppInterop"
+  ],
+  "tags": [
+   "unity",
+   "il2cpp",
+   "melonloader",
+   "harmony",
+   "ui",
+   "tmp",
+   "vr",
+   "settings-menu",
+   "prefab-clone"
   ]
  },
  {
@@ -12450,6 +12876,33 @@
   ],
   "links": [
    "https://www.tapatalk.com/groups/kottons_chop_shop/ti-scp-ti-sms-model-importer-t3217.html"
+  ]
+ },
+ {
+  "path": "techniques/motion-vectors-for-a-neural-upscaler-in-a-game-that-has-none.md",
+  "kind": "technique",
+  "title": "Motion vectors for a neural upscaler in a game that has none: a camera homography first, entities on demand",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "https://github.com/NVIDIA/DLSS",
+   "https://renderdoc.org",
+   "https://github.com/umar-afzaal/LumeniteFX"
+  ],
+  "tags": [
+   "motion-vectors",
+   "depth",
+   "dlss",
+   "ngx",
+   "upscaling",
+   "homography",
+   "unity",
+   "bepinex",
+   "validation"
   ]
  },
  {
