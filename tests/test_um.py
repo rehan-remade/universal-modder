@@ -1310,6 +1310,63 @@ def test_backup_repeated_restores_keep_undo_snapshots(tmp_path, backup_same_seco
             assert z.read("save.dat") == state.encode()
 
 
+def test_backup_rejects_reserved_manifest_file(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(backup, "_root", lambda name: (tmp_path / "snaps" / name).mkdir(parents=True, exist_ok=True)
+                        or tmp_path / "snaps" / name)
+    src = tmp_path / "src"
+    make(src, {"_um_manifest.json": "user data", "save.dat": "v1"})
+    with pytest.raises(SystemExit):
+        backup.create(str(src), name="t")
+    assert "reserved snapshot metadata file: _um_manifest.json" in capsys.readouterr().err
+    assert not (tmp_path / "snaps" / "t").exists()
+
+
+def test_backup_restore_stops_at_a_reserved_manifest_file_in_the_folder(tmp_path, backup_same_second, capsys):
+    # the automatic snapshot before the restore can't take that folder either: nothing may change until it's moved
+    src = tmp_path / "src"
+    make(src, {"save.dat": "v1"})
+    backup.create(str(src), name="t")
+    make(src, {"save.dat": "v2", "_um_manifest.json": "{}"})
+    with pytest.raises(SystemExit):
+        backup.restore("t", yes=True)
+    assert f"{src} contains reserved snapshot metadata file" in capsys.readouterr().err
+    assert (src / "save.dat").read_text() == "v2"
+    (src / "_um_manifest.json").unlink()
+    backup.restore("t", yes=True)
+    assert (src / "save.dat").read_text() == "v1"
+
+
+def test_backup_keeps_a_nested_file_named_like_the_manifest(tmp_path, backup_same_second):
+    # only the top level collides with the snapshot's manifest
+    src = tmp_path / "src"
+    make(src, {"sub/_um_manifest.json": "user data"})
+    backup.create(str(src), name="t")
+    make(src, {"sub/_um_manifest.json": "changed"})
+    backup.restore("t", yes=True)
+    assert (src / "sub" / "_um_manifest.json").read_text() == "user data"
+
+
+def test_backup_older_snapshot_with_two_manifest_members_restores_the_users_file(tmp_path, backup_same_second):
+    # snapshots from before the refusal hold the folder's file first and the manifest last, under one name.
+    # Restoring the last one wrote the manifest over the user's file, and then blocked backing up the folder
+    import hashlib
+    import warnings
+    dest = tmp_path / "dest"
+    files = {"_um_manifest.json": b"ORIGINAL USER DATA", "save.dat": b"s"}
+    zp = backup._root("old") / "20260101-000000.zip"
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")  # the duplicate name
+        with backup.zipfile.ZipFile(zp, "w") as z:
+            for rel, data in files.items():
+                z.writestr(rel, data)
+            z.writestr("_um_manifest.json", json.dumps(dict(source=str(dest), created="20260101-000000", note="", files={
+                rel: dict(size=len(data), sha1=hashlib.sha1(data).hexdigest()) for rel, data in files.items()})))
+    assert set(backup._manifest(zp)["files"]) == set(files)
+    backup.restore("old", yes=True)
+    assert (dest / "_um_manifest.json").read_bytes() == b"ORIGINAL USER DATA"
+    assert (dest / "save.dat").read_bytes() == b"s"
+
+
 def test_backup_handles_pre_1980_timestamps(tmp_path, monkeypatch):
     import os
     monkeypatch.setattr(backup, "_root", lambda name: (tmp_path / "snaps" / name).mkdir(parents=True, exist_ok=True)
@@ -1340,6 +1397,174 @@ def test_backup_diff_and_restore_round_trip(tmp_path, monkeypatch):
     assert (src / "sub" / "cfg.ini").read_text() == "a=1"
     assert not (src / "extra.log").exists()
     assert backup.snapshots("t-pre-restore")  # the state before the restore was kept
+
+
+def test_backup_relative_source_restores_to_original_folder(tmp_path, backup_same_second, monkeypatch):
+    a, b = tmp_path / "a", tmp_path / "b"
+    make(a, {"saves/save.dat": "origin"})
+    make(b, {"saves/save.dat": "other cwd"})
+    monkeypatch.chdir(a)
+    zp = backup.create("saves", name="relative")
+    assert backup._manifest(zp)["source"] == str(a / "saves")
+    make(a, {"saves/save.dat": "new origin"})
+
+    monkeypatch.chdir(b)  # restore without --to from another working directory
+    assert backup.diff("relative")["changed"] == ["save.dat"]
+    backup.restore("relative", yes=True)
+    assert (a / "saves" / "save.dat").read_text() == "origin"
+    assert (b / "saves" / "save.dat").read_text() == "other cwd"
+
+
+def test_backup_expands_home_in_recorded_source(tmp_path, backup_same_second, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path / "home"))
+    make(tmp_path / "home", {"saves/save.dat": "origin"})
+    zp = backup.create("~/saves", name="home")
+    assert backup._manifest(zp)["source"] == str(tmp_path / "home" / "saves")
+
+
+def test_backup_symlinked_source_keeps_link_name(tmp_path, backup_same_second):
+    real = tmp_path / "d" / "real-saves"
+    make(real, {"save.dat": "origin"})
+    link = tmp_path / "Terraria"
+    try:
+        link.symlink_to(real, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlinks not available")
+    zp = backup.create(str(link))
+    assert zp.parent.name == "terraria"
+    assert backup._manifest(zp)["source"] == str(link)
+
+
+def test_backup_dotdot_after_symlink_follows_the_os(tmp_path, backup_same_second):
+    if os.name == "nt":
+        pytest.skip("Windows itself resolves .. lexically")
+    real = tmp_path / "d" / "real"
+    make(tmp_path / "d", {"real/keep.txt": "", "x/save.dat": "via link"})
+    make(tmp_path, {"x/save.dat": "lexical"})
+    link = tmp_path / "link"
+    try:
+        link.symlink_to(real, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlinks not available")
+    zp = backup.create(str(link / ".." / "x"), name="t")
+    with backup.zipfile.ZipFile(zp) as z:
+        assert z.read("save.dat") == b"via link"  # the folder the OS reaches, as before the fix
+
+
+def test_backup_dot_source_is_named_after_the_folder(tmp_path, backup_same_second, monkeypatch):
+    make(tmp_path / "Terraria", {"save.dat": "origin"})
+    monkeypatch.chdir(tmp_path / "Terraria")
+    zp = backup.create(".")
+    assert zp.parent.name == "terraria"  # not "", which put the zip in the backups root
+    assert backup._manifest(zp)["source"] == str(tmp_path / "Terraria")
+
+
+def test_backup_source_with_dotdot_does_not_need_the_cwd_later(tmp_path, backup_same_second, monkeypatch):
+    # recorded as cwd/../saves, deleting the folder it was typed from made diff report every file as removed,
+    # and restore skipped the pre-restore snapshot and recreated that folder
+    work = tmp_path / "work"
+    make(work, {"saves/save.dat": "origin", "mod/x.txt": ""})
+    monkeypatch.chdir(work / "mod")
+    zp = backup.create("../saves", name="t")
+    assert backup._manifest(zp)["source"] == str(work / "saves")
+    monkeypatch.chdir(tmp_path)
+    shutil.rmtree(work / "mod")
+    make(work, {"saves/save.dat": "changed"})
+    assert backup.diff("t")["changed"] == ["save.dat"]
+    backup.restore("t", yes=True)
+    assert (work / "saves" / "save.dat").read_text() == "origin"
+    assert backup.snapshots("t-pre-restore") and not (work / "mod").exists()
+
+
+def test_backup_dotdot_source_is_named_after_the_folder(tmp_path, backup_same_second, monkeypatch):
+    make(tmp_path / "Terraria", {"sub/save.dat": "origin"})
+    monkeypatch.chdir(tmp_path / "Terraria" / "sub")
+    zp = backup.create("..")
+    assert zp.parent.name == "terraria"  # not "..", which put the zip outside backups/
+    assert backup._manifest(zp)["source"] == str(tmp_path / "Terraria")
+
+
+def test_backup_to_and_target_expand_home(tmp_path, backup_same_second, monkeypatch):
+    # a shell leaves ~ alone when it's quoted, and cmd always does: this made a literal ./~ folder
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path / "home"))
+    monkeypatch.chdir(tmp_path)
+    make(tmp_path / "src", {"save.dat": "origin"})
+    backup.create(str(tmp_path / "src"), name="t")
+    backup.restore("t", to="~/x", yes=True)
+    assert (tmp_path / "home" / "x" / "save.dat").read_text() == "origin"
+    assert backup.diff("t", "~/x")["target"] == str(tmp_path / "home" / "x")
+    assert not (tmp_path / "~").exists()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="WSL path conversion")
+def test_backup_wsl_windows_source_is_recorded_converted(tmp_path, backup_same_second, monkeypatch):
+    from um import common
+    monkeypatch.setattr(common, "is_wsl", lambda: True)
+    real = common.to_posix  # map /mnt/c to a temp folder so the converted path exists
+    monkeypatch.setattr(backup, "to_posix", lambda p: real(p).replace("/mnt/c/", f"{tmp_path}/c/", 1))
+    make(tmp_path / "c" / "Games" / "saves", {"save.dat": "origin"})
+    zp = backup.create("C:\\Games\\saves", name="w")
+    assert backup._manifest(zp)["source"] == f"{tmp_path}/c/Games/saves"
+    make(tmp_path / "c" / "Games" / "saves", {"save.dat": "changed"})
+    backup.restore("w", yes=True)
+    assert (tmp_path / "c" / "Games" / "saves" / "save.dat").read_text() == "origin"
+
+
+def _record_source(zp: Path, source: str):
+    """Rewrite a snapshot's manifest as one made before sources were stored absolute."""
+    with backup.zipfile.ZipFile(zp) as z:
+        members = {n: z.read(n) for n in z.namelist()}
+    manifest = json.loads(members["_um_manifest.json"])
+    manifest["source"] = source
+    members["_um_manifest.json"] = json.dumps(manifest).encode()
+    with backup.zipfile.ZipFile(zp, "w") as z:
+        for n, data in members.items():
+            z.writestr(n, data)
+
+
+def test_backup_legacy_home_source_restores_to_home(tmp_path, backup_same_second, monkeypatch):
+    home = tmp_path / "home"
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    make(home, {"saves/save.dat": "origin"})
+    zp = backup.create(str(home / "saves"), name="home")
+    _record_source(zp, "~/saves")
+    make(home, {"saves/save.dat": "changed"})
+    monkeypatch.chdir(tmp_path)
+    backup.restore("home", yes=True)
+    assert (home / "saves" / "save.dat").read_text() == "origin"
+    assert not (tmp_path / "~").exists()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="WSL path conversion")
+def test_backup_legacy_windows_source_still_works_under_wsl(tmp_path, backup_same_second, monkeypatch):
+    from um import common
+    src = tmp_path / "saves"
+    make(src, {"save.dat": "origin"})
+    _record_source(backup.create(str(src), name="legacy"), "C:\\Games\\saves")
+    monkeypatch.setattr(common, "is_wsl", lambda: True)
+    assert backup.diff("legacy")["target"] == "/mnt/c/Games/saves"  # converted before the absolute check
+
+
+def test_backup_legacy_relative_source_needs_explicit_folder(tmp_path, backup_same_second, monkeypatch, capsys):
+    src = tmp_path / "saves"
+    make(src, {"save.dat": "origin"})
+    _record_source(backup.create(str(src), name="legacy"), "saves")
+    other = tmp_path / "other"
+    make(other, {"saves/save.dat": "other cwd"})
+    monkeypatch.chdir(other)
+
+    for call in (lambda: backup.diff("legacy"), lambda: backup.restore("legacy", yes=True)):
+        with pytest.raises(SystemExit):
+            call()
+        assert "relative source (saves)" in capsys.readouterr().err
+    assert (other / "saves" / "save.dat").read_text() == "other cwd"
+    assert not backup.snapshots("legacy-pre-restore")
+    make(src, {"save.dat": "changed"})
+    backup.restore("legacy", to=str(src), yes=True)  # an explicit folder still works
+    assert (src / "save.dat").read_text() == "origin"
 
 
 # --------------------------------------------------------------------------- comfy
