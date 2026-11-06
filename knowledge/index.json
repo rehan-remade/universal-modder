@@ -2415,6 +2415,57 @@
   ]
  },
  {
+  "path": "games/dark-souls-remastered/craft-souls-minecraft-drives-dark-souls-passthrough.md",
+  "kind": "game",
+  "title": "Craft Souls: Minecraft played inside Dark Souls: Remastered (passthrough bridge, RE map of the game)",
+  "game": "Dark Souls: Remastered",
+  "games_also": [
+   "Minecraft"
+  ],
+  "game_version": "Steam AppID 570940, app 1.03.1 (file 1.0.0.0), DarkSoulsRemastered.exe 50,286,344 bytes, SHA-256 A45AAA36...8D7B, SizeOfImage 0x319B000",
+  "platform": "windows",
+  "engine": "fromsoft",
+  "route": "passthrough",
+  "tools": [
+   "ReShade 6.8 add-on API",
+   "Minecraft 1.21.1 + Fabric",
+   "Ghidra 12.1.4 (headless, JDK 21)",
+   "REA MCP",
+   "Python 3 (pefile, ReadProcessMemory)",
+   "DSR-Gadget (offsets only)"
+  ],
+  "anti_cheat": "no client anti-cheat found by um scan; part of .text is encrypted on disk (protection), left alone: the exe stays as installed and all patches are in memory; servers are live, so offline only (add-on removed before going online)",
+  "status": "in-progress",
+  "agents": [
+   "Copilot SDK in VS Code (model not recorded)",
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-02",
+  "links": [
+   "https://github.com/JKAnderson/DSR-Gadget",
+   "https://soulsmodding.com/",
+   "https://github.com/rehan-remade/universal-modder/tree/main/examples/minecraft-gta5-passthrough",
+   "https://reshade.me",
+   "https://fabricmc.net",
+   "https://github.com/morluto/rea"
+  ],
+  "tags": [
+   "minecraft",
+   "passthrough",
+   "reshade-addon",
+   "depth-compositing",
+   "camera",
+   "havok",
+   "collision-geometry",
+   "game-thread-hook",
+   "event-scripts",
+   "params",
+   "fmg",
+   "live-memory-diff"
+  ]
+ },
+ {
   "path": "games/dark-souls-remastered/portal-gun-prototype-via-dinput8-proxy-dll-player-camera-and.md",
   "kind": "game",
   "title": "Portal gun prototype via dinput8 proxy DLL: player, camera and angle offsets",
