@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import json
+import locale
 import os
 import platform
 import shutil
+import stat
 import subprocess
 import sys
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 
 def is_windows() -> bool:
@@ -47,7 +49,7 @@ def to_win(path: str | Path) -> str:
     if p.startswith("/mnt/") and len(p) == 6:
         return p[5].upper() + ":\\"
     if is_wsl() and shutil.which("wslpath"):
-        return subprocess.run(["wslpath", "-w", p], capture_output=True, text=True).stdout.strip()
+        return subprocess.run(["wslpath", "-w", p], capture_output=True, **text_utf8()).stdout.strip()
     return p
 
 
@@ -66,11 +68,85 @@ def data_dir() -> Path:
     return d
 
 
+# a reparse tag with this bit names another file or folder: symlinks, junctions, mount points, WSL symlinks
+NAME_SURROGATE = 0x20000000
+
+
+def is_link(p: Path) -> bool:
+    """A symlink, a junction or another Windows reparse point that leads somewhere else."""
+    try:
+        st = os.lstat(p)
+    except (FileNotFoundError, NotADirectoryError):
+        return False
+    if stat.S_ISLNK(st.st_mode) or (hasattr(p, "is_junction") and p.is_junction()):
+        return True
+    # Python < 3.12 has no is_junction. OneDrive's files on demand are reparse points too, but writes stay in place
+    return bool(getattr(st, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+                and getattr(st, "st_reparse_tag", NAME_SURROGATE) & NAME_SURROGATE)
+
+
+def inside(root: Path, name: str) -> Path:
+    """root / name for a write that must stay in root. ValueError if name is absolute or has a drive or a '..', if a
+    folder on the way or the file itself is a symlink or junction, or if it resolves outside root.
+
+    Pass root resolved: it may be a link itself (a saves folder on another drive), but nothing below it is followed."""
+    win = PureWindowsPath(name)  # splits on / and \ and knows drives, on every OS
+    path = root / name
+    if "\0" in name or win.anchor or ".." in win.parts or path == root:
+        raise ValueError("not a relative path inside the folder")
+    p = root
+    for part in path.relative_to(root).parts:
+        p = p / part
+        if is_link(p):
+            raise ValueError(f"{p} is a symlink or junction")
+    if not path.resolve().is_relative_to(root):
+        raise ValueError(f"resolves outside {root}")
+    return path
+
+
+def open_out(path: Path):
+    """open(path, "wb"), except that a symlink at path fails instead of being written through. Windows has no
+    O_NOFOLLOW: there, check with inside() first."""
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
+    return open(os.open(path, flags, 0o666), "wb")
+
+
+def text_utf8(**kw) -> dict:
+    """The kwargs for a command whose text output we parse.
+
+    ffmpeg (for a path), git and gh (for a note title) print UTF-8 on Windows, and so does PowerShell
+    once a script starts with PS_UTF8, while a bare `text=True` decodes with
+    `locale.getpreferredencoding()`: cp936 on a Chinese Windows, cp1252 on a Western one. One CJK window
+    title, save folder or game path is then enough to raise `UnicodeDecodeError` in subprocess's reader
+    thread and take the command down (`um win ps`, `um video` on a 中文 path). `errors="replace"` keeps a
+    wrong guess to one mojibake line instead of a traceback.
+    """
+    return dict(text=True, encoding="utf-8", errors="replace", **kw)
+
+
+def text_console(**kw) -> dict:
+    """The kwargs for Windows' own console tools (taskkill, reg), which print in the console's code page.
+
+    That's the OEM code page unless `chcp` changed it. On CJK Windows it equals the locale codec (936, 932,
+    949, 950), so these keep decoding with the locale, as before; `errors="replace"` turns a mismatch (a
+    Western OEM code page, or WSL's UTF-8 locale) into replacement characters instead of a traceback.
+    """
+    return dict(text=True, encoding=locale.getpreferredencoding(False), errors="replace", **kw)
+
+
+# Windows PowerShell 5.1 encodes what it prints to a pipe with [Console]::OutputEncoding, the console's code
+# page (OEM, so 936 on a Chinese Windows). Start every -Command script with this so its output is UTF-8 and
+# matches text_utf8(). Best-effort: with no console attached the setter throws, and the script still runs.
+PS_UTF8 = "try{[Console]::OutputEncoding=[Text.Encoding]::UTF8}catch{};"
+
+
 def run(cmd: list[str], check: bool = True, capture: bool = True, timeout: float | None = None, **kw) -> subprocess.CompletedProcess:
     try:
-        return subprocess.run(cmd, check=check, capture_output=capture, text=True, timeout=timeout, **kw)
+        return subprocess.run(cmd, check=check, capture_output=capture, **text_utf8(), timeout=timeout, **kw)
     except FileNotFoundError:
         die(f"not found: {cmd[0]}")
+    except subprocess.TimeoutExpired:
+        die(f"{' '.join(map(str, cmd[:3]))}... timed out after {timeout}s")
     except subprocess.CalledProcessError as e:
         die(f"{' '.join(map(str, cmd[:3]))}... failed ({e.returncode}):\n{(e.stderr or e.stdout or '').strip()[-2000:]}")
 

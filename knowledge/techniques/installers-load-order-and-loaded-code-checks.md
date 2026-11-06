@@ -32,8 +32,9 @@ game, and when a mod "doesn't load" for some users.
    moving branch. A download "stamp" is not a content digest.
 4. **Record ownership so uninstall can be exact.** BullySkate validates prepared asset sets by hash, keeps
    timestamped backups and refuses an unknown existing loader. NewVegasCraft's early installer kept existing
-   configuration on install but deleted those paths on removal; the GTA V example's `--remove` deletes
-   `ReShade.ini` even if the user had one before. Keep a manifest of what you created vs replaced.
+   configuration on install but deleted those paths on removal; the GTA V example's `--remove` deleted
+   `ReShade.ini` even if the user had one before, until install began leaving a marker when it creates the
+   file. Keep a manifest of what you created vs replaced.
 5. **Replace loaded DLLs safely.** NewVegasCraft switched to copy-then-rename so an already-mapped DLL isn't
    rewritten in place (under its Proton setup).
 6. **Divide responsibilities with other mods.** Touhou HFR with a popular rotation wrapper: the wrapper owns render targets,

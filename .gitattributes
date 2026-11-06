@@ -1,0 +1,7 @@
+# Shell scripts must stay LF: WSL bash cannot run CRLF scripts (a Windows checkout with core.autocrlf converts them)
+*.sh text eol=lf
+gradlew text eol=lf
+bin/um text eol=lf
+# and batch files stay CRLF: cmd.exe can miss goto labels in LF-only files
+*.cmd text eol=crlf
+*.bat text eol=crlf

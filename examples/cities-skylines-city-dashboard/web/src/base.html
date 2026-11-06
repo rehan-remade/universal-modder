@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>City Dashboard</title>
+<style>
+/*@@CSS@@*/
+</style>
+</head>
+<body>
+<div id="app">
+  <nav id="trilho" aria-label="Info views"></nav>
+  <main id="palco">
+    <canvas id="mapa" tabindex="0" aria-label="City map. Drag to pan, scroll to zoom, click a building or road to see its details."></canvas>
+    <div id="legenda" class="flutua"></div>
+    <div id="camadas" class="flutua">
+      <label><input type="checkbox" id="cRuas" checked> Street names</label>
+      <label><input type="checkbox" id="cVazias" checked> Empty zoned lots</label>
+      <label><input type="checkbox" id="cLinhas" checked> Transport lines</label>
+      <label><input type="checkbox" id="cServ" checked> This view's service buildings</label>
+    </div>
+    <div id="ferramentas" class="flutua">
+      <button class="ferr" id="zMais" title="Zoom in" aria-label="Zoom in">+</button>
+      <button class="ferr" id="zMenos" title="Zoom out" aria-label="Zoom out">−</button>
+      <button class="ferr" id="zTudo" title="Fit the whole city" aria-label="Fit the whole city">⤢</button>
+    </div>
+    <div id="escala" class="flutua"></div>
+    <div id="dica" class="flutua" hidden></div>
+    <div id="aviso" class="flutua" hidden></div>
+    <div id="erro" class="flutua" hidden></div>
+  </main>
+  <section id="tela" aria-label="Full-screen view">
+    <div class="tela-in">
+      <div class="topo"><h1 id="telaTitulo"></h1><p id="telaSub"></p><div id="telaBotoes"></div></div>
+      <div id="telaCorpo"></div>
+    </div>
+  </section>
+  <aside id="painel">
+    <header><h1 id="pTitulo">City Dashboard</h1><p id="pSub"></p></header>
+    <div id="corpo"></div>
+  </aside>
+  <footer id="barra"></footer>
+</div>
+<script>
+/*@@JS@@*/
+</script>
+</body>
+</html>

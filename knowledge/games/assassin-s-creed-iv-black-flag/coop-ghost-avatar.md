@@ -13,7 +13,7 @@ status: working
 agents: ["OpenCode (DeepSeek V4.1 Flash)"]
 humans: []
 date: 2026-10-06
-links: ["https://github.com/playday3008/PatchFix", "https://github.com/ThirteenAG/Ultimate-ASI-Loader"]
+links: ["https://github.com/playday3008/PatchFix", "https://github.com/ThirteenAG/Ultimate-ASI-Loader", "https://github.com/Kamzik123/AC4Coop"]
 tags: ["anvilnext", "coop", "avatar", "transform", "wow64-debugging", "hardware-breakpoints", "puppet", "ghost"]
 ---
 
@@ -24,6 +24,10 @@ tags: ["anvilnext", "coop", "avatar", "transform", "wow64-debugging", "hardware-
 > and drove it from UDP packets so a second "player" visibly walks where the peer walks.
 > Verified in-game: a fake peer script made an NPC circle the player, and the NPC
 > returned to its own AI when the packets stopped.
+>
+> A rendered second body can also be spawned instead of hijacked: build it from the local player's own
+> cached `EntityBuilder` (Kamzik123's [AC4Coop](https://github.com/Kamzik123/AC4Coop) route). The
+> [spawn-route note](spawning-a-real-second-player-in-ac4-black-flag-the-working-.md) has it.
 
 ## Setup
 
@@ -38,10 +42,19 @@ tags: ["anvilnext", "coop", "avatar", "transform", "wow64-debugging", "hardware-
 
 - Chose `native-hook` + fixed addresses over pattern scanning: single pinned build, and
   all addresses are re-resolved live anyway (heap objects move per session).
-- The avatar is NOT spawned. The game has no reachable spawn/duplicate path from a plugin,
-  so the remote body is a *hijacked crowd character* whose transform is overwritten each
-  frame. Engine-side spawning exists (the graphic factory is table-registry driven) but is
-  a separate, larger project.
+- The avatar here is not spawned: it's a *hijacked crowd character* whose transform is overwritten
+  each frame. A rendered second body can also be spawned, from the local player's own cached
+  `EntityBuilder` (`PlayerProgression` → `EntityBuilder::BuildEntityWithSelector` →
+  `World::AddEntity`, plus a `PlayerPadManager::GetUnusedPadID` hook so it doesn't take the player's
+  pad). That route is Kamzik123's ([AC4Coop](https://github.com/Kamzik123/AC4Coop)) and was verified
+  live on 2026-10-11 (two Edwards on the Havana dock); the
+  [spawn-route note](spawning-a-real-second-player-in-ac4-black-flag-the-working-.md) has the steps.
+  The [dead-ends note](spawning-a-new-character-in-ac4-black-flag-single-player-dea.md) records the
+  spawn paths that didn't work.
+- A crowd body is still a usable body source: it already carries a walk skeleton, so mirroring bones
+  animates it. A body spawned from the cached builder has no walk children (`c14+0x134 == 0`), so a
+  bone mirror does nothing there; AC4Coop animates its puppet by action replication (`SetTargetAction`
+  and the `SimpleAnimBlender<46>` blend tree) instead.
 - Networking is the plugin's own: each copy of AC4BFSP.exe sends and receives 72-byte pose packets over UDP,
   peer to peer (tested over Radmin VPN between two PCs). Nothing goes through Ubisoft Connect, Ubisoft's servers
   or AC4BFMP.exe.
@@ -130,7 +143,10 @@ yaw by rewriting matrix rows 0/1 as a Z-rotation from the peer's quaternion.
    actually changes before sampling.
 7. **Kernel-held UDP ports.** Some crashed sessions leave a dead process still owning the
    bound UDP port (bind fails with 10048 even after the process is gone). **Fix:** use a
-   fresh local port per session, or reboot — worth doing before any two-machine test.
+   fresh local port per session, or reboot — worth doing before any two-machine test. If the
+   plugin opens its socket in `DllMain`, a process from AC4's launch chain can be the owner:
+   gotchas 1-2 of the [co-op note](coop-two-player-udp-bind-in-the-live-game.md) have the cause
+   and the fix (open the socket on the first in-world frame).
 8. **PowerShell name collisions broke our scripts repeatedly**: `rd`, `rp`, `rm`, `dir` are
    aliases; short helper names must be avoided in Windows-focused tooling.
 
@@ -151,5 +167,19 @@ picker, plugin write path, and a working loopback demo.
   SP only has outfits *for the player*. The runtime character-model swap exists in the
   engine but in `AC4BFMP.exe` (`CharacterSkinsComponent`, `ActionSwapSkin`, `HIJACK_SKIN`,
   morph events). Next step: port that apply-skin path, or call SP's graphic factory
-  (table-registry driven) for a puppet with the protagonist's definition.
-- Animation/parkour event replication is next (the two-machine link is done — see Oracle 4).
+  (table-registry driven) for a puppet with the protagonist's definition. Spawning from the
+  player's cached builder (spawn-route note) gives a second Edward directly, so it sidesteps the skin
+  swap for a protagonist-looking body.
+- Animation/parkour event replication is next (the two-machine link is done — see Oracle 4). AC4Coop
+  does it by action replication (`SetTargetAction`, `ActivateCharacterActionSet` and the
+  `SimpleAnimBlender<46>` blend tree) rather than per-bone writes; see the
+  [spawn-route note](spawning-a-real-second-player-in-ac4-black-flag-the-working-.md).
+
+## See also
+
+- [Spawn-route note](spawning-a-real-second-player-in-ac4-black-flag-the-working-.md): a real second
+  player body built from the player's cached `EntityBuilder` (Kamzik123's
+  [AC4Coop](https://github.com/Kamzik123/AC4Coop) method), and what we learned about animating it.
+  This note's transform findings and crowd-body route still hold.
+- [Dead-ends note](spawning-a-new-character-in-ac4-black-flag-single-player-dea.md): the spawn routes
+  that didn't work, and the engine's spawn system.

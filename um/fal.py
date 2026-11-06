@@ -1,4 +1,7 @@
-"""Game assets from fal (https://fal.ai): plain REST, no SDK needed. Needs FAL_KEY (env or a .env file).
+"""Game assets from fal (https://fal.ai): plain REST, no SDK needed.
+
+The key comes from FAL_KEY, else from where `um fal key set` stored it (the desktop keyring on Linux,
+~/.secrets/fal-key elsewhere), else from FAL_KEY=... in a .env. `um fal key status` shows which one is used.
 
     um fal sprite "a rusty scrap drone enemy, side view facing left, 16-bit pixel art" --out assets/gen --name drone
     um fal image "key art: ..." --aspect 16:9
@@ -23,10 +26,14 @@ Model ids move fast: `um fal search` / the fal MCP's search_models find the curr
 from __future__ import annotations
 
 import base64
+import getpass
 import json
 import mimetypes
 import os
 import re
+import shutil
+import stat
+import subprocess
 import sys
 import time
 import urllib.error
@@ -34,7 +41,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from um.common import die
+from um.common import die, text_utf8
 
 QUEUE = "https://queue.fal.run"
 REST = "https://rest.fal.ai"
@@ -71,22 +78,188 @@ SPRITE_STYLE = ("a single game sprite, the whole subject in frame and centered, 
 
 # --------------------------------------------------------------------------- auth + http
 
+KEYRING_SERVICE = "fal.ai"
+KEYRING_KEY = "api"
+KEYRING_LABEL = "fal.ai API key (universal-modder)"
+KEYRING_ATTRS = ["service", KEYRING_SERVICE, "key", KEYRING_KEY]
+KEYRING_TIMEOUT = 20  # long enough to type a wallet password when the keyring asks to be unlocked
+_DEFAULT_KEY_FILE = "~/.secrets/fal-key"
+_KEY_CACHE: str | None = None
+
+
+def _named_key_file() -> str | None:
+    return os.environ.get("UM_FAL_KEY_FILE") or os.environ.get("FAL_KEY_FILE")
+
+
+def key_file() -> Path:
+    """The plaintext fallback: UM_FAL_KEY_FILE / FAL_KEY_FILE, else ~/.secrets/fal-key (owner-only)."""
+    return Path(_named_key_file() or _DEFAULT_KEY_FILE).expanduser()
+
+
+def mask(k: str) -> str:
+    return (k[:6] + "…" + k[-4:]) if len(k) > 14 else "…"
+
+
+def _secret_tool(*args: str, value: str | None = None) -> subprocess.CompletedProcess | None:
+    """libsecret's CLI (GNOME Keyring, KWallet). None when it is missing, fails to start or hangs (no keyring
+    daemon, a headless box). A secret goes in on stdin, never on the command line."""
+    st = shutil.which("secret-tool")
+    if not st:
+        return None
+    try:
+        return subprocess.run([st, *args], input=value, capture_output=True, timeout=KEYRING_TIMEOUT, **text_utf8())
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
+def keyring_available() -> bool:
+    return shutil.which("secret-tool") is not None
+
+
+def keyring_get() -> str | None:
+    """The key stored in the desktop keyring, or None."""
+    r = _secret_tool("lookup", *KEYRING_ATTRS)
+    return (r.stdout.strip() or None) if r and r.returncode == 0 else None
+
+
+def keyring_set(value: str) -> bool:
+    r = _secret_tool("store", "--label", KEYRING_LABEL, *KEYRING_ATTRS, value=value)
+    return bool(r and r.returncode == 0)
+
+
+def keyring_clear() -> bool:
+    r = _secret_tool("clear", *KEYRING_ATTRS)
+    return bool(r and r.returncode == 0)
+
+
+def write_key_file(value: str, path: Path | None = None) -> Path:
+    """Owner-only from the first byte: the file is created 0600 (an existing one is reset to 0600 before the
+    key is written) and a folder created for it is 0700. Existing folders are left alone. On Windows the mode
+    bits do nothing; the file sits in the user's profile."""
+    p = (path or key_file()).expanduser()
+    if not p.parent.exists():
+        p.parent.mkdir(mode=0o700, parents=True)
+    fd = os.open(p, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        if hasattr(os, "fchmod"):
+            os.fchmod(f.fileno(), 0o600)
+        f.write(value.strip() + "\n")
+    return p
+
+
+def file_mode(p: Path) -> str:
+    try:
+        return oct(stat.S_IMODE(p.stat().st_mode))
+    except OSError:
+        return "?"
+
+
+def _read_file(p: Path) -> str | None:
+    try:
+        return p.read_text().strip() or None
+    except OSError:
+        return None
+
+
+def _read_dotenv(p: Path) -> str | None:
+    try:
+        m = re.search(r"^\s*FAL_KEY\s*=\s*['\"]?([^'\"\s]+)", p.read_text(), re.M)
+    except OSError:
+        return None
+    return m.group(1) if m else None
+
+
+def _dotenv_files() -> list[Path]:
+    return list(dict.fromkeys((Path.cwd() / ".env", Path(__file__).resolve().parents[1] / ".env")))
+
+
+def _key_candidates():
+    """(label, reader, plaintext) for every place a key can come from, in precedence order. Nothing is read
+    until its reader is called, so a FAL_KEY in the environment never touches the keyring."""
+    yield "FAL_KEY environment variable", lambda: (os.environ.get("FAL_KEY") or "").strip() or None, False
+    named, p = _named_key_file(), key_file()
+    if named:
+        yield f"key file {p} (UM_FAL_KEY_FILE / FAL_KEY_FILE)", lambda: _read_file(p), False
+    yield f"OS keyring ({' '.join(KEYRING_ATTRS)})", keyring_get, False
+    if not named:
+        yield f"plaintext file {p} (mode {file_mode(p)})", lambda: _read_file(p), True
+    for env in _dotenv_files():
+        yield f".env file {env}", lambda env=env: _read_dotenv(env), True
+
+
+def key_sources() -> list[tuple[str, str]]:
+    """(label, key) for every source that has a key, in precedence order: the first one is used."""
+    return [(label, k) for label, read, _ in _key_candidates() if (k := read())]
+
 
 def fal_key() -> str:
-    k = os.environ.get("FAL_KEY")
-    if not k and os.environ.get("FAL_KEY_FILE"):
-        k = Path(os.environ["FAL_KEY_FILE"]).expanduser().read_text().strip()
-    if not k:
-        for env in (Path.cwd() / ".env", Path(__file__).resolve().parents[1] / ".env"):
-            if env.exists():
-                m = re.search(r"^\s*FAL_KEY\s*=\s*['\"]?([^'\"\s]+)", env.read_text(), re.M)
-                if m:
-                    k = m.group(1)
-                    break
-    if not k:
-        die("FAL_KEY is not set. Create a key at https://fal.ai/dashboard/keys and `export FAL_KEY=...` "
-            "(or put FAL_KEY=... in a .env file here)")
-    return k
+    global _KEY_CACHE
+    if _KEY_CACHE:
+        return _KEY_CACHE
+    for label, read, plaintext in _key_candidates():
+        k = read()
+        if k:
+            if plaintext and keyring_available():
+                print(f"um: fal key from {label}; `um fal key set` keeps it in the OS keyring", file=sys.stderr)
+            _KEY_CACHE = k
+            return k
+    die("no fal key. Create one at https://fal.ai/dashboard/keys, then `um fal key set` (or set FAL_KEY)")
+
+
+def cmd_key(args):
+    action = getattr(args, "action", None)
+    kf = key_file()
+    if action == "set":
+        if getattr(args, "from_file", None):
+            value = Path(args.from_file).expanduser().read_text().strip()
+        else:
+            value = getpass.getpass("fal API key (hidden): ").strip()
+        if not value:
+            die("empty key, nothing stored")
+        if getattr(args, "file_only", False):
+            print(f"stored in {write_key_file(value)} (plaintext, owner-only)")
+        elif keyring_set(value) and keyring_get() == value:
+            print(f"stored in the OS keyring as {mask(value)} ({' '.join(KEYRING_ATTRS)})")
+            if kf.exists():
+                print(f"note: {kf} still holds a key in plaintext; `um fal key clear --file` deletes it")
+        elif keyring_available():
+            die("could not write to the OS keyring (is it unlocked?); "
+                "`um fal key set --file-only` stores the key in a plaintext file instead")
+        else:
+            print(f"no OS keyring (no secret-tool); stored in {write_key_file(value)} (plaintext, owner-only)")
+        if os.environ.get("FAL_KEY"):
+            print("note: FAL_KEY is set in this environment and takes precedence over the stored key")
+    elif action == "status":
+        sources = key_sources()
+        if not sources:
+            print("no fal key configured; run `um fal key set`")
+        for i, (label, key) in enumerate(sources):
+            print(f"{'active  ' if i == 0 else 'shadowed'}  {label}  ->  {mask(key)}")
+        print()
+        in_keyring = any(label.startswith("OS keyring") for label, _ in sources)
+        print(f"keyring     {'available' if keyring_available() else 'not available (no secret-tool)'}"
+              f"{', has the key' if in_keyring else ''}")
+        print(f"key file    {kf} {'exists (mode ' + file_mode(kf) + ')' if kf.exists() else 'absent'}")
+    elif action == "clear":
+        removed = []
+        if keyring_get() and keyring_clear():
+            removed.append("OS keyring")
+        if getattr(args, "file", False) and kf.exists():
+            kf.unlink()
+            removed.append(str(kf))
+        print("removed: " + ", ".join(removed) if removed else "nothing to remove")
+    elif action == "migrate":
+        value = _read_file(kf)
+        if not value:
+            die(f"nothing to migrate: {kf} does not exist or is empty")
+        if not keyring_available():
+            die("no OS keyring here (no secret-tool); keeping the file")
+        if not (keyring_set(value) and keyring_get() == value):
+            die("could not write to the OS keyring (is it unlocked?); keeping the file")
+        kf.unlink()
+        print(f"moved {mask(value)} into the OS keyring and deleted {kf}")
+    else:
+        die("usage: um fal key {set|status|clear|migrate}")
 
 
 def _req(method: str, url: str, body=None, headers=None, auth=True, raw=False, timeout=120):
@@ -503,3 +676,23 @@ def register(sub):
     recipe("price", "pricing of an endpoint", "endpoint", out=False)
     q = recipe("result", "fetch (and download) a finished request", "endpoint", "request_id")
     recipe("upload", "upload a local file, print its URL", "file", out=False)
+
+    kp = rs.add_parser("key", help="store / inspect the fal API key (OS keyring first)",
+                       description="Every `um fal` recipe takes the key from FAL_KEY first, then from a file "
+                                   "named by UM_FAL_KEY_FILE (or FAL_KEY_FILE), then from the OS keyring, then "
+                                   "from ~/.secrets/fal-key, then from FAL_KEY=... in a .env. `um fal key set` "
+                                   "stores it in the desktop keyring through libsecret's secret-tool (GNOME "
+                                   "Keyring, KWallet: Linux). Where secret-tool is missing (Windows, macOS, WSL, "
+                                   "servers) it writes the plaintext file instead, readable only by you. Keys "
+                                   "are never printed in full.")
+    ka = kp.add_subparsers(dest="action", metavar="<action>")
+    ks = ka.add_parser("set", help="store a key from a hidden prompt (or --from-file)")
+    ks.add_argument("--from-file", metavar="PATH", help="read the key from PATH instead of prompting")
+    ks.add_argument("--file-only", action="store_true", help="skip the keyring and write the plaintext file")
+    ka.add_parser("status", help="show every source and which one is active (keys are masked)")
+    kc = ka.add_parser("clear", help="remove the key from the OS keyring")
+    kc.add_argument("--file", action="store_true", help="also delete the plaintext key file")
+    ka.add_parser("migrate", help="move the plaintext key file into the OS keyring and delete it")
+    kp.set_defaults(func=cmd_key)
+    for _a in ka.choices.values():
+        _a.set_defaults(func=cmd_key)

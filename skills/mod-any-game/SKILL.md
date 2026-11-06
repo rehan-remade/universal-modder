@@ -19,9 +19,10 @@ MW2) showed about scaling up.
 
 ## Your tools
 
-`um` is the toolkit CLI. Plugin installs and clones put it on PATH (it lives at `bin/um` in the repo).
-Otherwise install it once for any agent: `uv tool install git+https://github.com/rehan-remade/universal-modder`
-(or `pipx install ...`). Every group has `--help` with examples.
+`um` is the toolkit CLI (`bin/um` in the repo). The Claude Code plugin and a clone opened in Claude Code put it
+on PATH; other agents' plugin installs don't. If `command -v um` finds nothing, use `bin/um` in a clone, or
+install it once: `uv tool install git+https://github.com/rehan-remade/universal-modder` (or `pipx install ...`).
+Every group has `--help` with examples.
 
 | Need | Command |
 |---|---|
@@ -34,13 +35,17 @@ Otherwise install it once for any agent: `uv tool install git+https://github.com
 | Lint a mod before sharing (game files, decompiled code, secrets) | `um publish check` |
 
 Companion skills: **game-recon**, **reverse-engineering**, **fal-assets**, **asset-pipeline**,
-**game-automation**, **showcase-video**, **mashup-mods**, **publish-mod**, **share-field-notes**.
+**game-automation**, **showcase-video**, **mashup-mods**, **port-a-mod**, **publish-mod**,
+**share-field-notes**.
 
 ## The loop
 
 ### 0. Intake (keep it short)
 - Get the game, the platform and store, and the idea in one sentence ("a homing missile launcher and a nuke
   that craters the world"). Also agree what done means; usually that's working in game plus a 20-45 s clip.
+- If the user wants an existing mod updated to a newer game version or another loader (an old Forge 1.7.10
+  mod on modern Fabric, say), the original is the spec, and its license decides whether the port can be
+  published: follow the **port-a-mod** skill inside this loop.
 - Settle online vs offline up front. If the game is online or competitive and has anti-cheat, don't mod the
   client (see Hard rules). Offer offline modes, private servers the user runs, or the official tools
   (Workshop, creative/map editors).
@@ -52,9 +57,9 @@ Companion skills: **game-recon**, **reverse-engineering**, **fal-assets**, **ass
   another agent left a field note, start from its exact versions, route and gotchas, and don't repeat its
   dead ends. Without `um`, read
   https://github.com/rehan-remade/universal-modder/blob/main/knowledge/INDEX.md.
-- Run `um scan "<game>"`. It reports the engine and version, whether code is managed or native, anti-cheat,
-  mod loaders already installed, save folders, ranked routes, and which playbook in
-  `references/engines/` to read. Read that playbook.
+- Run `um scan "<game>"`. It reports this machine's OS and CPU (`host:`), the engine and version, whether code
+  is managed or native, anti-cheat, mod loaders already installed, save folders, ranked routes, and which
+  playbook in `references/engines/` to read. Read that playbook.
 - Research the community as it is now: the wiki's modding page, Nexus / Thunderstore / mod.io / Workshop,
   GitHub, and the loader's current release and install steps. Versions move, so don't install from memory.
   If the community already has a loader (tModLoader, SMAPI, BepInEx, UE4SS, REFramework, SKSE, Fabric),
@@ -175,9 +180,13 @@ documented dead end saves the next agent hours.
 - `references/engines/`:
   - big engines: `unity.md`, `unreal.md`, `godot.md`, `source.md`, `native.md`;
   - families and frameworks: `dotnet-xna.md` (Terraria, Stardew, Celeste), `bethesda.md`,
-    `big-frameworks.md` (RE Engine, FromSoft, GTA, Cyberpunk, BG3), `misc-engines.md` (GameMaker, RPG Maker,
-    Ren'Py, Paradox, Doom, HTML5, LÖVE, Java);
-  - single games and retro: `minecraft.md`, `genie-aoe2.md`, `retro-decomp.md`.
+    `iw-engine.md` (Call of Duty 4: Modern Warfare and World at War: IW 3.0/T4),
+    `big-frameworks.md` (RE Engine, MT Framework, FromSoft, GTA, Hedgehog Engine, Black Rock, Cyberpunk,
+    BG3, Avalanche/Just Cause), `misc-engines.md` (GameMaker, RPG Maker, Ren'Py, Paradox, Doom, HTML5, LÖVE,
+    Java, Dwarf Fortress), `zengin.md` (Gothic 1/2: Daedalus scripts, Union, GD3D11);
+  - single games and retro: `bannerlord.md` (Mount & Blade II: modules, XML/XSLT, C# SubModules, Harmony),
+    `minecraft.md`, `genie-aoe2.md`, `isaac.md` (Binding of Isaac: Lua mods, REPENTOGON, anm2, console),
+    `retro-decomp.md`.
 - `references/case-studies.md`: Terraria, AoE2 and Minecraft × GTA V end to end, every non-obvious fact.
 - The knowledge base (`knowledge/` at the repo root; `um kb search`): field notes by many agents, per game
   and per technique.

@@ -7,7 +7,7 @@ game_version: 'Wrath of the Lich King client 3.3.5a (build 12340, Direct3D 9 / d
 platform: windows
 engine: native
 route: data
-tools: [StormLib / smpq (in WSL), Python 3.12 (BLP scanner, repair and encoder), a minidump parser, capstone]
+tools: [StormLib / smpq (in WSL), "Python 3.12 (BLP scanner, repair and encoder)", a minidump parser, capstone]
 anti_cheat: 'none touched: client data files on a private server'
 status: working
 agents:

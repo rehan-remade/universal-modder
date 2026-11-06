@@ -39,7 +39,14 @@ tags: [source-engine, mdl, vvd, vtx, vtf, vpk, ani, skeletal-animation, skinning
 local animation descriptions, local sequences, textures, texture directories, skin table, body parts,
 included models, and the animation-block name, count and table. Records are fixed size: bone 216 bytes,
 body part 16, model 148, mesh 116, texture 64, sequence description 212, animation description 100.
-Strings are stored as offsets relative to the start of the record that owns them.
+Strings are stored as offsets relative to the start of the record that owns them. Field offsets used by the
+Portal 2 converter (byte offsets inside each record):
+- bone: position @32, quaternion @44, Euler rotation @60, position scale @72, rotation scale @84,
+  pose-to-bone @96;
+- model: vertex index @84, a byte offset into the VVD (divide by 48);
+- animation description: animation block @52, animation index @56, section index @80, section frames @84;
+- sequence description: event count @24, animation index index @60; an event is 80 bytes with its name
+  offset @76; an attachment is 92 bytes.
 
 **3. Geometry.**
 - VVD vertices are 48 bytes: three bone weights, three bone indices, a bone count, position, normal, UV.
@@ -48,8 +55,8 @@ Strings are stored as offsets relative to the start of the record that owns them
 - VTX holds, per body part, model, LOD, mesh and strip group, a vertex list (9 bytes each; the field you want is the
   original mesh vertex id) and a 16-bit index list (a plain triangle list in the files I read). The VTX structs
   are byte-packed with no padding: body part 8, model 8, LOD 12, mesh 9, strip group 25, strip 27 (as read from
-  Left 4 Dead 1). Some later v49 builds, such as Source Filmmaker's, add two ints to each strip group and strip
-  (33 and 35 bytes), so check that the next strip group starts where this one's size says.
+  Left 4 Dead 1). Some later v49 builds, such as Source Filmmaker's and Portal 2's, add two ints to each strip
+  group and strip (33 and 35 bytes), so check that the next strip group starts where this one's size says.
 - A triangle corner's final vertex index is the model's vertex start (its byte offset divided by 48), plus the
   mesh's vertex offset, plus the vertex id from the VTX.
 - Characters are split into body parts with several interchangeable models each (heads, upper bodies, lower
@@ -57,9 +64,10 @@ Strings are stored as offsets relative to the start of the record that owns them
 
 **4. Textures.** A material path is a texture directory plus the material name. The VMT's base-texture entry
 (it may be inside a patched-in "include" file) names the VTF. A VTF stores its mip levels smallest first, so the
-largest image is the last block of the file; any mip is reached by summing sizes from the end. Decode DXT1,
-DXT3 and DXT5 (and the uncompressed BGRA/RGB formats) yourself; it is short. Taking a lower mip gives a smaller
-texture without any resizing.
+largest image is the last block of the image data; any mip is reached by summing sizes from the end. From VTF
+7.3 on, find the image data through the resource entry tagged `0x30 0 0` rather than assuming it ends the file.
+Decode DXT1, DXT3 and DXT5 (and the uncompressed BGRA/RGB formats) yourself; it is short. Taking a lower mip
+gives a smaller texture without any resizing.
 
 **5. Skeleton and skinning, and how to prove they are right.** Each bone has a parent, a local position and a
 quaternion (x, y, z, w order), and a stored "pose to bone" 3x4 matrix, the inverse of its bind transform.
@@ -110,6 +118,8 @@ rotation convention are right, and any later trouble is in the animation decode,
   a wrong decode shows as a twisted or giant figure immediately. Plot bounding boxes of a clip's frames too; a
   decode that is wrong is usually off by orders of magnitude.
 - Final check in the real target (Minecraft): freeze the game, advance it a few ticks at a time and screenshot.
+- Portal 2's `v_portalgun` viewmodel (v49, all 14 sequences) was converted for Outer Wilds with the same steps:
+  [Portal 2 portal gun viewmodel](../games/portal-2/portal-2-portal-gun-viewmodel-converted-for-another-engine-v.md).
 - Not verified: IK rules, additive (delta) clips, facial flex animation, physics bones, other MDL versions
   (44-48 should work but was not tried), and the multi-frame VTF case (animated textures).
 

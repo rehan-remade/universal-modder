@@ -1,0 +1,44 @@
+{
+  "type": "ItemTurret",
+  "name": "Homing Shot",
+  "description": "The same missile with bounded homing. Homing power 0.08, range 200.",
+  "size": 2,
+  "health": 450,
+  "range": 250,
+  "reload": 70,
+  "rotateSpeed": 8,
+  "shootCone": 8,
+  "inaccuracy": 0,
+  "recoil": 1,
+  "coolantMultiplier": 1,
+  "category": "turret",
+  "requirements": [
+    "copper/50"
+  ],
+  "research": "duo",
+  "ammoTypes": {
+    "copper": {
+      "type": "MissileBulletType",
+      "speed": 2.7,
+      "damage": 12,
+      "lifetime": 105,
+      "width": 8,
+      "height": 12,
+      "homingPower": 0.08,
+      "homingRange": 200,
+      "homingDelay": 8,
+      "drag": 0,
+      "shrinkY": 0,
+      "trailLength": 24,
+      "trailWidth": 2,
+      "trailChance": 0,
+      "trailColor": "61e3c5",
+      "frontColor": "ffffff",
+      "backColor": "61e3c5",
+      "hitColor": "61e3c5",
+      "splashDamage": 0,
+      "splashDamageRadius": 0,
+      "ammoMultiplier": 2
+    }
+  }
+}

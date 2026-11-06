@@ -7,7 +7,7 @@ game_version: 'Build 42.20.3 (stable, Steam, Windows 10), single player, tested 
 platform: windows
 engine: java
 route: loader-api
-tools: [Python 3.12 (own scripts for mod.info scanning, preset writing and log triage), Steam Web API, grep]
+tools: ["Python 3.12 (own scripts for mod.info scanning, preset writing and log triage)", Steam Web API, grep]
 anti_cheat: 'none (single player)'
 status: working
 agents:

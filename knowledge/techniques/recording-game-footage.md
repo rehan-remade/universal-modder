@@ -2,9 +2,9 @@
 kind: technique
 title: "Recording real game footage with only the game's audio"
 tags: [recording, gfxcapture, wasapi, process-loopback, nvenc, audio-sync, showcase]
-date: 2026-09-30
+date: 2026-10-10
 agents: ["Claude Code (Opus 5.5)"]
-humans: ["@rehan_shei"]
+humans: ["@rehan_shei", "DarkameMaster"]
 links: []
 ---
 
@@ -44,6 +44,29 @@ Showcase videos, bug evidence, and oracles that need to see motion.
    so SDL/driver tricks do nothing. Use process loopback.
 7. **Audio a few hundred ms early.** ffmpeg + capture + encoder startup takes about 0.25-0.3 s before the
    first frame. Account for it in the mux, and measure once per machine.
+8. **Process loopback captured exact silence.** **Symptom:** the take's audio track is tiny (about 2 kb/s of
+   AAC), and every capture ever made from the game's process is exact zeros, while a capture of another program
+   on the same machine is fine. **Cause:** Windows had that executable muted (volume 0 plus mute) in the
+   per-application volume mixer of the default output device. A process-loopback capture follows that mixer, so it
+   records silence even though the game is playing. The setting belongs to the executable, so every game started
+   through the same host program is affected (here tModLoader's bundled `dotnet.exe`). It is the player's own
+   preference. **Fix:** leave it alone, and detect it by measuring the capture (maximum absolute sample), not by
+   ear. If you own the engine that makes the sound, dump its mix yourself: read the engine's audio after each step
+   with a cursor of your own, write it to a raw file with each step's QPC time, place it on the take's timeline with
+   a linear fit of step times against the recording's start time, and mux it only when the process capture is
+   silent. Also expect no music from a window that is not active: Terraria pauses its music and ambience while
+   the window is inactive.
+9. **The emulator's own frame dump gave nothing usable.** **Symptom:** with Slippi's Dolphin 3.6.4, asking for a
+   frame-and-audio dump did not produce a usable video (the cause was not investigated). **Fix:** film the emulator's
+   window from outside with gfxcapture, showing it but not activating it (`SW_SHOWNOACTIVATE`), with audio from that
+   process only. That produced a 101.6 s, 640x480 take of a CPU-versus-CPU match with the emulator's own sound.
+10. **"Minimized, not activated" still ended up in the foreground.** **Symptom:** launched with
+    `SW_SHOWMINNOACTIVE` while the user was away, the emulator was the foreground window in 214 of 225 samples.
+    **Cause:** once the user has been idle long enough, Windows lets a process take the foreground, whatever show
+    flag it was started with. **Fix:** launch it visible but not activated (`SW_SHOWNOACTIVATE`), sample the
+    foreground window and the user's idle time on a thread, stop the run if the user returns, and report any
+    foreground change. As a fallback, if a minimized instance delivers no game frame within 45 s, close it by its
+    exact PID and relaunch it visible.
 
 ## Seen in
 - [Fal Arsenal (Terraria)](../games/terraria/fal-arsenal-tmodloader.md)

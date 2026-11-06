@@ -90,7 +90,7 @@ your normal save folder.
 
    It uses `um fal run` rather than `um fal image`, because the image recipe adds inputs meant for its
    default model. The ten drawings this mod shipped with are in `assets/gen/` (as `.jpg`, flux/dev's
-   default format), and the script only calls fal (with `FAL_KEY`) for a file you delete. There's no
+   default format), and the script only calls fal (with your fal key) for a file you delete. There's no
    fixed seed, so that call draws something new.
 
 2. `um sprite` turns each drawing into the frames the mod uses:

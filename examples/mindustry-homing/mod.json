@@ -1,0 +1,8 @@
+{
+  "name": "modlab-homing",
+  "displayName": "ModLab Homing Lab",
+  "author": "ModLab",
+  "version": "0.1.0",
+  "minGameVersion": "160.7",
+  "description": "A free single-player homing-missile workshop. Two copper turrets, one repeatable moving-target lab. Open ModLab Homing Lab from the main menu, or press F8. Built with Codex and the Universal Modder workflow."
+}

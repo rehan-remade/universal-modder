@@ -59,24 +59,35 @@ Preamble (32 bytes), as observed on the shipped files:
 | offset | size | meaning | retail value |
 |---|---|---|---|
 | 0 | 8 | stamp | `POTATO70` |
-| 8 | 4 | file size | wraps above 4 GiB (see gotcha 3) |
-| 12 | 4 | burst size | 1 on exactly the two bundles over 4 GiB, 0 on the rest |
+| 8 | 4 | file size, low half | file size mod 2^32 (see gotcha 3) |
+| 12 | 4 | file size, high half | 1 on exactly the two bundles over 4 GiB, 0 on the rest |
 | 16 | 4 | header size | `data offset - 32` |
 | 20 | 2 | format version | **5** in every shipped bundle |
 | 22 | 4 | data offset | `32 + header size` |
 | 26 | 6 | zero | |
 
-Entries are a **304-byte** stride: a 256-byte null-terminated resource path, then a 16-byte resource hash,
-then eight `u32` fields, in order: data offset, a flag that is 0 or 1, uncompressed size, on-disk size, CRC,
-compression word, and two words that are always 0. 365,866 entries in total; 188,762 of them are compressed.
+Entries are a **304-byte** stride: a 256-byte null-terminated resource path, a 16-byte resource hash, then
+eight `u32` words in this order — data-offset low half, data-offset high half, uncompressed size, on-disk
+size, payload CRC32, compression word, and two reserved words that are always 0. 365,866 entries in total;
+188,762 of them are compressed. WolvenKit-7's pre-Remastered 320-byte entry orders its fields differently (an
+`Empty` word, the two sizes, a u32 offset, date, time, 16 zero bytes, CRC, compression), so port the order
+along with the stride.
+
+The second word is **not** a flag: it is the high half of a **u64** offset. It is 0 in the 29 bundles under
+4 GiB, and 0 or 1 in `buffers.bundle` (52,989 of 113,009 entries) and `movies.bundle` (624 of 1,236). Read the
+pair as `offset = w0 | (w1 << 32)`; the u64 offsets are monotonic with 0 violations across all 113,009
+`buffers.bundle` entries and all 1,236 `movies.bundle` entries. The CRC word is `zlib.crc32` of the
+**decompressed** payload (8/8 sampled in `buffers.bundle`, 5/5 in `ep1.bundle`), not of the stored bytes.
 
 Compression is per entry and only two values ship: `0` (stored, the two size words are equal) and `1`
 (raw `zlib`, the classic `78 da` header). `zlib.decompress` reproduced the declared uncompressed size in
 2,203 of 2,203 sampled compressed entries, and the size words were never out of order across 2,559 samples.
 The engine source also names Snappy, DOBOZ, LZ4, LZ4HC and chained zlib, but this build does not use them.
 
-Offsets are **32-bit**, and `buffers.bundle` (7.6 GB) and `movies.bundle` exceed 4 GiB. 111 of 251 sampled
-entries in `buffers.bundle` decoded only after adding 2^32 to the stored offset.
+Offsets are **u64, split across two words**, which only shows up in the two files over 4 GiB:
+`buffers.bundle` (7.6 GB) and `movies.bundle` (7.7 GB) — the only two whose high half is ever 1, and the only
+two whose preamble file size has a non-zero high word. 111 of 251 sampled entries in `buffers.bundle` decoded
+only after adding 2^32, because the high half was being ignored.
 
 Entry-name census: `levels` 117,802, `dlc` 94,896, `environment` 52,407, `characters` 30,633. All 113,009
 `.buffer` entries live in `buffers.bundle`. Paths are plain Windows-style relative paths
@@ -119,27 +130,32 @@ bundle definition through an initialised depot, which is a real limitation (gotc
 
 ## Build steps
 1. Install the game through Steam so `content/content0/bundles/` exists.
-2. Read a preamble: open `<bundle>`, read 32 bytes, unpack the first 26 with `<8sIIIHI` (bytes 26–31 are
-   zero) — stamp, file size, burst size, header size, version, data offset.
+2. Read a preamble: open `<bundle>`, read 32 bytes, unpack the first 26 with `<8sQIHI` (bytes 26–31 are
+   zero) — stamp, file size (u64), header size, version, data offset.
 3. Walk entries from offset 32 in **304-byte** steps until you reach the data offset: `path = raw[:256]`
    split at the first NUL, then the 16-byte hash `raw[256:272]` and eight `u32`s from `raw[272:304]`.
-4. For an entry with compression word `1`, slice `data[offset + wrap : ...]` for on-disk size bytes
-   (`wrap` is 2^32 for `buffers.bundle` and `movies.bundle`) and `zlib.decompress` it; with word `0`, slice
-   it as-is.
+4. For an entry with compression word `1`, slice on-disk-size bytes from `offset = w0 | (w1 << 32)` and
+   `zlib.decompress` it; with word `0`, slice it as-is. No manual `+ 2^32` is needed once the high half is
+   read.
 5. Whatever you extracted should start with `CR2W`. Parse the 160-byte header, then the ten descriptors,
    then walk the chunk chain with the fixed entry sizes above.
 
 A correct parser needs no game-specific tables: the file layout is self-describing apart from the 304-byte
-stride and the 4 GiB wrap.
+stride; the offset pair is plain little-endian u64.
 
 ## Verification
 - **Preamble:** all 31 shipped bundles matched the 32-byte layout field for field; the header-size word
   equals `data offset - 32` in every file.
 - **Entries:** 365,866 entries walked with no stride drift; the two size words were ordered
-  (`uncompressed >= on-disk`) in all 2,559 samples checked.
+  (`uncompressed >= on-disk`) in all 2,559 samples checked. Reading the offset as a u64 kept every entry in
+  order — 0 violations across all 113,009 entries of `buffers.bundle` (last offset 7,640,451,552, file
+  7,640,452,656) and all 1,236 of `movies.bundle` (last 7,679,472,832, file 7,680,309,920) — and the 0/1
+  second word marked the high half on exactly the entries that need it (0 disagreements in 8,359 resolved
+  samples: `dlc0` 5,800, `buffers` 2,545, `movies` 14; the unresolved rest are non-`CR2W` payloads). The CRC
+  word equalled `zlib.crc32` of the decompressed payload in all 13 sampled compressed entries.
 - **Compression:** 2,203 of 2,203 sampled compressed entries decompressed with `zlib` to exactly the
   declared uncompressed size and began with `CR2W`. Two entries that failed before the fix were explained
-  by the 4 GiB wrap, not by a different codec.
+  by an offset read without its high half, not by a different codec.
 - **CR2W:** the worked example's chunk chain consumed the file exactly (1024 of 2520 bytes of header and
   chunk region, then the declared buffers-end), and the string table contained coherent REDengine type
   names. Version 164 across all sampled resources.
@@ -155,13 +171,14 @@ stride and the 4 GiB wrap.
    304. **Fix:** choose the stride by build; do not trust a hardcoded 320.
 2. **The declared header version is 5, not the 3 the source describes.** **Cause:** the leak's tree is a
    2021 branch and the container version moved on. **Fix:** read the word, do not require 3.
-3. **Offsets in `buffers.bundle` and `movies.bundle` point at the wrong place.** **Cause:** data offsets
-   are `u32`, and both files are larger than 4 GiB, so the stored offset wraps. **Fix:** when the target
-   file is over 4 GiB, try `offset + 2^32`; the decompressed payload then starts with `CR2W`. The same
-   wrap affects the preamble's file-size word.
-4. **`zlib.decompress` throws `Error -3` on some entries.** **Cause:** usually the 4 GiB wrap pointing you
-   into the wrong bytes, not a codec the parser does not know. **Fix:** fix the offset first; of roughly
-   3,700 compressed samples only a handful start with bytes other than `78 da`.
+3. **Offsets in `buffers.bundle` and `movies.bundle` point at the wrong place.** **Cause:** the data offset
+   is **two `u32` words** — low, then high — and reading the high word as a 0/1 flag drops it, so every entry
+   past 4 GiB wraps. **Fix:** read `offset = w0 | (w1 << 32)`; the pair is monotonic across all 113,009
+   entries of `buffers.bundle`. The preamble's file size is the same kind of pair: low word at offset 8, high
+   word at offset 12.
+4. **`zlib.decompress` throws `Error -3` on some entries.** **Cause:** usually an offset read without its
+   high half, pointing you into the wrong bytes — not a codec the parser does not know. **Fix:** fix the
+   offset first; of roughly 3,700 compressed samples only a handful start with bytes other than `78 da`.
 5. **`bundlebuilder.exe` rejects every definition file, including a minimal empty one, with "Definition
    file does not contain valid json data".** **Cause:** it resolves the definition through an initialised
    depot (`GDepot->GetBundles()`), which exists only after you run Generate depot in the editor (about

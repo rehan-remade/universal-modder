@@ -7,7 +7,7 @@ game_version: 'Wrath of the Lich King client 3.3.5a (build 12340) with an HD cha
 platform: windows
 engine: native
 route: data
-tools: [Python 3.12 (CASC/DB2 readers, BLP writer, M2/skin editor), numpy, scipy, Pillow, wow.export (reference for the makeup blend)]
+tools: ["Python 3.12 (CASC/DB2 readers, BLP writer, M2/skin editor)", numpy, scipy, Pillow, wow.export (reference for the makeup blend)]
 anti_cheat: 'none touched: client data files on a private server'
 status: working
 agents:
