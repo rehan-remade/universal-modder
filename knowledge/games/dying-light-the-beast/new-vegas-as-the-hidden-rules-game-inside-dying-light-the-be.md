@@ -91,6 +91,20 @@ has a rule that would compete with FNV's decision (gore kills), that rule is swi
 - **Saves:** autosaves are off during a session; at the end the Courier goes back to the stored place and FNV saves
   into a NEW slot, never over an existing save.
 
+- **Incoming hits (FNV decides the damage Kyle takes):** FNV's own "attacker hits target" is 0x899CB0, a
+  `__thiscall` on the attacker with (target, bool, projectile, hit type); FNV's melee code calls it with no
+  projectile. Called on the attacker's stand-in with the hidden Courier as the target, FNV builds the hit from
+  the stand-in's own weapon, runs its hit math and applies it (`target->0x89A760`). Never call it on a stand-in
+  placed in the same frame: its process and 3D aren't ready, and FNV's code faults.
+- **Heals:** the Courier uses one of its own Stimpaks through FNV's EquipItem (0x88C650), the same path as the
+  Pip-Boy, so Medicine and Hardcore's heal-over-time are FNV's.
+- **The Beast's damage categories:** a biter's bites and claws arrive as category 0 in the damage info (+0x31);
+  1 is a projectile. Filtering on 2/3 only (the player-side melee categories) missed every bite.
+- **The Beast's self-opening pause is an idle timer:** 300 s without input (LogicalPlayer m_State +0x704 bit 0,
+  set when a +0x36cc accumulator passes 300.0); focus loss, a pad unplug or another window in front never pause it.
+- **FNV's VATS only targets a stand-in in the Courier's view.** Place stand-ins where the host's enemies really
+  are (a reader of the host's world feeding the placement); fixed spots ~40 deg off the facing never open VATS.
+
 ## Build steps
 1. Pin The Beast (above) and install the ASI loader; deploy the Beast plugin plus flag files next to it.
 2. MO2 + the Viva New Vegas set; enable the bridge's xNVSE plugin, the arena ESP and the play-flag files.
@@ -134,7 +148,16 @@ has a rule that would compete with FNV's decision (gore kills), that rule is swi
 10. **The Beast crashed once, 4 s after a spawn ("D3D12 ... FAILED VALIDATE_HR").** **Cause:** a fatal the game
     raised itself (its crash reporter's own capture call in the stack; nothing in the plugin); unexplained. Crash
     reports were moved aside, never sent without the player's say.
-11. **Byte-scanning FalloutNV.exe for known addresses found nothing.** **Cause:** the Steam exe's code is
+11. **FNV crashed when the session ended during its VATS.** **Cause:** removing the VATS target and moving the
+    Courier with VATS up (once because a tutorial box on top ate the single back-out press). **Fix:** press FNV's
+    own B again every second and never end while VATS is open.
+12. **VATS pressed right after a kill went nowhere.** **Cause:** FNV starts its kill camera a frame after the kill.
+    **Fix:** refuse the VATS button while FNV's kill camera runs and for ~0.35 s after a kill.
+13. **A background Python opened a visible console.** **Cause:** a venv's python.exe is a launcher; detached, its
+    child got a new console window. **Fix:** start background readers with the venv's pythonw.exe.
+14. **No save at the end of a session.** **Cause:** an FNV pop-up left open held the Courier's move home. **Fix:**
+    the session end waits for the player to close it (nothing of ours presses OK).
+15. **Byte-scanning FalloutNV.exe for known addresses found nothing.** **Cause:** the Steam exe's code is
     encrypted on disk. **Fix:** read code from the running process; don't strip the DRM.
 
 ## Assets
