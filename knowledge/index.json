@@ -1226,6 +1226,53 @@
   ]
  },
  {
+  "path": "games/brutalistick-vr/custom-music-player-with-its-own-music-plate-in-the-vr-setti.md",
+  "kind": "game",
+  "title": "Custom music player with its own Music plate in the VR settings menu",
+  "game": "BRUTALISTICK VR",
+  "games_also": [],
+  "game_version": "Steam app 2669380, Unity 6000.0.59f2 (IL2CPP x64), MelonLoader 0.7.3 Open-Beta / .NET 6",
+  "platform": "windows",
+  "engine": "unity-il2cpp",
+  "route": "loader-api",
+  "tools": [
+   "MelonLoader 0.7.3 Open-Beta",
+   "Il2CppDumper (dump.cs)",
+   "dotnet 6 SDK (net6.0 class library)",
+   "ffmpeg (generated test tones)",
+   "NLayer 1.16.0 and NVorbis 0.10.5 (embedded decoders)",
+   "Thunderstore (zip uploaded by hand, no CLI)"
+  ],
+  "anti_cheat": "none; single-player VR game, and Steam starts BrutalistickVR.exe directly",
+  "status": "released",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-11-05",
+  "links": [
+   "https://github.com/Skibidi41Rizz/CustomMusic",
+   "https://thunderstore.io/c/brutalistick-vr/p/SkIbidiRizTEAM/CustomMusic/",
+   "https://github.com/LavaGang/MelonLoader",
+   "https://github.com/naudio/NLayer",
+   "https://github.com/NVorbis/NVorbis",
+   "https://github.com/Perfare/Il2CppDumper"
+  ],
+  "tags": [
+   "audio",
+   "music",
+   "mci",
+   "winmm",
+   "harmony",
+   "ui",
+   "settings-menu",
+   "melonloader",
+   "il2cpp",
+   "vr",
+   "thunderstore"
+  ]
+ },
+ {
   "path": "games/call-of-duty-4-modern-warfare/cod4-iw3-vs-waw-t4-engine-architecture-and-modding.md",
   "kind": "game",
   "title": "Call of Duty 4: Modern Warfare (IW 3.0) vs World at War (Treyarch T4) Engine Architecture and Modding Comparison",
@@ -10742,6 +10789,33 @@
    "worldgen",
    "multiplayer",
    "verification"
+  ]
+ },
+ {
+  "path": "techniques/an-in-game-settings-menu-in-an-il2cpp-unity-game-clone-the-g.md",
+  "kind": "technique",
+  "title": "An in-game settings menu in an IL2CPP Unity game: clone the game's own tab and drive it from Harmony",
+  "status": "working",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-11-05",
+  "links": [
+   "https://github.com/Skibidi41Rizz/CustomMusic",
+   "https://github.com/Skibidi41Rizz/CustomMusic/blob/main/MusicPanel.cs",
+   "https://github.com/BepInEx/Il2CppInterop"
+  ],
+  "tags": [
+   "unity",
+   "il2cpp",
+   "melonloader",
+   "harmony",
+   "ui",
+   "tmp",
+   "vr",
+   "settings-menu",
+   "prefab-clone"
   ]
  },
  {
