@@ -1212,6 +1212,39 @@
   ]
  },
  {
+  "path": "games/jojo-s-bizarre-adventure-all-star-battle-r/asbr-code-mods-are-a-dead-end-without-drm-removal-the-steam-.md",
+  "kind": "game",
+  "title": "ASBR code mods are a dead end without DRM removal: the Steam exe always relaunches under EasyAntiCheat",
+  "game": "JoJo's Bizarre Adventure: All-Star Battle R",
+  "games_also": [],
+  "game_version": "Steam build 13123765 (app 1372110)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "other",
+  "tools": [
+   "JAPI 4.0.1 (Kapilarny/JAPI), loader files only, tested and removed"
+  ],
+  "anti_cheat": "EasyAntiCheat (EOS), via start_protected_game.exe",
+  "status": "abandoned",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-14",
+  "links": [
+   "https://github.com/Kapilarny/JAPI",
+   "https://gamebanana.com/games/16950"
+  ],
+  "tags": [
+   "cyberconnect2",
+   "easyanticheat",
+   "steam-stub",
+   "drm",
+   "loose-files",
+   "dead-end"
+  ]
+ },
+ {
   "path": "games/left-4-dead/left-4-dead-infected-and-tank-in-minecraft.md",
   "kind": "game",
   "title": "Left 4 Dead's common infected (19 looks) and Tank as animated Minecraft mobs",
@@ -2519,6 +2552,44 @@
    "eden",
    "file-format",
    "reverse-engineering"
+  ]
+ },
+ {
+  "path": "games/the-binding-of-isaac-repentance/lua-mods-without-repentogon-a-follower-clone-a-costume-on-th.md",
+  "kind": "game",
+  "title": "Lua mods without REPENTOGON: a follower clone, a costume on the back, an undroppable trinket, safe refactoring",
+  "game": "The Binding of Isaac: Repentance+",
+  "games_also": [],
+  "game_version": "Repentance+ v1.9.7.17 (Steam)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "loader-api",
+  "tools": [
+   "ModUploader",
+   "Python + Pillow",
+   "lupa",
+   "luaparser"
+  ],
+  "anti_cheat": "none (Steam Workshop mods; online co-op not touched)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "fareria"
+  ],
+  "date": "2026-11-07",
+  "links": [
+   "https://steamcommunity.com/sharedfiles/filedetails/?id=3828867916"
+  ],
+  "tags": [
+   "lua",
+   "no-repentogon",
+   "clone",
+   "costume",
+   "trinket",
+   "refactoring",
+   "workshop"
   ]
  },
  {
