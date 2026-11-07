@@ -8,7 +8,7 @@ platform: windows
 engine: unknown
 route: native-hook
 tools: ["MinGW-w64 GCC 16.2 (w64devkit)", "Ghidra 12.1.4 (headless, analysis only) + Temurin JDK 21", "custom C# read-only process-memory reader (PowerShell Add-Type)", "Python 3.12 + capstone (string/RTTI/xref scans)"]
-anti_cheat: "none. SteamStub/Denuvo on the exe is untouched: the mod is a proxy winhttp.dll next to the exe and patches no code."
+anti_cheat: "none. SteamStub/Denuvo on the exe is untouched: the mod is a proxy winhttp.dll next to the exe, and the exe file is never changed. Since v0.13 it replaces one game function (the captain id writer) in memory at run time; NpcIdHook=0 turns that off."
 status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["DeimozZarco"]
@@ -37,6 +37,15 @@ tags: [offline, online-services, hydra, agora, winhttp, proxy-dll, garrison, nem
 > note ([goblin-tribe...](goblin-tribe-a-new-nemesis-tribe-via-game-gamedb.md)) was tested before this existed;
 > new work should start here.
 
+## Disclaimers
+- **Personal project.** The DLL was built for and used on the author's own install only; no built DLL is
+  distributed, publicly or privately. Only its source is shared here (in the example), so anyone else builds it
+  themselves, in the hope that it helps other modders test safely offline.
+- It holds no game assets. All game assets used in the Shadow of War notes are from the games the user owns.
+- This offline mode mod is always on and present when making and installing the other Shadow of War mods in these
+  notes into the user's own game.
+- Only tested on the Steam build 3095001 (Windows 10 22H2); every exe address here is for that build only.
+
 ## Setup
 - **Game:** Steam, build 3095001, Windows 10 22H2. Steam Overlay and Steam Cloud were off for the tests (that was
   unrelated to the mod; it just made saves local-only).
@@ -57,9 +66,9 @@ tags: [offline, online-services, hydra, agora, winhttp, proxy-dll, garrison, nem
   - survivalizeed's loaders were present on the test PC but aren't used.
 
 ## Route and why
-- **Route:** `native-hook`, but only as a DLL search-order proxy. No game code is patched or hooked. Since v0.12
-  the DLL also writes one data field in the game's heap, the Nemesis id prefix (see How the game works);
-  `NpcGuidPrefix=0` turns that off.
+- **Route:** `native-hook`, as a DLL search-order proxy. Since v0.12 the DLL also writes one data field in the
+  game's heap, the Nemesis id prefix, and since v0.13 it replaces one game function in memory, the captain id
+  writer (see How the game works). `NpcGuidPrefix=0` / `NpcIdHook=0` turn these off. Nothing else is patched.
   - `winhttp.dll` forwards all 70 WinHTTP exports to the System32 DLL. Assembly stubs and a `.def` file are
     generated from the real export list.
   - It intercepts only sessions, connects and requests whose host matches `BlockedDomains`: `wbagora.com`,
@@ -186,6 +195,23 @@ private image kept outside any repo.
     [save note](save-format-decrypt-and-collectible-quests.md)), and each id appears once per member. Rewriting
     every duplicated `_NPC_<n>` to a unique same-length string (e.g. `_A0c_<n>`) made the affected captains
     garrisonable again; the length must not change.
+- **v0.13 (2026-11-06): the id writer itself.** v0.12's delayed prefix still let bare ids out (Gotchas 13-14).
+  - The writer is `FUN_141b2f174` (exe+0x1B2F174, 3 callers): it returns at once when member+0x3D0 is already set,
+    else formats `"%s_NPC_%d"` from the manager's prefix and the global counter at exe+0x2AA1BB8 (48-byte field).
+  - The DLL replaces it with a 14-byte absolute jump (`FF 25 00000000` + 64-bit address) to its own function: same
+    format, same counter (interlocked increment), the game's prefix when its first byte is set, else a random
+    128-bit per-launch prefix (`BCryptGenRandom`). The jump is written only when the function's first 16 bytes match
+    the expected code (polled for up to 5 minutes), with `VirtualProtect` + `FlushInstructionCache`; any other exe
+    build just logs "hook NOT installed".
+  - Result in the 2026-11-06 log: `NPC id hook installed` at load, and every captain made that session got
+    `<32 hex>_NPC_<n>`, the first ones included.
+  - **The Garrison store counts too.** Garrisoned captains are not in the save, but each `.agb` file keeps the
+    captain's id in `npc_profile_guid`. A save captain whose bare id matches a stored captain is refused just the
+    same. The save id rewrite must treat those ids as taken.
+- **Garrison size:** the capacity is only the `garrison_size` the stand-in sends in `game-settings` (read into
+  `CloudServicesGameSettingsMgr+0xCC`, no clamp seen at the read). `GarrisonSize=100` was accepted. The game still
+  requests `garrison-get-collection/run?limit=50`; the stand-in ignores `limit` and returns every stored captain (up to
+  256). A list past 50 is untested.
 
 ## Build steps
 1. **Build.** Run `examples/shadow-of-war-offline-mode/build.cmd`, with `GCC=` pointing at a MinGW-w64 `gcc.exe`.
@@ -209,6 +235,11 @@ private image kept outside any repo.
   - **Destroy for gear** granted a weapon (a dagger) with no error.
   - The log shows the full removal handshake for each orc: DELETE, then the notification served, then the game's
     DELETE dismissing it. No access violations.
+- **v0.13 in game (the user, 2026-11-06):** the refused Deserter captain was accepted by the Garrison after the save
+  rewrite (11 duplicated ids in the save + 2 matching Garrison captains; afterwards 604 ids, 0 duplicates, 0
+  collisions); the log showed the hook installed and only prefixed ids for new captains; a Garrison size of 100 was
+  accepted. Used for every mini-tribe test in the
+  [mini-tribe note](mini-tribes-easterling-and-deserter-captain-rows.md).
 - **Harness:** a C test harness links `responder.c` and `agb.c` and round-trips each endpoint: create, list, get
   and delete objects, the notification lifecycle, wallet commands, and re-encoding an object rebuilt from the log.
 - **Crash reporter:** the DLL installs a vectored exception handler. It logs up to 20 access violations inside the
@@ -262,6 +293,14 @@ private image kept outside any repo.
     **Cause:** v0.11 wrote the id prefix (and called `VirtualProtect`) as soon as the manager pointer existed,
     before the game's first request; that session made no online requests at all. **Fix:** v0.12 waits for the
     first request, a stable pointer and an all-zero field, and uses a plain store.
+13. **A new mini-tribe captain was refused by the Garrison although v0.12 was installed** (2026-11-06). **Cause:**
+    the log said `NPC GUID prefix present: ` with nothing after it: the 64-byte prefix area held other bytes with byte
+    0 = 0, so v0.12 never wrote its prefix that session, and every captain made then got a bare id. Captains made at
+    load (a captain row refilling right after the save loads) also come before v0.12's 10-second window. **Fix:**
+    v0.13's id-writer hook, plus the save id rewrite.
+14. **The save had no duplicate of the refused captain's id after the first rewrite pass.** **Cause:** the other
+    holder was an orc stored in the Garrison (not in the save). **Fix:** collect the ids from
+    `x64\OfflineGarrison\*.agb` (`npc_profile_guid`) and count them as taken when rewriting the save.
 
 ## Assets
 None.

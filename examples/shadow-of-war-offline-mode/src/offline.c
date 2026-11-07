@@ -6,7 +6,8 @@
  *   Mode=block    each request fails like an unreachable server (REQUEST_ERROR / ERROR_WINHTTP_CANNOT_CONNECT).
  *   Mode=emulate  each request is answered locally by responder.c (a minimal stand-in for WB's server, so
  *                 offline-capable features such as the Garrison can work from a local file).
- * Requests are logged to OfflineMode.log (sign-in bodies and auth headers are redacted). The exe is never modified.
+ * Requests are logged to OfflineMode.log (sign-in bodies and auth headers are redacted). The exe file is never modified;
+ * v0.13 patches one function in memory (the captain id writer, see "unique NPC GUIDs").
  */
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -437,8 +438,7 @@ static LONG CALLBACK crash_report(PEXCEPTION_POINTERS ep)
  * counter that restarts at 0 every launch. Offline the prefix stays empty, so every session hands out _NPC_0, _NPC_1...
  * again: the 2026-10-20 save held 359 bare ids, _NPC_0 alone on 36 captains. A captain whose id is already taken fails
  * the Garrison predicate HasNPCGUID ("You cannot send this Follower to the Garrison"). Fix: write a fresh random prefix
- * (like the online session GUID) once the game's first request is out and the manager is stable (v0.12, below), and
- * again whenever the game clears it.
+ * (like the online session GUID) as soon as the manager exists, and again whenever the game clears it.
  * Manager = *(*(exe+0x26FFAA8) + 0x6D18) (Ghidra base 0x140000000). Ini [Offline] NpcGuidPrefix=0 turns it off. */
 static char npc_prefix[33];
 
@@ -449,11 +449,71 @@ static BOOL readable(const void *p, size_t n) { return p && !IsBadReadPtr(p, n);
  * session made no online requests at all -> Garrison locked. Now: wait for the first request, then 10 s; the manager
  * pointer must be unchanged for 5 polls; the whole 64-byte prefix area must be zero; plain store (heap is writable,
  * no VirtualProtect). Writes once per manager pointer; re-checks every 2 s in case the game clears it. */
+/* v0.13 (2026-11-06): the v0.12 window still let bare ids out: captains made at load (a mini-tribe row refilling right
+ * after the save loads) got "_NPC_<n>" with n restarting at 0, so they collided with older bare ids in the save and in
+ * the Garrison (Mistadir the Runaway = "_NPC_0", same as two save captains and a garrisoned orc -> refused).
+ * Fix: replace the game's id writer (exe+0x1B2F174, 3 callers) with ours. Same output format and the game's own
+ * counter, but the prefix is the game's one when set, else our random per-launch prefix: every id is
+ * "<32 hex>_NPC_<n>" from the first captain on. The prefix comes from the system RNG (BCryptGenRandom, 128 bits), so two
+ * launches sharing one is practically impossible. The game's session field (mgr+0xA81) is not touched by the hook
+ * (v0.11 lesson). Ini [Offline] NpcIdHook=0 turns the hook off. In-memory patch only, the exe file is unchanged. */
+#define NPC_ID_RVA      0x1B2F174
+#define NPC_COUNTER_RVA 0x2AA1BB8
+static const unsigned char npc_id_orig[16] = { 0x40, 0x53, 0x48, 0x83, 0xEC, 0x60, 0x48, 0x8D, 0x9A, 0xD0, 0x03, 0x00, 0x00, 0x48, 0x85, 0xDB };
+static volatile LONG *npc_counter;
+static volatile LONG npc_hook_ids;
+static int npc_hook_on, npc_prefix_on;
+
+static void npc_id_hook(char *mgr, char *member)   /* stands in for the game's id writer at exe+0x1B2F174 (mgr, member): fill member+0x3D0 (48 bytes) once */
+{
+    char *dst = member + 0x3D0, tmp[128];
+    if (*dst) return;
+    int n = (int)InterlockedExchangeAdd(npc_counter, 1);
+    const char *pre = (mgr && mgr[0xA81]) ? mgr + 0xA81 : npc_prefix;
+    _snprintf(tmp, sizeof tmp, "%s_NPC_%d", pre, n); tmp[sizeof tmp - 1] = 0;
+    size_t len = strlen(tmp); if (len > 0x2F) len = 0x2F;
+    memcpy(dst, tmp, len); dst[len] = 0;
+    if (InterlockedIncrement(&npc_hook_ids) <= 30) logw(L"NPC id made: %hs", dst);
+}
+
+static void npc_prefix_random(void)
+{
+    unsigned char r[16];
+    typedef LONG (WINAPI *GenRandom)(void *, unsigned char *, ULONG, ULONG);
+    HMODULE bc = LoadLibraryW(L"bcrypt.dll");
+    GenRandom gen = bc ? (GenRandom)(void *)GetProcAddress(bc, "BCryptGenRandom") : NULL;
+    if (gen && gen(NULL, r, 16, 2 /* BCRYPT_USE_SYSTEM_PREFERRED_RNG */) == 0) {
+        for (int i = 0; i < 16; i++) { npc_prefix[2 * i] = "0123456789abcdef"[r[i] >> 4]; npc_prefix[2 * i + 1] = "0123456789abcdef"[r[i] & 15]; }
+        npc_prefix[32] = 0;
+        logw(L"NPC id prefix (system RNG): %hs", npc_prefix);
+    } else logw(L"NPC id prefix (fallback mixer): %hs", npc_prefix);
+}
+
+static void npc_id_hook_install(ULONG_PTR exe)
+{
+    unsigned char *tgt = (unsigned char *)(exe + NPC_ID_RVA);
+    int t;
+    for (t = 0; t < 1200 && (!readable(tgt, 16) || memcmp(tgt, npc_id_orig, 16)); t++) Sleep(250);   /* code ready? up to 5 min */
+    if (t == 1200) { logw(L"NPC id hook: id writer bytes not found at exe+0x%X (other exe build?): hook NOT installed", NPC_ID_RVA); return; }
+    npc_counter = (volatile LONG *)(exe + NPC_COUNTER_RVA);
+    unsigned char j[14] = { 0xFF, 0x25, 0, 0, 0, 0 };   /* jmp [rip+0] -> npc_id_hook */
+    ULONG_PTR to = (ULONG_PTR)&npc_id_hook; memcpy(j + 6, &to, 8);
+    DWORD old;
+    if (!VirtualProtect(tgt, 16, PAGE_EXECUTE_READWRITE, &old)) { logw(L"NPC id hook: VirtualProtect failed (%lu): hook NOT installed", GetLastError()); return; }
+    memcpy(tgt, j, sizeof j);
+    VirtualProtect(tgt, 16, old, &old);
+    FlushInstructionCache(GetCurrentProcess(), tgt, 16);
+    logw(L"NPC id hook installed (exe+0x%X, counter now %ld): every new captain gets <32 hex>_NPC_<n>", NPC_ID_RVA, *npc_counter);
+}
+
 static DWORD WINAPI npc_guid_thread(LPVOID unused)
 {
     ULONG_PTR exe = (ULONG_PTR)GetModuleHandleW(NULL);
     ULONG_PTR *g = (ULONG_PTR *)(exe + 0x26FFAA8);
     ULONG_PTR last = 0, done = 0; int stable = 0, writes = 0;
+    npc_prefix_random();
+    if (npc_hook_on) npc_id_hook_install(exe);
+    if (!npc_prefix_on) return 0;
     while (!net_started) Sleep(250);
     Sleep(10000);
     for (;; Sleep(1000)) {
@@ -465,7 +525,11 @@ static DWORD WINAPI npc_guid_thread(LPVOID unused)
         char *pre = (char *)(mgr + 0xA81);
         int empty = 1; for (int i = 0; i < 64; i++) if (pre[i]) { empty = 0; break; }
         if (!empty) {
-            if (done != mgr) { logw(L"NPC GUID prefix present: %.32hs", pre); done = mgr; }
+            if (done != mgr) {
+                if (pre[0]) logw(L"NPC GUID prefix present: %.32hs", pre);
+                else logw(L"NPC GUID prefix field holds other data (first byte 0): left alone%ls", npc_hook_on ? L"; the id hook supplies the prefix" : L"");
+                done = mgr;
+            }
             Sleep(1000);
             continue;
         }
@@ -509,7 +573,10 @@ static void load_config(HMODULE self)
     responder_init(data, GetPrivateProfileIntW(L"Offline", L"GarrisonSize", 50, ini));
     logw(L"Shadow of War Offline Mode, mode=%ls. WB/Agora hosts never reach the network:", emulate ? L"emulate" : L"block");
     for (int i = 0; i < nblocked; i++) logw(L"  *.%ls", blocked[i]);
-    if (GetPrivateProfileIntW(L"Offline", L"NpcGuidPrefix", 1, ini)) npc_guid_init();
+    npc_prefix_on = GetPrivateProfileIntW(L"Offline", L"NpcGuidPrefix", 1, ini);
+    npc_hook_on = GetPrivateProfileIntW(L"Offline", L"NpcIdHook", 1, ini);
+    logw(L"v0.13: NpcIdHook=%d NpcGuidPrefix=%d", npc_hook_on, npc_prefix_on);
+    if (npc_prefix_on || npc_hook_on) npc_guid_init();
 }
 
 BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID res)

@@ -13,3 +13,5 @@ BlockedDomains=wbagora.com,agoragames.com,wbgames.com,turbine.com,wbplay.com,wbi
 Log=1
 ; 1 = give new captains unique Nemesis ids offline (needed for the Garrison). 0 = off.
 NpcGuidPrefix=1
+; 1 = (v0.13) replace the game's captain id writer in memory: unique ids from the first captain on. 0 = off.
+NpcIdHook=1

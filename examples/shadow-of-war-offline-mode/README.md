@@ -1,4 +1,4 @@
-# Shadow of War Offline Mode + Local Garrison (v0.12)
+# Shadow of War Offline Mode + Local Garrison (v0.13)
 
 Keeps Middle-earth: Shadow of War off WB's online servers, while the **Garrison keeps working locally**: store, list, Details, **Deploy** and **Destroy for gear**.
 
@@ -9,7 +9,7 @@ Keeps Middle-earth: Shadow of War off WB's online servers, while the **Garrison 
 - **Nothing is unlocked or granted.** The store only gets inert placeholders. No Gold, chests, boosts or products can be bought or received.
 - **It isn't a server.** It runs inside the game process and opens no port, so nothing else can connect to it. Online Conquest, Online/Friend Vendettas and Market purchases aren't emulated.
 - **The game is untouched.** No game files are changed, and the exe and its DRM aren't modified. The mod is one `winhttp.dll` next to the exe.
-  Since v0.12 it also writes one field in the game's memory (the Nemesis id prefix), so captains get ids that stay unique across sessions. `NpcGuidPrefix=0` turns that off.
+  Since v0.12 it also writes one field in the game's memory (the Nemesis id prefix), and since v0.13 it replaces one game function in memory (the captain id writer), so captains get ids that stay unique across sessions. The exe file on disk is never changed. `NpcIdHook=0` and `NpcGuidPrefix=0` turn these off.
 
 Tested on Steam build 3095001 (Windows 10 22H2).
 
@@ -47,9 +47,10 @@ Keep `OfflineGarrison\` and `OfflineWallet.txt` if you might reinstall. They hol
 |---|---|---|
 | `Mode` | `emulate` | `emulate` answers WB requests locally, which the Garrison needs. `block` just fails them, as if WB were down. |
 | `StorePlaceholders` | `1` | One inert item and product, so the store (and the Garrison inside it) counts as open. `0` locks the Garrison. |
-| `GarrisonSize` | `50` | Garrison capacity sent to the game. |
+| `GarrisonSize` | `50` | Garrison capacity sent to the game. 100 worked as a capacity; the game still lists 50 per request and a list past 50 is untested. |
 | `BlockedDomains` | WB/Agora domains | Hosts handled locally, including subdomains. |
 | `Log` | `1` | Writes `x64\OfflineMode.log`. Sign-in data and tokens are redacted. |
+| `NpcIdHook` | `1` | (v0.13) Replaces the game's captain id writer in memory, so every new captain gets a prefixed, unique id from the first one on. `0` turns it off. |
 | `NpcGuidPrefix` | `1` | Gives new captains Nemesis ids that are unique across offline sessions, which the Garrison needs. `0` turns it off. |
 
 ## Your data
@@ -62,6 +63,20 @@ Keep `OfflineGarrison\` and `OfflineWallet.txt` if you might reinstall. They hol
 - A Steam "Verify integrity" doesn't remove `winhttp.dll`, but check that it's still there after a game update.
 
 ## Changes
+- **v0.13 (2026-11-06):** every new captain gets a unique id, from the first one made after loading.
+  - v0.12 still let bare `_NPC_<n>` ids through: captains made before its prefix was written (a captain row refilling
+    right after a save loads), and every captain of a session where the prefix field already held other bytes (the log
+    then said `NPC GUID prefix present: ` with nothing after it). A Deserter captain was refused by the Garrison because
+    his `_NPC_0` matched two save captains and an orc stored in the Garrison.
+  - The DLL now replaces the game's id writer (exe+0x1B2F174 on build 3095001, 3 callers) with its own: same
+    `<prefix>_NPC_<n>` format and the game's own counter, but the prefix is the game's when set, else a random 128-bit
+    per-launch prefix from the system RNG (`BCryptGenRandom`). It installs only when the function's first 16 bytes
+    match the expected code (it polls for up to 5 minutes), so another exe build just logs "hook NOT installed".
+  - The log shows `NPC id hook installed` and the first 30 ids made (`NPC id made: …`). `NpcIdHook=0` turns it off;
+    v0.12's prefix write stays as a second layer.
+  - Ids already duplicated in a save, or matching a Garrison captain's id, stay until the save is fixed (rewrite every
+    duplicated bare id to a unique id of the same length, and count the ids in `x64\OfflineGarrison\*.agb`, field
+    `npc_profile_guid`, as taken).
 - **v0.12 (2026-10-20):** unique Nemesis ids offline (fixes "You cannot send this Follower to the Garrison").
   - Offline the game's id prefix for new captains stays empty and its counter restarts every launch, so captains made in
     different sessions get the same `_NPC_<n>` id, and the Garrison refuses a captain whose id another one has.

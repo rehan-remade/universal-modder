@@ -5683,6 +5683,70 @@
   ]
  },
  {
+  "path": "games/middle-earth-shadow-of-war/mini-tribes-easterling-and-deserter-captain-rows.md",
+  "kind": "game",
+  "title": "Mini tribes: Easterling and Gondorian-deserter captains in their own Nemesis rows, built from the game's own models and deployed to Lithlad and Gorgoroth",
+  "game": "Middle-earth: Shadow of War",
+  "games_also": [],
+  "game_version": "Steam build 3095001 (exe 1.0.8874.0, public branch, unchanged since 2018-09-05), Windows 10 22H2. Every asset comes from that same Steam copy: the Easterling mercenaries from its DLC4 (Baranor) data, the Gondorian soldiers from the Minas Ithil base data. No other game was used.",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "custom C# gamedb reader-writer + two config-driven builders (PowerShell Add-Type)",
+   "Python 3.12 (save decrypt/edit, world-object dump, bone check)",
+   "Ghidra 12.1.4 (headless, analysis only) + Temurin JDK 21",
+   "QuickBMS + aluigi shadow_of_mordor.bms 0.4",
+   "MinGW-w64 GCC 16.2 (w64devkit: OfflineMode v0.13, diagnostic trace plugin)"
+  ],
+  "anti_cheat": "none; single-player only. The mod is game.gamedb + string tables (+ world stations in the imported Ud\u00fbn region only); the exe file is untouched (SteamStub/Denuvo untouched). Every build and test ran offline with the offline-mode DLL installed (never signed in to WB).",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "DeimozZarco"
+  ],
+  "date": "2026-11-06",
+  "links": [
+   "knowledge/games/middle-earth-shadow-of-war/offline-mode-and-local-garrison.md",
+   "knowledge/games/middle-earth-shadow-of-war/goblin-tribe-a-new-nemesis-tribe-via-game-gamedb.md",
+   "knowledge/games/middle-earth-shadow-of-war/falmer-tribe-a-skyrim-creature-as-a-nemesis-tribe.md",
+   "knowledge/games/middle-earth-shadow-of-war/small-mods-new-orc-bodies-talion-armour-and-mesh-draw-counts.md",
+   "knowledge/games/middle-earth-shadow-of-war/map-import-shadow-of-mordor-udun-as-a-new-region.md",
+   "knowledge/games/middle-earth-shadow-of-war/save-format-decrypt-and-collectible-quests.md"
+  ],
+  "tags": [
+   "nemesis",
+   "captains",
+   "mini-tribe",
+   "faction",
+   "army-screen",
+   "rows",
+   "refill",
+   "promotion-events",
+   "dominate",
+   "garrison",
+   "pit-fight",
+   "raise-dead",
+   "skeleton",
+   "anim-base",
+   "voices",
+   "personalities",
+   "character-bundle",
+   "preload",
+   "body-type",
+   "armour-pickers",
+   "name-table",
+   "titles",
+   "strings",
+   "spawn-locations",
+   "gamedb",
+   "save-editing",
+   "npc-id"
+  ]
+ },
+ {
   "path": "games/middle-earth-shadow-of-war/offline-mode-and-local-garrison.md",
   "kind": "game",
   "title": "Offline mode and local Garrison: a winhttp stand-in for WB's Hydra server",
@@ -5698,7 +5762,7 @@
    "custom C# read-only process-memory reader (PowerShell Add-Type)",
    "Python 3.12 + capstone (string/RTTI/xref scans)"
   ],
-  "anti_cheat": "none. SteamStub/Denuvo on the exe is untouched: the mod is a proxy winhttp.dll next to the exe and patches no code.",
+  "anti_cheat": "none. SteamStub/Denuvo on the exe is untouched: the mod is a proxy winhttp.dll next to the exe, and the exe file is never changed. Since v0.13 it replaces one game function (the captain id writer) in memory at run time; NpcIdHook=0 turns that off.",
   "status": "working",
   "agents": [
    "Claude Code (Opus 5.5)"
