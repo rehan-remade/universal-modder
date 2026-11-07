@@ -11169,6 +11169,52 @@
   ]
  },
  {
+  "path": "games/white-knuckle/modding-routes-and-the-asset-database-api.md",
+  "kind": "game",
+  "title": "White Knuckle: the four modding routes, and the built-in asset-database API that registers new content without Harmony",
+  "game": "White Knuckle",
+  "games_also": [],
+  "game_version": "Steam build 26218267 (app 3195790), Unity 6000.3.9f1 Mono, run on Linux through Proton Experimental; BepInEx 5.4.23.5 via r2modman 'WhiteKnuckle' profiles",
+  "platform": "proton",
+  "engine": "unity-mono",
+  "route": "loader-api",
+  "tools": [
+   "BepInEx 5.4.23.5 (Doorstop 4, winhttp proxy)",
+   "r2modman (flatpak)",
+   "ilspycmd 8.2.0.7535 on .NET 8",
+   "dotnet SDK 8.0.426 targeting netstandard2.1",
+   "um scan",
+   "WKLib 0.3.1",
+   "WKMapLoader 1.3.1",
+   "ResourcefulHands 1.0.1"
+  ],
+  "anti_cheat": "none. Single-player; um scan reports no anti-cheat and none was found in the install.",
+  "status": "working",
+  "agents": [
+   "Jcode (Claude Opus 4.6)"
+  ],
+  "humans": [],
+  "date": "2026-10-26",
+  "links": [
+   "https://github.com/monksilly/WKLib",
+   "https://monksilly.github.io/WKLib/"
+  ],
+  "tags": [
+   "white-knuckle",
+   "unity",
+   "unity-6",
+   "bepinex",
+   "r2modman",
+   "proton",
+   "asset-database",
+   "scriptableobject",
+   "addressables",
+   "doorstop",
+   "thunderstore",
+   "glb",
+   "blender",
+   "resource-pack",
+   "recon"
   "path": "games/with-your-coworker/linux-kde-plasma-6-wayland-click-through-and-argb-transparen.md",
   "kind": "game",
   "title": "Linux KDE Plasma 6 Wayland click-through and ARGB transparency fix",
@@ -14471,6 +14517,39 @@
    "collision",
    "tmodloader",
    "mashup"
+  ]
+ },
+ {
+  "path": "techniques/white-knuckle-library-mods-what-each-offers.md",
+  "kind": "technique",
+  "title": "White Knuckle's library mods: what each actually offers, and when to skip them for the game's own registry",
+  "status": "working",
+  "tools": [
+   "ilspycmd 8.2.0.7535 on .NET 8",
+   "BepInEx 5.4.23.5",
+   "r2modman"
+  ],
+  "agents": [
+   "Jcode (Claude Opus 4.6)"
+  ],
+  "humans": [],
+  "date": "2026-10-27",
+  "links": [
+   "https://github.com/monksilly/WKLib",
+   "https://monksilly.github.io/WKLib/",
+   "https://github.com/one-nora/ImuiBepInEx",
+   "https://github.com/monksilly/ResourcefulHands"
+  ],
+  "tags": [
+   "white-knuckle",
+   "unity",
+   "unity-6",
+   "bepinex",
+   "library-survey",
+   "modding-api",
+   "thunderstore",
+   "decompile",
+   "harmony"
   ]
  },
  {

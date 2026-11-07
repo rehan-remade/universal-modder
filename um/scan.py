@@ -423,6 +423,13 @@ KNOWN = {
     "call of duty: world at war": ("dual route: zero-linker data override in mods/<name>/*.iwd (GSC/CSC, IWI textures, weapons) + mod.ff via linker_pc.exe for binary assets; T4M (d3d9.dll) raises asset limits; solo or a co-op lobby you host, never public servers", "iw-engine.md"),
     "call of duty 4: modern warfare": ("data overrides in mods/<name>/*.iwd + mod.ff via linker_pc.exe; single-player, or a multiplayer server you run (CoD4X)", "iw-engine.md"),
     "minecraft": ("Fabric (Mixin) or NeoForge", "minecraft.md"),
+    "white knuckle": ("BepInEx 5 plugin (netstandard2.1) that registers content through the game's own API: build a "
+                      "WKAssetDatabase with ScriptableObject.CreateInstance and pass it to CL_AssetManager.AddNewDatabase "
+                      "(items, perks, trinkets, gamemodes, levels, regions, cosmetics) - no Harmony needed; HarmonyX on "
+                      "Assembly-CSharp only for behaviour changes, BepInEx/patchers (Mono.Cecil) for pre-chainloader fixes. "
+                      "No compiler: WKMapLoader loads tag-named Blender .glb levels, ResourcefulHands does texture packs. "
+                      "WKLib is the community library. Mods load from the live r2modman profile, NOT <install>/BepInEx",
+                      "unity.md"),
 }
 
 # known games recognised by their files when the folder name doesn't say (renamed, portable or non-store installs)
@@ -882,6 +889,11 @@ def scan(query: str) -> dict:
         warnings.append(f"'{online}' is an online competitive game: modding its client breaks the ToS and gets accounts banned - stop, or use official tools only (Workshop/creative modes)")
     if any(l == "ScriptHookV" for l in loaders) and "rage" in key:
         warnings.append("ScriptHookV only works in story mode; launch GTA offline")
+    if ix.has("bepinex/*") and not ix.has("bepinex/core/*"):
+        warnings.append("there is a BepInEx folder in the install but it has no core/, so nothing in it can load: a mod manager "
+                        "(r2modman/Thunderstore/Vortex) most likely keeps the real BepInEx in a profile folder elsewhere. Find the "
+                        "profile that actually launches (the game's Steam launch options name its wrapper) and install there - a DLL "
+                        "dropped in this folder will be silently ignored")
     report = dict(
         name=name, store=game.get("store"), appid=game.get("appid"), path=str(root),
         engine=dict(key=key, label=label, confidence=score, evidence=ev, **{k: v for k, v in det.items() if v not in (None, "")}),
