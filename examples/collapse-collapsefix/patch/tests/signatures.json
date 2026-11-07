@@ -1,0 +1,72 @@
+{
+  "_about": "Single source of truth for byte checks on collapse.exe (Steam 289620), used by st_a.py. The patterns are the ones in collapsefix.c. VAs assume image base 0x400000.",
+  "exe": {
+    "sha256": "3003600f506e4c1e9388716cc395fb958ef2d729ec8d291138b3f57f3bded283",
+    "sha256_laa": "767cb5ec39b1a9fafed38ffad08c4f84ea23b7a53721455d26cc4fa65e6829cc",
+    "size": 2392108,
+    "timestamp": 1223911287,
+    "characteristics": 270,
+    "dll_characteristics": 0,
+    "entry": "0x5ee574"
+  },
+  "iat": {
+    "KERNEL32.dll!GetTickCount": "0x603094"
+  },
+  "gettickcount_refs": [
+    {"va": "0x4176e3", "hex": "ff1594306000", "kind": "call [slot]"},
+    {"va": "0x52385b", "hex": "8b3594306000", "kind": "mov esi,[slot]"},
+    {"va": "0x5238fe", "hex": "8b3d94306000", "kind": "mov edi,[slot]"},
+    {"va": "0x5e27b6", "hex": "ff1594306000", "kind": "call [slot]"},
+    {"va": "0x5e2803", "hex": "ff1594306000", "kind": "call [slot]"},
+    {"va": "0x5e29a7", "hex": "8b3594306000", "kind": "mov esi,[slot]  (frame limiter FUN_005e2880)"},
+    {"va": "0x5e2ba4", "hex": "ff1594306000", "kind": "call [slot]  (main loop dt FUN_005e2b30)"},
+    {"va": "0x600d1a", "hex": "ff2594306000", "kind": "jmp [slot]  (import thunk, no direct callers)"}
+  ],
+  "sites": [
+    {"id": "heap_res_128m", "va": "0x5e585d", "hex": "c744241800000008", "what": "init_heap: request 128 MB (mov [esp+18h],8000000h)"},
+    {"id": "heap_res_512m", "va": "0x5e58d7", "hex": "c744241800000020", "what": "init_heap: request 512 MB"},
+    {"id": "heap_cap_cmp1", "va": "0x5e5932", "hex": "81ff00000070", "what": "init_heap: reservation loop stops at 0x70000000 (cmp edi)"},
+    {"id": "heap_cap_cmp2", "va": "0x5e5951", "hex": "81fb00000070", "what": "init_heap: clamp region to 0x70000000 (cmp ebx)"},
+    {"id": "heap_cap_mov",  "va": "0x5e5959", "hex": "b900000070",   "what": "init_heap: mov ecx,70000000h"},
+    {"id": "heap_init_stub","va": "0x5e5c70", "hex": "e8cbfbffff",   "what": "CRT initializer stub: call init_heap"},
+    {"id": "pp_interval_fs","va": "0x4dcacb", "hex": "c744246c00000080", "what": "D3DPRESENT_PARAMETERS.PresentationInterval = IMMEDIATE (fullscreen default)"},
+    {"id": "pp_interval_win","va": "0x4dcaef","hex": "8944246c",     "what": "windowed: PresentationInterval = eax (1, ONE)"},
+    {"id": "create_device", "va": "0x4dcf6b", "hex": "ff5040",       "what": "IDirect3D9::CreateDevice call (vtbl+40h)"},
+    {"id": "fov_mul_pi",    "va": "0x57d530", "hex": "dc0d98526000", "what": "setup reader: FOV * pi"},
+    {"id": "fov_mul_180",   "va": "0x57d536", "hex": "dc0da0526000", "what": "setup reader: FOV * (1/180)"},
+    {"id": "writer_display","va": "0x57e9cd", "hex": "6814676200",   "what": "setup writer: push \"[display]\""},
+    {"id": "fov_blend_call","va": "0x5e1375", "hex": "e8c645e4ff",   "what": "projection: the only call to the FOV blend function"}
+  ],
+  "patterns": [
+    {"id": "fov_blend_call", "regex": "8bc883c12ce8........dc0d........b800401c468bced9f2", "what": "must match exactly once in .text: hook_fov() in collapsefix.c"},
+    {"id": "text_filter", "regex": "6a016a056a008b0850ff91140100008b86840400006a016a066a00", "what": "must match exactly once in .text: hook_ui_scale() in collapsefix.c"},
+    {"id": "ui_ortho_call", "regex": "56b9........e8........8bc8e8........b9........e8........8a44240c84c0", "what": "must match exactly once in .text: hook_ui_scale() in collapsefix.c"},
+    {"id": "ui_msg_call", "regex": "515250e8........83c40cc20c00", "what": "must match exactly once in .text: hook_ui_scale() in collapsefix.c"},
+    {"id": "ui_overlay_call", "regex": "8b473853568b08e8........56e8", "what": "must match exactly once in .text: hook_ui_scale() in collapsefix.c"},
+    {"id": "ui_cursors_call", "regex": "8b4738568b08e8........5f5ec3", "what": "must match exactly once in .text: hook_ui_scale() in collapsefix.c"},
+    {"id": "ui_screen_w", "regex": "d98000020000d8a0f801000005f801000033db", "what": "must match exactly once in .text: hook_ui_scale() in collapsefix.c"},
+    {"id": "ui_screen_h", "regex": "d98004020000d8a0fc01000005f801000033db", "what": "must match exactly once in .text: hook_ui_scale() in collapsefix.c"},
+    {"id": "label_filter", "regex": "6a016a056a008b1050ff92140100008b86840400006a016a066a00", "what": "must match exactly once in .text: hook_ui_scale() in collapsefix.c"},
+    {"id": "nav_step", "regex": "0f84........b856555555899c24........f7eb8bca8b9424........8bc1c1e81f03c8898c24........f6048a010f85........", "what": "must match exactly once in .text: hook_nav_guard() in collapsefix.c"},
+    {"id": "batch_free_init", "regex": "8b562852e8........83c404c74628000000008bcec7462400000000e8", "what": "must match exactly once in .text: hook_batch_release() in collapsefix.c"},
+    {"id": "batch_free_teardown", "regex": "8b462850e8........896e28896e24", "what": "must match exactly once in .text: hook_batch_release() in collapsefix.c"},
+    {"id": "heap_unmap", "regex": "83ec1c538b5c242c55568b7424305785db74..8b2d........8b3d........8d4424106a1c5056ffd585c074..8b4c24308b4424143b0175..8b54241c6800400000", "what": "must match exactly once in .text: hook_heap_guard() in collapsefix.c"}
+  ],
+  "constants": [
+    {"va": "0x605298", "type": "f64", "value": 3.141592653589793, "what": "pi (FOV deg->rad)"},
+    {"va": "0x6052a0", "type": "f64", "value": 0.005555555555555556, "what": "1/180"},
+    {"va": "0x603250", "type": "f64", "value": 0.001, "what": "ms -> s (dt)"},
+    {"va": "0x604aa0", "type": "f64", "value": 0.005, "what": "limiter: sleep only if > 5 ms remain"},
+    {"va": "0x603230", "type": "f64", "value": 0.5, "what": "tan(FOV*0.5)"}
+  ],
+  "crt_init": {"table_slot": "0x60f008", "points_to": "0x5e5c70", "tls_callbacks": "0x60f0cc"},
+  "startup": {
+    "function": "0x5e7dd0",
+    "order": [
+      {"call": "0x5e6b90", "what": "database_init (single-instance lock, profile root)"},
+      {"call": "0x5e79a0", "what": "GetFileVersionInfoA -> first VERSION.dll delay-load"},
+      {"call": "0x4db940", "what": "LoadLibraryA d3d9 + Direct3DCreate9"},
+      {"call": "0x426080", "what": "input init -> DirectInput8Create (DINPUT8.dll delay-load)"}
+    ]
+  }
+}

@@ -11,7 +11,11 @@ import java.net.InetSocketAddress;
 import java.util.Locale;
 import net.minecraft.client.Minecraft;
 import org.java_websocket.WebSocket;
+import org.java_websocket.drafts.Draft;
+import org.java_websocket.exceptions.InvalidDataException;
+import org.java_websocket.framing.CloseFrame;
 import org.java_websocket.handshake.ClientHandshake;
+import org.java_websocket.handshake.ServerHandshakeBuilder;
 import org.java_websocket.server.WebSocketServer;
 
 /**
@@ -48,6 +52,21 @@ public final class HostLink extends WebSocketServer {
 	@Override
 	public void onStart() {
 		Passthrough.LOG.info("host link listening on 127.0.0.1:{}", this.getPort());
+	}
+
+	/**
+	 * 127.0.0.1 doesn't keep web pages out: any page open in the player's browser can open this socket and send
+	 * "cmd". Browsers always put an Origin header on the handshake and the host's clients never do, so refuse it.
+	 */
+	@Override
+	public ServerHandshakeBuilder onWebsocketHandshakeReceivedAsServer(final WebSocket conn, final Draft draft, final ClientHandshake request)
+		throws InvalidDataException {
+		if (request.hasFieldValue("Origin")) {
+			Passthrough.LOG.warn("refused a web page's connection to the host link (Origin: {})", request.getFieldValue("Origin"));
+			throw new InvalidDataException(CloseFrame.POLICY_VALIDATION, "web pages can't use this link");
+		}
+
+		return super.onWebsocketHandshakeReceivedAsServer(conn, draft, request);
 	}
 
 	@Override
