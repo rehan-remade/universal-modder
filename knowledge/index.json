@@ -6350,6 +6350,43 @@
   ]
  },
  {
+  "path": "games/monster-hunter-wilds/heavy-bowgun-solo-cheats-reframework-lua.md",
+  "kind": "game",
+  "title": "Heavy Bowgun solo cheats with an online cut-off (REFramework Lua)",
+  "game": "Monster Hunter Wilds",
+  "games_also": [],
+  "game_version": "Steam 2246340 build 25921695 (2026-10-28 patch); REFramework nightly commit d052e8fd, TDB 81",
+  "platform": "windows",
+  "engine": "re-engine",
+  "route": "loader-api",
+  "tools": [
+   "REFramework (Lua)",
+   "Vortex (deploy)",
+   "lupa (offline Lua syntax check + stub dry runs)"
+  ],
+  "anti_cheat": "none found by um scan; online lobbies/SOS exist, so every cheat switches itself off when another player is in your instance or quest (checked online by the human)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-08",
+  "links": [],
+  "tags": [
+   "weapons",
+   "bowgun",
+   "ammo",
+   "gauges",
+   "fire-rate",
+   "damage",
+   "guard",
+   "hit-hooks",
+   "motion-speed",
+   "item-pouch",
+   "solo-only"
+  ]
+ },
+ {
   "path": "games/mount-and-blade-ii-bannerlord/bannercraft-minecraft-gameplay-bridge.md",
   "kind": "game",
   "title": "BannerCraft: Minecraft gameplay through a local two-mod bridge",
