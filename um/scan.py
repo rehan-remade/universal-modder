@@ -146,13 +146,18 @@ def steam_games() -> list[dict]:
     return games
 
 
-def epic_games() -> list[dict]:
+def epic_manifests() -> Path | None:
     base = Path(r"C:\ProgramData") if is_windows() else Path("/mnt/c/ProgramData") if is_wsl() else None
+    return base / "Epic/EpicGamesLauncher/Data/Manifests" if base else None
+
+
+def epic_games() -> list[dict]:
+    manifests = epic_manifests()
     out = []
-    if base:
-        for item in (base / "Epic/EpicGamesLauncher/Data/Manifests").glob("*.item"):
+    if manifests:
+        for item in manifests.glob("*.item"):
             try:
-                d = json.loads(item.read_text(errors="replace"))
+                d = json.loads(item.read_text(encoding="utf-8", errors="replace"))
             except (json.JSONDecodeError, OSError):
                 continue
             p = to_posix(d.get("InstallLocation", ""))
@@ -552,7 +557,7 @@ def detect(ix: Index) -> tuple[list[tuple[str, int, list[str], dict]], dict]:
         info = f"{dd}/app.info" if dd else None
         if info and info in ix.files:
             try:
-                company, product = (ix.path(info).read_text(errors="replace").splitlines() + ["", ""])[:2]
+                company, product = (ix.path(info).read_text(encoding="utf-8", errors="replace").splitlines() + ["", ""])[:2]
                 det.update(company=company, product=product)
             except OSError:
                 pass
