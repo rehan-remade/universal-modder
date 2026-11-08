@@ -1456,6 +1456,179 @@
   ]
  },
  {
+  "path": "games/call-of-duty-black-ops-ii/bo1-maps-to-bo2-shader-slots-and-lighting.md",
+  "kind": "game",
+  "title": "Black Ops 1 Zombies maps in Black Ops II: technique slot tables, lightmap formats and the crashes behind a working Kino port",
+  "game": "Call of Duty: Black Ops II",
+  "games_also": [
+   "Call of Duty: Black Ops",
+   "Call of Duty: World at War"
+  ],
+  "game_version": "Black Ops II Zombies Steam build 24784239 via Plutonium T6 (launcher revision 5369 when written); source Black Ops Steam build 87954; tested October 2026",
+  "platform": "windows",
+  "engine": "iw",
+  "route": "data",
+  "tools": [
+   "B2W (our BO1 fork)",
+   "OpenAssetTools",
+   "Ghidra headless",
+   "Capstone",
+   "fxc D3DDisassemble",
+   "Python 3.13"
+  ],
+  "anti_cheat": "Data only: converted mod zones, played solo. Sources are our own installs. No game files are distributed.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "AryaBlue"
+  ],
+  "date": "2026-11-08",
+  "links": [
+   "https://github.com/AryaBlue/BO1-B2W",
+   "https://github.com/AryaBlue/CoD-RE/blob/main/shared/notes/bo1_to_bo2_porting.md",
+   "https://github.com/Ticass/B2W",
+   "https://github.com/Laupetin/OpenAssetTools"
+  ],
+  "tags": [
+   "zombies",
+   "t5",
+   "t6",
+   "map-port",
+   "shaders",
+   "techniques",
+   "lighting",
+   "lightmap",
+   "light-grid",
+   "converter"
+  ]
+ },
+ {
+  "path": "games/call-of-duty-black-ops-ii/external-fbx-to-a-walkable-t6-map.md",
+  "kind": "game",
+  "title": "Black Ops II: linking a walkable Zombies map from your own FBX files with the OpenAssetTools BSP linker",
+  "game": "Call of Duty: Black Ops II",
+  "game_version": "Black Ops II Zombies, Steam build 24784239, run through Plutonium T6 (launcher revision 5369 when written); tested 2026-10-20",
+  "platform": "windows",
+  "engine": "iw",
+  "route": "data",
+  "tools": [
+   "OpenAssetTools T6 linker as vendored in B2W (commit 7d027e8f)",
+   "our own Python FBX writer"
+  ],
+  "anti_cheat": "Data only: a mod folder of linked zones, played solo. No client patching or injection in this route.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "AryaBlue"
+  ],
+  "date": "2026-11-08",
+  "links": [
+   "https://github.com/Ticass/B2W",
+   "https://github.com/Laupetin/OpenAssetTools",
+   "https://github.com/AryaBlue/CoD-RE"
+  ],
+  "tags": [
+   "zombies",
+   "t6",
+   "bsp",
+   "fbx",
+   "collision",
+   "linker",
+   "map-port",
+   "ipak",
+   "lighting"
+  ]
+ },
+ {
+  "path": "games/call-of-duty-black-ops-ii/openassettools-x64-zone-loading.md",
+  "kind": "game",
+  "title": "OpenAssetTools can load T4, T5 and T6 zones in a 64-bit process",
+  "game": "Call of Duty: Black Ops II",
+  "games_also": [
+   "Call of Duty: Black Ops",
+   "Call of Duty: World at War"
+  ],
+  "game_version": "Zones from Steam Black Ops II Zombies build 24784239 and our own World at War and Black Ops installs; tested 2026-10-31",
+  "platform": "windows",
+  "engine": "iw",
+  "route": "other",
+  "tools": [
+   "OpenAssetTools as vendored in B2W (commit 7d027e8f)",
+   "MSBuild"
+  ],
+  "anti_cheat": "None involved: offline reads of our own zone files. No game process.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "AryaBlue"
+  ],
+  "date": "2026-11-08",
+  "links": [
+   "https://github.com/Laupetin/OpenAssetTools",
+   "https://github.com/Ticass/B2W"
+  ],
+  "tags": [
+   "fastfile",
+   "zones",
+   "x64",
+   "tools",
+   "openassettools",
+   "t4",
+   "t5",
+   "t6"
+  ]
+ },
+ {
+  "path": "games/call-of-duty-black-ops-iii/bo2-map-to-bo3-usermap-collision-and-navmesh.md",
+  "kind": "game",
+  "title": "Black Ops III: a walkable Zombies usermap with a working navmesh from another map's geometry and clip brushes",
+  "game": "Call of Duty: Black Ops III",
+  "games_also": [
+   "Call of Duty: Black Ops II"
+  ],
+  "game_version": "Black Ops III Steam, version 100.2.2.7.109.0 when tested 2026-10-21; Mod Tools Steam build 5284267",
+  "platform": "windows",
+  "engine": "iw",
+  "route": "data",
+  "tools": [
+   "Black Ops III Mod Tools (cod2map, linker, gdtdb)",
+   "OpenAssetTools Unlinker",
+   "Ghidra",
+   "REA",
+   "Python"
+  ],
+  "anti_cheat": "None bypassed. Offline custom map through the official Mod Tools. Personal test; converted map content is not distributed.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "AryaBlue"
+  ],
+  "date": "2026-11-08",
+  "links": [
+   "https://github.com/AryaBlue/CoD-RE",
+   "https://github.com/Laupetin/OpenAssetTools"
+  ],
+  "tags": [
+   "zombies",
+   "t6",
+   "t7",
+   "usermap",
+   "collision",
+   "navmesh",
+   "cod2map",
+   "map-port",
+   "plane-cap"
+  ]
+ },
+ {
   "path": "games/call-of-duty-world-at-war/prototype-107-fastfile-deswizzling-and-asset-recovery.md",
   "kind": "game",
   "title": "Call of Duty: World at War Prototype 1.0.7: Xenon FastFile recovery, dual-tier texture deswizzling and UI extraction",
