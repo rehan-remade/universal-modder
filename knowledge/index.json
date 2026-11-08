@@ -6096,6 +6096,54 @@
   ]
  },
  {
+  "path": "games/minecraft/horizon-rust-minecraft-26-3-on-linux-launcher-layout-and-two-mod-routes.md",
+  "kind": "game",
+  "title": "Horizon (Rust Minecraft 26.3) on Linux: launcher and game-home layout, and what the WASM and native mod routes can actually do",
+  "game": "Minecraft",
+  "games_also": [],
+  "game_version": "Minecraft Java 26.3 resources (world version 5023, protocol 777, pack formats 97.1/121.0); Horizon launcher 0.2.37, Nightly 2026-11-03 (commit f42ef42); Fabric Loader 0.20.1 + Fabric API 0.165.0+26.3 in a PrismLauncher instance",
+  "platform": "linux",
+  "engine": "native",
+  "route": "loader-api",
+  "tools": [
+   "Horizon launcher 0.2.37",
+   "horizon-ctl (CLI + MCP stdio server)",
+   "horizon-prepare",
+   "horizon-server",
+   "cargo-horizon-mod",
+   "horizon-mixins",
+   "PrismLauncher",
+   "JDK 25.0.5"
+  ],
+  "anti_cheat": "none: Horizon is an open-source client/server and mods are a supported feature; the game's Mojang resources are prepared from a copy the player already owns (no ownership check bypassed)",
+  "status": "working",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash Free)"
+  ],
+  "humans": [],
+  "date": "2026-11-08",
+  "links": [
+   "https://github.com/horizon-rust/horizon",
+   "https://github.com/horizon-rust/horizon/blob/main/docs/mods.md",
+   "https://github.com/horizon-rust/horizon/blob/main/docs/native-mods.md",
+   "https://playhorizon.dev"
+  ],
+  "tags": [
+   "horizon",
+   "rust",
+   "minecraft-26.3",
+   "fabric",
+   "webassembly",
+   "hmod",
+   "hnmod",
+   "native-mods",
+   "launcher",
+   "linux",
+   "vulkan",
+   "agent-control"
+  ]
+ },
+ {
   "path": "games/minecraft/kindred-local-llm-ai-companion-fabric.md",
   "kind": "game",
   "title": "Kindred: Local LLM AI companion with Ollama, bounded inference, autonomy, and memory",
