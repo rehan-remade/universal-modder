@@ -8622,6 +8622,187 @@
   ]
  },
  {
+  "path": "games/sword-art-online-hollow-realization/dlc-partner-unlocker-live-friend-table-and-flags.md",
+  "kind": "game",
+  "title": "DLC Partner Unlocker: Rain, Seven, adult Tia, Alice and Eugeo as friends and partners via the live friend table and story flags",
+  "game": "Sword Art Online: Hollow Realization Deluxe Edition",
+  "games_also": [],
+  "game_version": "Steam app 607890, sao_hr.exe PE timestamp 0x59DF33EF, SizeOfImage 0x10A2000, SHA-256 1923F0D8D2CAD559D6AD6E001AF54EA5EA5AA70171323F42D4E1FA3D63699E43; Windows 11 Pro 26100",
+  "platform": "windows",
+  "engine": "native",
+  "route": "other",
+  "tools": [
+   "MSVC 2022 Build Tools (C console tool)",
+   "Python 3.11 (own memory reader, script disassembler, CPK/OFS3 readers)"
+  ],
+  "anti_cheat": "none; single-player. The Deluxe Edition ships these characters' data; the tool only changes friend state for characters already in the install, through live memory of the user's own running game.",
+  "status": "released",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "BinaryNull"
+  ],
+  "date": "2026-11-10",
+  "links": [],
+  "tags": [
+   "partners",
+   "friends",
+   "dlc-characters",
+   "memory-editing",
+   "flags",
+   "script-vm",
+   "bytecode",
+   "save-checksum",
+   "npc-data",
+   "npcequip"
+  ]
+ },
+ {
+  "path": "games/sword-art-online-hollow-realization/enemy-materials-in-npc-shops.md",
+  "kind": "game",
+  "title": "Enemy material drops sold in NPC shops (Phase 1: container survey, shop and item table candidates)",
+  "game": "Sword Art Online: Hollow Realization Deluxe Edition",
+  "games_also": [],
+  "game_version": "Steam app 607890, sao_hr.exe SHA-256 1923F0D8D2CAD559D6AD6E001AF54EA5EA5AA70171323F42D4E1FA3D63699E43; data.cpk 37,316,054,776 bytes; Windows 11 Pro 26100",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "Python 3.11 (own CPK/@UTF/CRILAYLA/OFS3 scanners)"
+  ],
+  "anti_cheat": "none; single-player. Read-only analysis so far.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "BinaryNull"
+  ],
+  "date": "2026-11-10",
+  "links": [],
+  "tags": [
+   "shops",
+   "items",
+   "drops",
+   "ofs3",
+   "cri-cpk",
+   "crilayla",
+   "survey"
+  ]
+ },
+ {
+  "path": "games/sword-art-online-hollow-realization/genesis-as-a-combat-partner.md",
+  "kind": "game",
+  "title": "Genesis Unlocker: the story antagonist as a working combat partner (npc_data + NpcEquip data patch, live friend add)",
+  "game": "Sword Art Online: Hollow Realization Deluxe Edition",
+  "games_also": [],
+  "game_version": "Steam app 607890, sao_hr.exe PE timestamp 0x59DF33EF, SizeOfImage 0x10A2000, SHA-256 1923F0D8D2CAD559D6AD6E001AF54EA5EA5AA70171323F42D4E1FA3D63699E43; Windows 11 Pro 26100",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "MSVC 2022 Build Tools (C tool)",
+   "Python 3.11 (own CPK/OFS3 readers, memory scans)"
+  ],
+  "anti_cheat": "none; single-player. Edits the user's own data.cpk and the user's own running game.",
+  "status": "released",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "BinaryNull"
+  ],
+  "date": "2026-11-10",
+  "links": [],
+  "tags": [
+   "partners",
+   "npc-data",
+   "npcequip",
+   "cri-cpk",
+   "memory-editing",
+   "flags",
+   "skills",
+   "combat-ai"
+  ]
+ },
+ {
+  "path": "games/sword-art-online-hollow-realization/smith-radar-percent-winmm-proxy.md",
+  "kind": "game",
+  "title": "Smith Radar Percent: blacksmith stats as percentages on the Craftsman Data radar (winmm.dll proxy), plus the enhancement formula",
+  "game": "Sword Art Online: Hollow Realization Deluxe Edition",
+  "games_also": [],
+  "game_version": "Steam app 607890, sao_hr.exe PE timestamp 0x59DF33EF, SizeOfImage 0x10A2000, SHA-256 1923F0D8D2CAD559D6AD6E001AF54EA5EA5AA70171323F42D4E1FA3D63699E43; Windows 11 Pro 26100",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "MSVC 2022 Build Tools (winmm.dll proxy)",
+   "Python 3.11 (table decoding, exe patch prototype)"
+  ],
+  "anti_cheat": "none; single-player. The exe on disk is not modified; the proxy patches one call in memory.",
+  "status": "released",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "BinaryNull"
+  ],
+  "date": "2026-11-10",
+  "links": [],
+  "tags": [
+   "blacksmith",
+   "enhancement-formula",
+   "ui",
+   "proxy-dll",
+   "winmm",
+   "code-cave",
+   "localize-msg"
+  ]
+ },
+ {
+  "path": "games/sword-art-online-hollow-realization/zero-exp-patcher-cri-cpk-append.md",
+  "kind": "game",
+  "title": "Zero EXP patcher: enemy, quest and duel EXP off, with a partners-still-level mode (CRI CPK append patching)",
+  "game": "Sword Art Online: Hollow Realization Deluxe Edition",
+  "games_also": [],
+  "game_version": "Steam app 607890, sao_hr.exe PE timestamp 0x59DF33EF, SizeOfImage 0x10A2000, SHA-256 1923F0D8D2CAD559D6AD6E001AF54EA5EA5AA70171323F42D4E1FA3D63699E43; Windows 11 Pro 26100",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "Python 3.11 (own CPK/@UTF/CRILAYLA/OFS3 scripts)",
+   "PyInstaller 6.11.1 (v1.x)",
+   "MSVC 2022 Build Tools (v2.x patcher and DLL)",
+   "zig cc 0.13.0 (first DLL build)",
+   "YACpkTool",
+   "OFS3_TOOL v1.0"
+  ],
+  "anti_cheat": "none; single-player. No DRM wrapper on the exe. The optional code change is applied in memory by a dinput8.dll proxy; the exe on disk is never modified.",
+  "status": "released",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "BinaryNull"
+  ],
+  "date": "2026-11-10",
+  "links": [],
+  "tags": [
+   "cri-cpk",
+   "crilayla",
+   "utf-table",
+   "ofs3",
+   "exp",
+   "quests",
+   "duels",
+   "partners",
+   "proxy-dll",
+   "dinput8",
+   "patcher"
+  ]
+ },
+ {
   "path": "games/teardown/physics-accelerator-native-solver-physx.md",
   "kind": "game",
   "title": "Physics Accelerator: a multi-core replay of Teardown's island solver, two PhysX 5.9 remaps, and a flight recorder (native dsound.dll)",
