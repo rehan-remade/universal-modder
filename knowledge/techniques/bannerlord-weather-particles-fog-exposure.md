@@ -44,9 +44,9 @@ behaviour, AI gets one Harmony postfix. No native hooks were needed.
 - **Sky-visibility flags are not overridable. [V]** The emitter override `use_sky_visibility=false` is ignored. Vanilla emitters that carry
   the flag (`psys_game_snow`, `psys_game_rain`, `rain_mid`, the splash) stay invisible unless the engine's own weather object for that
   scene is active. Copy the effect into an unflagged base, or drive the engine's rain/snow density.
-- **Vanilla map weather emits above the camera. [V]** `campaign_*` rain and snow emit 12-16 units above a root at ground + 26, which
-  is above the map camera at the default zoom (38), and their clouds fade out when looked down on. Spawn your own bodies just below the
-  camera instead.
+- **Vanilla map weather emits above the camera. [V]** The `campaign_*` rain and snow bodies emit from roots high enough that, at the
+  default map zoom (38), the particles start above the camera and are never seen; their clouds fade out when looked down on. Spawn your
+  own bodies just below the camera instead.
 - **A grain sprite can be a cluster. [V][M]** A base effect whose texture shows several grains draws them all in one quad:
   `particle_size` is the quad, not the grain. One such sprite drew about 5 grains, each about 1/5 of the quad, so hailstones sized as
   one quad per stone were 3-7 mm and invisible. Size the quad from the grain you measured in game.
@@ -57,11 +57,14 @@ behaviour, AI gets one Harmony postfix. No native hooks were needed.
   inside and ends in a straight line where it stops. Lowering alpha did not help, because the overlapping particles saturate. What
   worked was letting the fog carry visibility (density from the visibility you want, fog start pulled to the camera so there is no
   clear ring) and keeping only sparse particles for motion.
-- **Run-time exposure works. [V][M]** `Scene.SetMinExposure`, `SetMaxExposure`, `SetTargetExposure` and `SetMiddleGray` exist and
-  are honoured when written every frame (the only way they were tested). The noon TOD (`Native/Atmospheres/TOD_12_00_SemiCloudy.xml`) has `min_exposure` -11.2
-  against `target_exposure` -11.0, so a bright snow field can only darken 0.2 EV and clips (100 % of a near-snow crop at 250+).
-  Lowering the floor by 2 EV took it to 0 % clipped, about 2.2 stops over mid-grey. The floor for campaign scenes is
-  `AtmosphereInfo.PostProInfo.MinExposure`; custom battles read it from the TOD file.
+- **Run-time exposure works. [V][M]** `Scene.SetMinExposure`, written every frame in a custom battle, is honoured (the only setter
+  tried; `SetMaxExposure`, `SetTargetExposure` and `SetMiddleGray` exist [S]). The noon TOD (`Native/Atmospheres/TOD_12_00_SemiCloudy.xml`)
+  has `min_exposure` -11.2 against `target_exposure` -11.0, so a bright snow field can only darken 0.2 EV and clips (100 % of a near-snow
+  crop at 250+). Lowering the floor by 2 EV took it to 0 % clipped, about 2.2 stops over mid-grey.
+- **The campaign's exposure baseline is not in those units. [S]** `DefaultMapWeatherModel` fills `AtmosphereInfo.PostProInfo.MinExposure`
+  with `Lerp(-3, -2, day)`, while the interpolated atmosphere the scene loads (`Native/Atmospheres/Interpolated/semi_snowy.xml`) keys
+  `Postfx#min_exposure` at -11.2 for noon. "PostProInfo.MinExposure - 2" would raise the floor about 6 EV and blow the scene out; read the
+  interpolated file at the hour's frame instead (not yet tested in game).
 - **Custom battles keep their TOD sky. [V]** A custom battle loads a semi-cloudy TOD. Writing fog and sky brightness later cannot add
   clouds, so light rain falls from a sunny sky there; only heavier weather's fog hides it.
 - **Hourly AI scores. [S][V]** `AiPartyThinkBehavior.PartyHourlyAiTick` calls `CampaignEventDispatcher.AiHourlyTick(party, params)`,
@@ -87,9 +90,9 @@ behaviour, AI gets one Harmony postfix. No native hooks were needed.
 - An in-mod autotest opens a custom battle (season, weather steps, troops), forces each weather for N seconds, writes the shown layers
   and a 5 s average frame time to the log at every shot, takes screenshots, and quits. A map mode loads a save paused, and a campaign
   mode runs days on a copy of the save and hashes every `.sav` before and after.
-- Frame cost (RTX 4090, 4K, 300 agents marching, 5 s average): clear 2.7 ms, rain +0.9, hail +1.5, snow +2.2, sandstorm +2.4,
-  dust +3.3, blizzard +4.2 [M]. The on-screen counter is capped by `max_framerate` in `engine_config.txt` (200 by default), so measure
-  from the mission's own dt.
+- Frame cost (RTX 4090, 4K, 300 agents marching, 5 s average) [M]: over summer clear (2.7 ms) rain +0.9, hail +1.5, sandstorm +2.4,
+  dust +3.3; over winter clear (3.4 ms) snow +2.2, blizzard +4.2. The on-screen counter is capped by `max_framerate` in
+  `engine_config.txt` (200 on the test machine), so measure from the mission's own dt.
 
 ## Gotchas
 1. A scripted `Blow` with `KnockDown`, `CanDismount` or `MakesRear` and no attacker (owner -1) crashes natively in
@@ -102,12 +105,15 @@ behaviour, AI gets one Harmony postfix. No native hooks were needed.
 6. Ground-hugging particles without `emit_on_terrain` vanish on slopes and float over dips. [V]
 7. A 960 px preview hides small particles: hail looked absent there but measured fine at 1:1, and the reverse. [V]
 8. Only per-frame exposure writes were tested [V]; whether a single write survives the engine's own atmosphere updates is untested.
-   Write it only from a known baseline: an unset struct field of 0 would be a -2 EV floor that blows the scene out. [S]
-9. Save-load: storm ages saved at the hour of the save and re-stamped on load keep keyed events (hail on the same storm) stable
-    across a reload. [S]
+   Write the floor only from a baseline you actually read: a defaulted 0 would be a -2 EV floor that blows the scene out.
+9. Gate weather damage on `Mission.Mode == MissionMode.Battle`: without it, lightning or hail also hits town walks, village visits and
+   the deployment phase, where a knocked-out player has no defeat flow.
+10. Save-load (design note, not an engine fact): saving storm ages at the hour of the save and re-stamping them on load keeps keyed
+    events (hail on the same storm) stable across a reload.
 
 ## Assets
-Weather textures and meshes reuse effects the game already packs; new sounds were generated and ship with their own credits file.
+Weather particle effects are overrides of effects the game already packs; the module also ships its own texture packs (Kenney CC0
+fog and dust, and the original mod's packs) and generated sounds with their own credits file.
 
 ## Cost and time
 About a week of agent time across twelve plans, most of it in-game verification loops (3-5 minutes per launch).
