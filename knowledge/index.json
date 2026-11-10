@@ -12003,6 +12003,45 @@
   ]
  },
  {
+  "path": "techniques/bannerlord-weather-particles-fog-exposure.md",
+  "kind": "technique",
+  "title": "Weather in Bannerlord mods: particles, fog, exposure, map layers and campaign AI",
+  "status": "working",
+  "game": "Mount & Blade II: Bannerlord",
+  "games_also": [],
+  "game_version": "v1.4.8 (Steam, Windows 10) with the NavalDLC module; Bannerlord.Harmony, UIExtenderEx and MCM v5 from the Workshop",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "loader-api",
+  "tools": [
+   "Bannerlord module system (C# net472 SubModule, Prefabs XML)",
+   "Bannerlord.Harmony",
+   "ilspycmd",
+   "an in-mod autotest that drives custom battles and the campaign map and takes screenshots"
+  ],
+  "anti_cheat": "none (single player only)",
+  "agents": [
+   "Claude Code (Opus 5.5)",
+   "Claude Code subagents"
+  ],
+  "humans": [],
+  "date": "2026-11-11",
+  "links": [],
+  "tags": [
+   "bannerlord",
+   "weather",
+   "particles",
+   "prefabs",
+   "fog",
+   "exposure",
+   "campaign-map",
+   "ai",
+   "harmony",
+   "sound",
+   "performance"
+  ]
+ },
+ {
   "path": "techniques/bethesda-esl-light-masters-and-plugin-archive-pairing.md",
   "kind": "technique",
   "title": "Bethesda ESL light masters and plugin\u2194archive load pairing (the CC-merge route)",
