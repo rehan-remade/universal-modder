@@ -58,7 +58,7 @@ behaviour, AI gets one Harmony postfix. No native hooks were needed.
   worked was letting the fog carry visibility (density from the visibility you want, fog start pulled to the camera so there is no
   clear ring) and keeping only sparse particles for motion.
 - **Run-time exposure works. [V][M]** `Scene.SetMinExposure`, `SetMaxExposure`, `SetTargetExposure` and `SetMiddleGray` exist and
-  are honoured when written every frame. The noon TOD (`Native/Atmospheres/TOD_12_00_SemiCloudy.xml`) has `min_exposure` -11.2
+  are honoured when written every frame (the only way they were tested). The noon TOD (`Native/Atmospheres/TOD_12_00_SemiCloudy.xml`) has `min_exposure` -11.2
   against `target_exposure` -11.0, so a bright snow field can only darken 0.2 EV and clips (100 % of a near-snow crop at 250+).
   Lowering the floor by 2 EV took it to 0 % clipped, about 2.2 stops over mid-grey. The floor for campaign scenes is
   `AtmosphereInfo.PostProInfo.MinExposure`; custom battles read it from the TOD file.
@@ -101,10 +101,9 @@ behaviour, AI gets one Harmony postfix. No native hooks were needed.
 5. `particle_size` on a multi-grain sprite is the cluster size: check one particle at 1:1 before sizing a whole layer. [V]
 6. Ground-hugging particles without `emit_on_terrain` vanish on slopes and float over dips. [V]
 7. A 960 px preview hides small particles: hail looked absent there but measured fine at 1:1, and the reverse. [V]
-8. Writing `engine_config.txt` with a Unix tool can silently turn its CRLF line endings into LF; back it up and copy the backup back. [V]
-9. Exposure written once is not enough to rely on; write it every frame, and only with a known baseline (a struct default of 0 would be
-   a -2 EV floor that blows the scene out). [V]
-10. Save-load: storm ages saved at the hour of the save and re-stamped on load keep keyed events (hail on the same storm) stable
+8. Only per-frame exposure writes were tested [V]; whether a single write survives the engine's own atmosphere updates is untested.
+   Write it only from a known baseline: an unset struct field of 0 would be a -2 EV floor that blows the scene out. [S]
+9. Save-load: storm ages saved at the hour of the save and re-stamped on load keep keyed events (hail on the same storm) stable
     across a reload. [S]
 
 ## Assets
