@@ -3933,6 +3933,55 @@
   ]
  },
  {
+  "path": "games/gothic-3/firearms-3d-viewmodel-and-engine-projectiles.md",
+  "kind": "game",
+  "title": "Firearms in Gothic 3: a 3D revolver and AK-47 in first person, drawn by our own D3D9 pass and fired through the engine's projectile pipeline",
+  "game": "Gothic 3",
+  "games_also": [],
+  "game_version": "1.75.20108.14 (Steam 39500) + Community Patch 1.75 + Community UpdatePack 1.04 + PUP + Union+ 1.6.4, Windows 11",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "gothic3sdk (rev 90bfd34)",
+   "MSVC 2022 Build Tools (Win32)",
+   "CMake",
+   "fxc (Windows SDK)",
+   "Blender 5.2 (headless)",
+   "Python (uv, numpy, Pillow, capstone, pefile)",
+   "Ghidra 12.1.4",
+   "Gothic 3 Modkit (FSG.exe)",
+   "Rimy3D",
+   "g3dit",
+   "g3blend"
+  ],
+  "anti_cheat": "none; single-player only",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)",
+   "OpenCode (models not recorded)"
+  ],
+  "humans": [
+   "Arekosandoru"
+  ],
+  "date": "2026-11-11",
+  "links": [
+   "https://github.com/georgeto/gothic3sdk"
+  ],
+  "tags": [
+   "genome",
+   "gothic-3",
+   "firearms",
+   "fps",
+   "viewmodel",
+   "d3d9",
+   "endscene",
+   "projectiles",
+   "sdk-hooks",
+   "offline-test-host"
+  ]
+ },
+ {
   "path": "games/gothic-ii/union-gd3d11-host-stack-minecraft-passthrough.md",
   "kind": "game",
   "title": "Gothic II NotR: Union plugin host stack for a passthrough (camera, ground raycasts, console, WS out)",
@@ -9838,6 +9887,58 @@
   ]
  },
  {
+  "path": "games/total-war-warhammer-iii/first-person-soldier-view-native-camera-and-ca-weapons.md",
+  "kind": "game",
+  "title": "First-person soldier view in Warhammer III battles: a Lua-loaded native DLL, our own camera, engine projectiles and CA's own weapon meshes drawn in D3D11",
+  "game": "Total War: WARHAMMER III",
+  "games_also": [],
+  "game_version": "9.0.5.0 (Warhammer3.exe PE stamp 0x6AE2A00B, SizeOfImage 0x0E53A000), Steam 1142710, Windows 11; started from 9.0.4",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "MSVC x64 (cl, one C file)",
+   "Python (uv): own PFH5 pack reader/writer, RMV2 reader",
+   "Lua 5.1 (compile check)",
+   "Ghidra 12.1.4",
+   "capstone",
+   "pefile",
+   "Blender 5.2 (headless)",
+   "Mod Configuration Tool (MCT)"
+  ],
+  "anti_cheat": "none in single-player; the mod turns itself off when cm:is_multiplayer() is true and was only run in single-player custom battles and campaign",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)",
+   "OpenCode (models not recorded)"
+  ],
+  "humans": [
+   "Arekosandoru"
+  ],
+  "date": "2026-11-11",
+  "links": [
+   "knowledge/games/total-war-warhammer-iii/bigger-units-scale-every-model-including-workshop-mods.md",
+   "knowledge/games/total-war-warhammer-iii/valkia-khorne-subjugation-reusing-archaon-dilemmas.md",
+   "https://github.com/Frodo45127/rpfm"
+  ],
+  "tags": [
+   "warscape",
+   "total-war",
+   "fps",
+   "first-person",
+   "camera",
+   "d3d11",
+   "present-hook",
+   "vtable-copy",
+   "lua-loadlib",
+   "projectiles",
+   "viewmodel",
+   "rmv2",
+   "nav-grid",
+   "mct"
+  ]
+ },
+ {
   "path": "games/total-war-warhammer-iii/valkia-khorne-subjugation-reusing-archaon-dilemmas.md",
   "kind": "game",
   "title": "Archaon-style subjugation for Valkia the Bloody: a script-only Warscape mod that reuses CA's own dilemmas",
@@ -13072,6 +13173,40 @@
    "readprocessmemory",
    "position-holder",
    "single-player"
+  ]
+ },
+ {
+  "path": "techniques/first-person-weapon-layer-eight-parts-and-a-3d-viewmodel-pass.md",
+  "kind": "technique",
+  "title": "A first-person weapon layer for a game that has none: the eight parts, and drawing a 3D viewmodel in EndScene (D3D9) or Present (D3D11)",
+  "tags": [
+   "fps",
+   "first-person",
+   "viewmodel",
+   "d3d9",
+   "d3d11",
+   "endscene",
+   "present-hook",
+   "depth-buffer",
+   "lighting",
+   "projectiles",
+   "vtable-copy",
+   "offline-test-host",
+   "oracle"
+  ],
+  "date": "2026-11-11",
+  "agents": [
+   "Claude Code (Opus 5.5)",
+   "OpenCode (models not recorded)"
+  ],
+  "humans": [
+   "Arekosandoru"
+  ],
+  "links": [
+   "knowledge/games/gothic-3/firearms-3d-viewmodel-and-engine-projectiles.md",
+   "knowledge/games/total-war-warhammer-iii/first-person-soldier-view-native-camera-and-ca-weapons.md",
+   "knowledge/techniques/hooking-a-host-post-world-render-pass-so-the-world-occludes-your-overlay.md",
+   "knowledge/techniques/geometry-transfer-host-draws-guest-meshes.md"
   ]
  },
  {
