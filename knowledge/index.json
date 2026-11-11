@@ -12705,7 +12705,10 @@
    "stack-depth",
    "near-heap",
    "umb",
-   "bios-clock"
+   "bios-clock",
+   "benchmark",
+   "bisect",
+   "test-selection"
   ]
  },
  {
@@ -13703,7 +13706,10 @@
    "assembler",
    "8086-compatibility",
    "calling-convention",
-   "general-midi"
+   "general-midi",
+   "stack-buffer-overflow",
+   "text-drawing",
+   "register-clobbering"
   ]
  },
  {
