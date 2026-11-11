@@ -7,7 +7,7 @@ agents:
 humans: []
 date: '2026-10-25'
 links: ["https://github.com/eb4x/ghidra-plugin-rtlink", "https://github.com/keystone-engine/keystone", "https://github.com/capstone-engine/capstone"]
-tags: [dos, rtlink, overlays, vm-manager, binary-patching, mz-exe, trampolines, code-cave, x86-16, memory-pressure, conventional-memory, page-cache, umb, gates, hook-dispatcher, relocations, keystone, assembler, 8086-compatibility, calling-convention, general-midi]
+tags: [dos, rtlink, overlays, vm-manager, binary-patching, mz-exe, trampolines, code-cave, x86-16, memory-pressure, conventional-memory, page-cache, umb, gates, hook-dispatcher, relocations, keystone, assembler, 8086-compatibility, calling-convention, general-midi, stack-buffer-overflow, text-drawing, register-clobbering]
 ---
 # Patching RTLink/Plus overlaid DOS executables: growing the image and calling new code safely from overlays
 
@@ -300,15 +300,51 @@ cover them.
     resends them; volume is done by scaling every channel-volume (CC 7) message as the player sends it and
     resending all channels on a change. The GM master-volume SysEx is ignored by some synths.
 
-10. **evm0012 "unvectored call" the second time a hook called a resident routine.** (2026-10-27.)
+23. **evm0012 "unvectored call" the second time a hook called a resident routine.** (2026-10-27.)
     **Cause:** the hook made the far call as `push seg; push off; retf` into the resident routine; the
     manager couldn't vector it. **Fix:** `call far cs:[ptr]` with the far pointer stored in the block.
-11. **The game jumped into garbage after the first menu choice through a new dialog hook.** (2026-10-27.)
+24. **The game jumped into garbage after the first menu choice through a new dialog hook.** (2026-10-27.)
     **Cause:** two of the game's menu routines remove their own arguments (`retf N`), and the hook also
     did `add sp` after the call, as for a C-style routine. **Fix:** read the callee's return instruction
     before calling it; test the hook in an emulator that checks SP after the call.
-12. **Three branches' hooks in the same 96 free bytes.** (2026-10-27.) **Cause:** each agent picked "free"
+25. **Three branches' hooks in the same 96 free bytes.** (2026-10-27.) **Cause:** each agent picked "free"
     space by reading the code in its own branch. **Fix:** the ledger above; nobody picks space by hand.
+
+26. **A freeze ("invalid opcode", stack inside a data array) after clicking a label in a new screen.**
+    (2026-11-11.) **Cause:** the game's text drawing routine copies the string into an 80-byte buffer on its
+    own stack with no length check. A composed line of 90 characters (a narrow font let it pass the pixel
+    width check) ran past the buffer into the saved BP and the return address. 81-86 characters only
+    overwrite the colours stored above the buffer, which is why a slightly long line had worked for weeks.
+    Enlarging the routine's frame was not safe (its saved parameters sit just below it). **Fix:** draw long
+    lines in pieces of at most 79 characters, each starting at the x the previous call returned (same
+    pixels); a build check that fails on any new string constant of 80+ characters; audit every caller of
+    the routine's entry points for composed lines (names + clauses at their longest).
+27. **A message box showed the first lines of the message file (its copyright header) instead of a
+    message.** (2026-11-11.) **Cause:** the hook kept the message key's pointer in CX across two calls to
+    the game's C routines; Microsoft C callers may clobber AX, BX, CX, DX and ES, so the key arrived as 0,
+    and the text lookup only seeks a key when the pointer is non-null - with null it reads the file from the
+    top. The emulated test faked those game calls without touching CX, so it passed. **Fix:** push/pop
+    around the calls; make every emulated fake of a game routine clobber the volatile registers, so tests
+    catch values held across calls. Also add a check that every message key the patch names exists in the
+    message files.
+28. **Moving a merged ledger record before its code was merged broke the space check on every other
+    branch.** (2026-11-11.) **Cause:** a feature needed to move three older data tables into freed space; the
+    records were repointed at once, but only the feature's branch had the new code, and the check reads
+    every live record against each tree. **Fix:** record the new homes as the feature's own reservations
+    (no overlap with anything) and swap the old records over in the same step that merges the feature.
+29. **evm0012 "Unvectored call to resident symbol" in an AI's turn, now and then, never on a reload.**
+    (2026-11-11, cause narrowed, not confirmed.) Reading the message: RTLink prints "near address" with an
+    absolute segment (not a map address) only when CS lies outside the resident image, i.e. inside the
+    page pool. Compare that address with each overlay's load frame: here CS was one overlay's frame but
+    the bytes there were another, smaller overlay's (both frames end at the top of the pool), and the
+    printed call was that overlay's code at the same linear address. So a far call into the second overlay
+    evicted the caller's overlay and returned straight into its old place without the manager's reload
+    thunk. It only happens when the patch has shrunk the page pool below the size of the two overlays
+    together (here 0x999 paragraphs vs 0xE99 needed; the original's pool holds both), which explains a
+    patch-only, intermittent crash. Leftover return records from resident calls are normal RTLink behaviour
+    (the original EXE has them too). Check every patch hook inside the calling overlay first (frames,
+    gates); then trap the manager's thunk-skip path in a debugger build instead of sampling, which is too
+    slow to see one short call.
 
 ## Seen in
 - Sid Meier's Colonization 3.0 (DOS, GOG release) binary-patching project (no public game note yet).
