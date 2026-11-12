@@ -9453,6 +9453,41 @@
   ]
  },
  {
+  "path": "games/the-outer-worlds-2/restore-abandoned-companion-inez-save-edit.md",
+  "kind": "game",
+  "title": "Restore an abandoned companion (Inez) by editing a Game Pass save",
+  "game": "The Outer Worlds 2",
+  "games_also": [],
+  "game_version": "Microsoft Store / Game Pass PC package Microsoft.OE-Arkansas 1.299.4920.0; saves written by game builds 1.0.3.0, 1.0.4.1 and 1.0.5.0",
+  "platform": "windows",
+  "engine": "unreal",
+  "route": "data",
+  "tools": [
+   "Python 3 (stdlib zlib, struct, ctypes)",
+   "oo2core_8_win64.dll from another installed game (read-only Oodle decoding, not redistributed)",
+   "gh"
+  ],
+  "anti_cheat": "none (single-player)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-12",
+  "links": [],
+  "tags": [
+   "save-editing",
+   "companions",
+   "quests",
+   "global-variables",
+   "xbox-wgs",
+   "game-pass",
+   "iostore",
+   "oodle",
+   "unreal-5"
+  ]
+ },
+ {
   "path": "games/the-precinct/four-shifts-a-permadeath-roster-game-mode-with-melonloader-o.md",
   "kind": "game",
   "title": "Four Shifts: a permadeath roster game mode with MelonLoader on Unity 6 IL2CPP",
