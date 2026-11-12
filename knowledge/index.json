@@ -7910,6 +7910,45 @@
   ]
  },
  {
+  "path": "games/satisfactory/working-hologram-opacity-slider-in-the-vanilla-options-menu-.md",
+  "kind": "game",
+  "title": "Working hologram opacity slider in the vanilla Options menu (SML 3.12 C++ mod)",
+  "game": "Satisfactory",
+  "games_also": [],
+  "game_version": "1.2.5.0 (build/CL 517554, UE 5.6.1-CSS), Steam, SML 3.12.0",
+  "platform": "windows",
+  "engine": "unreal",
+  "route": "loader-api",
+  "tools": [
+   "SML 3.12 starter project (headers CL517554) + Alpakit",
+   "Unreal Engine 5.6.1-CSS (satisfactorymodding/UnrealEngine 5.6.1-css-83)",
+   "Visual Studio 2022 17.14 (MSVC 14.38)",
+   "wwise-cli 0.2.4 (Wwise 2025.1.6.9117, integration 2025.1.6.4248)",
+   "UE Python editor scripting (asset authoring)",
+   "um win (shot/drive), um backup, um publish check"
+  ],
+  "anti_cheat": "none (single-player save; client-side visual mod, RequiredOnRemote false)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-11",
+  "links": [],
+  "tags": [
+   "hologram",
+   "build-mode",
+   "options-menu",
+   "fgusersetting",
+   "game-features",
+   "post-process",
+   "custom-depth-stencil",
+   "translucency",
+   "dynamic-material-instance",
+   "smart-app-control"
+  ]
+ },
+ {
   "path": "games/schedule-i/qol-suite-and-stack-limits-on-the-schedule-i-0-4-7-il2cpp-be.md",
   "kind": "game",
   "title": "QoL suite and stack limits on the Schedule I 0.4.7 IL2CPP beta with MelonLoader",
