@@ -7758,6 +7758,40 @@
   ]
  },
  {
+  "path": "games/resident-evil-4/naming-the-re4-2005-pc-exe-from-the-gamecube-decompilation.md",
+  "kind": "game",
+  "title": "Naming the RE4 (2005) PC exe from the GameCube decompilation",
+  "game": "Resident Evil 4",
+  "games_also": [],
+  "game_version": "Steam UHD, original bio4.exe of 2018-01-27, 9,126,456 bytes, SHA-1 3ddec5c068c0c968c95a5694a44389b8b8518205",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "Ghidra 12.1.4 headless",
+   "Python 3.10",
+   "MSVC 2019 (header compile test)"
+  ],
+  "anti_cheat": "none (single-player)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-12",
+  "links": [
+   "https://github.com/adonis-singh/re4"
+  ],
+  "tags": [
+   "reverse-engineering",
+   "ghidra",
+   "decompilation",
+   "address-map",
+   "rtti",
+   "vtables"
+  ]
+ },
+ {
   "path": "games/risk-of-rain-2/arkham-knight-batman-survivor.md",
   "kind": "game",
   "title": "Arkham Knight Batman as a Risk of Rain 2 survivor: UE3 model and animations ported with umodel, Blender and a Unity AssetBundle",
