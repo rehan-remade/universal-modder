@@ -7778,7 +7778,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-11-12",
+  "date": "2026-11-13",
   "links": [
    "https://github.com/adonis-singh/re4"
   ],
@@ -7788,7 +7788,9 @@
    "decompilation",
    "address-map",
    "rtti",
-   "vtables"
+   "vtables",
+   "direct3d9",
+   "xact"
   ]
  },
  {
