@@ -9416,6 +9416,206 @@
   ]
  },
  {
+  "path": "games/the-elder-scrolls-iv-oblivion-remastered/generating-rfg-destructible-building-chunks.md",
+  "kind": "game",
+  "title": "Generating destructible building chunks for Red Faction Guerrilla",
+  "game": "Red Faction: Guerrilla Re-Mars-tered",
+  "games_also": [],
+  "game_version": "Steam app 667720 (rfg.exe, Re-Mars-tered)",
+  "platform": "proton",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "Python 3",
+   "hkpack.py",
+   "chunkwrite.py",
+   "genchunk.py",
+   "walk.py"
+  ],
+  "anti_cheat": "none",
+  "status": "in-progress",
+  "agents": [
+   "Antigravity (Gemini 3.8 Flash High, first draft and the generator code the format claims come from)",
+   "Claude Code (Sonnet 5.5; audit of every claim on 2026-11-05, see docs/kb-drafts/AUDIT.md)"
+  ],
+  "humans": [],
+  "date": "2026-11-05",
+  "links": [],
+  "tags": [
+   "rfg",
+   "geomod",
+   "destruction",
+   "chunks",
+   "havok",
+   "tagfile",
+   "binary-format",
+   "convex-hulls"
+  ]
+ },
+ {
+  "path": "games/the-elder-scrolls-iv-oblivion-remastered/native-processevent-from-a-plain-dll-in-oblivion-remastered.md",
+  "kind": "game",
+  "title": "Native per-frame actor mover for Oblivion Remastered: ProcessEvent from a plain DLL loaded by UE4SS Lua",
+  "game": "The Elder Scrolls IV: Oblivion Remastered",
+  "games_also": [
+   "Red Faction: Guerrilla Re-Mars-tered"
+  ],
+  "game_version": "Oblivion Remastered 1.512.105 (UE5.3.2)",
+  "platform": "proton",
+  "engine": "unreal",
+  "route": "native-hook",
+  "tools": [
+   "RE-UE4SS 3.0.1",
+   "mingw-w64 (x86_64)",
+   "Proton 11.0",
+   "Binary Ninja",
+   "gamescope"
+  ],
+  "anti_cheat": "none (single-player, lab copy of the game)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Sonnet 5.5; written by Claude, audited claim by claim on 2026-11-05, see docs/kb-drafts/AUDIT.md)"
+  ],
+  "humans": [],
+  "date": "2026-11-05",
+  "links": [],
+  "tags": [
+   "ue4ss",
+   "native",
+   "processevent",
+   "package-loadlib",
+   "interpolation",
+   "mingw",
+   "actors",
+   "performance"
+  ]
+ },
+ {
+  "path": "games/the-elder-scrolls-iv-oblivion-remastered/rfg-destruction-passthrough-into-oblivion-remastered.md",
+  "kind": "game",
+  "title": "Red Faction Guerrilla destruction passthrough into Oblivion Remastered",
+  "game": "The Elder Scrolls IV: Oblivion Remastered",
+  "games_also": [
+   "Red Faction: Guerrilla Re-Mars-tered"
+  ],
+  "game_version": "Oblivion Remastered 1.512.105 (UE5.3.2); RFG Re-Mars-tered Steam app 667720",
+  "platform": "proton",
+  "engine": "unreal",
+  "route": "passthrough",
+  "tools": [
+   "RE-UE4SS 3.0.1",
+   "Proton 11.0",
+   "retoc 0.1.5",
+   "Blender (headless)"
+  ],
+  "anti_cheat": "none",
+  "status": "in-progress",
+  "agents": [
+   "Antigravity (Gemini 3.8 Flash High, first draft of the Setup, Route, How-the-game-works, Build, Verification, Gotchas and Assets text)",
+   "Claude Code (Sonnet 5.5; wrote the ground sections and, on 2026-11-05, audited every claim against repo evidence, see docs/kb-drafts/AUDIT.md)"
+  ],
+  "humans": [],
+  "date": "2026-11-13",
+  "links": [],
+  "tags": [
+   "passthrough",
+   "cross-process",
+   "havok",
+   "destruction",
+   "shared-memory",
+   "seqlock",
+   "ue5",
+   "lua"
+  ]
+ },
+ {
+  "path": "games/the-elder-scrolls-iv-oblivion-remastered/rfg-destruction-rules-rebuilt-inside-oblivion-remastered.md",
+  "kind": "game",
+  "title": "Red Faction Guerrilla's destruction rules rebuilt inside Oblivion Remastered, measured against the real game",
+  "game": "The Elder Scrolls IV: Oblivion Remastered",
+  "games_also": [
+   "Red Faction: Guerrilla Re-Mars-tered"
+  ],
+  "game_version": "Oblivion Remastered 1.512.105 (UE5.3.2); RFG Re-Mars-tered Steam app 667720",
+  "platform": "proton",
+  "engine": "unreal",
+  "route": "reimplementation",
+  "tools": [
+   "RE-UE4SS 3.0.1",
+   "Proton 11.0",
+   "mingw-w64",
+   "Blender (headless)",
+   "UE 5.3.2 editor commandlet (cook)",
+   "retoc",
+   "Binary Ninja",
+   "python3 + numpy"
+  ],
+  "anti_cheat": "none (single-player, lab copies of both games, offline)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Fable 5.2; plan, reading, analysis, this note)",
+   "Claude Code (Opus 5.5; code)",
+   "Claude Code (Sonnet 5.5; lab runs)"
+  ],
+  "humans": [],
+  "date": "2026-11-13",
+  "links": [
+   "https://github.com/LinuxMintJeff21/oblivion-remastered-geomod"
+  ],
+  "tags": [
+   "destruction",
+   "reimplementation",
+   "oracle",
+   "chaos",
+   "havok",
+   "collision",
+   "depenetration",
+   "trace-replay",
+   "ue4ss",
+   "lua",
+   "physics"
+  ]
+ },
+ {
+  "path": "games/the-elder-scrolls-iv-oblivion-remastered/ue4ss-lua-actor-move-cost-model-oblivion-remastered.md",
+  "kind": "game",
+  "title": "UE4SS Lua cost model for moving many actors in Oblivion Remastered",
+  "game": "The Elder Scrolls IV: Oblivion Remastered",
+  "games_also": [
+   "Red Faction: Guerrilla Re-Mars-tered"
+  ],
+  "game_version": "Oblivion Remastered 1.512.105 (UE5.3.2)",
+  "platform": "proton",
+  "engine": "unreal",
+  "route": "loader-api",
+  "tools": [
+   "RE-UE4SS 3.0.1",
+   "Proton 11.0",
+   "perf-house.sh",
+   "bench-calls.lua",
+   "gamescope"
+  ],
+  "anti_cheat": "none",
+  "status": "in-progress",
+  "agents": [
+   "Antigravity (Gemini 3.8 Flash High, first draft of everything above Gotcha 5)",
+   "Claude Code (Sonnet 5.5; Gotchas 5 to 8, and the audit of every claim on 2026-11-05, see docs/kb-drafts/AUDIT.md)"
+  ],
+  "humans": [],
+  "date": "2026-11-05",
+  "links": [],
+  "tags": [
+   "ue4ss",
+   "lua",
+   "performance",
+   "profiling",
+   "actors",
+   "staticfindobject",
+   "out-parameters",
+   "cost-model"
+  ]
+ },
+ {
   "path": "games/the-king-of-fighters-xiii/kyo-passed-through-from-kof-xiii-into-a-custom-arena-stepped.md",
   "kind": "game",
   "title": "Kyo passed through from KOF XIII into a custom arena: stepped frames, native hit injection and a shared GPU layer",
@@ -13101,6 +13301,42 @@
    "https://web.archive.org/web/20231023061958/https://forum.xentax.com/viewtopic.php?t=4256",
    "https://github.com/noidex0/fh6-model-tools",
    "https://github.com/Nenkai/ForzaTools/tree/master/ForzaTools.Bundles"
+  ]
+ },
+ {
+  "path": "techniques/fractured-mesh-look-match-ue5.md",
+  "kind": "technique",
+  "title": "Making a fractured copy of a UE5 mesh look identical to the original (UV channels, V flip, normal frames, sun drift)",
+  "game": "The Elder Scrolls IV: Oblivion Remastered",
+  "game_version": "Oblivion Remastered 1.512.105 (UE5.3.2)",
+  "platform": "proton",
+  "engine": "unreal",
+  "route": "passthrough",
+  "tools": [
+   "RE-UE4SS 3.0.1",
+   "retoc",
+   "Blender 4.x (bisect fracture)",
+   "UE 5.3.2 editor commandlet (cook)",
+   "python3"
+  ],
+  "anti_cheat": "none",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-07",
+  "links": [],
+  "tags": [
+   "unreal",
+   "materials",
+   "uv",
+   "normals",
+   "fracture",
+   "destruction",
+   "swap",
+   "a-b-test",
+   "time-of-day"
   ]
  },
  {
