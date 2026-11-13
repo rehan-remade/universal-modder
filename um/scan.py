@@ -457,6 +457,9 @@ ONLINE_ONLY = ["valorant", "league of legends", "fortnite", "apex legends", "pub
                "call of duty hq", "call of duty warzone", "destiny 2", "genshin impact", "escape from tarkov", "battlefield 2042",
                "battlefield 6", "overwatch", "overwatch 2", "counter strike 2", "dota 2", "marvel rivals", "the finals", "rust",
                "dead by daylight", "naraka bladepoint", "warframe", "deadlock"]
+# an ONLINE_ONLY name that an older single-player game has too, and the files that tell that game apart: Call of Duty
+# (2003) installs to a folder named "Call of Duty", the plain name of today's live-service launcher
+NOT_ONLINE_FILES = {"call of duty": ("codsp.exe", "codmp.exe", "coduosp.exe", "coduomp.exe")}
 
 
 def _plain(name: str) -> str:
@@ -861,6 +864,8 @@ def scan(query: str) -> dict:
     known = next((v for k, v in sorted(KNOWN.items(), key=lambda kv: -len(kv[0])) if k == lname or (k in lname and len(k) > 5)), None) \
         or next((KNOWN[k] for k, pats in KNOWN_FILES if ix.has(*pats)), None)
     online = online_only(name)
+    if online and ix.has(*NOT_ONLINE_FILES.get(online, ())):
+        online = None
     routes = []
     if known:
         routes.append(dict(route=known[0], playbook=known[1], why="known game"))

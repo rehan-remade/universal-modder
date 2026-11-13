@@ -624,6 +624,19 @@ def test_scan_warns_only_for_online_games(tmp_path):
         assert any("online competitive" in w for w in scan.scan(str(d))["warnings"]) == warned, name
 
 
+def test_scan_call_of_duty_2003_is_not_the_live_service_game(tmp_path):
+    # the 2003 game installs to a folder named plain "Call of Duty", the same name as today's launcher: it was told to stop
+    for sub, files, warned in [("2003", ["CoDSP.exe", "CoDMP.exe", "main/pak0.pk3", "pb/pbcl.dll"], False),
+                               ("launcher", ["cod.exe"], True)]:
+        d = tmp_path / sub / "Call of Duty"
+        for rel in files + [f"f{i}.txt" for i in range(6)]:
+            (d / rel).parent.mkdir(parents=True, exist_ok=True)
+            (d / rel).write_bytes(b"x")
+        r = scan.scan(str(d))
+        assert any("online competitive" in w for w in r["warnings"]) == warned, sub
+    assert "PunkBuster" in scan.scan(str(tmp_path / "2003" / "Call of Duty"))["anti_cheat"]   # still reported
+
+
 def _fake_host(monkeypatch, os_name, machine, wsl=False):
     import platform
     monkeypatch.setattr(scan, "is_mac", lambda: os_name == "macos")
