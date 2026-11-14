@@ -9453,6 +9453,53 @@
   ]
  },
  {
+  "path": "games/the-legend-of-zelda-ocarina-of-time-switch-2/sprint-button-and-minimap-toggle-as-nx2navi-recomp-runtime-f.md",
+  "kind": "game",
+  "title": "Sprint button and minimap toggle as NX2navi recomp runtime features (OoT Switch 2 1.1.1)",
+  "game": "The Legend of Zelda: Ocarina of Time (Switch 2)",
+  "games_also": [],
+  "game_version": "1.1.1 (main build id E0F3CCFAF50065AE) via the NX2navi static recompiler 0.9.1 to 0.10.1, Windows",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "decomp-recomp",
+  "tools": [
+   "NX2navi (static ARM64 to C recompiler + Vulkan runtime)",
+   "capstone",
+   "numpy",
+   "mmh3",
+   "zstandard",
+   "MSYS2 UCRT64 clang"
+  ],
+  "anti_cheat": "none (single-player, offline recompiled exe)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "Kendoismebutmaybenot"
+  ],
+  "date": "2026-11-14",
+  "links": [
+   "https://github.com/tangerineturtle1/NX2navi",
+   "https://github.com/tangerineturtle1/NX2navi/pull/752",
+   "https://github.com/tangerineturtle1/NX2navi/pull/870",
+   "https://gamebanana.com/mods/737688"
+  ],
+  "tags": [
+   "static-recompilation",
+   "switch-2",
+   "patch-sets",
+   "hud",
+   "minimap",
+   "sprint",
+   "input",
+   "eui",
+   "ainb",
+   "gamedata",
+   "murmur3"
+  ]
+ },
+ {
   "path": "games/the-precinct/four-shifts-a-permadeath-roster-game-mode-with-melonloader-o.md",
   "kind": "game",
   "title": "Four Shifts: a permadeath roster game mode with MelonLoader on Unity 6 IL2CPP",
