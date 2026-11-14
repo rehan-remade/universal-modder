@@ -6350,6 +6350,39 @@
   ]
  },
  {
+  "path": "games/minecraft/runtime-dimensions-parallel-universe-portals-and-whole-dimen.md",
+  "kind": "game",
+  "title": "Runtime dimensions, parallel-universe portals and whole-dimension endings in Forge 26.3",
+  "game": "Minecraft",
+  "games_also": [],
+  "game_version": "Minecraft Java 26.3, Forge 66.1.5",
+  "platform": "windows",
+  "engine": "java",
+  "route": "loader-api",
+  "tools": [
+   "ForgeGradle 7",
+   "JDK 25",
+   "Vineflower-decompiled reference sources (kept outside the repo)"
+  ],
+  "anti_cheat": "none (single player, own dedicated server)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Claude Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-14",
+  "links": [],
+  "tags": [
+   "dimensions",
+   "portals",
+   "shaders",
+   "saveddata",
+   "world-scale",
+   "dedicated-server",
+   "forge"
+  ]
+ },
+ {
   "path": "games/mount-and-blade-ii-bannerlord/bannercraft-minecraft-gameplay-bridge.md",
   "kind": "game",
   "title": "BannerCraft: Minecraft gameplay through a local two-mod bridge",
