@@ -1,6 +1,6 @@
 ---
 kind: game
-title: "Sprint button, minimap toggle, mouse-style gyro aim and DualSense HD rumble as NX2navi runtime features (OoT Switch 2 1.1.1)"
+title: "Sprint button, minimap toggle, custom gyro (player space and other spaces, per-item aim detection) and DualSense HD rumble as NX2navi runtime features (OoT Switch 2 1.1.1)"
 game: "The Legend of Zelda: Ocarina of Time (Switch 2)"
 games_also: []
 game_version: "1.1.1 (main build id E0F3CCFAF50065AE) via the NX2navi static recompiler 0.9.1 to 0.10.1, Windows"
@@ -13,11 +13,11 @@ status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["Kendoismebutmaybenot"]
 date: 2026-11-14
-links: ["https://github.com/tangerineturtle1/NX2navi", "https://github.com/tangerineturtle1/NX2navi/pull/752", "https://github.com/tangerineturtle1/NX2navi/pull/870", "https://github.com/tangerineturtle1/NX2navi/pull/887", "https://github.com/tangerineturtle1/NX2navi/pull/892", "https://gamebanana.com/mods/737688", "https://github.com/trzz1214/RenHDrum"]
-tags: [static-recompilation, switch-2, patch-sets, hud, minimap, sprint, input, eui, ainb, gamedata, murmur3, gyro, player-space, haptics, dualsense, memory-snapshot]
+links: ["https://github.com/tangerineturtle1/NX2navi", "https://github.com/tangerineturtle1/NX2navi/pull/752", "https://github.com/tangerineturtle1/NX2navi/pull/870", "https://github.com/tangerineturtle1/NX2navi/pull/887", "https://github.com/tangerineturtle1/NX2navi/pull/892", "https://github.com/tangerineturtle1/NX2navi/pull/927", "https://github.com/tangerineturtle1/NX2navi/pull/951", "https://github.com/tangerineturtle1/NX2navi/pull/955", "https://gamebanana.com/mods/737688", "https://github.com/trzz1214/RenHDrum"]
+tags: [static-recompilation, switch-2, patch-sets, hud, minimap, sprint, input, eui, ainb, gamedata, murmur3, gyro, player-space, world-space, laser-pointer, aim-detection, fishing, sdl-sensor, haptics, dualsense, memory-snapshot, launcher-downgrade]
 ---
 
-# Sprint button, minimap toggle, mouse-style gyro aim and DualSense HD rumble as NX2navi runtime features (OoT Switch 2 1.1.1)
+# Sprint button, minimap toggle, custom gyro (player space and other spaces, per-item aim detection) and DualSense HD rumble as NX2navi runtime features (OoT Switch 2 1.1.1)
 
 > The Switch 2 Ocarina of Time remake runs on PC through NX2navi, a static recompiler (ARM64 to C to x86-64)
 > with its own runtime. NX2navi cannot load exlaunch/subsdk code mods, so I rebuilt two quality-of-life mods as
@@ -28,10 +28,12 @@ tags: [static-recompilation, switch-2, patch-sets, hud, minimap, sprint, input, 
 >   gives Pro a minimap, and Normal can go without. Open as PR #870.
 > - **L3 in conversations:** the sprint button no longer swallows L3 while the game uses it to hide the text box
 >   (PR #887).
-> - **Player-space gyro (mouse-style):** the gamepad gyro turns the camera, and the hookshot aim, through the
->   runtime's direct-mouse path, following JoyShockMapper's PLAYER_TURN maths. It has no dead zone or smoothing,
->   unlike the game's own gyro aiming. It can run always or only while the game aims, and has separate horizontal
->   and vertical sensitivity. Local branch, not yet a PR.
+> - **Custom gyro (mouse-style):** the gamepad gyro turns the camera and every aimed item through the
+>   runtime's direct-mouse path, with no dead zone or smoothing, unlike the game's own gyro aiming. Six gyro
+>   spaces (player, world, local yaw, local roll, local yaw + roll, laser pointer), separate sensitivities, an
+>   optional dead zone and tightening, and a touchpad pause. "When the game allows" turns it on from what the game
+>   itself says while the bow, slingshot, hookshot, boomerang or fishing rod aims (PR #955).
+> - **Toggled sprint through rolls** (PR #927), and a launcher **Downgrade** screen (PR #951).
 > - **DualSense HD rumble:** the game's two-band HD vibration is played on a USB DualSense's voice-coil actuators
 >   as audio on its 3rd and 4th channels (PR #892).
 >
@@ -41,8 +43,11 @@ tags: [static-recompilation, switch-2, patch-sets, hud, minimap, sprint, input, 
 - **Game:** OoT Switch 2 1.1.1. The exefs `main` is an NSO (LZ4 segments, RELR relocations), and the romfs is a
   NX2navi-packed `romfs.bin` with an `index.json` (path, offset, size).
 - **NX2navi:** the launcher keeps each version in `%LOCALAPPDATA%\Programs\NX2navi\app\<ver>`.
-  - The `current.txt` and `previous.txt` pointers pick the version, so a downgrade means editing them, plus
-    turning off `auto_install` in `data\launcher.json` or the old version re-installs the new one.
+  - The `current.txt` and `previous.txt` pointers pick the version, so a manual downgrade means editing them.
+    To keep the older version, set `rolled_back` in `data\launcher.json` to the newest version: every launcher
+    since background updates began (0.6.1) neither stages nor installs that version by itself, and the feed only
+    ever offers its newest. Turning off `auto_install` alone is lost if the player turns it back on. PR #951 adds a
+    Settings > Downgrade screen that does this.
   - A kit holds `recomp/` (generator and patch tables), `runtime/` (C/C++ sources), `tools/make_game.py` and a
     bundled MSYS2 UCRT64 clang.
   - Editing `runtime/` invalidates the prebuilt `libnx2navirt.a` digest, so "Rebuild the Game" then compiles the
@@ -151,6 +156,28 @@ Addresses are 1.1.1 `main` offsets (base 0x7000000000).
 - **Red herring:** the string `PlayerHookshotAimStick` is passed to `main+0xa44760` together with the actor,
   strength 1.0 and duration −1. It's a vibration request (the aim rumble), not an input mode.
 
+**Which items aim, and how to tell (all from per-frame recordings)**
+- **Which items use gyro at all:** `Pack/Actor/PlayerCamera.pack.zs` (a SARC, zstd with `pack.zsdic`) holds one
+  `game__camera__PlayerCameraParamAiming` file per aiming camera: `Bow`, `Bow_Child` (the slingshot), `Boomerang`,
+  `Hookshot`, `FishingRod`, `FishingRod_Child`, plus `*LockOn` variants. `Bow` and `FishingRod` override
+  `LatGyroScale`/`LngGyroScale`; the others take the defaults, and a param file stores only overrides, so a missing
+  key does not mean "no gyro". There is no first-person look camera, so the game uses motion only while an item
+  aims.
+- **The controlled Link object:** `[[[[[main+0x4c7e0d0]]+0x470]+0x18]+0x270]+0x358` (class `main+0x4b4dfc0`
+  checked). The component at `actor+0x270` points back to Link at `+0x358`, found by searching every recorded
+  region for Link's own pointer.
+- **Hookshot / longshot:** camera settings word bit 32 (above).
+- **Bow, slingshot, boomerang: Link `+0xf84`, the item or action in use.** 3 bow *and* slingshot drawn, 4 hookshot
+  aim, 5 boomerang aim, **1 and 2 a sword swing**, 0 otherwise (idle, walking, shielding, lock-on). Drawing the bow
+  changes neither the camera word nor Link's state (it stays 40 Wait). Gate on exact values, never on non-zero.
+- **Fishing rod: Link `+0xe58`, a phase word.** `0x400` rod held, `0x01000000` the cast aimed (RT/ZR held), then
+  `0x02000000` the throw, `0x08000000` lure flying, `0x10000000` line in the water, `0x20000000`/`0x40000000`
+  reeling and a fish on. Neither `+0xf84` nor the camera word changes during the cast aim. Link's state is 52 for
+  the whole of fishing.
+- **Other camera word bits:** 37 = the fishing line is out (not the aim), 47+23 = lock-on (state 65), 47+23+25+26 =
+  shield (state 65), 16 flashes about 0.6 s after every load, 60/61 flash during loads.
+- **Link state ids met:** 5 HookshotShoot, 40 Wait, 52 fishing, 65 lock-on/shield, 99 Rolling.
+
 **Vibration**
 - On 1.1.1 the game sends HD-rumble values tuned for the Switch 2's actuators
   (`IsOunceVibrationDeviceMounted` returns true). Most amplitudes are under 0.05, so a plain amp → motor map feels
@@ -199,6 +226,23 @@ Addresses are 1.1.1 `main` offsets (base 0x7000000000).
      so the frame rate and the stick setting cancel out.
    - Bias is learnt only while the accelerometer reads 1 G and the rate stays slow for a second.
    - While it runs, the game's six-axis read is handed a controller at rest, so the game's own gyro adds nothing.
+     With "when the game allows", the game gets the real motion only while no detected item aims, so its own gyro
+     still covers anything undetected but never stacks with ours.
+   - **Every sensor report, not the newest:** SDL sends one `SDL_EVENT_GAMEPAD_SENSOR_UPDATE` per report during
+     `SDL_UpdateGamepads`, with the controller's `sensor_timestamp`. NX2navi had those events disabled (nothing reads
+     SDL's queue on Windows). Enable them and install `SDL_SetEventFilter`: keep the motion pad's gyro readings
+     (with the newest accelerometer) in a ring and return false, so nothing is queued. The motion thread drains the
+     ring every 4 ms and integrates each reading over its own timestamp gap. A DualSense over USB reports at 250 Hz
+     in SDL here; a faster controller loses nothing.
+   - **Gyro spaces** (w = rad/s in the Switch frame: x right, y toward the top edge, z out of the face; up = the
+     fusion's up vector):
+     - world: yaw = −w·up; pitch = w on the level left-right axis, x − up·(up·x) normalised.
+     - local yaw: yaw = −w.z; local roll: yaw = +w.y (the right side going down turns right); yaw + roll: w.y − w.z.
+       Pitch = w.x.
+     - laser pointer: world yaw, and pitch = the change of asin(up.y), the top edge's elevation, so pointing back
+       returns exactly (gravity-referenced, no drift). No dead zone or tightening.
+   - **Dead zone and tightening** act on the turn's speed before the sensitivities; tightening scales a turn
+     slower than the threshold in proportion to its speed, which fades tremor without an edge.
 8. **DualSense HD rumble:**
    - The DSP is adapted from RenHDrum (MIT/Apache-2.0); keep its copyright line and add a third-party notice.
    - Over USB a DualSense is also a 4-channel 48 kHz audio device; channels 3 and 4 drive the left and right
@@ -217,14 +261,20 @@ Addresses are 1.1.1 `main` offsets (base 0x7000000000).
 - **Unit tests:** `tests/sprint_check.py` and `tests/minimap_check.py`, against stand-in Link and screen
   objects. Each in-game bug was first reproduced as a failing test case, then fixed.
 - **Patch tables:** checked against the real `main` with the generator's own checker, every NX2navi version.
-- **Gyro:** the user played the hookshot aim with the gyro in "only while aiming" mode, and it works.
+- **Gyro:** the user played the hookshot, bow, slingshot, boomerang and fishing rod's cast with the gyro in
+  "when the game allows", with the game's fallback switched off for the rod test so only ours could move it. Sword
+  swings, shielding, lock-on, walking and the line in the water leave it off. Every gyro space was tried, and the
+  game's own gyro (Original) felt the same after the every-report change.
+  - `tests/gyro_mouse_check.py` also checks world space's level pitch, the local spaces, and the laser pointer
+    tilting up 10° and back to exactly 0 with no rate input.
   - A 50 s per-frame memory recording (below) gave the aim flag and the 1:1 linear response, with numbers.
   - `tests/gyro_mouse_check.py` checks the player-space yaw held flat, upright and between, pitch, both
     sensitivities, bias learning and the turn dropped during menus.
 - **HD rumble:** played on a USB DualSense ("works very well"). `tests/rumble_haptics_check.py` checks the curve,
   sines, ceiling, glide, accent and peak hold.
-- **Not verified:** the bow and slingshot setting the same aim bit (only the hookshot was recorded), whether the
-  game's sensitivity option scales the aim as well as the camera, and HD rumble over Bluetooth (the motors are
+- **Not verified:** whether the game's sensitivity option scales the aim as well as the camera, whether the item
+  and fishing words keep their offsets in other game versions, aiming the bow while locked on (expected 3), the
+  launcher downgrade against real GitHub releases, and HD rumble over Bluetooth (the motors are
   kept there). Also whether `+0x2359` (the event display flag) is meaningful on Pro, the latest
   conversation/event fix (pending a user re-test), and NX2navi versions other than 0.9.1, 0.9.2, 0.10.0 and
   0.10.1.
@@ -289,19 +339,40 @@ Addresses are 1.1.1 `main` offsets (base 0x7000000000).
 17. **HD rumble on a DualSense felt weak or missed short ticks.** **Cause:** Switch 2-tuned tiny amplitudes, and
     single-update values falling between audio callbacks. **Fix:** the lift curve plus sqrt, and peak hold per
     256-frame slot.
+18. **The bow gate was wrong twice.** **Cause:** camera-word bits 25 and then 16 were guessed from narrow change
+    logs; 25 is the shield's and 16 flashes after every load. **Fix:** the full recorder (Gotcha 14) found Link
+    `+0xf84` in one test.
+19. **Sword swings turned the gyro on.** **Cause:** the gate took any non-zero `+0xf84`, assuming it was an aim
+    flag; it is the item or action in use, and a swing sets 1 or 2. **Fix:** exact values 3, 4, 5. The always-on
+    "aiming on/off (Link's aim N)" log line showed the values from the user's own play.
+20. **The fishing rod gate never fired.** **Cause:** a camera-word change log showed bit 37 appearing once per cast,
+    so it looked like the aim; it is set from the throw while the line is out, the opposite half. **Fix:** a full
+    recording with buttons labelled (RT held = aim) found Link `+0xe58` bit 24. Two narrow guesses had cost two
+    test rounds each; the user's rule since: always record broadly first, a heavier test build is fine.
+21. **Testing a fix while a fallback can hide it.** **Cause:** with the game's own gyro still live, a gate that
+    does not fire looks like it works. **Fix:** switch the fallback off in a test build so only the new path can
+    move the aim.
+22. **A downgraded launcher would re-install the newer version.** **Cause:** after a downgrade the *older*
+    launcher runs, which knows nothing of a new "hold" setting. **Fix:** reuse the existing `rolled_back` key,
+    which every launcher since 0.6.1 honours, and remove releases staged in the background.
+23. **A test of the gyro's first take read nothing.** **Cause:** `gyro_mouse_take` drops the first take (no earlier
+    one to measure staleness against), by design for menus. **Fix:** prime with one take before feeding.
 
 ## Assets
 None.
 
 ## Cost and time
 Several sessions over 3 days, including a cheat-cave prototype, a native rewrite and three NX2navi version
-moves. The gyro aim took about 8 play-test rounds, 5 of which a full recording would have saved.
+moves. The gyro aim took about 8 play-test rounds, 5 of which a full recording would have saved. The later items
+went faster: the bow took two wrong guesses then one recording, the boomerang one log round, the fishing rod two
+wrong guesses then one recording.
 
 ## Open questions
 - The meaning of `+0x2359` on Pro, and whether respecting it would be a cleaner event gate.
 - A shared "gameplay" signal in NX2navi (sprint and minimap each keep their own Link-update heartbeat).
 - The minimap's contents when force-opened on Pro looked right in the user's tests, but they are not checked
   in every area type (indoors, dungeon floors).
-- Whether the bow, slingshot and other aimed items set the camera's bit 32 like the hookshot.
+- Whether the item-in-use word (`+0xf84`) has values for magic (Din's Fire, Farore's Wind) or other actions
+  that should, or should not, count as aiming.
 - The aim's vertical rate per unit of `+0x53c` (only the horizontal was measured), and the ~3% gap between the
   aim (1.83°/frame) and camera (1.78°/frame) rates.
