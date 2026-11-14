@@ -9455,7 +9455,7 @@
  {
   "path": "games/the-legend-of-zelda-ocarina-of-time-switch-2/sprint-button-and-minimap-toggle-as-nx2navi-recomp-runtime-f.md",
   "kind": "game",
-  "title": "Sprint button and minimap toggle as NX2navi recomp runtime features (OoT Switch 2 1.1.1)",
+  "title": "Sprint button, minimap toggle, mouse-style gyro aim and DualSense HD rumble as NX2navi runtime features (OoT Switch 2 1.1.1)",
   "game": "The Legend of Zelda: Ocarina of Time (Switch 2)",
   "games_also": [],
   "game_version": "1.1.1 (main build id E0F3CCFAF50065AE) via the NX2navi static recompiler 0.9.1 to 0.10.1, Windows",
@@ -9468,7 +9468,8 @@
    "numpy",
    "mmh3",
    "zstandard",
-   "MSYS2 UCRT64 clang"
+   "MSYS2 UCRT64 clang",
+   "SDL3 (audio + gamepad sensors)"
   ],
   "anti_cheat": "none (single-player, offline recompiled exe)",
   "status": "working",
@@ -9483,7 +9484,10 @@
    "https://github.com/tangerineturtle1/NX2navi",
    "https://github.com/tangerineturtle1/NX2navi/pull/752",
    "https://github.com/tangerineturtle1/NX2navi/pull/870",
-   "https://gamebanana.com/mods/737688"
+   "https://github.com/tangerineturtle1/NX2navi/pull/887",
+   "https://github.com/tangerineturtle1/NX2navi/pull/892",
+   "https://gamebanana.com/mods/737688",
+   "https://github.com/trzz1214/RenHDrum"
   ],
   "tags": [
    "static-recompilation",
@@ -9496,7 +9500,12 @@
    "eui",
    "ainb",
    "gamedata",
-   "murmur3"
+   "murmur3",
+   "gyro",
+   "player-space",
+   "haptics",
+   "dualsense",
+   "memory-snapshot"
   ]
  },
  {
