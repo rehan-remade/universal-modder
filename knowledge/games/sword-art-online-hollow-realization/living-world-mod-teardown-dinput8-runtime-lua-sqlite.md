@@ -13,13 +13,14 @@ status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["BinaryNull"]
 date: 2026-11-14
-links: []
+links: ["https://www.patreon.com/cw/Reignenn/home"]
 tags: [teardown, third-party-mod, proxy-dll, dinput8, lua, sqlite, death-mode, living-world, npc-simulation, guild, party, cri-cpk, crilayla, ofs3, phyre, block-patch, call-site-hook, vtable-hook, fail-closed]
 ---
 
 # Inside the SAOHR Living World mod (Supporter DeathMode 0.3.1 test build)
 
-> A teardown of someone else's mod, not one we built. The "SAOHR Living World" mod (this build:
+> A teardown of someone else's mod, not one we built. The "SAOHR Living World" mod is by **Reignenn**, who
+> publishes it on Patreon (<https://www.patreon.com/cw/Reignenn/home>); get the mod from there (this build:
 > *Supporter DeathMode 0.3.1-test.20261028.5*) turns SAO:HR into a permadeath game with a persistent NPC
 > world. It has two halves. A 13.5 MB `dinput8.dll` proxy hooks hundreds of game functions in memory and
 > runs embedded Lua 5.5 and SQLite. Hash-pinned block patches to `pkg/usa.cpk` add a Guild menu, a
@@ -35,8 +36,8 @@ tags: [teardown, third-party-mod, proxy-dll, dinput8, lua, sqlite, death-mode, l
   `title-assets\` and `guild-assets\`, and PowerShell + bash installers (bash for Proton / Steam Deck).
 - The mod comes in three editions (Community / Supporter / Beater) × three rulesets (DeathMode / LevelOne /
   RegularDeath). Each pair has its own runtime folder `saohr_<edition>_<ruleset>` and its own world database.
-- The build manifest names a source branch `codex/supporter-systems-audit-20261028`. The original author is not
-  named anywhere in the package.
+- The build manifest names a source branch `codex/supporter-systems-audit-20261028`. The package itself does not name
+  its author; the mod is by Reignenn (Patreon link above).
 
 ## Route and why
 - **In-memory hooks from a proxy DLL** (`native-hook`) do all of the logic. The exe on disk is never touched.
@@ -194,4 +195,3 @@ One session (2026-11-14), read-only analysis.
 ## Open questions
 - What the hooked functions are (`0x2A1060`, `0x2321A0`, `0x260B80`, `0x29F8B0`, `0x234410`) in game terms. Names
   are inferred from the mod's log messages only.
-- Who the original author is, for credit.
