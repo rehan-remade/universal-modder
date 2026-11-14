@@ -2939,6 +2939,181 @@
   ]
  },
  {
+  "path": "games/dishonored-2/domino-phantasmal-link-past-4-targets.md",
+  "kind": "game",
+  "title": "Domino (Phantasmal Link) past 4 targets: a 5-byte exe patch",
+  "game": "Dishonored 2",
+  "games_also": [],
+  "game_version": "GOG (DRM-free), Dishonored2.exe 42,591,232 bytes, PE timestamp 0x5c050611 (2018-12-03), x64",
+  "platform": "windows",
+  "engine": "idtech",
+  "route": "native-hook",
+  "tools": [
+   "python 3.15",
+   "pefile",
+   "capstone",
+   "numpy",
+   "Cheat Engine",
+   "universal-modder um"
+  ],
+  "anti_cheat": "none (single-player, GOG build has no DRM)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-14",
+  "links": [
+   "https://github.com/chipolux/disrev"
+  ],
+  "tags": [
+   "void-engine",
+   "idtech5",
+   "domino",
+   "phantasmal-link",
+   "hard-coded-limit",
+   "idlist",
+   "fixed-pool",
+   "exe-patch",
+   "resources-index"
+  ]
+ },
+ {
+  "path": "games/dishonored-2/gog-exe-fixes-with-an-added-code-section.md",
+  "kind": "game",
+  "title": "Seventeen hard-coded fixes as one on-disk exe patcher with an added code section (GOG build)",
+  "game": "Dishonored 2",
+  "games_also": [
+   "Dishonored: Death of the Outsider"
+  ],
+  "game_version": "GOG (DRM-free), Dishonored2.exe 42,591,232 bytes, PE timestamp 0x5c050611 (2018-12-03), x64",
+  "platform": "windows",
+  "engine": "idtech",
+  "route": "native-hook",
+  "tools": [
+   "python 3.15",
+   "pefile",
+   "capstone",
+   "keystone-engine",
+   "numpy",
+   "Cheat Engine",
+   "universal-modder um"
+  ],
+  "anti_cheat": "none (single-player, GOG build has no DRM)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-14",
+  "links": [],
+  "tags": [
+   "void-engine",
+   "idtech5",
+   "exe-patch",
+   "pe-section",
+   "code-cave",
+   "keystone",
+   "powers",
+   "blink",
+   "far-reach",
+   "wwise",
+   "occlusion",
+   "havok",
+   "cvars",
+   "ai-awareness",
+   "player-state-machine",
+   "live-probe"
+  ]
+ },
+ {
+  "path": "games/dishonored-2/iggy-ui-bytecode-patches-and-decl-findings.md",
+  "kind": "game",
+  "title": "Iggy UI bytecode patches (same-length AVM2 rewrites) and decl, material and map findings",
+  "game": "Dishonored 2",
+  "games_also": [
+   "Dishonored: Death of the Outsider"
+  ],
+  "game_version": "GOG (DRM-free), Dishonored2.exe PE timestamp 0x5c050611; DOTO GOG Dishonored_DO.exe 0x5c0584aa",
+  "platform": "windows",
+  "engine": "idtech",
+  "route": "data",
+  "tools": [
+   "python 3.15",
+   "own AVM2 disassembler and re-encoder",
+   "zlib",
+   "the user's resource export/import tool"
+  ],
+  "anti_cheat": "none (single-player, GOG build has no DRM)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-14",
+  "links": [
+   "https://github.com/chipolux/disrev",
+   "https://www.nexusmods.com/dishonored2/mods/30",
+   "https://www.nexusmods.com/dishonored2/mods/31"
+  ],
+  "tags": [
+   "void-engine",
+   "idtech5",
+   "iggy",
+   "avm2",
+   "as3",
+   "flash-ui",
+   "decl",
+   "materials",
+   "dark-vision",
+   "resources-index",
+   "voidmod",
+   "physhape"
+  ]
+ },
+ {
+  "path": "games/dishonored-death-of-the-outsider/porting-dishonored-2-exe-fixes-to-death-of-the-outsider.md",
+  "kind": "game",
+  "title": "Porting Dishonored 2 exe fixes to Death of the Outsider, plus Displace and Blink marker smoothing (GOG)",
+  "game": "Dishonored: Death of the Outsider",
+  "games_also": [
+   "Dishonored 2"
+  ],
+  "game_version": "GOG (DRM-free), Dishonored_DO.exe 43,757,056 bytes, PE timestamp 0x5c0584aa (2018-12-04), x64",
+  "platform": "windows",
+  "engine": "idtech",
+  "route": "native-hook",
+  "tools": [
+   "python 3.15",
+   "pefile",
+   "capstone",
+   "keystone-engine",
+   "Cheat Engine",
+   "universal-modder um"
+  ],
+  "anti_cheat": "none (single-player, GOG build has no DRM)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-14",
+  "links": [],
+  "tags": [
+   "void-engine",
+   "idtech5",
+   "exe-patch",
+   "pe-section",
+   "port",
+   "displace",
+   "blink",
+   "fx-markers",
+   "results-chart",
+   "sliding",
+   "live-probe"
+  ]
+ },
+ {
   "path": "games/don-t-starve-together/lua-weapon-item.md",
   "kind": "game",
   "title": "Official Lua mod API: a new weapon item",
