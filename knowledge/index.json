@@ -8727,6 +8727,53 @@
   ]
  },
  {
+  "path": "games/sword-art-online-hollow-realization/living-world-mod-teardown-dinput8-runtime-lua-sqlite.md",
+  "kind": "game",
+  "title": "Inside the SAOHR Living World mod (Supporter DeathMode 0.3.1 test build): a dinput8.dll runtime with embedded Lua and SQLite, plus hash-pinned usa.cpk block patches",
+  "game": "Sword Art Online: Hollow Realization Deluxe Edition",
+  "games_also": [],
+  "game_version": "Steam app 607890, sao_hr.exe PE timestamp 0x59DF33EF, SizeOfImage 0x10A2000, SHA-256 1923F0D8D2CAD559D6AD6E001AF54EA5EA5AA70171323F42D4E1FA3D63699E43; mod package SAOHR-Supporter-DeathMode-0.3.1-test.20261028.5 (dinput8.dll SHA-256 36A89D71...7F8C5); Windows 11 Pro 26100",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "Python 3.11 + pefile + capstone (PE, exports, call-site disassembly)",
+   "own CRI CPK @UTF / CRILAYLA / OFS3 readers (from the Zero EXP note)",
+   "reading the mod's own PowerShell installers, Lua policy and runtime log"
+  ],
+  "anti_cheat": "none; single-player. Analysis only: nothing was patched, run or redistributed by us. The mod itself changes the exe only in memory, and changes pkg/usa.cpk on disk after checking its hash.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "BinaryNull"
+  ],
+  "date": "2026-11-14",
+  "links": [],
+  "tags": [
+   "teardown",
+   "third-party-mod",
+   "proxy-dll",
+   "dinput8",
+   "lua",
+   "sqlite",
+   "death-mode",
+   "living-world",
+   "npc-simulation",
+   "guild",
+   "party",
+   "cri-cpk",
+   "crilayla",
+   "ofs3",
+   "phyre",
+   "block-patch",
+   "call-site-hook",
+   "vtable-hook",
+   "fail-closed"
+  ]
+ },
+ {
   "path": "games/sword-art-online-hollow-realization/smith-radar-percent-winmm-proxy.md",
   "kind": "game",
   "title": "Smith Radar Percent: blacksmith stats as percentages on the Craftsman Data radar (winmm.dll proxy), plus the enhancement formula",
@@ -8758,6 +8805,45 @@
    "winmm",
    "code-cave",
    "localize-msg"
+  ]
+ },
+ {
+  "path": "games/sword-art-online-hollow-realization/ssc-counter-dbghelp-proxy-save-skill-progress.md",
+  "kind": "game",
+  "title": "SSC Counter: the save's hidden Sword Skill Connect combo total shown on the Status screen (dbghelp.dll proxy)",
+  "game": "Sword Art Online: Hollow Realization Deluxe Edition",
+  "games_also": [],
+  "game_version": "Steam app 607890, sao_hr.exe PE timestamp 0x59DF33EF, SizeOfImage 0x10A2000, SHA-256 1923F0D8D2CAD559D6AD6E001AF54EA5EA5AA70171323F42D4E1FA3D63699E43; Windows 11 Pro 26100",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "MSVC 2022 Build Tools (dbghelp.dll proxy, /MT)",
+   "Capstone (disassembly)",
+   "Keystone (assembling stubs)",
+   "OFS3 TOOL by Liquid-S",
+   "CriPakTools (CRILAYLA reference)"
+  ],
+  "anti_cheat": "none; single-player. The exe on disk, game data and saves are never modified; one call is redirected in memory.",
+  "status": "released",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "BinaryNull"
+  ],
+  "date": "2026-11-14",
+  "links": [],
+  "tags": [
+   "ssc",
+   "sword-skill-connect",
+   "ui",
+   "status-screen",
+   "proxy-dll",
+   "dbghelp",
+   "code-cave",
+   "skill-unlocks",
+   "save-data"
   ]
  },
  {
@@ -8800,45 +8886,6 @@
    "proxy-dll",
    "dinput8",
    "patcher"
-  ]
- },
- {
-  "path": "games/sword-art-online-hollow-realization/ssc-counter-dbghelp-proxy-save-skill-progress.md",
-  "kind": "game",
-  "title": "SSC Counter: the save's hidden Sword Skill Connect combo total shown on the Status screen (dbghelp.dll proxy)",
-  "game": "Sword Art Online: Hollow Realization Deluxe Edition",
-  "games_also": [],
-  "game_version": "Steam app 607890, sao_hr.exe PE timestamp 0x59DF33EF, SizeOfImage 0x10A2000, SHA-256 1923F0D8D2CAD559D6AD6E001AF54EA5EA5AA70171323F42D4E1FA3D63699E43; Windows 11 Pro 26100",
-  "platform": "windows",
-  "engine": "native",
-  "route": "native-hook",
-  "tools": [
-   "MSVC 2022 Build Tools (dbghelp.dll proxy, /MT)",
-   "Capstone (disassembly)",
-   "Keystone (assembling stubs)",
-   "OFS3 TOOL by Liquid-S",
-   "CriPakTools (CRILAYLA reference)"
-  ],
-  "anti_cheat": "none; single-player. The exe on disk, game data and saves are never modified; one call is redirected in memory.",
-  "status": "released",
-  "agents": [
-   "Claude Code (Opus 5.5)"
-  ],
-  "humans": [
-   "BinaryNull"
-  ],
-  "date": "2026-11-14",
-  "links": [],
-  "tags": [
-   "ssc",
-   "sword-skill-connect",
-   "ui",
-   "status-screen",
-   "proxy-dll",
-   "dbghelp",
-   "code-cave",
-   "skill-unlocks",
-   "save-data"
   ]
  },
  {
