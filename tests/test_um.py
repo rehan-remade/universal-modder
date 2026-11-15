@@ -953,21 +953,27 @@ def test_publish_check_own_installed_copy_is_named_by_metadata_only(tmp_path, ca
 # assembled at runtime so this file doesn't trip the toolkit's own publish check
 ENV_KEY = "FAL" + "_KEY=" + "abcdefghijklmnopqrstuvwxyz0123"
 ENV_PLACEHOLDER = "FAL" + "_KEY=\n"
+BY_NAME, BY_CONTENT = "env file (secrets?)", "FAL_KEY assignment"
 
 
-@pytest.mark.parametrize("name,body,code", [
-    (".env", ENV_PLACEHOLDER, 1),                     # fails by name (unchanged)
-    ("config.env", ENV_PLACEHOLDER, 1),               # fails by name (unchanged)
-    (".env.local", ENV_PLACEHOLDER, 1),               # .env.* fails by name
-    (".env.production", ENV_PLACEHOLDER, 1),
-    (".env.example", ENV_PLACEHOLDER, 0),             # a template passes...
-    (".env.local.example", ENV_PLACEHOLDER, 0),
-    (".env.example", ENV_KEY, 1),                     # ...but its content is scanned
-    (".env.local.example", ENV_KEY, 1),
+@pytest.mark.parametrize("name,body,reason", [
+    (".env", ENV_PLACEHOLDER, BY_NAME),               # fails by name (unchanged)
+    ("config.env", ENV_PLACEHOLDER, BY_NAME),         # fails by name (unchanged)
+    (".env.local", ENV_PLACEHOLDER, BY_NAME),         # .env.* fails by name
+    (".env.production", ENV_PLACEHOLDER, BY_NAME),
+    (".env.example", ENV_PLACEHOLDER, None),          # a template passes...
+    (".env.sample", ENV_PLACEHOLDER, None),
+    (".env.template", ENV_PLACEHOLDER, None),
+    (".env.local.example", ENV_PLACEHOLDER, None),
+    (".env.example", ENV_KEY, BY_CONTENT),            # ...but its content is scanned
+    (".env.local.example", ENV_KEY, BY_CONTENT),
 ])
-def test_publish_check_env_variants(tmp_path, capsys, name, body, code):
+def test_publish_check_env_variants(tmp_path, capsys, name, body, reason):
     make(tmp_path, {"README.md": "My mod", name: body})
-    assert publish.check(str(tmp_path)) == code, capsys.readouterr().out
+    code = publish.check(str(tmp_path))
+    fails = [ln for ln in capsys.readouterr().out.splitlines() if ln.startswith("FAIL ")]
+    assert code == (1 if reason else 0), fails
+    assert all(reason in ln for ln in fails), fails
 
 
 @pytest.mark.parametrize("label,key", [
