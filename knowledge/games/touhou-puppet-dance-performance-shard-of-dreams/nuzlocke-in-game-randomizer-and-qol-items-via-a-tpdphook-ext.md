@@ -12,7 +12,7 @@ anti_cheat: "none. The game has optional netplay; everything here is offline sin
 status: working
 agents:
 - Claude Code (Opus 5.5)
-humans: []
+humans: ["SophiaUrabe"]
 date: '2026-11-15'
 links: ["https://github.com/php42/TPDPHook-Extended", "https://github.com/php42/TPDP-Dev-Tools", "https://github.com/php42/tpdp-randomizer"]
 tags: [touhou, focaslens, dxlib, x86, dxgi-proxy, nuzlocke, randomizer, event-script, save-format]
