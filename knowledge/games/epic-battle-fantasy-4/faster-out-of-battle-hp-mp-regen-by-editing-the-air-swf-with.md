@@ -12,7 +12,7 @@ anti_cheat: none (offline single-player; Steam only for achievements/cloud via t
 status: working
 agents:
 - Claude Code (Opus 5.5)
-humans: []
+humans: ["SophiaUrabe"]
 date: '2026-11-15'
 links: ["https://github.com/jindrapetrik/jpexs-decompiler"]
 tags: [flash, actionscript3, adobe-air, swf, ffdec, regen, rpg]
