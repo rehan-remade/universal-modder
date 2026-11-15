@@ -45,6 +45,12 @@ SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", ".pytest_ca
 TEXT_EXT = {".cs", ".c", ".cpp", ".h", ".hpp", ".py", ".lua", ".js", ".ts", ".json", ".toml", ".ini", ".cfg", ".txt", ".md", ".xml",
             ".yaml", ".yml", ".rs", ".java", ".kt", ".gd", ".rpy", ".psc", ".sh", ".ps1", ".bat", ".gml", ".hlsl", ".glsl", ".env"}
 ARCHIVE_EXT = {".pak", ".utoc", ".ucas", ".bsa", ".ba2", ".vpk", ".rpf", ".pck", ".assets", ".bundle", ".sga", ".big", ".wad", ".bdt", ".archive"}
+ENV_TEMPLATE_EXT = {".example", ".sample", ".template"}
+
+
+def _is_env_file(name: str) -> bool:
+    """.env, config.env and .env.local / .env.production (not .envrc)."""
+    return name == ".env" or name.endswith(".env") or name.startswith(".env.")
 
 
 def _sha1(p: Path) -> str:
@@ -138,11 +144,11 @@ def check(mod: str, game: str | None = None) -> int:
                     break
     for f in files:
         rel = f.relative_to(root).as_posix()        # same report on every OS (Windows would print src\Mod.cs)
-        if f.name == ".env" or f.name.endswith(".env"):
+        if _is_env_file(f.name) and f.suffix.lower() not in ENV_TEMPLATE_EXT:
             fails.append(f"env file (secrets?): {rel}")
         if f.suffix.lower() in ARCHIVE_EXT and f.stat().st_size > 5 << 20:
             warns.append(f"large engine archive ({f.stat().st_size >> 20} MB): {rel} - make sure it holds only your own assets")
-        if f.suffix.lower() in TEXT_EXT or f.name in (".env",):
+        if f.suffix.lower() in TEXT_EXT or _is_env_file(f.name):
             try:
                 txt = f.read_text(errors="replace")
             except OSError:

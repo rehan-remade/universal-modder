@@ -950,6 +950,26 @@ def test_publish_check_own_installed_copy_is_named_by_metadata_only(tmp_path, ca
     assert publish._own_names([tmp_path / "mod" / "src/N7Plugin.csproj"]) == {"n7"}
 
 
+# assembled at runtime so this file doesn't trip the toolkit's own publish check
+ENV_KEY = "FAL" + "_KEY=" + "abcdefghijklmnopqrstuvwxyz0123"
+ENV_PLACEHOLDER = "FAL" + "_KEY=\n"
+
+
+@pytest.mark.parametrize("name,body,code", [
+    (".env", ENV_PLACEHOLDER, 1),                     # fails by name (unchanged)
+    ("config.env", ENV_PLACEHOLDER, 1),               # fails by name (unchanged)
+    (".env.local", ENV_PLACEHOLDER, 1),               # .env.* fails by name
+    (".env.production", ENV_PLACEHOLDER, 1),
+    (".env.example", ENV_PLACEHOLDER, 0),             # a template passes...
+    (".env.local.example", ENV_PLACEHOLDER, 0),
+    (".env.example", ENV_KEY, 1),                     # ...but its content is scanned
+    (".env.local.example", ENV_KEY, 1),
+])
+def test_publish_check_env_variants(tmp_path, capsys, name, body, code):
+    make(tmp_path, {"README.md": "My mod", name: body})
+    assert publish.check(str(tmp_path)) == code, capsys.readouterr().out
+
+
 @pytest.mark.parametrize("label,key", [
     # assembled at runtime so this file doesn't trip the toolkit's own publish check
     ("OpenAI key", "sk-" + "proj-" + "Ab3_dE-f" + "Gh1jK2lM3nO4pQ5rS6tU7vW8xY9z0" * 4),
