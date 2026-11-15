@@ -49,8 +49,9 @@ ENV_TEMPLATE_EXT = {".example", ".sample", ".template"}
 
 
 def _is_env_file(name: str) -> bool:
-    """.env, config.env and .env.local / .env.production (not .envrc)."""
-    return name == ".env" or name.endswith(".env") or name.startswith(".env.")
+    """.env, config.env and .env.local / .env.production (not .envrc), in any case."""
+    low = name.lower()
+    return low == ".env" or low.endswith(".env") or low.startswith(".env.")
 
 
 def _sha1(p: Path) -> str:

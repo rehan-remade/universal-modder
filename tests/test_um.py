@@ -961,6 +961,8 @@ BY_NAME, BY_CONTENT = "env file (secrets?)", "FAL_KEY assignment"
     ("config.env", ENV_PLACEHOLDER, BY_NAME),         # fails by name (unchanged)
     (".env.local", ENV_PLACEHOLDER, BY_NAME),         # .env.* fails by name
     (".env.production", ENV_PLACEHOLDER, BY_NAME),
+    (".ENV.local", ENV_PLACEHOLDER, BY_NAME),         # any case
+    ("Config.ENV", ENV_PLACEHOLDER, BY_NAME),
     (".env.example", ENV_PLACEHOLDER, None),          # a template passes...
     (".env.sample", ENV_PLACEHOLDER, None),
     (".env.template", ENV_PLACEHOLDER, None),
