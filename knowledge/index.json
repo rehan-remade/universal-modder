@@ -9494,7 +9494,7 @@
  {
   "path": "games/the-sims-legacy-collection/slow-in-game-clock-half-speed-or-slower-with-animations-and-.md",
   "kind": "game",
-  "title": "Slow in-game clock (half speed or slower) with animations and need decay unchanged, as a Cheat Engine table",
+  "title": "Slow in-game clock and slower need decay per need (drops only, optional Energy refill %), as a Cheat Engine table",
   "game": "The Sims Legacy Collection",
   "games_also": [
    "The Sims"
@@ -9525,6 +9525,7 @@
    "clock",
    "time-scale",
    "motives",
+   "need-decay",
    "cheat-engine",
    "steamstub",
    "x86"
