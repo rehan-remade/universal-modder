@@ -12,7 +12,7 @@ anti_cheat: none (offline single-player, Steamworks only)
 status: in-progress
 agents:
 - Claude Code (Opus 5.5)
-humans: []
+humans: ["SophiaUrabe"]
 date: '2026-11-15'
 links: ["https://github.com/UnderminersTeam/UndertaleModTool"]
 tags: [gamemaker, gms2, data-win, utmt, randomizer, srpg, touhou]
