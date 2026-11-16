@@ -14,13 +14,16 @@ tools:
 - "wwise-cli 0.2.4 (Wwise 2025.1.6.9117, integration 2025.1.6.4248)"
 - "UE Python editor scripting (asset authoring)"
 - "um win (shot/drive), um backup, um publish check"
-anti_cheat: "none (single-player save; client-side visual mod, RequiredOnRemote false)"
+anti_cheat: "none (Satisfactory has no anti-cheat; client-side visual mod, RequiredOnRemote false)"
 status: working
 agents:
 - Claude Code (Opus 5.5)
 humans: []
 date: '2026-11-11'
-links: []
+links:
+- https://github.com/satisfactorymodding/SatisfactoryModLoader
+- https://docs.ficsit.app/satisfactory-modding/latest/Development/UpdatingFromSml311.html
+- https://github.com/mircearoata/wwise-cli
 tags: [hologram, build-mode, options-menu, fgusersetting, game-features, post-process, custom-depth-stencil, translucency, dynamic-material-instance, smart-app-control]
 ---
 # Working hologram opacity slider in the vanilla Options menu (SML 3.12 C++ mod)
@@ -32,8 +35,12 @@ tags: [hologram, build-mode, options-menu, fgusersetting, game-features, post-pr
 > 100/75/50/25/0% and after setting 48% through the real slider.
 
 ## Setup
-- Satisfactory 1.2.5.0, CL 517554, UE 5.6.1 CSS fork, modular build with PDBs. SML 3.12.0 installed by SMM; mods live
-  in `FactoryGame/Mods/GameFeatures/<Mod>` and must be Game Feature plugins.
+- Satisfactory 1.2.5.0, CL 517554, UE 5.6.1 CSS fork, modular build with PDBs. SML 3.12.0 installed by SMM; since 1.2
+  a mod with content is a Game Feature plugin in `FactoryGame/Mods/GameFeatures/<Mod>` (SML's
+  [3.11 -> 3.12 guide](https://docs.ficsit.app/satisfactory-modding/latest/Development/UpdatingFromSml311.html) exempts
+  only pure scripting libraries).
+- Multiplayer: Satisfactory is co-op with no PvP, and the mod only changes how holograms look on your own screen
+  (`RequiredOnRemote: false`), so it's fine in any session you join. A multiplayer client wasn't tested.
 - Official toolchain: VS 2022 17.14 from `SML.vsconfig` (`vs_community.exe --config SML.vsconfig --passive --wait`),
   UE 5.6.1-CSS from the satisfactorymodding/UnrealEngine release (needs GitHub linked to Epic + linker.ficsit.app;
   Inno Setup installer accepts `/SILENT /DIR=...`), starter project `master` at "Update headers to CL517554".
@@ -115,10 +122,11 @@ and a hand-rolled headerless module was considered but the official toolchain gi
    (~75% coverage at 50%). **Fix:** one-sided material; tune fresnel/line opacity boosts low (0.35 / 0.1).
 5. **Launching `FactoryGameSteam.exe` directly exits** with `Game restarting within Steam client, exiting` and Steam
    relaunches without your args (so `-ini:...?loadgame=` quick-load args are lost). **Fix:** `steam://rungameid/526870`
-   and the menu's Continue/Load, or a steam_appid.txt (not tried).
+   and the menu's Continue/Load, or a steam_appid.txt (not tried; Steamworks' developer file, which skips the restart
+   while Steam still has to be running).
 6. **um win `type` text doesn't reach the Unreal console** (VK_PACKET unicode is ignored). **Fix:** open the console
    with VK 0xC0 and send each character as a virtual-key press (`key 0x48` ...); console commands are
-   case-insensitive.
+   case-insensitive. This drives the real keyboard, so ask the human first and not while they're typing.
 7. **Windows Smart App Control (enforcing) kills the CSS editor** (`UnrealEditor-Cmd` exit 0xC0E90002,
    CodeIntegrity events 3033/3077). Game, SML and ficsit.app mod DLLs are also unsigned but pass on reputation; a
    freshly built mod DLL would not. Only the human can decide to turn it off.
@@ -128,14 +136,16 @@ and a hand-rolled headerless module was considered but the official toolchain gi
 10. **In a commandlet, `EditorAssetLibrary.load_asset` can miss assets** the registry hasn't scanned; use
     `unreal.load_asset`. The pythonscript commandlet also exits 1 when an unrelated startup error was logged
     (e.g. "GameFeatureData is missing" before the script creates it).
-12. **Packaging while the human launches the game half-uninstalls the mod.** PackagePlugin's
+11. **Packaging while the human launches the game half-uninstalls the mod.** PackagePlugin's
     `-CopyToGameDirectory_Windows` deletes the old install first, then fails on the DLL the starting game has locked.
     **Fix:** package without the copy flag, wait until the game process is gone, then extract the release zip
     (the archive step runs before the copy, so the zip is complete).
-11. **IoStore reading without third-party Oodle:** the game's Core DLL exports
-    `FOodleDataCompression::Decompress`, usable from Python ctypes; zen package summary in UE 5.6 has 15 fields
-    (Cell import/export offsets), export offsets are relative to the end of the zen header, and Satisfactory's cooked
-    assets use tagged (versioned) properties, so they parse without mappings.
+12. **IoStore reading without third-party Oodle:** the game's Core DLL exports
+    `FOodleDataCompression::Decompress`, usable from Python ctypes. A UE 5.6 zen header starts with 15 `u32`s when it
+    has no versioning info: the 13 of the summary (`FMappedName` takes two) and the two Verse cell offsets, which
+    CUE4Parse reads after the versioning info when there is some. Export offsets are relative to the end of the zen
+    header. The assets we read used tagged (versioned) properties and parsed without mappings; the game also ships
+    `CommunityResources/FactoryGame.usmap` and `CustomVersions.json`, which SML's docs have FModel load.
 
 ## Assets
 No generated art. One material authored by script (translucent, unlit, one-sided, custom depth writes, all CSS mesh
