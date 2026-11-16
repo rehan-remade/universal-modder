@@ -1,42 +1,51 @@
 ---
 kind: game
-title: "Heavy Bowgun solo cheats with an online cut-off (REFramework Lua)"
+title: "Heavy Bowgun cheats for offline single player, with a multiplayer cut-off (REFramework Lua)"
 game: "Monster Hunter Wilds"
 games_also: []
-game_version: "Steam 2246340 build 25921695 (2026-10-28 patch); REFramework nightly commit d052e8fd, TDB 81"
+game_version: "Steam 2246340, Ver.1.042.00.03 (the 2026-10-28 patch), build 25921695; REFramework nightly commit d052e8fd, TDB 81"
 platform: windows
 engine: re-engine
 route: loader-api
 tools: ["REFramework (Lua)", "Vortex (deploy)", "lupa (offline Lua syntax check + stub dry runs)"]
-anti_cheat: "none found by um scan; online lobbies/SOS exist, so every cheat switches itself off when another player is in your instance or quest (checked online by the human)"
+anti_cheat: "no client anti-cheat (Steam + Denuvo DRM, left alone); online co-op, SOS and Capcom's online Arena/Challenge Quest rankings exist, so offline single player only. The script also switches itself off when another player is in your instance or quest"
 status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: []
 date: 2026-11-08
 links: []
-tags: [weapons, bowgun, ammo, gauges, fire-rate, damage, guard, hit-hooks, motion-speed, item-pouch, solo-only]
+tags: [weapons, bowgun, ammo, gauges, fire-rate, damage, guard, hit-hooks, motion-speed, item-pouch, solo-only, offline]
 ---
 
-# Heavy Bowgun solo cheats with an online cut-off (REFramework Lua)
+# Heavy Bowgun cheats for offline single player, with a multiplayer cut-off (REFramework Lua)
 
 > One REFramework Lua script (`reframework/autorun/HBGCheat.lua`) adds toggles for the Heavy Bowgun:
 > fire-rate slider (shots and reloads), no reload, infinite pouch ammo, full Ignition gauge and Wyvernsnipe
 > ammo, damage multiplier, auto perfect block, no recoil / no flinch and instant charge. Every feature turns
-> off while another player is near you or in your quest. All of it was confirmed in the real game by the human,
+> off while another player is near you or in your quest. That's a safety net, not a way to play online: the
+> script is for offline single player (Setup). All of it was confirmed in the real game by the human,
 > over 13 versions, with logs the mod wrote as the oracle. A "load any ammo type" feature was a partial dead
 > end and was removed (Gotcha 10).
 
 ## Setup
-- Monster Hunter Wilds, Steam app 2246340, build id 25921695 (the 2026-10-28 patch), Windows 11.
+- Monster Hunter Wilds, Steam app 2246340, Ver.1.042.00.03 (the 2026-10-28 patch), build id 25921695, Windows 11.
+- **Single player, offline only.** Start the game offline (Steam in offline mode, or the PC disconnected). Since
+  Ver.1.042, event and Challenge Quests can be played offline too. "Online Single Player" is still online:
+  time-based Arena and Challenge Quests record clear times in Capcom's worldwide rankings whenever you're
+  connected. Capcom reviews those rankings and removes irregular times, and has banned cheaters there. The
+  cut-off below doesn't stop a solo run from being recorded. Never take the script into co-op, an SOS or
+  another hunter's quest, even though it switches itself off there.
 - REFramework nightly (commit `d052e8fd`, TDB version 81), installed and managed through **Vortex**. The
   LooseFileLoader fails on this build ("Failed to find via.io.file"), so loose `natives\` mods don't load; Lua does.
 - The mod ships as a Vortex zip containing only `reframework/autorun/HBGCheat.lua`, because Vortex manages
   `reframework\` and `reframework\autorun\` (Gotcha 8).
 
 ## Route and why
-`loader-api`: REFramework Lua (`sdk.hook`, `get_field`/`set_field`, `re.on_pre_application_entry`). The only
-community "infinite bowgun ammo" mod is a loose-file mod, which can't load on this REFramework build, and
-every feature here needs runtime state anyway. Work went **probe first**:
+`loader-api`: REFramework Lua (`sdk.hook`, `get_field`/`set_field`, `re.on_pre_application_entry`). A
+loose-file "infinite bowgun ammo" mod exists, but it can't load on this REFramework build. Bimmr's MHWS-Buffer,
+a REFramework Lua buff mod, also has Heavy Bowgun options (unlimited ammo, no reload, no recoil, a full Ignition
+gauge) that use the same handling fields. Every feature here needs runtime state anyway. Work went
+**probe first**:
 - A read-only probe script snapshotted the bowgun's handling object and the save's item pouch.
 - It logged every value change together with the current base/sub action, all action changes, the master
   hunter's hits on monsters, and online-looking getters on manager singletons.
@@ -193,4 +202,5 @@ that went into the abandoned load-any-ammo feature.
   unlocked? Possible places to look: a GUI-side ammo filter, `app.MainShellType`/`AmmoStrength`, or the
   weapon's `ShellList` prefab set.
 - Whether `get_InstancedPlayerNum` stays 1 in an online lobby when other hunters are far away. The cut-off
-  switched OFF when it should; the edge cases weren't mapped.
+  switched OFF when it should; the edge cases weren't mapped. It's a safety net for offline play, not a reason to
+  go online (Setup).
