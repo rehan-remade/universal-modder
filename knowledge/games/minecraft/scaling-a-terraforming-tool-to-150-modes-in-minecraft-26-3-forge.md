@@ -95,6 +95,10 @@ tags: [terraforming, undo, world-editing, file-input, regeneration, self-test, d
   - Creative-only and op-only refusals work.
   - History, undo and checkpoints survive a server restart.
 - Server tick while a warp runs: 1–8 ms.
+- **Follow-up (1.15.1, a config default change):** the same mod's escape portals used to close 10 s before a
+  world-ending event ended. Now they stay open until the destruction starts. A scripted dev client checked this with
+  a 20 s countdown: the portal was open at 8.95, 1.9 and 0.35 s left, the player crossed at about 9 s, and the portal
+  collapsed at 0 s.
 
 ## Gotchas
 1. A loop that steps by a setting (`x += spacing`) hangs the server thread when the setting is 0. Clamp the step to
@@ -115,6 +119,14 @@ tags: [terraforming, undo, world-editing, file-input, regeneration, self-test, d
 10. A dev client idling on the title screen invites a click from whoever is at the PC. Warn them beforehand.
 11. Windows needs a privilege to create symlinks, so a "link out of the folder" test can only be skipped there, not
     run.
+12. Changing a `ForgeConfigSpec` default doesn't reach players who already have the config file, because the old
+    value is written in it. To change the behaviour for everyone, define the setting under a new key (here
+    `pointOfNoReturn` = 10 became `collapseBeforeEnd` = 0). Forge then logs "Incorrect key ... was corrected from
+    null to its default" and adds it, and the stale key is simply ignored.
+13. Block entities tick only while their chunk is loaded. In single player, after the player went through the portal
+    to another dimension, a "did the portal collapse after the end?" check from there still found the portal blocks.
+    Most likely the old dimension's chunks had unloaded, so its block entity never ticked; this wasn't confirmed. A
+    second run with the player staying beside the portal saw it collapse. Run that check with the player nearby.
 
 ## Assets
 None generated. The modes use only vanilla blocks; the 3D text uses a 5x7 font drawn for the mod.
