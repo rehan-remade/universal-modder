@@ -3,18 +3,18 @@ kind: game
 title: Nuzlocke, in-game randomizer and QoL items via a TPDPHook-Extended fork
 game: Touhou Puppet Dance Performance Shard of Dreams
 games_also: ["幻想人形演舞-ユメノカケラ-", "TPDP SoD Extended"]
-game_version: "SoD 1.103 + Shard of Dreams Extended V4 (SoD_Extended_Setup_V4.exe, data Sep 2022, dxgi.dll Aug 2022) + English translation patch; standalone (not Steam)"
+game_version: "SoD 1.103 + Shard of Dreams Extended V4 (SoD_Extended_Setup_V4.exe, data Sep 2022, dxgi.dll Aug 2022) + English translation patch; FocasLens' own release (not on Steam), with the base game installed"
 platform: windows
 engine: native
 route: native-hook
 tools: ["TPDPHook-Extended (php42) @ac012c3 forked", "TPDP-Dev-Tools 1.4.1 (php42)", "tpdp-randomizer 1.3.0 (php42, GPLv3)", "MSVC 14.44 / VS2022 BuildTools CMake (Win32)", "Python pefile + capstone", "innoextract 1.9", "ILSpy"]
-anti_cheat: "none. The game has optional netplay; everything here is offline single-player and the network code was not touched"
+anti_cheat: "none. The game has optional netplay (Extended V4 points it at its own community server); everything here is offline single-player, the network code was not touched, and fork saves stay out of netplay"
 status: working
 agents:
 - Claude Code (Opus 5.5)
 humans: ["SophiaUrabe"]
 date: '2026-11-15'
-links: ["https://github.com/php42/TPDPHook-Extended", "https://github.com/php42/TPDP-Dev-Tools", "https://github.com/php42/tpdp-randomizer"]
+links: ["https://github.com/php42/TPDPHook-Extended", "https://github.com/php42/TPDP-Dev-Tools", "https://github.com/php42/tpdp-randomizer", "http://fo-lens.net/enbu_ap/"]
 tags: [touhou, focaslens, dxlib, x86, dxgi-proxy, nuzlocke, randomizer, event-script, save-format]
 ---
 # Nuzlocke, in-game randomizer and QoL items via a TPDPHook-Extended fork
@@ -33,6 +33,14 @@ added to the hook. Every feature except the PP respec was tested in game by the 
 ## Setup
 - Base install: SoD + Extended V4 + the English translation patch. Extended's own launcher is
   `SoD-Extended-EN.exe` (32-bit, DirectX 9, DxLib). The vanilla exe makes TPDPHook.log complain.
+  - SoD is an add-on disc: FocasLens' SoD page says it won't run unless the base game, Touhou Puppet Dance
+    Performance (幻想人形演舞, 2014), is installed. The game finds it through `InstallPath` in
+    `%APPDATA%\FocasLens\幻想人形演舞\gn_enbu.ini`. Both are sold as downloads on DLsite (RJ179146 and RJ179149).
+  - SoD -Extended- is Barudo's mod (a concept of Hanabi's, finished with a small team). The English translation
+    patch is the community patch the TPDP wiki (tpdp.miraheze.org) announced in 2018.
+  - **Netplay:** direct battles and Random Battle matchmaking (which Extended V4 points at its own community
+    server through TPDPHook's `[network]` settings) are always against other people. This fork changes puppets,
+    items and rules, so keep it offline: don't take a fork save into netplay or the PvP hub.
 - Extended setups are Inno Setup 6.1; `innoextract` 1.9 unpacks them. Both setups contain a file called
   `patch.bin`: pre-create `tmp/patch.bin#patch/` and pass `--collisions=rename`.
   - `patch.bin` is a TPDP-Dev-Tools `diffgen` zip, applied with `diffgen -i <game> -o <patch> -p`.
@@ -40,7 +48,8 @@ added to the hook. Every feature except the PP respec was tested in game by the 
 - Hook source: TPDPHook-Extended HEAD (2025-09, @ac012c3) matches the **V4** dll's ini keys, not the 2021 one.
 - Build: VS2022 BuildTools (MSVC 14.44), using the CMake bundled with BuildTools (not on PATH):
   `cmake -A Win32 -B build -S .` then `cmake --build build --config Release --target TPDPHook` gives `build/Release/dxgi.dll`.
-- Saves: `save\enbu_ap.sav`. Logs: `TPDPHook.log`; we added a `trace` level.
+- Saves: `save\enbu_ap.sav`. Logs: `TPDPHook.log`; `logging = trace` under `[general]` is the most detailed level
+  (upstream already has it).
 
 ## Route and why
 - **Native hook in the existing proxy DLL.** Extended already loads TPDPHook as `dxgi.dll`, and its source has
@@ -66,7 +75,8 @@ addresses baked into code bytes differ from the file. Compute them from the RVA 
   512 × 497 bytes). Serving a randomized `DollData.dbs` later only reaches local re-reads. The fix: copy the
   randomized records into the live tables on the first frame.
   - The type chart (doubles at 0x6f9ab20, index atk*18+def) is lazy-loaded; clear bit 1 of 0x6f9b5d4 to force a reload.
-  - The game also re-reads the *original* DollData via `%APPDATA%` InstallPath for a legitimacy check (0x17e560).
+  - The game also reads the base game's DollData, through `InstallPath` (see Setup), for a legitimacy check
+    (0x17e560).
 - Items are parallel arrays (name/desc std::string stride 0x1c at 0x8a50c0/0x8ac0c0, price 0x8b30c0,
   genre 0x8b40c0, ...).
   - Bag counts: u8[1024] at 0xd7bb45. add 0x17c280, remove 0x17c380.
@@ -118,14 +128,17 @@ addresses baked into code bytes differ from the file. Compute them from the RVA 
 - op0C: scripted wild battle (species, lines, style, level); op45: same but uncatchable.
 - op14: give item.
 - op2F: show a list from a CSV (unlock flag, label, event to run).
-- **op9 <flag> <n> = if the flag is SET, jump to record n, else continue.** The community README has it backwards.
+- **op9 <flag> <n> = if the flag is SET, jump to record n, else continue.** TPDP-Dev-Tools' `EVS SCRIPT README.txt`
+  had it backwards up to v1.5.0, including 1.4.1 (the version TPDPHook-Extended's submodule pins); v1.5.1
+  (2026-03-02) fixed it.
 - Map objects are fmf layer 10 plus `.obs` records (1024 × 20 bytes). An invisible step trigger is sprite 0,
   move 0, delay 255, arg = event id.
 
 ## Build steps
 1. Install SoD + Extended V4 + the English patch in a **copy** of the game folder. Keep one clean folder as reference data.
-2. Clone TPDPHook-Extended with submodules (TPDP-Dev-Tools 1.4.1). Add `/source-charset:.932` for
-   `misc_hacks.cpp` and `custom_skills.cpp`, and `/execution-charset:.932` for the target (see Gotcha 1).
+2. Clone TPDPHook-Extended with submodules (TPDP-Dev-Tools 1.4.1). Give `misc_hacks.cpp` and `custom_skills.cpp`
+   their real source charset (`/source-charset:utf-8` for upstream's files) and the target `/execution-charset:.932`
+   (see Gotcha 1).
 3. Rebuild the config: V4's dll embeds an internal config that the source build doesn't have (Gotcha 2). Extract it
    and merge it with V4's external `TPDPHook.ini`, using LF line endings.
 4. Add the code:
@@ -154,13 +167,16 @@ The fork isn't published; the RVAs above are what you need to redo it on V4.
   (never touched).
 
 ## Gotchas
-1. **Japanese battle strings came out corrupted from a source build.** **Cause:** two hook sources are Shift-JIS
-   without a BOM. MSVC on a non-Japanese locale reads the SJIS trail byte 0x5C as a backslash escape (warning C4129).
-   **Fix:** `/source-charset:.932` on those files and `/execution-charset:.932`, then compare a literal against the
+1. **Japanese battle strings came out corrupted from a source build.** **Cause:** `misc_hacks.cpp` and
+   `custom_skills.cpp` have no BOM, so MSVC reads them in the system code page, while the game needs Shift-JIS
+   strings (the 11-byte `スペシャル` write in `misc_hacks.cpp` only fits its Shift-JIS form). At ac012c3 both files
+   are UTF-8. A copy converted to Shift-JIS fails another way on a non-Japanese locale: the trail byte 0x5C reads as
+   a backslash escape (warning C4129). **Fix:** `/execution-charset:.932`, plus the files' real source charset
+   (`/source-charset:utf-8` for upstream's files, `.932` for a Shift-JIS copy). Then compare a literal against the
    official dll.
 2. **The source-built hook boots, but every Extended custom skill/item/ability is silently OFF.** **Cause:** the
    official V4 dll embeds an internal config (skill animations, ID tables). Its external `TPDPHook.ini` only has
-   `[general]`/`[network]`, and missing IDs default to "none". **Fix:** extract the internal config and ship it in
+   `[general]`/`[network]`, and missing IDs default to "none". **Fix:** extract the internal config and put it in
    the external ini. The parser doesn't strip CR, so use LF endings.
 3. **The randomized type chart made everything immune.** **Cause:** the chart is read with DxLib `FileRead_scanf`,
    which our VFS didn't wrap, so it read zeros. **Fix:** wrap `scanf` too (line-based vsscanf over the served bytes).
@@ -173,7 +189,8 @@ The fork isn't published; the RVAs above are what you need to redo it on V4.
    the first battle. **Fix:** check scene 8.
 7. **New items showed up in the wrong bag tab.** **Cause:** tabs filter by ID range. Old IDs also stayed in the
    per-genre slot list with count 0. **Fix:** pick IDs inside the tab's range; purge stale slots and compact.
-8. **The event `op9` logic was inverted from the docs.** **Fix:** treat it as "jump if set" (verified on the shrine gate).
+8. **The event `op9` logic was inverted from the docs.** **Cause:** TPDP-Dev-Tools' README had it backwards until
+   v1.5.1. **Fix:** treat it as "jump if set" (verified on the shrine gate).
 9. **A healing item in battle healed for free before our cancel ran.** **Cause:** the battle opens the field bag and
    the party target screen heals immediately. **Fix:** block it at the bag Use dispatch, not in the battle item handler.
 10. **Addresses taken from the file didn't match at runtime.** **Cause:** ASLR. **Fix:** RVA-only, and build expected
@@ -184,6 +201,8 @@ The fork isn't published; the RVAs above are what you need to redo it on V4.
 
 ## Assets
 - One options-row label image was rebuilt from glyphs lifted from the game's other labels, with a regenerated outline.
+  It's made from the game's own art, so it stays in your install: a published fork would build it from the
+  player's files at runtime or use a label you drew yourself.
 - All text is the game's own style. No generated art.
 
 ## Cost and time
