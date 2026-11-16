@@ -457,8 +457,9 @@ ONLINE_ONLY = ["valorant", "league of legends", "fortnite", "apex legends", "pub
                "call of duty hq", "call of duty warzone", "destiny 2", "genshin impact", "escape from tarkov", "battlefield 2042",
                "battlefield 6", "overwatch", "overwatch 2", "counter strike 2", "dota 2", "marvel rivals", "the finals", "rust",
                "dead by daylight", "naraka bladepoint", "warframe", "deadlock"]
-# an ONLINE_ONLY name that an older single-player game has too, and the files that tell that game apart: Call of Duty
-# (2003) installs to a folder named "Call of Duty", the plain name of today's live-service launcher
+# an ONLINE_ONLY name that an older game's install folder has too, and the files that tell that game apart: Call of Duty
+# (2003) installs to "Call of Duty" (the retail default and Steam's installdir), the live-service launcher's name. Its
+# multiplayer is left to the anti-cheat scan, as above: PunkBuster's pb/ folder still gets its warning
 NOT_ONLINE_FILES = {"call of duty": ("codsp.exe", "codmp.exe", "coduosp.exe", "coduomp.exe")}
 
 

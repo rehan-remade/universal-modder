@@ -608,7 +608,7 @@ def test_slay_the_spire_2_is_not_sts1(tmp_path):
 def test_online_only_matches_whole_names():
     # a substring test told agents to stop on single-player games: Rusty Lake ("rust"), Battlefield 1942, MW2 (2009)
     for offline in ["Rusty Lake Paradise", "Rusted Warfare", "Battlefield 1942", "Call of Duty: Modern Warfare 2 (2009)",
-                    "Deadlock: Planetary Conquest", "The Final Station", "Trusty Rusty"]:
+                    "Call of Duty (2003)", "Deadlock: Planetary Conquest", "The Final Station", "Trusty Rusty"]:
         assert scan.online_only(offline) is None, offline
     for online in ["Rust", "Counter-Strike 2", "Call of Duty®", "Tom Clancy's Rainbow Six® Siege", "PUBG: BATTLEGROUNDS",
                    "Overwatch® 2", "Deadlock", "NARAKA: BLADEPOINT"]:
@@ -634,7 +634,10 @@ def test_scan_call_of_duty_2003_is_not_the_live_service_game(tmp_path):
             (d / rel).write_bytes(b"x")
         r = scan.scan(str(d))
         assert any("online competitive" in w for w in r["warnings"]) == warned, sub
-    assert "PunkBuster" in scan.scan(str(tmp_path / "2003" / "Call of Duty"))["anti_cheat"]   # still reported
+    # its multiplayer still gets the PunkBuster warning, which keeps modded clients out of online play
+    r = scan.scan(str(tmp_path / "2003" / "Call of Duty"))
+    assert "PunkBuster" in r["anti_cheat"]
+    assert any(w.startswith("anti-cheat present (PunkBuster)") and "never inject into online play" in w for w in r["warnings"])
 
 
 def _fake_host(monkeypatch, os_name, machine, wsl=False):
