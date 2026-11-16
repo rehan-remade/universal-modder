@@ -6,8 +6,8 @@ game_version: "Black Ops II Zombies, Steam build 24784239, run through Plutonium
 platform: windows
 engine: iw
 route: data
-tools: ["OpenAssetTools T6 linker as vendored in B2W (commit 7d027e8f)", "our own Python FBX writer"]
-anti_cheat: "Data only: a mod folder of linked zones, played solo. No client patching or injection in this route."
+tools: ["OpenAssetTools T6 linker as vendored in B2W (B2W commit af7b672d)", "our own Python FBX writer"]
+anti_cheat: "VAC on Steam multiplayer and Plutonium T6's own anti-cheat, not involved: data only (a mod folder of linked zones), played solo. No client patching or injection in this route."
 status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["AryaBlue"]
@@ -15,7 +15,6 @@ date: 2026-11-08
 links:
   - https://github.com/Ticass/B2W
   - https://github.com/Laupetin/OpenAssetTools
-  - https://github.com/AryaBlue/CoD-RE
 tags: [zombies, t6, bsp, fbx, collision, linker, map-port, ipak, lighting]
 ---
 
@@ -26,9 +25,19 @@ tags: [zombies, t6, bsp, fbx, collision, linker, map-port, ipak, lighting]
 > this to build a small test world that spawned, walked, lit correctly and ran Zombies rounds in the real game.
 
 ## Setup
-- Black Ops II Zombies on Steam, Plutonium T6, Windows 11.
-- B2W's vendored OpenAssetTools, 32-bit Release linker. Line references below are for commit 7d027e8f.
+- Black Ops II Zombies on Steam, Plutonium T6, Windows 11. Plutonium's install guide only asks for a game folder,
+  so point it at your own Steam install.
+- B2W's vendored OpenAssetTools (`vendor/OpenAssetToolsT6`), 32-bit Release linker. Line references below are for
+  B2W commit af7b672d (2026-10-14), the version current when this was tested. `7d027e8f` is the upstream
+  OpenAssetTools commit that B2W's T4 patch applies to. Upstream has no BSP linker (checked in November 2026), so it
+  only exists in B2W's copy.
 - Any tool that writes FBX. Ours was a small standalone Python writer.
+- **Multiplayer:** Zombies co-op runs on the host's game, so a custom map is for solo play or a private lobby you host
+  with friends who agreed and run the same mod. Never take it onto Plutonium's public servers, which run their own
+  anti-cheat (the same rule as the World at War notes).
+- **What ships:** the world and its FBX files are yours, but cloned stock materials and the stock material sources
+  on the linker's search path are Black Ops II's, dumped from your install. A zone linked with them is your own
+  build; a release would have to rebuild that part from each player's install.
 
 ## Credits
 - [OpenAssetTools](https://github.com/Laupetin/OpenAssetTools) (Laupetin) and the [B2W](https://github.com/Ticass/B2W)

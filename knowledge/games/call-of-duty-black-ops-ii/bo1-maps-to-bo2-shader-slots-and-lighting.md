@@ -8,14 +8,13 @@ platform: windows
 engine: iw
 route: data
 tools: ["B2W (our BO1 fork)", "OpenAssetTools", "Ghidra headless", "Capstone", "fxc D3DDisassemble", "Python 3.13"]
-anti_cheat: "Data only: converted mod zones, played solo. Sources are our own installs. No game files are distributed."
+anti_cheat: "VAC on Steam multiplayer and Plutonium T6's own anti-cheat, not involved: data only (converted mod zones), played solo. Sources are our own installs, and the converted zones stay private."
 status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["AryaBlue"]
 date: 2026-11-08
 links:
   - https://github.com/AryaBlue/BO1-B2W
-  - https://github.com/AryaBlue/CoD-RE/blob/main/shared/notes/bo1_to_bo2_porting.md
   - https://github.com/Ticass/B2W
   - https://github.com/Laupetin/OpenAssetTools
 tags: [zombies, t5, t6, map-port, shaders, techniques, lighting, lightmap, light-grid, converter]
@@ -25,12 +24,19 @@ tags: [zombies, t5, t6, map-port, shaders, techniques, lighting, lightmap, light
 
 > We extended the B2W World at War converter to take Black Ops 1 maps. Kino der Toten loads and plays in Black Ops II:
 > collision, buyable doors, zombies, game over and reload all work. Compared by eye in game, the lighting looks 1:1
-> with the original. Five and the World at War custom map Another Road also loaded in game. This note records what
-> differed between the engines. Full research is in CoD-RE.
+> with the original. Five and animallover's World at War custom map Another Road (v1.1) also loaded in game. This
+> note records what differed between the engines.
 
 ## Setup
-- Sources: your own Black Ops 1 install. Target: Black Ops II Zombies through Plutonium T6.
+- Sources: your own Black Ops 1 install. Target: Black Ops II Zombies through Plutonium T6. Plutonium's install guide
+  only asks for a game folder, so point it at your own Steam install.
 - Converter: our public B2W fork, linked above.
+- **What ships:** nothing converted. The zones carry Treyarch's maps (and, for Another Road, animallover's work), so
+  they stay on your machine: don't share or upload them. Anyone else builds them from their own copies with the
+  converter.
+- **Multiplayer:** Zombies co-op runs on the host's game, so this is for solo play or a private lobby you host with
+  friends who agreed and run the same mod. Never take converted maps onto Plutonium's public servers, which run their
+  own anti-cheat (the same rule as the World at War notes).
 
 ## Credits
 - [B2W](https://github.com/Ticass/B2W) is the converter this extends.

@@ -3,18 +3,17 @@ kind: game
 title: "Black Ops III: a walkable Zombies usermap with a working navmesh from another map's geometry and clip brushes"
 game: "Call of Duty: Black Ops III"
 games_also: ["Call of Duty: Black Ops II"]
-game_version: "Black Ops III Steam, version 100.2.2.7.109.0 when tested 2026-10-21; Mod Tools Steam build 5284267"
+game_version: "Black Ops III Steam, version 100.2.2.7.109.0 (Steam build 24784313) when tested 2026-10-21; Mod Tools Steam build 5284267"
 platform: windows
 engine: iw
 route: data
 tools: ["Black Ops III Mod Tools (cod2map, linker, gdtdb)", "OpenAssetTools Unlinker", "Ghidra", "REA", "Python"]
-anti_cheat: "None bypassed. Offline custom map through the official Mod Tools. Personal test; converted map content is not distributed."
+anti_cheat: "VAC on multiplayer, not involved: a usermap built with the official Mod Tools and played solo. Personal test; the converted map stays private and never goes on the Workshop."
 status: in-progress
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["AryaBlue"]
 date: 2026-11-08
 links:
-  - https://github.com/AryaBlue/CoD-RE
   - https://github.com/Laupetin/OpenAssetTools
 tags: [zombies, t6, t7, usermap, collision, navmesh, cod2map, map-port, plane-cap]
 ---
@@ -28,6 +27,12 @@ tags: [zombies, t6, t7, usermap, collision, navmesh, cod2map, map-port, plane-ca
 ## Setup
 - Official Black Ops III Mod Tools. T6 and T7 share inch units, so no rescale.
 - The source world and clip were dumped from our own Black Ops II with the OpenAssetTools Unlinker.
+- **Paid DLC:** Alcatraz is Mob of the Dead (`zm_prison`), from Black Ops II's Uprising DLC (Steam app 219099, whose
+  depot Steam only installs for owners). Nothing in the port checks ownership, so it's only for players who own
+  Uprising.
+- **What ships:** nothing. The usermap is built from Black Ops II's geometry, clip and textures, so it stays on your
+  machine: never publish it to the Workshop or share it. Anyone else builds it from their own Black Ops II and
+  Uprising with the official Mod Tools.
 
 ## Credits
 - [OpenAssetTools](https://github.com/Laupetin/OpenAssetTools) (Laupetin) for the dumps.

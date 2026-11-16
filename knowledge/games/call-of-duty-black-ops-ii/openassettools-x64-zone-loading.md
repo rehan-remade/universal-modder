@@ -7,7 +7,7 @@ game_version: "Zones from Steam Black Ops II Zombies build 24784239 and our own 
 platform: windows
 engine: iw
 route: other
-tools: ["OpenAssetTools as vendored in B2W (commit 7d027e8f)", "MSBuild"]
+tools: ["OpenAssetTools as vendored in B2W (upstream commit 7d027e8f plus B2W's vendor/OpenAssetTools.patch)", "MSBuild"]
 anti_cheat: "None involved: offline reads of our own zone files. No game process."
 status: working
 agents: ["Claude Code (Opus 5.5)"]
@@ -26,7 +26,9 @@ tags: [fastfile, zones, x64, tools, openassettools, t4, t5, t6]
 > in-process, with no 32-bit helper.
 
 ## Setup
-B2W's vendored OpenAssetTools at commit 7d027e8f, MSBuild, Windows 11.
+B2W's vendored OpenAssetTools (upstream commit 7d027e8f plus B2W's `vendor/OpenAssetTools.patch`), MSBuild,
+Windows 11. Upstream's `premake5.lua` at that commit already declares both platforms (`x86`, the default, and `x64`,
+with `ARCH_x86`/`ARCH_x64` defines), though its README only documents x86 builds.
 
 ## Credits
 [OpenAssetTools](https://github.com/Laupetin/OpenAssetTools) (Laupetin) and its zone code generator did this work.
@@ -38,7 +40,8 @@ Tooling. Reading the original files in-process replaced a large converted cache.
 ## Build steps
 1. Build RawTemplater, ZoneCodeGenerator, Common, ObjCommon, ZoneCode and ZoneCommon first.
 2. Then build the libraries, using MSBuild on each `.vcxproj`. Solution-level targets failed.
-3. Guard any 32-bit layout `static_assert` with `ARCH_x86`. B2W's `SoundAliasJsonDumperT4.cpp` has one.
+3. Guard any 32-bit layout `static_assert` with `ARCH_x86`. B2W's patch adds one to `SoundAliasJsonDumperT4.cpp`
+   (`sizeof(snd_alias_t) == 184`).
 
 ## Verification
 - x64 and x86 dump output matched byte for byte on `zm_tomb`, `mp_raid` and `nazi_zombie_prototype`, apart from one
