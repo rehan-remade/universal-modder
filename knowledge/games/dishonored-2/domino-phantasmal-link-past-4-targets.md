@@ -3,7 +3,7 @@ kind: game
 title: 'Domino (Phantasmal Link) past 4 targets: a 5-byte exe patch'
 game: Dishonored 2
 games_also: []
-game_version: 'GOG (DRM-free), Dishonored2.exe 42,591,232 bytes, PE timestamp 0x5c050611 (2018-12-03), x64'
+game_version: 'GOG 1.77.9 (DRM-free), Dishonored2.exe 42,591,232 bytes, PE timestamp 0x5c050611 (2018-12-03), x64'
 platform: windows
 engine: idtech
 route: native-hook
@@ -41,6 +41,10 @@ the vanilla tree stops at EXTRA_NODES = 2 via the upgrades `domino_link_3` / `do
 - Chosen: on-disk exe patch. A Python patcher locates each byte by its own pattern, refuses unless every
   pattern matches exactly once, writes via a temp file, keeps `Dishonored2.exe.domino-backup`, and has `undo`.
   A game update or GOG "verify files" reverts it; re-run `apply`.
+- Editing the exe on disk is fine here because GOG's build has no DRM wrapper: GOG sells it DRM-free, and
+  `.text` reads as plain code in the file. It wouldn't be on a wrapped exe. The patterns guard each site, not
+  the whole file, so also check the exe's SHA-256 (or at least the size and PE timestamp above) before the
+  first write, and the backup's before restoring it. Share the patcher, never a patched exe.
 
 ## How the game works (what we had to learn)
 VAs below are for this GOG build (image base 0x140000000; .text file offset = VA - 0x140000000 - 0xC00).
@@ -129,5 +133,7 @@ One long session of static analysis (two context compactions), plus two in-game 
 
 ## Open questions
 - Does the same pattern set match the current Steam exe? Run the patcher's `status`: it reports
-  "not supported" and changes nothing if any pattern isn't found exactly once.
+  "not supported" and changes nothing if any pattern isn't found exactly once. On Steam, the
+  [bonecharm note](black-and-corrupt-bonecharm-traits-learnable-and-ng-persistent.md)'s dinput8 proxy patches
+  bytes in memory and leaves the exe on disk alone; an on-disk patch is only fine on an exe with no DRM wrapper.
 - A 7+ cap would need a larger connexion pool (moving the network's later fields) or a heap-backed pool.

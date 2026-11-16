@@ -3,7 +3,7 @@ kind: game
 title: 'Iggy UI bytecode patches (same-length AVM2 rewrites) and decl, material and map findings'
 game: Dishonored 2
 games_also: ["Dishonored: Death of the Outsider"]
-game_version: 'GOG (DRM-free), Dishonored2.exe PE timestamp 0x5c050611; DOTO GOG Dishonored_DO.exe 0x5c0584aa'
+game_version: 'GOG 1.77.9 (DRM-free), Dishonored2.exe PE timestamp 0x5c050611; DOTO GOG 1.145, Dishonored_DO.exe 0x5c0584aa'
 platform: windows
 engine: idtech
 route: data
@@ -41,6 +41,9 @@ both Dishonored 2 and Death of the Outsider.
 - Data only, by request. Every change is a same-length edit, so the file layout, string pools and offsets
   stay valid. Same-length matters because the Iggy file stores the ABC inside a larger binary with offsets.
 - Growing a method body or adding pool entries would mean relocating the ABC block; not attempted.
+- **What ships:** nothing yet. The patched `.iggy`, decl, material and `.cvd` files are Arkane's own files
+  with edits, so they stay in your own `game1_voidmod` overlay. To share a fix, publish the edit itself (file,
+  offset, original and new bytes) as a patcher that runs on the player's own exports, never the patched files.
 
 ## How the game works (what we had to learn)
 ### Resources and the overlay
@@ -49,8 +52,11 @@ both Dishonored 2 and Death of the Outsider.
 - The engine inflates with a **1 KB zlib window** (header `28 15`). An earlier version of the user's import
   tool wrote that header but compressed with a 32 KB window. Small files survived by luck; a big map
   `.entities` crashed at half the loading bar. A one-file A/B proved it: original compressed bytes in the
-  overlay loaded, the tool's bytes didn't. Python's `zlib.decompress` with wbits 15 hides the error; decode
-  with wbits 10 to check. (The tool's author has since fixed it.)
+  overlay loaded, the tool's bytes didn't. Python's `zlib.decompress` hides the error with wbits 15, and with
+  wbits 10 too when the whole output comes back from one call (in a test, a 32 KB-window stream under a
+  `28 15` header decoded at 8 and 15 KB and only failed at 200 KB). To check a blob, decode it with
+  `zlib.decompressobj(10)` in small steps (`max_length=256`), which sends every far match through the 1 KB
+  window. (The tool's author has since fixed it.)
 
 ### Which `.iggy` runs
 - A screen loads the `.iggy` copies **inside its `iggyFile` container** (e.g. the power wheel container
@@ -157,7 +163,8 @@ both Dishonored 2 and Death of the Outsider.
    frame number that has no enum name.
 
 ## Assets
-The user made their own pistol pickup icon (DDS) and recoloured the results frame. No generated assets.
+The user made their own pistol pickup icon (DDS) and recoloured the results frame. No generated assets. The
+recoloured frame is the game's own texture, so like the patched files it stays in your own install.
 
 ## Cost and time
 Spread over five days alongside the exe work; most UI patches needed two or three in-game rounds.

@@ -3,7 +3,7 @@ kind: game
 title: 'Porting Dishonored 2 exe fixes to Death of the Outsider, plus Displace and Blink marker smoothing (GOG)'
 game: "Dishonored: Death of the Outsider"
 games_also: ["Dishonored 2"]
-game_version: 'GOG (DRM-free), Dishonored_DO.exe 43,757,056 bytes, PE timestamp 0x5c0584aa (2018-12-04), x64'
+game_version: 'GOG 1.145 (DRM-free), Dishonored_DO.exe 43,757,056 bytes, PE timestamp 0x5c0584aa (2018-12-03), x64'
 platform: windows
 engine: idtech
 route: native-hook
@@ -35,7 +35,9 @@ every listed feature in game.
 ## Route and why
 - Same as DH2: on-disk exe patch (the user runs other dinput8 proxy mods), pattern per spot (vanilla |
   patched + context), new code in an appended PE section (`.dotomod`, RVA 0x445A000, raw 0x29BAE00; no ASLR,
-  checksum 0, one free section-header slot). RWX (0xE0000020) for latch and slot bytes.
+  checksum 0, one free section-header slot). RWX (0xE0000020) for latch and slot bytes. On disk is fine for
+  the same reason as in DH2: GOG's DOTO exe has no DRM wrapper. Check the vanilla exe's SHA-256 before the
+  first write and the backup's before restoring it, as the DH2 note's Route says.
 - The patcher is **generated**: a builder script assembles each stub with keystone at its section offset,
   checks it against the vanilla exe, and writes the patcher from a template. Re-running the builder after a
   change rebuilds every stub consistently.

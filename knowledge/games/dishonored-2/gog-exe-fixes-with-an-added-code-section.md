@@ -3,7 +3,7 @@ kind: game
 title: 'Seventeen hard-coded fixes as one on-disk exe patcher with an added code section (GOG build)'
 game: Dishonored 2
 games_also: ["Dishonored: Death of the Outsider"]
-game_version: 'GOG (DRM-free), Dishonored2.exe 42,591,232 bytes, PE timestamp 0x5c050611 (2018-12-03), x64'
+game_version: 'GOG 1.77.9 (DRM-free), Dishonored2.exe 42,591,232 bytes, PE timestamp 0x5c050611 (2018-12-03), x64'
 platform: windows
 engine: idtech
 route: native-hook
@@ -34,6 +34,8 @@ in the real game. The same fixes were later ported to Death of the Outsider; see
 - Live measuring: Python `ctypes` with `ReadProcessMemory` / `WriteProcessMemory` / `VirtualProtectEx`
   against the running game (no debugger). Cheat Engine was the user's tool for setting attributes.
 - Other user mods in the game folder at the same time (unaffected): a dinput8 high-FPS fix, ReShade.
+- The [bonecharm note](black-and-corrupt-bonecharm-traits-learnable-and-ng-persistent.md) covers a 2025 Steam
+  exe of the same game, with a dinput8 proxy that patches in memory and leaves the exe on disk alone.
 
 ## Route and why
 - **Why not a dinput8 proxy:** the user already runs other dinput8 proxy mods and there was no compiler.
@@ -41,13 +43,18 @@ in the real game. The same fixes were later ported to Death of the Outsider; see
   match exactly once as (vanilla bytes | patched bytes) + a little following context. So `status` can tell
   vanilla / patched / unknown per spot, `apply` and `undo` work per feature, and any other build is refused.
   The patcher writes via a temp file and keeps a vanilla backup.
+- **Why on disk is fine here:** GOG's build has no DRM wrapper (GOG sells it DRM-free, and `.text` reads as
+  plain code in the file). On a wrapped exe it wouldn't be. The patterns guard each site, not the whole file,
+  so also check the vanilla exe's SHA-256 (or at least its size and PE timestamp) before the first write, and
+  the backup's before restoring it. Share the patcher (patterns and your own stub bytes), never a patched exe.
 - **Code caves first, then an own section:** the first features hid their code in dead logging blocks
   (`if (missing) print warning` blocks whose only entry is the conditional jump; each starts with a short
   jump over itself). That became fragile, so the patcher now appends a PE section `.dh2mod`
   (RVA 0x42F0000, 0x1000 bytes). The header had room for exactly one more section header; the exe has no
-  DYNAMIC_BASE (fixed base 0x140000000), no Authenticode signature and checksum 0, so nothing else needs
-  fixing. `undo` removes the section when no feature uses it, so a full undo is byte-identical to vanilla.
-  The section is RWX (0xE0000020) because some features keep a latch or slot byte there.
+  DYNAMIC_BASE (fixed base 0x140000000), no Authenticode signature and checksum 0, so apart from
+  `NumberOfSections` and `SizeOfImage` nothing else needs fixing. `undo` removes the section when no feature
+  uses it, so a full undo is byte-identical to vanilla. The section is RWX (0xE0000020) because some features
+  keep a latch or slot byte there.
 - **Upgrade rule:** patterns know only vanilla and the current patched bytes, so a feature whose code
   changed is undone with the previous patcher version first, then applied with the new one.
 
