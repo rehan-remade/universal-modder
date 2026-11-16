@@ -13,7 +13,7 @@ status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: []
 date: 2026-11-12
-links: []
+links: ["https://github.com/Z1ni/XGP-save-extractor"]
 tags: [save-editing, companions, quests, global-variables, xbox-wgs, game-pass, iostore, oodle, unreal-5]
 ---
 
@@ -35,6 +35,8 @@ tags: [save-editing, companions, quests, global-variables, xbox-wgs, game-pass, 
 - Python 3 with the standard library only. To read game data we loaded an `oo2core_8_win64.dll` that another
   installed game ships, via ctypes. Oodle 2.8 decoded this UE5 IoStore without problems.
 - No mod loader, no console enabler, nothing installed into the game folder.
+- Online: the game is single player with no online mode. The Xbox app syncs saves to the cloud, so once it
+  uploads, the cloud copy is the edited save too, and the snapshot from build step 1 is the only way back.
 
 ## Route and why
 - **Console:** the community console (Nexus "Console Enabler and BP ModLoader") lists item, perk, trait and
@@ -49,21 +51,28 @@ tags: [save-editing, companions, quests, global-variables, xbox-wgs, game-pass, 
 - Game data (names for the GUIDs) came from the unencrypted IoStore. We read it but redistribute none of it.
 
 ## How the game works (what we had to learn)
-**Xbox wgs container (Game Pass saves).**
+**Xbox wgs container (Game Pass saves).** Z1ni's
+[XGP-save-extractor](https://github.com/Z1ni/XGP-save-extractor) (MIT) reads the same layout.
 - `containers.index`:
-  - header: `i32 ver`, `i32 count`, `i32`, `str16 package`, 12 bytes, `str16 guid`, 8 bytes;
+  - header: `i32 ver`, `i32 count`, `i32` (an empty `str16`: XGP-save-extractor reads a display name there,
+    which only console saves fill in), `str16 package`, 12 bytes, `str16 guid`, 8 bytes;
   - per entry: `str16 name`, `str16 name2`, `str16 etag`, `u8 containerNum`, 4 bytes, `GUID folder`,
     `u64 FILETIME mtime`, 8 bytes, `u64 totalSize`.
   - `str16` = `i32 charCount` + UTF-16LE.
 - `<folder>\container.<num>`: `i32`, `i32 fileCount`, then per file 64 UTF-16 chars of name, a 16-byte
-  cloud GUID and a 16-byte local GUID. The local GUID's hex is the blob's file name.
+  cloud GUID and a 16-byte local GUID. Here the local GUID's hex was the blob's file name; when the two
+  differ, XGP-save-extractor takes whichever file exists.
+- Folder and blob names are the GUID read in Windows byte order, as uppercase hex without dashes (Python:
+  `uuid.UUID(bytes_le=raw).hex.upper()`).
 - Each OW2 save holds three blobs: `Metadata.dat`, `SaveGameScreenshot.png` and `SavedState.dat`.
   `totalSize` in the index equals the sum of their sizes.
 - Manual-save container names are 32-hex hashes; autosaves are `Autosave00..02`.
 
 **`Metadata.dat`** (magic `GMHF`). It holds the character name, the player level (a `u32` right after the
 name), the build string (e.g. `1.0.4.1`) and a zlib blob. **`u32` at 0xF7 = decompressed length of
-`SavedState.dat`.** There is no hash of the state.
+`SavedState.dat`.** There is no hash of the state. All the saves here are one character's; if the name or
+the build string sits before that field, it moves with them, so check that the `u32` you patch holds the old
+decompressed length first.
 
 **`SavedState.dat`** is a single zlib stream. Decompressed, it is a flat archive:
 ```python
@@ -141,7 +150,9 @@ so copying a record from a newer save works.
   None of those were set, so the questline had never been consumed.
 
 ## Build steps
-1. Close the game and snapshot the whole `wgs` folder.
+1. Close the game and snapshot the whole `wgs` folder:
+   `um backup create "%LOCALAPPDATA%\Packages\Microsoft.OE-Arkansas_8wekyb3d8bbwe\SystemAppData\wgs" --name tow2-saves`
+   (`um backup restore tow2-saves` puts it back). Keep it until the edit has proved itself in game.
 2. Find the target container in `containers.index`. Pick a save made **before** landing on Halcyon Prime;
    see Gotcha 4. The save we edited was made on the player ship (`LevelRefs.dat` →
    `0502_PlayerShip_P`).
@@ -158,8 +169,9 @@ so copying a record from a newer save works.
 7. In `Quests.dat`, replace the `CQ_Inez0` record (from its GUID to the `CQ_Inez1` GUID) with the donor's
    record (status 2). Leave `CQ_Inez1`, `CQ_Inez2A_EndGraftingProgram` and `CQ_Inez2B_ReformGraftingProgram`
    as they are (status 0).
-8. Rebuild the archive and zlib-compress it. Write `SavedState.dat`, patch `Metadata.dat` @0xF7 with the new
-   decompressed length, and in `containers.index` set the entry's `totalSize` and bump its `mtime` to now.
+8. Rebuild the archive and zlib-compress it. Write `SavedState.dat`, patch `Metadata.dat` @0xF7 (after
+   checking it holds the old length) with the new decompressed length, and in `containers.index` set the
+   entry's `totalSize` and bump its `mtime` to now.
 9. Launch through the Xbox app and load the save. The Xbox app did **not** overwrite the edited blobs from the
    cloud.
 
@@ -176,7 +188,10 @@ so copying a record from a newer save works.
   - the end slides;
   - whether her level scales properly (her record came from an early-game save);
   - a second edit, adding her straight to the active party in the point-of-no-return save on Halcyon Prime
-    (never loaded).
+    (never loaded);
+  - saves of another character (whether `Metadata.dat`'s length field moves with the name);
+  - achievements: with Inez restored, the edited save may count towards "One for All" (recruited all
+    companions) and "All for One" (completed all companion quests).
 
 ## Gotchas
 1. **Symptom:** `PermissionError` reading the Game Pass shipping exe. **Cause:** that file's ACL blocks reads
