@@ -87,6 +87,7 @@ capture. What works on Windows 11 with DOSBox 0.74-2:
   `SetLayeredWindowAttributes(hwnd, 0, 0, LWA_ALPHA)` (alpha 0). Windows doesn't draw it, real clicks fall through
   to what is behind it, and `PrintWindow`/`BitBlt` from its DC still return the game's picture.
 - **No taskbar button:** `WS_EX_TOOLWINDOW` (and clear `WS_EX_APPWINDOW`), set while the window is still minimised.
+  Microsoft's taskbar docs say to hide the window while the style changes; setting it while minimised worked here.
 - **Bottom of the stack:** `SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE)`.
 - **Catch the window the moment it exists:** DOSBox shows its window normally whatever the start-up information
   says, and a lookup by process takes about half a second. Start a thread per game that runs `EnumWindows` every
@@ -121,9 +122,10 @@ own name to a shared results folder (gotcha 10).
 Guest RAM shows the state, not the code that is looping. DOSBox 0.74 (32-bit) keeps the emulated CPU's
 registers in its own data segment, so a host script can sample CS:IP read-only too:
 - the segment registers are a global array of eight 16-bit values followed by their eight 32-bit
-  physical bases (in real mode base = value x 16): find it by that pattern in the DOSBox module's
-  data with `ReadProcessMemory`; the general registers (eax ... edi, then eip and flags) sit at a fixed
-  offset after it in a given build (E0h in GOG's 0.74-2; check it against the flags word);
+  physical bases (in real mode base = value x 16; `Segs` in 0.74-2's `regs.h`): find it by that pattern in
+  the DOSBox module's data with `ReadProcessMemory`; the general registers (`cpu_regs`: eax, ecx, edx, ebx,
+  esp, ebp, esi, edi, then eip and flags) sit at a fixed offset after it in a given build (E0h in GOG's
+  0.74-2; check it against the flags word);
 - a hang detector then waits until the frame has been unchanged for N seconds (90 here) and saves a few
   dozen CS:IP samples, the guest RAM and a screenshot: the samples show which routine it loops in.
 
@@ -241,10 +243,11 @@ run time. Measure the worst case instead of guessing:
   save/load) and with EMS/XMS on and off;
 - build test EXEs with a deliberately bigger block to see what fails first (here: large optional buffers were
   refused and the game fell back to smaller ones; nothing crashed until far past the budget);
-- remember the store launcher: GOG starts this game through a front-end EXE that loads it into its own process
-  and costs about 5 KB more than starting the game directly;
+- remember the front end: GOG's and Steam's confs and the game's own `COLONIZE.BAT` all run `opening -g`
+  (OPENING.EXE, the intro and title program), which hands over to VICEROY in the same process and costs about
+  5 KB more than starting VICEROY directly, so this applies to every copy started normally;
 - turn the result into a budget with a margin and an automated test that fails when a build exceeds it (here an
-  8 KB margin plus the launcher's 4,992 bytes);
+  8 KB margin plus the front end's 4,992 bytes);
 - sample from a thread every 0.25 s during the session and save a frame at each new low-water mark and each refused
   allocation, so you see which screen costs most (here a native leader's greeting, which allocates a 49,128-byte buffer).
 Two more limits that patches eat silently, both readable from guest RAM:
@@ -276,8 +279,9 @@ EXE with `umb=false` when you compare original and patched (see the upper memory
 ## Not verified
 Only DOSBox 0.74-2 (SDL 1.2) on Windows 11, driving one game. DOSBox Staging and DOSBox-X's SDL2 builds have no
 `windib` or `directx` video driver (SDL2's is `windows`), so the input section won't carry over to them as written.
-The project ships player confs for Staging 0.83 and DOSBox-X 2026.10 but never ran either (not installed); the
-guest-RAM offset (0x20) was measured on the 32-bit 0.74-2 build only. The RAM figures are from one 15.5 GB laptop.
+The project's player confs (for the planned patcher) also target Staging 0.83 and DOSBox-X 2026.10, but neither was
+run (not installed); the guest-RAM offset (0x20) and the register block's offset (E0h) were measured on the 32-bit
+0.74-2 build only. The RAM figures are from one 15.5 GB laptop, the game counts from it and one 16-thread desktop.
 
 ## Gotchas
 1. **Posted keys did nothing; clicks did nothing.** (2026-10-22.) **Cause:** DOSBox 0.74 picks SDL 1.2's DirectX
@@ -430,7 +434,6 @@ guest-RAM offset (0x20) was measured on the 32-bit 0.74-2 build only. The RAM fi
     refused any build in which a profession in the game had no line in its table, so the integration build
     stopped with the missing ids. **Fix / pattern:** for every data-driven table that must cover a growing set
     (goods, professions, buildings), add a completeness check to its generator.
-
 33. **A suite entry pointed at a file that didn't exist ("unknown test").** (2026-10-27.) **Cause:** the
     PowerShell test list (CRLF, Windows paths like `tests\f1_test.py`) was edited with sed/printf-style
     tools, which turned `\f` and `\r` in the paths into a form feed and a carriage return. **Fix:** edit
@@ -438,7 +441,6 @@ guest-RAM offset (0x20) was measured on the 32-bit 0.74-2 build only. The RAM fi
 34. **Twice as many DOSBoxes as planned.** (2026-10-27.) **Cause:** each in-game test runs the original and
     the patched EXE in parallel by default, so N agents "each using one DOSBox" used 2N. **Fix:** a
     variant-jobs setting (1 when several agents share the machine), on top of the machine-wide cap.
-
 35. **A release halved the computer players' expansion and every test passed.** (2026-11-11.) **Cause:**
     functional tests check that things work, not how well the AI plays; the regression (rivals founding
     about half as many colonies) came from one of several merged changes. **Fix / pattern:** keep an
@@ -463,7 +465,6 @@ guest-RAM offset (0x20) was measured on the 32-bit 0.74-2 build only. The RAM fi
     blocks are chained after moves all of them, so every suite covering a later block is selected (156
     suites for a pedia fix). **Fix / pattern:** expected, not a selection bug; when several fixes wait for a
     release, merge them first and run the selection once on the combined build.
-
 37. **A release gate's hundreds of game windows came up in front of the human's work.** (2026-11-12, about 300
     suites at 6 games.) **Cause:** the WMI launch and `SW_SHOWNOACTIVATE` keep the focus away, but a window shown
     that way still lands on top of the stack. Putting it at the bottom of the stack wasn't enough: each new game
@@ -491,18 +492,21 @@ guest-RAM offset (0x20) was measured on the 32-bit 0.74-2 build only. The RAM fi
 42. **A frame-compare test failed 2 runs in 6 with one square "too many".** (2026-11-14.) **Cause:** the program's
     cursor blinks on a timer, and the two frames caught different blink phases. **Fix:** compare the cursor's cell
     inside its box only (or mask it), like other blinking elements (gotcha 20).
-43. **A player's one-off crash couldn't be reproduced, and the play copy had nothing watching.** (2026-11-13: End
-    of Turn threw the game back to its intro.) The save folder still told part of the story: a save written by
+43. **A one-off crash in play couldn't be reproduced, and the copy being played had nothing watching.** (2026-11-13:
+    End of Turn threw the game back to its intro.) The save folder still told part of the story: a save written by
     only one code path, in the same minute as the last autosave, showed which exit ran and that control flow
-    was sound. The flag that sent it there had been set by a stray write. **Fix / pattern:** ship the recorder in
-    the build, not in a diagnostic copy: a check in the timer interrupt for the state that must never be set
-    (registers, interrupted CS:IP and stack saved once, then the flag cleared so play goes on), a record at the
-    overlay manager's error entry, and an outside process that reads guest RAM (see "Read the game's state from
-    guest RAM") and saves a full report when the record appears. Have every player launcher start the watcher.
+    was sound. The flag that sent it there had been set by a stray write. **Fix / pattern:** build the recorder into
+    the normal build, not only into a diagnostic copy: a check in the timer interrupt for the state that must never
+    be set (registers, interrupted CS:IP and stack saved once, then the flag cleared so play goes on), a record at
+    the overlay manager's error entry, and an outside process that reads guest RAM (see "Read the game's state from
+    guest RAM") and saves a full report when the record appears. Have every launcher that starts the game for play
+    start the watcher.
 
 ## Seen in
 - Sid Meier's Colonization 3.0 (DOS, GOG release; VICEROY.EXE, an RTLink-overlaid executable) binary-patching
-  project (no public game note yet).
+  project (no public game note yet). A "release" in this note is one of the project's own versions. A patched EXE
+  is the game's own file with your code in it, so it stays on your machine; anything published is a patcher for
+  the player's own copy (the upper memory note's "What can ship").
 - Related: [Driving real games safely](driving-real-games-safely.md) (input and focus rules for any game) and
   [Running several isolated tModLoader test instances in parallel](running-several-isolated-tmodloader-test-instances-in-parall.md)
   (the same sandbox-per-instance idea for Terraria).

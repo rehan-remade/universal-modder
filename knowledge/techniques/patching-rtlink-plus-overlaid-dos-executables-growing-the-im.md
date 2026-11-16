@@ -62,7 +62,9 @@ eb4x's doc writes it `210d:0d91` because Ghidra loads the image at segment 0x100
 pair a resident-target trampoline), which rewrites the offset word of the calling `lcall` and continues through
 the far jump that follows it.
 On a call, the manager also inspects the caller's call target to decide whether the call comes from an
-overlay page; only then does it protect the caller's return address against the page being discarded.
+overlay page; only then does it protect the caller's return address against the page being discarded. In
+VICEROY the first call through a stub is classified at `110D:2FD2`, and the routine that follows the call target
+is at `110D:3254` (`210D:2FD2` and `210D:3254` in Ghidra's numbering).
 - **Working layout (18 bytes):** the hook site in the overlay does `lcall NEWSEG:t`, and
   `t: call fixsegs; jmp far v; v: lcall <vector>; ljmp NEWSEG:hook`. The manager follows a `call near` only
   when a `jmp far` comes next, so this chain reaches the vector call and is recognised. fixsegs fills the
@@ -141,7 +143,10 @@ So:
 - measure the game's own low-water free memory in the heaviest scenarios (see the DOSBox note's guest-RAM
   section), set a budget for the inserted block with a safety margin, and test it automatically;
 - for more room, lower the cache caps: each paragraph taken from the cache gives one back to the budget
-  (VICEROY: 16 and 32 KB smaller caches showed no slowdown over several turns, even with EMS/XMS off).
+  (VICEROY: 16 and 32 KB smaller caches showed no slowdown over several turns, even with EMS/XMS off);
+- whatever shrinks the pool (lower caps, or less free memory for the cache extra), keep it at least as big as
+  two overlays that call each other need together: gotcha 29's intermittent evm0012 came with a pool cut below
+  that (cause narrowed, not confirmed).
 
 ### Hooks that record state must tell real actions from look-ups
 Games often run the same routine to *ask* something as to *do* it (VICEROY's AI "lifts" a ship's passengers
@@ -183,7 +188,8 @@ this manager and confirmed in game on it only. Gotcha 22's fix is planned, not b
 manager's routine bodies byte-identical across the games it covers (only their offsets move), so the trampoline rule
 should carry over, but run the emulated call test on your own binary before trusting it. The call-target rule, the
 BP-chain walk and the page-pool startup were read from VICEROY's manager and its error messages; eb4x's doc doesn't
-cover them.
+cover them. Gotcha 29's cause is narrowed from the crash addresses, not confirmed: the manager's thunk-skip path
+hasn't been trapped yet.
 
 ## Gotchas
 1. **About 1 run in 10-20: debug assertion popups, garbage prompts with nonsense values, an R6003 divide by
@@ -217,11 +223,12 @@ cover them.
 9. **A state-recording hook tied units to AI ships that never sailed.** (2026-10-25.) **Cause:** the hooked
    routine was also called by the AI to count and put back. **Fix:** treat those call sites as look-only.
 10. **"evm0012" with a CS of DEAD after long play, about 1 run in 15 of a 40-turn soak.** (2026-10-28.) **Cause:**
-    given free upper memory, the manager built a page heap there, right under DOSBox's EMS page frame at E000. A
-    return into a page was re-vectored to a frame whose segment plus the module's offset gave DEAD (DE52 + 5B), so
-    the manager couldn't place the return address. The unpatched game has the same hazard (a few of its
-    test runs were flaky the same way). **Fix:** the start-up allocates all remaining upper memory after its own
-    block and keeps it, so the manager keeps its pages in conventional memory and EMS/XMS. 42 clean soaks after.
+    given free upper memory, the manager built a page heap there, right under DOSBox's EMS page frame at E000, and
+    moved page 15h (0x213 paragraphs, about 8.5 KB) to DE52, so it ended at E065, 0x65 paragraphs into the frame. A
+    return into that page was re-vectored to its code segment (DEAD = DE52 + 5B), and the manager couldn't place the
+    return address. The unpatched game has the same hazard (a few of its test runs were flaky the same way).
+    **Fix:** the start-up allocates all remaining upper memory after its own block and keeps it, so the manager
+    keeps its pages in conventional memory and EMS/XMS. 42 clean soaks after.
 11. **MSC run-time error R6001 at the end of a game, only with one feature in play.** (2026-10-28.) **Cause:** a
     patch moved an `lcall` three bytes on, so the patched bytes covered a word the overlay manager relocates; when
     the page loaded, the call was rewritten into garbage. Emulated tests passed because they didn't apply the
@@ -270,7 +277,7 @@ cover them.
     game's `fread` changes CX; the emulated test's stand-in for it did not, so the emulated test passed while the
     first in-game run took every new-version chunk for the old version. **Fix:** keep the length in memory or on the
     stack across the call. An emulated test can't catch this class of bug unless it runs the game's real routine or a
-    stand-in that clobbers every scratch register (which this project did not add).
+    stand-in that clobbers every scratch register (this project had none then; see gotcha 27).
 19. **A popup opened from a correctly framed hook still stopped with "evm0012 ... Return address could not be found
     on the BP chain".** (2026-11-03.) **Cause:** the hook was entered through the shared dispatcher, a plain
     `call far` from overlay code into the UMB that does not pass through the manager's vector, so the manager never
@@ -299,7 +306,6 @@ cover them.
     **Fix (planned):** pause silences every music channel and remembers each channel's last volume, resuming
     resends them; volume is done by scaling every channel-volume (CC 7) message as the player sends it and
     resending all channels on a change. The GM master-volume SysEx is ignored by some synths.
-
 23. **evm0012 "unvectored call" the second time a hook called a resident routine.** (2026-10-27.)
     **Cause:** the hook made the far call as `push seg; push off; retf` into the resident routine; the
     manager couldn't vector it. **Fix:** `call far cs:[ptr]` with the far pointer stored in the block.
@@ -309,7 +315,6 @@ cover them.
     before calling it; test the hook in an emulator that checks SP after the call.
 25. **Three branches' hooks in the same 96 free bytes.** (2026-10-27.) **Cause:** each agent picked "free"
     space by reading the code in its own branch. **Fix:** the ledger above; nobody picks space by hand.
-
 26. **A freeze ("invalid opcode", stack inside a data array) after clicking a label in a new screen.**
     (2026-11-11.) **Cause:** the game's text drawing routine copies the string into an 80-byte buffer on its
     own stack with no length check. A composed line of 90 characters (a narrow font let it pass the pixel
@@ -321,7 +326,7 @@ cover them.
     the routine's entry points for composed lines (names + clauses at their longest).
 27. **A message box showed the first lines of the message file (its copyright header) instead of a
     message.** (2026-11-11.) **Cause:** the hook kept the message key's pointer in CX across two calls to
-    the game's C routines; Microsoft C callers may clobber AX, BX, CX, DX and ES, so the key arrived as 0,
+    the game's C routines; Microsoft C routines may clobber AX, BX, CX, DX and ES, so the key arrived as 0,
     and the text lookup only seeks a key when the pointer is non-null - with null it reads the file from the
     top. The emulated test faked those game calls without touching CX, so it passed. **Fix:** push/pop
     around the calls; make every emulated fake of a game routine clobber the volatile registers, so tests
