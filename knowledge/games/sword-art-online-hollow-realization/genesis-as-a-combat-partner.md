@@ -8,13 +8,13 @@ platform: windows
 engine: native
 route: data
 tools: ["MSVC 2022 Build Tools (C tool)", "Python 3.11 (own CPK/OFS3 readers, memory scans)"]
-anti_cheat: "none; single-player. Edits the user's own data.cpk and the user's own running game."
-status: released
+anti_cheat: "none; single player only (the game also has online co-op and PvP). Edits the user's own data.cpk and the user's own running game."
+status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["BinaryNull"]
 date: 2026-11-10
 links: []
-tags: [partners, npc-data, npcequip, cri-cpk, memory-editing, flags, skills, combat-ai]
+tags: [phyreengine, partners, npc-data, npcequip, cri-cpk, memory-editing, flags, skills, combat-ai]
 ---
 
 # Genesis as a combat partner in SAO: Hollow Realization
@@ -22,13 +22,17 @@ tags: [partners, npc-data, npcequip, cri-cpk, memory-editing, flags, skills, com
 > Genesis (npc 24) has a save slot and an availability flag but was never meant to be a partner: added as a
 > friend he follows you and stands idle. The Genesis Unlocker patches his `npc_data` record and adds a
 > `NpcEquip` entry (both borrowed from adult Tia, who shares his two-handed weapon type), then adds him to
-> the friend list in the running game. Released as v1.0.0; confirmed in-game that he fights, and that it
-> survives save, restart and reload.
+> the friend list in the running game. v1.0.0 is the current version; confirmed in-game that he fights, and
+> that it survives save, restart and reload.
 
 ## Setup
 - SAO: Hollow Realization Deluxe Edition, Steam, Windows 11, exe identity as in the front matter.
 - Builds on the CPK append method and readers from the [Zero EXP patcher](zero-exp-patcher-cri-cpk-append.md)
   and the live friend table from the [DLC Partner Unlocker](dlc-partner-unlocker-live-friend-table-and-flags.md).
+- Multiplayer: SAO:HR also has online co-op and PvP for up to four players. Tested in single player only;
+  keep the mod out of online sessions with other people unless they all agreed.
+- Saves: back up the save folder first (`um backup create`), as in the DLC Partner Unlocker note. Gotcha 3 is
+  a save that never spawned him again.
 
 ## Route and why
 The missing pieces are data: a weapon, partner fields and a skill list. Combat AI code is shared by all

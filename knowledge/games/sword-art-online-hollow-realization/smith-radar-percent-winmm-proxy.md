@@ -8,31 +8,35 @@ platform: windows
 engine: native
 route: native-hook
 tools: ["MSVC 2022 Build Tools (winmm.dll proxy)", "Python 3.11 (table decoding, exe patch prototype)"]
-anti_cheat: "none; single-player. The exe on disk is not modified; the proxy patches one call in memory."
-status: released
+anti_cheat: "none; single player only (the game also has online co-op and PvP). The exe on disk is not modified; the proxy patches one call in memory."
+status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["BinaryNull"]
 date: 2026-11-10
 links: []
-tags: [blacksmith, enhancement-formula, ui, proxy-dll, winmm, code-cave, localize-msg]
+tags: [phyreengine, blacksmith, enhancement-formula, ui, proxy-dll, winmm, code-cave, localize-msg]
 ---
 
 # Smith Radar Percent for SAO: Hollow Realization
 
 > The Craftsman Data screen shows each smith's five stats only as a radar shape. This mod adds the value as
 > a percentage beside each label ("Precision 80%"). It is a `winmm.dll` proxy that redirects one text call to
-> a small code cave in memory. Released as v1.0.0; confirmed in-game. The research behind it also decoded the
-> smith tables and the enhancement success formula, written up below.
+> a small code cave in memory. v1.0.0 is the current version; confirmed in-game. The research behind it also
+> decoded the smith tables and the enhancement success formula, written up below.
 
 ## Setup
 - SAO: Hollow Realization Deluxe Edition, Steam, Windows 11, exe identity as in the front matter.
 - MSVC 2022 Build Tools; the DLL is built `/MT` and imports only KERNEL32.
+- Multiplayer: SAO:HR also has online co-op and PvP for up to four players. The mod only changes what your
+  own screen shows, but it was tested in single player only; keep it out of online sessions with other people
+  unless they all agreed.
 
 ## Route and why
 First tried a text-only mod: putting the numbers into the profile name (text 8110000+npc in
 `usa.cpk msg/localize_msg.dat`, which *is* the Craftsman Data name). It worked, but the user wanted the
-numbers beside the radar labels. A direct exe patch also worked; the release uses a proxy DLL because Nexus
-discourages exe edits. `winmm.dll` was chosen over `dinput8.dll` so it can sit beside the
+numbers beside the radar labels. A direct exe patch also worked, on a test copy (reverted afterwards); the
+release uses a proxy DLL instead, so the exe on disk stays as installed and an edited exe never has to be
+shipped. `winmm.dll` was chosen over `dinput8.dll` so it can sit beside the
 [Zero EXP patcher's](zero-exp-patcher-cri-cpk-append.md) dinput8 proxy.
 
 ## How the game works (what we had to learn)
@@ -82,8 +86,10 @@ discourages exe edits. `winmm.dll` was chosen over `dinput8.dll` so it can sit b
 ## Gotchas
 1. **Profile-name text mod changed the wrong place for the user's taste.** **Cause:** 8110xxx is the
    Craftsman Data *name*, not the labels. **Fix:** code patch on the label loop.
-2. **Exe edits not acceptable for Nexus.** **Fix:** the same patch applied in memory by a proxy DLL.
-3. **dinput8.dll was already taken by another mod.** **Fix:** proxy winmm.dll instead.
+2. **An edited exe can't be shipped.** **Cause:** it's a game file. **Fix:** the same patch applied in memory by
+   a proxy DLL.
+3. **dinput8.dll was already taken by another mod.** **Cause:** the Zero EXP patcher's partner mode uses it.
+   **Fix:** proxy winmm.dll instead.
 4. **Not every smith in smith_param is a usable smith.** **Cause:** three records belong to town guards.
    **Fix:** exclude npc 301–303 from smith comparisons.
 

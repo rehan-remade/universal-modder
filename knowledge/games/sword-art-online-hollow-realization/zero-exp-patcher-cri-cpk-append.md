@@ -7,14 +7,14 @@ game_version: "Steam app 607890, sao_hr.exe PE timestamp 0x59DF33EF, SizeOfImage
 platform: windows
 engine: native
 route: data
-tools: ["Python 3.11 (own CPK/@UTF/CRILAYLA/OFS3 scripts)", "PyInstaller 6.11.1 (v1.x)", "MSVC 2022 Build Tools (v2.x patcher and DLL)", "zig cc 0.13.0 (first DLL build)", "YACpkTool", "OFS3_TOOL v1.0"]
-anti_cheat: "none; single-player. No DRM wrapper on the exe. The optional code change is applied in memory by a dinput8.dll proxy; the exe on disk is never modified."
-status: released
+tools: ["Python 3.11 (own CPK/@UTF/CRILAYLA/OFS3 scripts)", "PyInstaller 6.11.1 (v1.x)", "MSVC 2022 Build Tools (v2.x patcher and DLL)", "zig cc 0.13.0 (first DLL build)", "YACpkTool", "OFS3_TOOL v1.0 (Liquid-S)"]
+anti_cheat: "none; no DRM wrapper on the exe. Single player only (the game also has online co-op and PvP). The optional code change is applied in memory by a dinput8.dll proxy; the exe on disk is never modified."
+status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["BinaryNull"]
 date: 2026-11-10
-links: []
-tags: [cri-cpk, crilayla, utf-table, ofs3, exp, quests, duels, partners, proxy-dll, dinput8, patcher]
+links: ["https://github.com/Liquid-S/OFS3-TOOL"]
+tags: [phyreengine, cri-cpk, crilayla, utf-table, ofs3, exp, quests, duels, partners, proxy-dll, dinput8, patcher]
 ---
 
 # Zero EXP patcher for SAO: Hollow Realization
@@ -22,22 +22,28 @@ tags: [cri-cpk, crilayla, utf-table, ofs3, exp, quests, duels, partners, proxy-d
 > A patcher that sets EXP to 0 from enemy kills, request quests, episode/field quests and duels, each
 > selectable, plus a "partner mode" where the player gains nothing but partners still level. It edits the
 > user's own `data.cpk` (each file SHA-256 checked, no game files shipped), keeps a backup and uninstalls
-> byte-identically. Released as v2.0.1 (C rewrite); every option was confirmed in the real game.
+> byte-identically. v2.0.1 (a C rewrite) is the current version; every option was confirmed in the real game.
 
 ## Setup
 - SAO: Hollow Realization Deluxe Edition, Steam, Windows 11. Exe guard: PE timestamp `0x59DF33EF`,
   SizeOfImage `0x10A2000`, image base `0x140000000`, `.text` RVA = file offset + `0x1000`.
-- Data: `pkg/data.cpk` (35.6 GB, 11,363 files, CPK version 7 rev 14, built by CPKMC2.49.32).
+- Engine: Sony's PhyreEngine (PCGamingWiki; textures in the archives are `.phyre` files). `engine: native`,
+  since `um scan` has no PhyreEngine key.
+- Data: `pkg/data.cpk` (37.3 GB stock: 37,316,054,776 bytes, as in the
+  [shop note](enemy-materials-in-npc-shops.md); 11,363 files, CPK version 7 rev 14, built by CPKMC2.49.32).
 - Tests ran on a copy of the install launched from `sao_hr.exe` directly, plus a second copy kept only for
   install/uninstall hash checks.
 - v1.x: Python + PyInstaller 6.11.1. v2.x: C, MSVC 2022 Build Tools (`vcvars64`, `cl`, `/MT`).
+- Multiplayer: SAO:HR also has online co-op and PvP for up to four players (Steam store page, PCGamingWiki).
+  Everything here was tested in single player. Keep the patch out of online sessions with other people unless
+  they all agreed.
 
 ## Route and why
 Data edits for every reward value, since each is a table field. The CPK can't be rebuilt reliably with
 public tools (Gotcha 1), and the tables are compressed (Gotcha 2), so the patcher **appends** modified files
 to the end of the CPK and repoints their TOC rows. For partner mode no data-only split exists (player and
 partners share one multiplier table), so a 12-byte code change is applied in memory by a `dinput8.dll`
-proxy. A proxy keeps the exe untouched, which Nexus prefers.
+proxy. The exe on disk stays as installed.
 
 ## How the game works (what we had to learn)
 ### CRI CPK and friends
@@ -45,9 +51,10 @@ proxy. A proxy keeps the exe untouched, which Nexus prefers.
   Align 2048. Absolute file position = `FileOffset + TocOffset`. No CRC over TOC or files.
 - About half the files are **CRILAYLA**-compressed (CRI's backwards LZ). A row with FileSize == ExtractSize
   is read as uncompressed, which is what makes appending plain files work.
-- **OFS3** container used by most tables: magic, u32 header size 0x10, u8 type (0 unnamed, 2 named), u8
-  alignment, u8 entry mode, u32 body size, u32 count, entries relative to 0x10. Mode 0 = (offset, size),
-  mode 1 = (offset, id) with no size.
+- **OFS3** container used by most tables: magic, u32 header size 0x10, u16 type (0 unnamed, 2 named), u8
+  alignment, u8 entry mode, u32 body size at 0xC, u32 count at 0x10, entries relative to 0x10 (the layout
+  [OFS3_TOOL](https://github.com/Liquid-S/OFS3-TOOL) reads). Mode 0 = (offset, size), mode 1 = (offset, id)
+  with no size. Type 2 entries add a name offset; the names follow the body, and the body size stops at them.
 - **Only `sys/sys_data_abyss1/` is loaded on PC** (the exe contains only that path). `sys_data` and
   `sys_data_abyss2` are leftovers; the patcher edits all three anyway, harmlessly.
 
@@ -105,8 +112,10 @@ proxy. A proxy keeps the exe untouched, which Nexus prefers.
 5. **Partner mode looked broken (no popups).** **Cause:** message 0x21's mask is player-only. **Fix:** 0x30.
 6. **OFS3_TOOL overwrote edits.** **Cause:** clicking Extract again re-extracts over the folder. **Fix:**
    edit copies, or use a script.
-7. **Two proxy mods both want dinput8.dll.** **Fix:** other mods use a different system DLL (see
-   [Smith Radar Percent](smith-radar-percent-winmm-proxy.md)).
+7. **Two proxy mods both want dinput8.dll.** **Cause:** only one file of that name can sit next to
+   `sao_hr.exe`. **Fix:** other mods use a different system DLL (see
+   [Smith Radar Percent](smith-radar-percent-winmm-proxy.md)). Reignenn's Living World mod also uses
+   dinput8.dll, so partner mode can't run alongside it.
 
 ## Assets
 None.

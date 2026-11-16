@@ -8,13 +8,13 @@ platform: windows
 engine: native
 route: other
 tools: ["MSVC 2022 Build Tools (C console tool)", "Python 3.11 (own memory reader, script disassembler, CPK/OFS3 readers)"]
-anti_cheat: "none; single-player. The Deluxe Edition ships these characters' data; the tool only changes friend state for characters already in the install, through live memory of the user's own running game."
-status: released
+anti_cheat: "none; single player only (the game also has online co-op and PvP). The Steam Deluxe Edition includes the season pass and the free update these characters come from, so every copy owns them; the tool only changes friend state for characters already in the install, through live memory of the user's own running game."
+status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["BinaryNull"]
 date: 2026-11-10
 links: []
-tags: [partners, friends, dlc-characters, memory-editing, flags, script-vm, bytecode, save-checksum, npc-data, npcequip]
+tags: [phyreengine, partners, friends, dlc-characters, memory-editing, flags, script-vm, bytecode, save-checksum, npc-data, npcequip]
 ---
 
 # DLC Partner Unlocker for SAO: Hollow Realization
@@ -22,12 +22,22 @@ tags: [partners, friends, dlc-characters, memory-editing, flags, script-vm, byte
 > A console tool that adds Rain, Seven, adult Tia, Alice and Eugeo to the friend list of a running game, so
 > they can be partners without playing each join event, and puts them in town. It writes friendship points,
 > the joined byte and the right story flags into the live game, keeps a backup of every byte, and can undo.
-> The game then saves the result normally. Released as v1.1.0; confirmed in-game (friend list, combat, town,
-> Tia's look switch, persistence over save and reload).
+> The game then saves the result normally. v1.1.0 is the current version; confirmed in-game (friend list,
+> combat, town, persistence over save and reload).
 
 ## Setup
 - SAO: Hollow Realization Deluxe Edition, Steam, Windows 11, exe identity as in the front matter. The tool
   refuses any other exe.
+- Ownership: every Steam copy owns these characters. Steam sells the game as the Deluxe Edition, which
+  includes the season pass, and lists no separate DLC for it (store page). Alice, Eugeo and adult Tia (the
+  DLC's "Awakened Tia") were added in the season pass's third chapter, Abyss of the Shrine Maiden Chapter
+  III; Rain and Seven came in a free update (Gematsu's coverage of both). The tool skips their join events and
+  unlocks nothing a copy doesn't have.
+- Multiplayer: SAO:HR also has online co-op and PvP for up to four players. Tested in single player only;
+  keep the tool out of online sessions with other people unless they all agreed.
+- Saves: once the game saves, the change is in `GAME00.BIN` (`<Steam>\userdata\<id>\607890\remote`, synced
+  by Steam Cloud, per PCGamingWiki). Back that folder up first (`um backup create`); the tool's undo only
+  covers the running game.
 - C console tool (MSVC 2022), using OpenProcess / ReadProcessMemory / WriteProcessMemory.
 - Research helpers were own Python scripts: a script-bytecode disassembler, a read-only memory dumper, a
   flag setter with backup/undo.
@@ -72,14 +82,13 @@ applying their few effects directly was enough.
   id), 166 show event CG.
 - `event_list.dat` (abyss1, 35 sections, one per character chain): step (a, b) = script `a_b`. Every join
   event calls 84(id, 2) (Rain `51_5200`, Seven `51_5300`, Kizmel `50_7600`, ...). Adult Tia joins in
-  catch-up script `11_0000`: if story value 43 ≥ 235 and flag 1294 is off, set 1294 and call 84(19, 2). No
-  script ever adds child Tia (18).
+  catch-up script `11_0000`: if story value 43 ≥ 235 and flag 1294 is off, set 1294 and call 84(19, 2).
 
 ### Tia
 - Adult Tia (19) is the partner; child Tia (18) uses Premiere's model and only speaks in base-story scripts.
 - Look is chosen in code from flags: 1299 → younger form (npc 799), else 1298 → Ch.3 white-cape look
-  (npc 795), else 34 → another outfit (npc 798), else the default adult model. Flag 1754 enables "Change
-  Appearance" in the friend talk menu, which toggles 1299.
+  (npc 795), else 34 → another outfit (npc 798), else the default adult model. Flag 1754 enables the game's
+  own "Change Appearance" option when talking to her, which toggles 1299.
 - Town movement depends on `sys/NpcEquip` (OFS3 by npc id; 0x3C-byte rows with a condition at +9 and
   (tag u16, id u32) slots from +0x18; 0x14 weapon, 0x34 outfit). Tia's always-on set has no 0x34 outfit, so
   she stands frozen; the flag-selected sets have one.
@@ -87,14 +96,14 @@ applying their few effects directly was enough.
 ## Build steps
 1. Check the exe identity, that a save is loaded (slot 300 holds npc id 1) and that flag 1140 (Asuna) is on.
 2. For each chosen partner, check the slot's npc id, then write points = 100 (level 2), joined = 1 and the
-   availability flag. For adult Tia also set 1298 (Ch.3 look) and 1754 (Change Appearance), and reset child
-   Tia's slot to 0 points / not joined.
+   availability flag. For adult Tia also set 1298 (Ch.3 look), and reset child Tia's slot to 0 points / not
+   joined.
 3. Write a backup of every changed byte and flag bit first; undo restores it.
 4. In-game: save, then restart and load so town placement is rebuilt.
 
 ## Verification
 - In-game by the human: each partner in the friend list, fighting, in the Town of Beginnings, surviving
-  save + reload; Tia's Change Appearance switching Ch.3 look ↔ younger form immediately.
+  save + reload.
 - Add / undo / add again checked against the running game by reading the bytes back.
 - Not verified: Sumeragi as a partner (set up like a non-combat NPC: no weapon or skill set, no script ever
   adds her). She was added and then removed at the user's request.
@@ -104,8 +113,8 @@ applying their few effects directly was enough.
    and v1.0.0 only wrote points/joined. **Fix:** set availability flags (v1.1.0).
 2. **Partners listed as "Unknown" location / not in town.** **Cause:** availability flag off. **Fix:** set
    it, save, restart.
-3. **Tia frozen in town.** **Cause:** her always-on NpcEquip set has no outfit slot. **Fix:** flag 1298 or
-   1299 selects a set with one.
+3. **Tia frozen in town.** **Cause:** her always-on NpcEquip set has no outfit slot. **Fix:** flag 1298
+   selects a set with one.
 4. **Tia's Ch.3 look had stiff legs, then a bald head.** **Cause:** models a322/a323/a325 are cutscene-only
    (one section, no `_lo` part), and that body expects head model 19, not 16. **Fix:** don't swap +0x9C;
    use flag 1298, which picks a complete npc record.
@@ -123,5 +132,4 @@ None.
 About two days of sessions (2026-11-07 to 2026-11-08).
 
 ## Open questions
-- Child Tia (18) as a separate permanent partner.
 - Setting friendship level 5 without skipping the per-character achievements.

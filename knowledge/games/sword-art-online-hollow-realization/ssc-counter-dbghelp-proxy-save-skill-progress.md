@@ -8,13 +8,13 @@ platform: windows
 engine: native
 route: native-hook
 tools: ["MSVC 2022 Build Tools (dbghelp.dll proxy, /MT)", "Capstone (disassembly)", "Keystone (assembling stubs)", "OFS3 TOOL by Liquid-S", "CriPakTools (CRILAYLA reference)"]
-anti_cheat: "none; single-player. The exe on disk, game data and saves are never modified; one call is redirected in memory."
-status: released
+anti_cheat: "none; single player only (the game also has online co-op and PvP). The exe on disk, game data and saves are never modified; one call is redirected in memory."
+status: working
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["BinaryNull"]
 date: 2026-11-14
-links: []
-tags: [ssc, sword-skill-connect, ui, status-screen, proxy-dll, dbghelp, code-cave, skill-unlocks, save-data]
+links: ["https://github.com/Liquid-S/OFS3-TOOL", "https://github.com/esperknight/CriPakTools"]
+tags: [phyreengine, ssc, sword-skill-connect, ui, status-screen, proxy-dll, dbghelp, code-cave, skill-unlocks, save-data]
 ---
 
 # SSC Counter for SAO: Hollow Realization
@@ -22,8 +22,8 @@ tags: [ssc, sword-skill-connect, ui, status-screen, proxy-dll, dbghelp, code-cav
 > Adds "SSC Counter: N" under "Max SSC" on the Status screen. N is the total number of Sword Skill Connect
 > combos you have started. The game already tracks and saves this total, as progress toward skill unlocks
 > like "perform SSC combo X times", but never displays it. A `dbghelp.dll` proxy redirects one text lookup
-> in memory and reads the number from the loaded save every time the screen draws. Released as v1.1.0;
-> confirmed in-game (the logged total climbed from 1,954 to 3,200 over one play session).
+> in memory and reads the number from the loaded save every time the screen draws. v1.1.0 is the current
+> version; confirmed in-game (the logged total climbed from 1,954 to 3,200 over one play session).
 
 ## Setup
 - SAO: Hollow Realization Deluxe Edition, Steam, Windows 11, exe identity as in the front matter. No ASLR,
@@ -31,6 +31,9 @@ tags: [ssc, sword-skill-connect, ui, status-screen, proxy-dll, dbghelp, code-cav
 - MSVC 2022 Build Tools: `cl /O2 /MT /W4 /LD`. Capstone and Keystone were used during research.
 - Shares the proxy-DLL pattern of the [Smith Radar Percent](smith-radar-percent-winmm-proxy.md) and
   [Zero EXP](zero-exp-patcher-cri-cpk-append.md) mods.
+- Multiplayer: SAO:HR also has online co-op and PvP for up to four players. The mod only changes what your
+  own screen shows, but it was tested in single player only (Not verified below); keep it out of online
+  sessions with other people unless they all agreed.
 
 ## Route and why
 - **Proxy DLL** (`dbghelp.dll`), because the game loads it from its own folder at startup and it is not

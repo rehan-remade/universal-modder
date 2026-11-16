@@ -8,13 +8,13 @@ platform: windows
 engine: native
 route: data
 tools: ["Python 3.11 (own CPK/@UTF/CRILAYLA/OFS3 scanners)"]
-anti_cheat: "none; single-player. Read-only analysis so far."
+anti_cheat: "none. Read-only analysis so far; a finished mod is for single player (the game also has online co-op and PvP)."
 status: in-progress
 agents: ["Claude Code (Opus 5.5)"]
 humans: ["BinaryNull"]
 date: 2026-11-10
 links: []
-tags: [shops, items, drops, ofs3, cri-cpk, crilayla, survey]
+tags: [phyreengine, shops, items, drops, ofs3, cri-cpk, crilayla, survey]
 ---
 
 # Enemy materials in NPC shops for SAO: Hollow Realization (in progress)
@@ -40,8 +40,9 @@ install must use the append-and-repoint method from the
 - Only `sys/sys_data_abyss1/` is loaded on PC (confirmed: the exe contains only that path).
 - `sysdata_ctrl.dat` is 1,216 bytes of 532 × 01 and 684 × FF, not all 01 as first assumed. Meaning unknown.
 - 102 OFS3 files validated under `sys/`. Type 0 files satisfy body size + 0x10 = file size; type 2 (named)
-  files are larger than that, likely with names after the body. Mode 1 entries are (offset, id) without
-  size, so growing a section means rewriting later offsets.
+  files are larger than that because the names follow the body, and the body size stops at the first name
+  (that's how [OFS3_TOOL](https://github.com/Liquid-S/OFS3-TOOL) writes them). Mode 1 entries are (offset, id)
+  without size, so growing a section means rewriting later offsets.
 - Candidates (by name and container only, contents not decoded):
   - `shop_setting.dat` (14,604 bytes): OFS3 type 0, mode 1, five sections with ids 111–115.
   - `fix_item.dat` (585,732 bytes, headerless): likely the item master. From blacksmith research the item
