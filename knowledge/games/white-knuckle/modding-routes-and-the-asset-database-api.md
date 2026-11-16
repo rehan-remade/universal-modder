@@ -8,7 +8,7 @@ platform: proton
 engine: unity-mono
 route: loader-api
 tools: ["BepInEx 5.4.23.5 (Doorstop 4, winhttp proxy)", "r2modman (flatpak)", "ilspycmd 8.2.0.7535 on .NET 8", "dotnet SDK 8.0.426 targeting netstandard2.1", "um scan", "WKLib 0.3.1", "WKMapLoader 1.3.1", "ResourcefulHands 1.0.1"]
-anti_cheat: "none. Single-player; um scan reports no anti-cheat and none was found in the install."
+anti_cheat: "none. Single-player, but runs are ranked on leaderboards: keep runs with modded content off them. um scan reports no anti-cheat and none was found in the install."
 status: working
 agents:
 - Jcode (Claude Opus 4.6)
@@ -41,7 +41,14 @@ tags: [white-knuckle, unity, unity-6, bepinex, r2modman, proton, asset-database,
 - Build mods with the **.NET 8 SDK targeting `netstandard2.1`**. Reference `BepInEx.dll`, `0Harmony.dll`
   from a profile's `BepInEx/core`, and `Assembly-CSharp.dll` plus the `UnityEngine.*` modules from
   `White Knuckle_Data/Managed`.
-- No anti-cheat. The game is single-player and only read from.
+- No anti-cheat. The game is single-player, and its files are only read (mods load through BepInEx).
+- **Leaderboards.** Runs are still ranked: `M_Gamemode` carries `LeaderboardCategories` (score, time, distance,
+  climb), Workshop items hold leaderboard score configs (gotcha 9), and some gameplay mods on Thunderstore switch a
+  run to cheat mode or turn its leaderboards off (CiCi's framework has `SetDisablesLeaderboards`). Keep runs with
+  content that changes play, like the `gripResist` perk below, off the leaderboards and out of anything you post
+  or compare. Whether the game still submits a score for such a run wasn't checked.
+- The [Minecraft port note](climbing-movement-and-damage-look-in-minecraft-fabric.md) reads the same game for a
+  different project (build 25612096, the same Unity version and ilspycmd setup).
 
 ## Route and why
 
@@ -157,7 +164,8 @@ ilspycmd -p -o ./decomp \
 # 3. build a netstandard2.1 BepInEx plugin against the profile's core + the game's Managed folder
 dotnet build -c Release
 
-# 4. install into the r2modman profile you actually launch, NOT <install>/BepInEx
+# 4. install into the r2modman profile you actually launch, NOT <install>/BepInEx (gotcha 1);
+#    with BepInEx installed by hand in the game folder instead, <install>/BepInEx/plugins is the place
 cp bin/Release/netstandard2.1/YourMod.dll \
    "<r2modman>/WhiteKnuckle/profiles/<Profile>/BepInEx/plugins/"
 ```
@@ -250,7 +258,8 @@ here, so the UI side of a perk is untested.
 
 1. **The `BepInEx/` folder inside the game directory is a decoy.** On this install it contains only
    `plugins/WKMultiMod-1.8.x.zip` and **no `core/`**, so nothing there can load. `um scan` still
-   reports `bepinex/plugins` as a mod dir, correctly in general but misleadingly here. **Cause:**
+   reports `bepinex/plugins` as a mod dir, correctly in general but misleadingly here, and now warns
+   when an install's `BepInEx/` has no `core/`. **Cause:**
    r2modman keeps a complete BepInEx per profile outside the game folder. **Fix:** find the profile
    that actually launches and install there. Dropping a DLL in `<install>/BepInEx/plugins` does nothing.
 

@@ -428,7 +428,8 @@ KNOWN = {
                       "(items, perks, trinkets, gamemodes, levels, regions, cosmetics) - no Harmony needed; HarmonyX on "
                       "Assembly-CSharp only for behaviour changes, BepInEx/patchers (Mono.Cecil) for pre-chainloader fixes. "
                       "No compiler: WKMapLoader loads tag-named Blender .glb levels, ResourcefulHands does texture packs. "
-                      "WKLib is the community library. Mods load from the live r2modman profile, NOT <install>/BepInEx",
+                      "WKLib is the community library. With r2modman, mods load from the profile it launches, not "
+                      "<install>/BepInEx. Single-player: keep runs with modded content off the leaderboards",
                       "unity.md"),
 }
 
@@ -891,9 +892,10 @@ def scan(query: str) -> dict:
         warnings.append("ScriptHookV only works in story mode; launch GTA offline")
     if ix.has("bepinex/*") and not ix.has("bepinex/core/*"):
         warnings.append("there is a BepInEx folder in the install but it has no core/, so nothing in it can load: a mod manager "
-                        "(r2modman/Thunderstore/Vortex) most likely keeps the real BepInEx in a profile folder elsewhere. Find the "
-                        "profile that actually launches (the game's Steam launch options name its wrapper) and install there - a DLL "
-                        "dropped in this folder will be silently ignored")
+                        "(r2modman / Thunderstore Mod Manager) most likely keeps the real BepInEx in a profile folder elsewhere. "
+                        "Find the profile that actually launches (on Linux the game's Steam launch options name the manager's "
+                        "wrapper; on Windows it passes the profile on the command line) and install there - a DLL dropped in "
+                        "this folder will be silently ignored")
     report = dict(
         name=name, store=game.get("store"), appid=game.get("appid"), path=str(root),
         engine=dict(key=key, label=label, confidence=score, evidence=ev, **{k: v for k, v in det.items() if v not in (None, "")}),

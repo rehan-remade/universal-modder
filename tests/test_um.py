@@ -505,6 +505,25 @@ def test_isaac_route(tmp_path, name):
     assert r["routes"][0]["playbook"] == "isaac.md" and r["routes"][0]["why"] == "known game"
 
 
+def test_white_knuckle_route(tmp_path):
+    # Unity Mono, but the game's own registry (CL_AssetManager.AddNewDatabase) is the route, ahead of the engine default
+    r = _named_game(tmp_path, "White Knuckle", {"UnityPlayer.dll": b"MZ",
+                                                "White Knuckle_Data/Managed/Assembly-CSharp.dll": b"MZ"})
+    assert r["engine"]["key"] == "unity-mono"
+    assert r["routes"][0]["route"] == scan.KNOWN["white knuckle"][0] and r["routes"][0]["why"] == "known game"
+    assert "AddNewDatabase" in r["routes"][0]["route"] and r["routes"][0]["playbook"] == "unity.md"
+
+
+def test_bepinex_folder_without_core_warns(tmp_path):
+    # a mod manager keeps the real BepInEx in a profile, so an install's BepInEx/ with no core/ loads nothing
+    def warned(name, files):
+        return any("no core/" in w for w in _named_game(tmp_path, name, files)["warnings"])
+
+    assert warned("Decoy", {"BepInEx/plugins/SomeMod-1.8.5.zip": b"PK"})
+    assert not warned("Installed", {"BepInEx/core/BepInEx.dll": b"MZ", "BepInEx/plugins/Mod.dll": b"MZ"})
+    assert not warned("Vanilla", {})
+
+
 def test_vdf():
     d = scan._vdf('"AppState" { "appid" "105600" "name" "Terraria" "installdir" "Terraria" }')
     assert d["AppState"]["installdir"] == "Terraria"

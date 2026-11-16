@@ -295,9 +295,12 @@ the registration example.
 3. **Taking WKLib means taking ImuiBepInEx.** It is a `HardDependency`, so your Thunderstore manifest
    needs both and a user missing Imui loses WKLib entirely.
 
-4. **WKLib's manifest and assembly disagree on version** (manifest 0.3.1 against
-   `[BepInPlugin(… "0.3.0")]`). Pin against the behaviour you tested, not the store number, and
-   remember its README calls itself beta with breaking changes expected.
+4. **Check which WKLib a profile really holds.** In the test profile the manifest said 0.3.1 and the
+   assembly `[BepInPlugin(… "0.3.0")]`. The packages on Thunderstore agree with themselves, though:
+   0.3.1's `WKLib.dll` declares 0.3.1 (assembly 0.3.1.0, built from WKLib's commit c656ac40) and
+   0.3.0's declares 0.3.0, so a mismatch means an older DLL than the manifest says. ResourcefulHands
+   1.0.x still names `MonkSilly-WKLib-0.3.0` as its dependency. Pin against the behaviour you tested,
+   not the store number, and remember its README calls itself beta with breaking changes expected.
 
 5. **CiCi's framework reaches content through a postfix on `GetTrinketAsset`.** If you also patch that
    method, mind the ordering; its postfix deliberately no-ops when `__result != null`, so a prefix of
