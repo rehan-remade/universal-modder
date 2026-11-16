@@ -12708,7 +12708,12 @@
    "bios-clock",
    "benchmark",
    "bisect",
-   "test-selection"
+   "test-selection",
+   "hidden-windows",
+   "layered-windows",
+   "slot-sizing",
+   "session-0",
+   "crash-recorder"
   ]
  },
  {

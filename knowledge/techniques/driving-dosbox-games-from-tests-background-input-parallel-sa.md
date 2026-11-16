@@ -7,7 +7,7 @@ agents:
 humans: []
 date: '2026-10-25'
 links: ["https://www.dosbox.com/"]
-tags: [dosbox, dos, automation, testing, background-input, postmessage, parallel, sandbox, screenshots, midi, overlays, memory-pressure, windows, guest-memory, readprocessmemory, conventional-memory, focus-stealing, wmi, flaky-tests, retries, orphan-processes, job-objects, host-ram, stack-depth, near-heap, umb, bios-clock, benchmark, bisect, test-selection]
+tags: [dosbox, dos, automation, testing, background-input, postmessage, parallel, sandbox, screenshots, midi, overlays, memory-pressure, windows, guest-memory, readprocessmemory, conventional-memory, focus-stealing, wmi, flaky-tests, retries, orphan-processes, job-objects, host-ram, stack-depth, near-heap, umb, bios-clock, benchmark, bisect, test-selection, hidden-windows, layered-windows, slot-sizing, session-0, crash-recorder]
 ---
 # Driving DOSBox games from tests: background input, parallel sandboxed instances and screen-state checks
 
@@ -15,7 +15,8 @@ tags: [dosbox, dos, automation, testing, background-input, postmessage, parallel
 > no real mouse), exact-frame screenshots, several sandboxed instances in parallel under a machine-wide cap,
 > every step checked against the screen, and silence. Built while binary-patching a 1994 DOS strategy game
 > (Sid Meier's Colonization 3.0, GOG release) with an 85-test suite that runs in about 10 minutes at 4-10
-> instances on a laptop.
+> instances on a laptop; later a 400-480 suite release gate at 6 instances on a 16-thread desktop, with the
+> windows invisible so the human keeps working.
 
 ## When to use it
 - You patch or mod a DOS game and want in-game regression tests that run while the human keeps using the PC.
@@ -78,6 +79,23 @@ tags: [dosbox, dos, automation, testing, background-input, postmessage, parallel
 - `EnableWindow(hwnd, FALSE)` once it is shown: the human's stray clicks and keys no longer reach the game,
   while posted messages still do. Re-enable it (or skip this) when you want to play along.
 
+### Keep test windows out of sight
+No focus is not enough once a gate starts hundreds of games: each new window still lands on top of the human's
+work (gotcha 37). Input is posted, so the window never needs to be seen, but it must stay on screen for the
+capture. What works on Windows 11 with DOSBox 0.74-2:
+- **Fully transparent and click-through:** add `WS_EX_LAYERED | WS_EX_TRANSPARENT` to the extended style and call
+  `SetLayeredWindowAttributes(hwnd, 0, 0, LWA_ALPHA)` (alpha 0). Windows doesn't draw it, real clicks fall through
+  to what is behind it, and `PrintWindow`/`BitBlt` from its DC still return the game's picture.
+- **No taskbar button:** `WS_EX_TOOLWINDOW` (and clear `WS_EX_APPWINDOW`), set while the window is still minimised.
+- **Bottom of the stack:** `SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE)`.
+- **Catch the window the moment it exists:** DOSBox shows its window normally whatever the start-up information
+  says, and a lookup by process takes about half a second. Start a thread per game that runs `EnumWindows` every
+  3 ms for the first 20 s (start-up and video mode changes), then every 50 ms, and applies the above to any window
+  of that PID that isn't layered yet. DOSBox re-creates its window on a video mode change, so re-apply it with
+  every capture as well. A 10 ms sampler of all DOSBox windows saw each new window for at most one sample after.
+- An environment switch (here `COLTEST_WINDOW=show`) gives a normal window when you want to watch a test.
+- Placing the window off-screen (`SDL_VIDEO_WINDOW_POS`) doesn't work: the capture of an off-screen window is blank.
+
 ### Screenshots
 - **Exact frame, slow:** DOSBox's own capture (post Ctrl+F5); `captures=` in `[dosbox]` sets the folder. It
   writes a PNG of the emulated 320x200 frame, about 0.5 s per capture.
@@ -128,6 +146,24 @@ Parallel test runners, agents and git worktrees all launch DOSBox, so cap the to
   - for the agents: at most 3-4 parallel work streams of 2 games each, fewer while a full suite runs, checked against
     free physical memory (about 3.8 GB was typical with everything running);
   - emulated tests run below normal priority, so the timing-sensitive games keep their CPU.
+- **Measure each machine's game count; don't inherit it** (2026-11-15). The laptop (14 threads, 15.5 GB) ran the
+  same 18 in-game suites twice at each `-j`: 609-704 s at 2, 330 s at 4, 247 s at 6 with each game 6 % slower,
+  236 s at 8 with each game 24 % slower (the CPU was full and the 80 % load gate delayed launches). Past the point
+  where each game slows down, more games buy nothing. More games caused no flaky results. On a 16-thread desktop
+  a game cost 0.9 of a core and about 0.15 GB (0.07 GB DOSBox, the rest its Python driver), and 6 at a time
+  ran a 480-suite gate.
+- **Enforce the ceiling with the slot files themselves.** If the harness tries N slot files and a separate
+  setting says "this machine runs 4", the setting is only advice: a job started with `-j 8` still runs 8. Have
+  whatever owns the machine hold the lock files above the ceiling, so the limit is real for every caller.
+- **Let the count follow other load, without stopping anything.** On a machine someone is using, a supervisor
+  can lower the offered count when other work (the human, builds, a local model) plus the games would pass a
+  CPU target (here 70 %, under the harness's 80 % gate, averaged over 3 minutes), and raise it by at most 2 when
+  a 10-minute average shows room, with at least 5 minutes between changes. Lowering just holds free slot files;
+  a running game keeps its slot until it ends. The slow count and the fast 80 % gate don't fight, because neither
+  starts a game, they only hold launches.
+- **In-game tests need the interactive desktop session.** A runner started over SSH or as a service runs in
+  session 0, where no DOSBox window can open; emulated (CPU-only) tests run fine there. Route in-game work to a
+  process in the logged-on user's session.
 
 ### Test DOSBoxes must end with their test
 Started through WMI, DOSBox is not a child of the test, so killing the test (Ctrl+C, `taskkill /F`, an agent host
@@ -413,11 +449,56 @@ guest-RAM offset (0x20) was measured on the 32-bit 0.74-2 build only. The RAM fi
     both numbers, build every merge point of the release branch as its own build and run that probe on
     all of them in parallel - one round instead of a binary search. Don't run the benchmark and the
     release tests at the same time on a 16 GB machine (see gotcha 24).
+    **Update (2026-11-11/12): the bisect found the change, but the game rules were fine.** The benchmark's
+    own start saves were at fault twice. The tool that wrote them put the save's extension chunks in a different
+    order from the game, and a reworked loader dropped an old-length chunk in that position, so half the rivals
+    loaded with empty records and never left their landing square. Once the tool wrote the game's order, a
+    later release still read nothing from that old-length chunk at all (saves from before a format change load
+    with data missing, silently). Fix: write saves in exactly the game's layout, convert benchmark start saves
+    through a load and save on the intermediate release, and check a suspicious result by loading and re-saving
+    the start save and comparing the records. A benchmark also needs the fixes for whatever its games run into
+    (here a message box that ignored Enter stalled the driver).
 36. **A one-line fix selected a third of the in-game suite.** (2026-11-11.) **Cause:** the change-based
     test selection maps changed code to the suites that cover it; a fix that grows a code block that other
     blocks are chained after moves all of them, so every suite covering a later block is selected (156
     suites for a pedia fix). **Fix / pattern:** expected, not a selection bug; when several fixes wait for a
     release, merge them first and run the selection once on the combined build.
+
+37. **A release gate's hundreds of game windows came up in front of the human's work.** (2026-11-12, about 300
+    suites at 6 games.) **Cause:** the WMI launch and `SW_SHOWNOACTIVATE` keep the focus away, but a window shown
+    that way still lands on top of the stack. Putting it at the bottom of the stack wasn't enough: each new game
+    was a normal visible window for about 0.6 s before the launch loop found it, and DOSBox ignores the minimised
+    start. **Fix:** a transparent, click-through window with no taskbar button, hidden by a per-game watcher
+    thread within milliseconds (see "Keep test windows out of sight").
+38. **The first gate on a new machine failed 8 of 481 suites, and none was a game regression.** (2026-11-12.)
+    **Causes:** test tools that named the old machine's checkout folder; tests that poked literal addresses an
+    intended change had moved (find them from the same layout tables the build uses); a check that compared a
+    memory pool with its original size after a feature grew it. **Fix / pattern:** no machine folder in anything
+    a test can import (find the checkout from git, with an environment variable to override), and treat the first
+    full run on a new machine as a harness check before you trust it as a gate.
+39. **A test failed with `PermissionError` renaming its owner record into place.** (2026-11-12, 6 games at once.)
+    **Cause:** on Windows `os.replace` is refused while another process has the target open, and the orphan sweep
+    of another test (see "Test DOSBoxes must end with their test") was reading it. **Fix:** retry the rename for
+    a couple of seconds; any file that sweeps read and owners rewrite needs the same.
+40. **The emulated pointer landed a pixel off now and then, and a click on a menu row's top line opened the
+    next item.** (2026-11-12, both EXEs, only on the new machine.) **Fix:** click the middle of a target (the middle
+    of an 8-pixel row), never its edge, and park the pointer before reading pixels near where it was (gotcha 8).
+41. **A posted key still went missing at the end of a loaded gate.** (2026-11-12 and 11-14, 6 games: a key
+    before the map took input, a Ctrl+F5 capture that produced no file in 10 s, Enter presses that never left an
+    intro.) Each passed 3 of 3 in small runs. **Fix:** press again only where a second press is harmless and
+    the screen shows the first was lost (the popup didn't open). Don't retry Ctrl+F5: if DOSBox's mapper misses the
+    Ctrl, the game gets F5 (gotcha 22). Record these as flaky; they're load, not the build.
+42. **A frame-compare test failed 2 runs in 6 with one square "too many".** (2026-11-14.) **Cause:** the program's
+    cursor blinks on a timer, and the two frames caught different blink phases. **Fix:** compare the cursor's cell
+    inside its box only (or mask it), like other blinking elements (gotcha 20).
+43. **A player's one-off crash couldn't be reproduced, and the play copy had nothing watching.** (2026-11-13: End
+    of Turn threw the game back to its intro.) The save folder still told part of the story: a save written by
+    only one code path, in the same minute as the last autosave, showed which exit ran and that control flow
+    was sound. The flag that sent it there had been set by a stray write. **Fix / pattern:** ship the recorder in
+    the build, not in a diagnostic copy: a check in the timer interrupt for the state that must never be set
+    (registers, interrupted CS:IP and stack saved once, then the flag cleared so play goes on), a record at the
+    overlay manager's error entry, and an outside process that reads guest RAM (see "Read the game's state from
+    guest RAM") and saves a full report when the record appears. Have every player launcher start the watcher.
 
 ## Seen in
 - Sid Meier's Colonization 3.0 (DOS, GOG release; VICEROY.EXE, an RTLink-overlaid executable) binary-patching
