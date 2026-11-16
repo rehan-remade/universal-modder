@@ -3,7 +3,7 @@ kind: game
 title: "Mini tribes: Easterling and Gondorian-deserter captains in their own Nemesis rows, built from the game's own models and deployed to Lithlad and Gorgoroth"
 game: 'Middle-earth: Shadow of War'
 games_also: []
-game_version: 'Steam build 3095001 (exe 1.0.8874.0, public branch, unchanged since 2018-09-05), Windows 10 22H2. Every asset comes from that same Steam copy: the Easterling mercenaries from its DLC4 (Baranor) data, the Gondorian soldiers from the Minas Ithil base data. No other game was used.'
+game_version: 'Steam build 3095001 (exe 1.0.8874.0, public branch, unchanged since 2018-09-05) with The Desolation of Mordor expansion (Steam app 533110), Windows 10 22H2. Every asset comes from that same Steam copy: the Easterling mercenaries from the expansion''s data (DLC4 in the game''s records), the Gondorian soldiers from the Minas Ithil base data. No other game was used.'
 platform: windows
 engine: unknown
 route: data
@@ -26,10 +26,11 @@ tags: [nemesis, captains, mini-tribe, faction, army-screen, rows, refill, promot
 # Mini tribes: Easterling and Gondorian-deserter captains in their own Nemesis rows
 
 > Two small **human** captain tribes in the Nemesis system, made only from models that ship with Shadow of War:
-> **Easterlings** (the DLC4 mercenaries) and **Deserters** (the Minas Ithil Gondorian soldiers, with their own four
-> names, 13 titles and a "Deserter" label). Each tribe has its own locked 2-slot row on a region's army screen, and
-> only that tribe refills it. Its captains spawn at fixed camps, take damage and break, can be Dominated and
-> Recruited, go to the Garrison and back, Deploy, fight in pits, speak, and keep their own body when raised as undead.
+> **Easterlings** (the mercenaries of The Desolation of Mordor, a paid story expansion; DLC4 in the game's records)
+> and **Deserters** (the Minas Ithil Gondorian soldiers, with their own four names, 13 titles and a "Deserter"
+> label). Each tribe has its own locked 2-slot row on a region's army screen, and only that tribe refills it. Its
+> captains spawn at fixed camps, take damage and break, can be Dominated and Recruited, go to the Garrison and back,
+> Deploy, fight in pits, speak, and keep their own body when raised as undead.
 > Both tribes were built and tested first in an imported test region (Udûn, see the map-import note), then
 > **deployed to two stock campaign regions by database edits alone**: the Easterlings to Lithlad, the Deserters to
 > Gorgoroth. The user tested every step in the real game (2026-11-02 to 2026-11-06). The last two tests were the
@@ -43,11 +44,18 @@ tags: [nemesis, captains, mini-tribe, faction, army-screen, rows, refill, promot
   research only, in the hope that the framework helps other modders add their own mini tribes.
 - **All game assets used are from the games the user owns.** Here that is one game, the user's own Steam copy of
   Shadow of War (build 3095001) with its DLC data; no model, texture or sound was taken from anywhere else.
+- **Paid DLC: The Desolation of Mordor.** The Easterling mercenaries (models, bundles, merc records) and the Lithlad
+  region come from this story expansion (Steam app 533110, sold separately), and the Deserters reuse the Easterling
+  captain inventory (weapons swapped). The test copy has it installed: Lithlad is open in the Talion campaign. The mod
+  doesn't check ownership, so only build these tribes, or deploy one to Lithlad, in an install that owns the
+  expansion.
 - **The previously made offline mode mod is always on and present when making and installing mods into the user's
   own game.** Every build, install and test in this note ran with the
-  [offline-mode DLL](offline-mode-and-local-garrison.md) in place (v0.12, then v0.13 from 2026-11-06). Keep it
-  installed while the modded database is in use, and don't use Online Conquest, Online / Friend Vendettas or WB's
-  own Garrison: a stored or shared captain of a mini tribe references records an unmodded game doesn't have.
+  [offline-mode DLL](offline-mode-and-local-garrison.md) in place (v0.12, then v0.13 from 2026-11-06). Play the
+  modded game offline, as in the other notes here: keep the DLL installed while the modded database is in use, and
+  don't use Online Conquest, Online / Friend Vendettas or WB's own Garrison (the DLL removed). A stored or shared
+  captain of a mini tribe references records an unmodded game doesn't have, and those modes carry your captains into
+  other players' games.
 - **Only tested on the Steam build** (3095001, exe 1.0.8874.0, Windows 10 22H2). Every exe address below is for that
   build only. Not tested on GOG / Epic / Microsoft Store / console builds, other exe versions or Proton.
 - **No game files are in this repo.** No database, string table, mesh or extracted data; record names are quoted so
@@ -60,21 +68,23 @@ tags: [nemesis, captains, mini-tribe, faction, army-screen, rows, refill, promot
 - Earlier notes this builds on, read them first:
   - [offline mode](offline-mode-and-local-garrison.md): offline play, the local Garrison and the Nemesis id fix that
     mini-tribe captains need (v0.13 section);
-  - [Goblins of War](goblin-tribe-a-new-nemesis-tribe-via-game-gamedb.md): the `game.gamedb` format, name hashes, the
-    sort rule, roles → tribes;
-  - [Falmer tribe](falmer-tribe-a-skyrim-creature-as-a-nemesis-tribe.md) and [small mods](small-mods-new-orc-bodies-talion-armour-and-mesh-draw-counts.md):
-    body types, body items, captain bodies;
+  - [Goblins of War](goblin-tribe-a-new-nemesis-tribe-via-game-gamedb.md): the `game.gamedb` format, AttrHash (the
+    map-import toolkit's sowhash), the sort rule, roles → tribes;
+  - [Falmer tribe](falmer-tribe-a-skyrim-creature-as-a-nemesis-tribe.md) and
+    [small mods](small-mods-new-orc-bodies-talion-armour-and-mesh-draw-counts.md): body types, body items, captain
+    bodies;
   - [save format](save-format-decrypt-and-collectible-quests.md): save decrypt / edit (used for two save fixes here);
   - [map import](map-import-shadow-of-mordor-udun-as-a-new-region.md): the Udûn test region. **Not needed** for the
-    stock-region deploys; a mini tribe can go straight into a stock region (section "Deploying a tribe to a stock region").
-- Other plugins present in the test install (not part of this mod, loaded by a small ME ModLoader shim): Nemesis
-  Recurrence, Always All Upgrades and Talion Level 85 Cap, all by YoRHa9S (Nexus 278 / 289 / 286), plus the diagnostic
-  trace plugin from the map-import note.
+    stock-region deploys; a mini tribe can go straight into a stock region (Build steps, B).
+- Other plugins present in the test install (not part of this mod, loaded by a small shim for ReaperAnon's
+  [Middle Earth Mod Loader](https://github.com/ReaperAnon/Middle-Earth-Mod-Loader) plugins):
+  [Nemesis Recurrence](https://www.nexusmods.com/middleearthshadowofwar/mods/278), Always All Upgrades and Talion
+  Level 85 Cap, all by YoRHa9S (Nexus 278 / 289 / 286), plus the diagnostic trace plugin from the map-import note.
 
 ## Setup
 - Shadow of War Steam build 3095001, Windows 10 22H2; the user's long-running campaign save (Act 3+, Lithlad
-  unlocked, Udûn imported as a region). Lithlad needs the region's DLC config (`DLC.Config:Lithlad`), present on the
-  test copy.
+  unlocked, Udûn imported as a region). Lithlad is The Desolation of Mordor's region (see Disclaimers, Paid DLC); it
+  needs the region's DLC config (`DLC.Config:Lithlad`), present on the test copy.
 - Offline-mode DLL v0.12 → v0.13 (`GarrisonSize` raised to 100 on 2026-11-06), see Disclaimers.
 - Our tools (all own code, described so another agent can rebuild them):
   - `GameDb.cs`: the `game.gamedb` reader-writer from the Goblins note (named and unnamed records, heap strings,
@@ -178,7 +188,7 @@ the orc records, found one test at a time:
 - `Combat/CharacterType` records have no attributes; they are referenced only by `Combat/Tree` and by combat-type
   lists (`Orc_Infantry_FacA` is in 95 lists). The tribe gets `UD_<id>_Infantry` / `_Archer` / `_Defender` = twins of the
   orc ones, appended to all 131 lists that hold an orc twin (292 entries), plus its own list (`UD_Easterlings`).
-- That own list is what the undead items exclude (field `F15EA6B9` on `Body_Scar_BodyReplacement` and
+- That own list is what the undead items exclude (field `F15EA6B9`, an AttrHash, on `Body_Scar_BodyReplacement` and
   `I_Am_Undead_Appearance`). Before it, raised Easterlings got the orc scar body and orc undead skin (black body).
 
 ### 6. Body type ids and armour pickers (the raise-dead look)
@@ -268,9 +278,9 @@ the orc records, found one test at a time:
 ### 12. Shared stock records (what a stock-region deploy must not touch)
 - Stock regions share most army records: `CombatTreePicker:Default` and `ClassMemberSetup:Default` (24 factions each),
   event setups (`Faction_desert_Setup` is shared by 5 desert factions, `Faction_volcano_Setup` by 7 volcano ones),
-  `PromotionEventSetup:Default` (linked by 6 event setups, 3 timed events and the 3 difficulty overrides `Difficulty_3Hard
-  / 4Brutal / 5Bloody.PromotionEventOverrides` Default → HardMode), and even row records (the main-game desert rows
-  are shared by 3 factions).
+  `PromotionEventSetup:Default` (linked by 6 event setups, 3 timed events and the 3 difficulty overrides
+  `Difficulty_3Hard / 4Brutal / 5Bloody.PromotionEventOverrides` Default → HardMode), and even row records (the
+  main-game desert rows are shared by 3 factions).
 - Entries for rows a faction doesn't have are ignored (the 1-row `Faction_Player` runs on the 6-row Default setup).
   So a RowIndex-6 entry in `Default` / `HardMode` reaches only factions that have a row 6: fine for **one** deployed
   tribe.
@@ -375,6 +385,8 @@ What the deploy does, in order:
 Then diff, install with the game closed (installer checks the previous db md5, backs up saves + db), and test.
 
 ### C. Save fixes used along the way
+Both use the decrypt from the [save note](save-format-decrypt-and-collectible-quests.md), and its scope applies: your
+own saves, both copies backed up and edited, loaded only with the offline DLL installed.
 - **Locations stick** (10): when the imported region's rows changed, legacy captains kept old or no locations.
   `fix_udun_locations.py` gives each member a free location from his own row's list (location = the u32 after the bytes
   `04 FF FF FF FF 00` in the member record; row link next to the faction link).
@@ -444,16 +456,18 @@ logs checked after each test.
 16. **(Avoided by research)** The second deployed tribe on row 6 would be refilled by the first tribe's builder.
     **Cause:** shared `PromotionEventSetup:Default`, entries matched by RowIndex. **Fix:** own setups, timed events and
     difficulty pairs for the second region.
-17. **Deploy configs are not independent.** The Lithlad deploy's `retire` block drained the Udûn row of that tribe;
-    the Udûn row was later re-pointed at new spots by another config. Re-running the old config as is would drain it
-    again. Keep a build log of which config ran on which db, and build each database from the previous one.
-18. **`db_diff_named` always reports `NEW Faction/Loot/TagWeight:` and `NEW Faction/Loot/Tag:`.** Two stock records
-    whose names hold a non-ASCII byte; the name lookup returns null. False positives.
+17. **Deploy configs are not independent.** **Cause:** the Lithlad deploy's `retire` block drained the Udûn row of
+    that tribe; the Udûn row was later re-pointed at new spots by another config, so re-running the old config as is
+    would drain it again. **Fix:** keep a build log of which config ran on which db, and build each database from the
+    previous one.
+18. **`db_diff_named` always reports `NEW Faction/Loot/TagWeight:` and `NEW Faction/Loot/Tag:`.** **Cause:** two
+    stock records whose names hold a non-ASCII byte; the name lookup returns null. **Fix:** none needed, they are
+    false positives.
 19. **Changing a row's locations didn't move existing captains.** **Cause:** locations are saved and kept. **Fix:**
     the location save fix, or wait for the captains to die / be dominated.
 20. **The database header's named / unnamed counts grew with every hand-made build.** **Cause:** the early tools never
-    reset the count snapshot before saving, so each save added the totals again. Harmless to the game; the kit keeps
-    the base db's value.
+    reset the count snapshot before saving, so each save added the totals again. **Fix:** harmless to the game; the
+    kit keeps the base db's value.
 
 ## Known issues (open, by the user's choice)
 - Slot-11 head replacements (e.g. sack / infested heads handed out on raise) have no human head picker.

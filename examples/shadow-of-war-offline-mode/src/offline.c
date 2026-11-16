@@ -438,7 +438,8 @@ static LONG CALLBACK crash_report(PEXCEPTION_POINTERS ep)
  * counter that restarts at 0 every launch. Offline the prefix stays empty, so every session hands out _NPC_0, _NPC_1...
  * again: the 2026-10-20 save held 359 bare ids, _NPC_0 alone on 36 captains. A captain whose id is already taken fails
  * the Garrison predicate HasNPCGUID ("You cannot send this Follower to the Garrison"). Fix: write a fresh random prefix
- * (like the online session GUID) as soon as the manager exists, and again whenever the game clears it.
+ * (like the online session GUID) once the game's first request is out and the manager is stable (v0.12, below), and
+ * again whenever the game clears it. v0.13 also replaces the id writer itself (below).
  * Manager = *(*(exe+0x26FFAA8) + 0x6D18) (Ghidra base 0x140000000). Ini [Offline] NpcGuidPrefix=0 turns it off. */
 static char npc_prefix[33];
 

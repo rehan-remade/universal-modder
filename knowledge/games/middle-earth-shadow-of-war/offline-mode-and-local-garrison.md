@@ -80,7 +80,8 @@ tags: [offline, online-services, hydra, agora, winhttp, proxy-dll, garrison, nem
     the OS, and it affects other programs.
   - **Firewall block.** It works for "offline", but the Garrison and the Mirian wallet then stay locked or are lost
     (see Gotcha 4).
-  - **Patching the exe.** It's DRM-wrapped, which is out of scope.
+  - **Patching the exe file.** It's DRM-wrapped, which is out of scope. (v0.13's id-writer hook is only written in
+    memory, once the code is unpacked, and leaves the DRM running.)
 - **Scope (keep it this way):** the stand-in is a single-player helper, not a server.
   - It runs inside the game process and opens no port, so nothing else can connect to it.
   - It grants nothing: no catalog products, Gold, War Chests, boosts, entitlements, DLC or reimbursements.
@@ -195,19 +196,20 @@ private image kept outside any repo.
     [save note](save-format-decrypt-and-collectible-quests.md)), and each id appears once per member. Rewriting
     every duplicated `_NPC_<n>` to a unique same-length string (e.g. `_A0c_<n>`) made the affected captains
     garrisonable again; the length must not change.
-- **v0.13 (2026-11-06): the id writer itself.** v0.12's delayed prefix still let bare ids out (Gotchas 13-14).
+- **v0.13 (2026-11-06): the id writer itself.** v0.12's delayed prefix still let bare ids out (Gotcha 13).
   - The writer is `FUN_141b2f174` (exe+0x1B2F174, 3 callers): it returns at once when member+0x3D0 is already set,
     else formats `"%s_NPC_%d"` from the manager's prefix and the global counter at exe+0x2AA1BB8 (48-byte field).
   - The DLL replaces it with a 14-byte absolute jump (`FF 25 00000000` + 64-bit address) to its own function: same
     format, same counter (interlocked increment), the game's prefix when its first byte is set, else a random
     128-bit per-launch prefix (`BCryptGenRandom`). The jump is written only when the function's first 16 bytes match
     the expected code (polled for up to 5 minutes), with `VirtualProtect` + `FlushInstructionCache`; any other exe
-    build just logs "hook NOT installed".
+    build just logs "hook NOT installed". v0.12's prefix write (fixed offsets, see above) has no such check yet, so
+    on any other build set `NpcGuidPrefix=0`.
   - Result in the 2026-11-06 log: `NPC id hook installed` at load, and every captain made that session got
     `<32 hex>_NPC_<n>`, the first ones included.
-  - **The Garrison store counts too.** Garrisoned captains are not in the save, but each `.agb` file keeps the
-    captain's id in `npc_profile_guid`. A save captain whose bare id matches a stored captain is refused just the
-    same. The save id rewrite must treat those ids as taken.
+  - **The Garrison store counts too** (Gotcha 14). Garrisoned captains are not in the save, but each `.agb` file
+    keeps the captain's id in `npc_profile_guid`. A save captain whose bare id matches a stored captain is refused
+    just the same. The save id rewrite must treat those ids as taken.
 - **Garrison size:** the capacity is only the `garrison_size` the stand-in sends in `game-settings` (read into
   `CloudServicesGameSettingsMgr+0xCC`, no clamp seen at the read). `GarrisonSize=100` was accepted. The game still
   requests `garrison-get-collection/run?limit=50`; the stand-in ignores `limit` and returns every stored captain (up to
@@ -249,6 +251,7 @@ private image kept outside any repo.
   - other builds, and the GOG/Epic versions;
   - Online Conquest and Vendettas with the DLL removed again;
   - more than 2 orcs in the Garrison at once;
+  - a Garrison list past 50 captains (`GarrisonSize=100` was accepted as a capacity);
   - Deploy into an occupied slot;
   - a `PUT objects/<type>/<id>` with a shape other than `{data}`. The game never sent one; it's logged, not
     applied.
