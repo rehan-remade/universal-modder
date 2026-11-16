@@ -10,30 +10,33 @@ route: loader-api
 tools: [ForgeGradle 7, JDK 25, Vineflower-decompiled reference sources (kept outside the repo)]
 anti_cheat: none (single player, own dedicated server)
 status: working
-agents:
-- Claude Code (Claude Opus 5.5)
+agents: ["Claude Code (Opus 5.5)"]
 humans: []
 date: '2026-11-14'
-links: []
-tags: [dimensions, portals, shaders, saveddata, world-scale, dedicated-server, forge]
+links: ["https://github.com/MinecraftForge/MinecraftForge", "https://github.com/Vineflower/vineflower"]
+tags: [dimensions, portals, shaders, saveddata, world-scale, respawn, forge-config, dedicated-server, forge]
 ---
 # Runtime dimensions, parallel-universe portals and whole-dimension endings in Forge 26.3
 
-> A Forge 26.3 mod (a disasters mod's 1.12.0 release) that creates "parallel universes" as real dimensions while the
-> server runs (pristine seed, variant seed, or an echo copy of the player's surroundings), portals into them with a charge
-> and a point of no return tied to world-ending events, a world-ending event that rewrites a whole dimension including
-> chunks generated later, and a procedural-shader sky (eyes, a planet). No mixins: loader API, reflection into the
-> server's level map, and own core shaders. Verified in scripted dev clients and on a dedicated server with two clients.
+> A Forge 26.3 mod (a disasters mod's 1.12.0 release, plus later portal and respawn fixes) that creates "parallel
+> universes" as real dimensions while the server runs (pristine seed, variant seed, or an echo copy of the player's
+> surroundings), portals into them with a charge and a point of no return tied to world-ending events, a world-ending
+> event that rewrites a whole dimension including chunks generated later, and a procedural-shader sky (eyes, a planet).
+> No mixins: loader API, reflection into the server's level map, and own core shaders. Verified in scripted dev clients
+> and on a dedicated server with two clients.
 
 ## Setup
 - Minecraft Java 26.3, Forge 66.1.5, ForgeGradle 7, JDK 25 (Windows 11). Dev runs with `runClient` / `runServer`.
 - Decompiled 26.3 + Forge sources in a private folder outside the repo, used only to check API names and behaviour.
 - Optional compatibility tested with TNT Expansion 4.7.1 (+ its two library mods) on the dev classpath only.
+- **Multiplayer:** universes, portals and world-ending events change the world for everyone on the server, and an
+  ending kills whoever stays behind. That's for single player, or a server you run with players who agreed to it.
 
 ## Route and why
 Loader API plus a little reflection. A mixin into level creation was the alternative; it isn't needed because the
 server's level map is a plain mutable map and the level constructor is public. Datapack-defined dimensions were
-rejected: they are fixed at world creation and can't be made on demand.
+rejected: they are fixed at world creation and can't be made on demand (the
+[NeoForge 1.21.1 dimension note](neoforge-1-21-1-custom-dimension-and-tool-tier.md) shows that route).
 
 ## How the game works (what we had to learn)
 1. **Levels at runtime.** `MinecraftServer` keeps its levels in a `LinkedHashMap` keyed by dimension key; level creation
@@ -57,18 +60,27 @@ rejected: they are fixed at world creation and can't be made on demand.
    no depth write, drawn from a client-only anchor entity kept at the camera.
 6. **Heights:** a chunk's height query returns the top block; the level's height query returns one above it.
 7. **Tags changed:** `#minecraft:dirt` is only dirt, coarse dirt and rooted dirt in 26.3; grass, podzol and mycelium
-   live in other tags; the umbrella for "ground" is `#substrate_overworld`.
+   are `#minecraft:grass_blocks`; the umbrella for "ground" is `#minecraft:substrate_overworld` (dirt, mud, moss blocks
+   and grass blocks).
 8. **Event lists:** stopping (removing) one event from inside the manager's tick loop throws a concurrent-modification
    exception; mark it finished and let the manager remove it.
 9. **Whole-dimension rewrite:** a per-dimension record that rewrites loaded chunks over several ticks (time-budgeted)
    and any other chunk the moment it loads or generates, with a saved "done" set, covers chunks that don't exist yet.
+10. **Respawn points in other dimensions.** `ServerPlayer.setRespawnPosition(new RespawnConfig(RespawnData.of(dim, pos,
+    yaw, pitch), forced=true), false)` works like `/spawnpoint`. If that spot is later blocked, vanilla *clears* the
+    respawn config before `PlayerRespawnEvent` fires and puts the player at the world spawn (another dimension). A
+    fallback that reads the config in the respawn event sees nothing; keep your own copy in the player's persisted data
+    (`getPersistentData()` under `ServerPlayer.PERSISTED_NBT_TAG`, which Forge copies across death) and move the player
+    there.
 
 ## Build steps
 1. Create the level as in (1) from a command handler; keep a SavedData list of universes and recreate them on
    server-started.
 2. Portal frame block + block entity (charge phases), portal block implementing `Portal`, a key item holding the target
    in custom data.
-3. For world-ending events, compute "seconds until the end here"; portals collapse a configurable time before it.
+3. For world-ending events, compute "seconds until the end here"; portals collapse a configurable time before it
+   (10 s by default before 1.15.1; from 1.15.1 the default is 0, so they stay open until the destruction starts, and
+   gotcha 13 says how that default was changed).
 4. `./gradlew build`; the jar contains only the mod's own classes and assets.
 
 ## Verification
@@ -82,6 +94,10 @@ rejected: they are fixed at world creation and can't be made on demand.
   10 s before, the other stayed and died at the impact; no errors in the server log.
 - 37-scenario regression of earlier features compared line by line with the previous release's logs, with and
   without an optional compat mod.
+- **Follow-up (1.15.1, the collapse default changed to 0):** a scripted dev client checked it with a 20 s countdown:
+  the portal was open at 8.95, 1.9 and 0.35 s left, the player crossed at about 9 s, and the portal collapsed at 0 s.
+- **Respawn fix:** dying in the universe crossed to respawns there; with the respawn spot walled in, the fallback moves
+  the player to safe ground in that universe (log line), not back to the first world.
 - Not verified: very large worlds (thousands of chunks) under the full-pass mode on low-memory machines.
 
 ## Gotchas
@@ -113,6 +129,18 @@ rejected: they are fixed at world creation and can't be made on demand.
 12. **Test runs killed for low memory** (16 GB host, dev server + two clients). **Cause:** leftover game clients and
     Gradle daemons from earlier runs. **Fix:** close them by PID between runs; cap heaps (`-Xmx`) for multi-client
     tests.
+13. **A new `ForgeConfigSpec` default didn't reach players who already had the config file.** **Cause:** the old value
+    is written in the file, and Forge only uses a default when the key is missing or invalid. **Fix:** define the
+    setting under a new key (here `pointOfNoReturn` = 10 became `collapseBeforeEnd` = 0). Forge then adds the new key
+    with its default and removes the stale one from the file, logging both as "Incorrect key ... was corrected from
+    ... to its default" (from null for the new key, to null for the old one).
+14. **A "did the portal collapse after the end?" check still found the portal blocks** (single player, checked from
+    the dimension the player had crossed into). **Cause:** block entities tick only while their chunk is loaded; most
+    likely the old dimension's chunks had unloaded, so the portal's block entity never ticked (not confirmed). **Fix:**
+    run that check with the player nearby; a second run with the player beside the portal saw it collapse.
+15. **With the respawn spot walled in, players respawned in the first world.** **Cause:** vanilla clears a blocked
+    forced respawn point before `PlayerRespawnEvent` fires. **Fix:** keep your own copy in persisted data (How the
+    game works, 10).
 
 ## Assets
 All textures and sounds generated by the mod's own Python scripts (pixel art drawn in code, synthesised audio); no
