@@ -6011,6 +6011,43 @@
   ]
  },
  {
+  "path": "games/minecraft/extending-a-terraforming-tool-to-222-modes-browser-lasting-zones-minecraft-26-3-forge.md",
+  "kind": "game",
+  "title": "Extending a Minecraft 26.3 Forge terraforming tool to 222 modes: a full-screen mode browser, lasting zones saved with the world, exact undo for animated and timed modes",
+  "game": "Minecraft",
+  "games_also": [],
+  "game_version": "Minecraft Java 26.3, Forge 66.1.5 (ForgeGradle 7, Java 25)",
+  "platform": "windows",
+  "engine": "java",
+  "route": "loader-api",
+  "tools": [
+   "Forge 66.1.5",
+   "ForgeGradle 7",
+   "decompiled 26.3 sources for API checks (kept out of the repo)",
+   "scripted dev clients",
+   "a dev dedicated server"
+  ],
+  "anti_cheat": "none (single player and a dev dedicated server the user runs)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-16",
+  "links": [],
+  "tags": [
+   "terraforming",
+   "undo",
+   "world-editing",
+   "saved-data",
+   "zones",
+   "gui",
+   "self-test",
+   "dedicated-server",
+   "forge"
+  ]
+ },
+ {
   "path": "games/minecraft/factorio-style-belts-power-and-ore-patches-as-horizon-rust-m.md",
   "kind": "game",
   "title": "Factorio-style belts, power and ore patches as Horizon (Rust Minecraft 26.3) WebAssembly mods",
