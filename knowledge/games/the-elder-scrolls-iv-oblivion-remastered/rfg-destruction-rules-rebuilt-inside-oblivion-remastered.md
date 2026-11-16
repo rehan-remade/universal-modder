@@ -3,17 +3,17 @@ kind: game
 title: "Red Faction Guerrilla's destruction rules rebuilt inside Oblivion Remastered, measured against the real game"
 game: "The Elder Scrolls IV: Oblivion Remastered"
 games_also: ["Red Faction: Guerrilla Re-Mars-tered"]
-game_version: "Oblivion Remastered 1.512.105 (UE5.3.2); RFG Re-Mars-tered Steam app 667720"
+game_version: "Oblivion Remastered 1.512.105 (patch 1.2, UE 5.3.2), Steam app 2623190; RFG Re-Mars-tered, Steam app 667720"
 platform: proton
 engine: unreal
 route: reimplementation
-tools: ["RE-UE4SS 3.0.1", "Proton 11.0", "mingw-w64", "Blender (headless)", "UE 5.3.2 editor commandlet (cook)", "retoc", "Binary Ninja", "python3 + numpy"]
-anti_cheat: "none (single-player, lab copies of both games, offline)"
+tools: ["RE-UE4SS 3.0.1 Beta (experimental build)", "Proton 11.0", "mingw-w64", "Blender (headless)", "UE 5.3.2 editor commandlet (cook)", "retoc", "Binary Ninja", "python3 + numpy"]
+anti_cheat: "none; Oblivion Remastered is single-player. RFG has online PvP and leaderboards, so both lab copies run offline and the RFG proxy never goes online"
 status: in-progress
 agents: ["Claude Code (Fable 5.2; plan, reading, analysis, this note)", "Claude Code (Opus 5.5; code)", "Claude Code (Sonnet 5.5; lab runs)"]
 humans: []
 date: 2026-11-13
-links: ["https://github.com/LinuxMintJeff21/oblivion-remastered-geomod"]
+links: ["rfg-destruction-passthrough-into-oblivion-remastered.md", "../red-faction-guerrilla/generating-rfg-destructible-building-chunks.md", "../../techniques/fractured-mesh-look-match-ue5.md", "https://github.com/UE4SS-RE/RE-UE4SS", "https://github.com/trumank/retoc"]
 tags: ["destruction", "reimplementation", "oracle", "chaos", "havok", "collision", "depenetration", "trace-replay", "ue4ss", "lua", "physics"]
 ---
 
@@ -25,22 +25,30 @@ tags: ["destruction", "reimplementation", "oracle", "chaos", "havok", "collision
 > the game and is measured there; it has not been play-tested as a whole and is not a release.
 
 ## Setup
-- Oblivion Remastered 1.512.105 (UE5.3.2) and RFG Re-Mars-tered (Steam app 667720), both under Proton 11.0 on Linux, both
-  run headless in gamescope, each from its own lab copy with its own saves.
-- RE-UE4SS 3.0.1 in Oblivion: one Lua mod plus a mingw-built DLL loaded with `package.loadlib` (the rules).
+- Oblivion Remastered 1.512.105 (Steam app 2623190, UE 5.3.2) and RFG Re-Mars-tered (Steam app 667720), both under
+  Proton 11.0 on Linux, both run headless in gamescope, each from its own lab copy with its own saves.
+- RE-UE4SS in Oblivion (the lab's experimental build, which logs as 3.0.1 Beta; see the passthrough note's Setup): one
+  Lua mod plus a mingw-built DLL loaded with `package.loadlib` (the rules).
 - In RFG: a proxy `dinput8.dll` (our own C, built with mingw for 32-bit) that swaps one stock chunk for ours at load,
   fires test rockets on command and writes logs.
+- **Offline only.** Oblivion Remastered is single-player. RFG Re-Mars-tered has online PvP and Steam leaderboards (its
+  Steam page), so the proxy lives only in RFG's lab copy, which runs offline; remove it before playing RFG online.
 - Buildings are built offline from the user's own install: extract the meshes, fracture in Blender, write the link graph,
   cook the pieces with the UE 5.3.2 editor commandlet into a pak. No game file is shipped.
+- The decompiler output (Binary Ninja) stays private, outside any repository, and the project's own repository isn't
+  public.
 
 ## Route and why
-- The first route ran RFG itself beside Oblivion and passed its simulation through shared memory (see the note "Red Faction
-  Guerrilla destruction passthrough into Oblivion Remastered"). It worked for one house and cost a hidden second game, a
-  frame of lag and two grounds that never matched.
+- The first route ran RFG itself beside Oblivion and passed its simulation through shared memory (see
+  [the passthrough note](rfg-destruction-passthrough-into-oblivion-remastered.md)). It worked for one house and cost a
+  hidden second game, a frame of lag and two grounds that never matched.
 - Since 2026-11-05 the rules are rebuilt in our own code and Unreal moves the pieces. The passthrough stayed as the oracle:
   the same building, as a chunk, in the real RFG, hit by the same three rockets at the same points.
 - What a rebuild loses is the original's motion: every difference between Havok and Chaos shows up as a different outcome.
   Most of this note is about finding which difference it was.
+- This is the rebuilt-guest route of `techniques/rebuilt-guest-engine-inside-a-host.md`, with the real game as the oracle
+  (`techniques/oracles-how-agents-know-a-mod-works.md`); `techniques/engine-recreation-measures-and-fidelity.md` covers
+  what such a rebuild can measure.
 
 ## How the game works (what we had to learn)
 All of this is our reading of RFG's code and of its run-time behaviour, in our own words.
@@ -64,7 +72,8 @@ All of this is our reading of RFG's code and of its run-time behaviour, in our o
 ## Build steps
 1. Build a house: components from the cooked Blueprint, meshes from the pak, fracture, link graph, collision boxes, cook.
 2. Write the same house as an RFG chunk (pieces, links, anchors, convex hulls in a Havok packfile) and let the proxy DLL swap
-   it in for a stock building. This gives the oracle with the same piece ids on both sides.
+   it in for a stock building. This gives the oracle with the same piece ids on both sides. The chunk format and its
+   gotchas are in [the chunk note](../red-faction-guerrilla/generating-rfg-destructible-building-chunks.md).
 3. One script per side fires three rockets at fixed points of the house, 25 s apart, and records: the standing piece count,
    every damage call (place, piece, energy), every link the stress pass broke, link strengths before and after each pass.
 4. A run list tool starts the runs one after another, judges each from its evidence files, and ends with one table.
@@ -88,8 +97,9 @@ All of this is our reading of RFG's code and of its run-time behaviour, in our o
    fitted around the pieces, so 99 % of touching pairs overlapped (median 0.22 m). Chaos pushes a body out of an overlap:
    a piece freed after the blast read 0 m/s at birth and 2.4 m/s sideways 0.08 s later (RFG's: a plain fall from rest).
    The kicked pieces hit the house, broke links, and the stress passes went on. **Fix:** boxes that stay inside each piece
-   and share a separating plane with every neighbour (0 % overlap). Same pieces, same links: the upper part held after the first rocket in 14 of 14 runs.
-   Frame time after the rocket fell from 34 to 26 ms as well. Measure the overlap offline before any lab time.
+   and share a separating plane with every neighbour (0 % overlap). Same pieces, same links: the upper part held after the
+   first rocket in 14 of 14 runs. Frame time after the rocket fell from 34 to 26 ms as well. Measure the overlap offline
+   before any lab time.
 2. **Symptom.** Days of tuning rules that were already right. **Cause:** we compared outcomes, and an outcome has many
    causes. **Fix:** split the question. Replay the original's logged state through your rule (is the rule right?), replay
    your event rule on the original's recorded motion (is the detection right?), then record your own motion in the same
@@ -110,8 +120,8 @@ All of this is our reading of RFG's code and of its run-time behaviour, in our o
    velocities; a large gap between the two is itself the sign of overlap (it closed once the boxes were inset).
 7. **Symptom.** The recorder changed the result. **Cause:** six engine calls per body per tick from Lua took about 3 s of
    the 20 s after a rocket (frame 34 ms without it, 39 to 48 with it; far more after the second rocket), and Unreal steps
-   physics by frame time. **Fix:** log the recorder's own time, run one
-   unrecorded run beside the recorded ones, and use recorded runs only for the window where the cost is small.
+   physics by frame time. **Fix:** log the recorder's own time, run one unrecorded run beside the recorded ones, and use
+   recorded runs only for the window where the cost is small.
 8. **Symptom.** A workaround hid the cause for days. A "new piece ignores its neighbours for 400 ms" rule had been added
    for pieces freed by a blast. **Cause:** it covered only that path; pieces freed later by contact damage or the stress
    pass still overlapped. **Fix:** fix the shapes, then re-test every workaround built on the old shapes (ours made no
@@ -122,7 +132,9 @@ All of this is our reading of RFG's code and of its run-time behaviour, in our o
     scratch folder that held a script named like a standard module (`dis.py`). **Fix:** run tools from a clean folder.
 
 ## Assets
-None generated. Building pieces come from the user's own install at build time and stay on the user's machine.
+None generated. Building pieces come from the user's own install at build time and stay on the user's machine. So does
+the RFG chunk of the same house, which keeps a stock chunk's headers and materials from the user's RFG install: anyone
+else builds both from their own two installs.
 
 ## Cost and time
 About ten days of agent sessions so far. One lab run is 4.6 minutes; a six-a-side comparison is about an hour. The motion

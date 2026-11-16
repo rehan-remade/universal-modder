@@ -1,31 +1,35 @@
 ---
 kind: technique
-title: "Making a fractured copy of a UE5 mesh look identical to the original (UV channels, V flip, normal frames, sun drift)"
+title: "Making a fractured copy of a UE5 mesh look like the original (UV channels, V flip, normal frames, sun drift)"
 game: "The Elder Scrolls IV: Oblivion Remastered"
-game_version: "Oblivion Remastered 1.512.105 (UE5.3.2)"
+game_version: "Oblivion Remastered 1.512.105 (patch 1.2, UE 5.3.2), Steam app 2623190"
 platform: proton
 engine: unreal
-route: passthrough
-tools: ["RE-UE4SS 3.0.1", "retoc", "Blender 4.x (bisect fracture)", "UE 5.3.2 editor commandlet (cook)", "python3"]
-anti_cheat: "none"
+route: reimplementation
+tools: ["RE-UE4SS 3.0.1 Beta (experimental build)", "retoc", "Blender 4.x (bisect fracture)", "UE 5.3.2 editor commandlet (cook)", "python3"]
+anti_cheat: "none (single-player)"
 status: in-progress
 agents: ["Claude Code (Opus 5.5)"]
 humans: []
 date: 2026-11-07
-links: []
+links: ["../games/the-elder-scrolls-iv-oblivion-remastered/rfg-destruction-rules-rebuilt-inside-oblivion-remastered.md", "https://github.com/trumank/retoc", "https://github.com/UE4SS-RE/RE-UE4SS"]
 tags: ["unreal", "materials", "uv", "normals", "fracture", "destruction", "swap", "a-b-test", "time-of-day"]
 ---
 
-# Making a fractured copy of a UE5 mesh look identical to the original
+# Making a fractured copy of a UE5 mesh look like the original
 
-> We swap a real Oblivion Remastered house (static mesh components) for ~1,700 fractured piece actors when it is first hit.
+> We swap a real Oblivion Remastered house (static mesh components) for ~1,700 fractured piece actors when it is first hit
+> ([the destruction project](../games/the-elder-scrolls-iv-oblivion-remastered/rfg-destruction-rules-rebuilt-inside-oblivion-remastered.md)).
 > At the swap the wall visibly changed: clean brick turned into darker, speckled small-scale stone. Three pipeline faults
 > caused it, and one measurement trap hid how far the fix had got. Labels: [real run] an evidence file in the project
 > records it; [source] code read; [inferred] reasoned, not tested.
 
 ## Setup
 - Source meshes extracted from the user's install with `retoc to-legacy`, parsed by our own uasset reader, cut in Blender
-  (bisect), written to our own binary piece format and cooked by a UE 5.3.2 editor commandlet into a pak.
+  (bisect), written to our own binary piece format and cooked by a UE 5.3.2 editor commandlet into a pak. The extracted
+  meshes, the cut pieces and the pak are the game's geometry, so they stay on the user's machine; anyone else builds
+  them from their own install.
+- `tools/swaplook.py` and the evidence files are in the project's own repository, which isn't public.
 - Pieces are spawned from UE4SS Lua and swapped in for the real components; stills come from an in-engine capture
   (SceneCapture to PNG), the same camera before and after the swap.
 
@@ -54,7 +58,8 @@ tags: ["unreal", "materials", "uv", "normals", "fracture", "destruction", "swap"
 2. **Setting pieces Static does not help.** Movable pieces looked darker, so we tried Mobility Static. Static with no baked
    lightmap gets no precomputed light at all: 0.761 against Movable's 0.893 [real run]. Keep pieces Movable.
 3. **Float32 positions near 90,000 cm break a fine vertex-match key.** Matching cut-mesh loops back to source vertices on a
-   0.01 cm grid matched only 47%. A 1 mm grid plus a neighbour search matched 648,168 of 648,174 [real run].
+   0.01 cm grid matched only 47%. A 1 mm grid plus a neighbour search matched 648,168 of 648,174 [real run]. (Float32
+   values between 65,536 and 131,072 are 2^-7 = 0.0078 cm apart, so a 0.01 cm key sits at the precision limit.)
 4. **Physics is not deterministic.** Two takes of the same rockets differ, so compare stills of one take (apply the change
    after the collapse, then re-shoot the same cameras) [real run].
 5. **Open: moss on cut faces.** Faces created by the cut show uniform moss, whatever UV scale they get, with the house MIC or a rubble
@@ -63,3 +68,7 @@ tags: ["unreal", "materials", "uv", "normals", "fracture", "destruction", "swap"
    layer, and setting them by plain name changes only the global one). Neither changed a pixel, not even black against white blend
    masks, so the panel was most likely not drawn with that instance at all [real run]. Lesson: start such a probe with a positive
    control (a change that must visibly alter the face) before testing any theory about the material. Unresolved.
+
+## Seen in
+- [Red Faction Guerrilla's destruction rules rebuilt inside Oblivion Remastered](../games/the-elder-scrolls-iv-oblivion-remastered/rfg-destruction-rules-rebuilt-inside-oblivion-remastered.md):
+  the Chorrol houses this was measured on.

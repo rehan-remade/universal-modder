@@ -3,17 +3,17 @@ kind: game
 title: "Native per-frame actor mover for Oblivion Remastered: ProcessEvent from a plain DLL loaded by UE4SS Lua"
 game: "The Elder Scrolls IV: Oblivion Remastered"
 games_also: ["Red Faction: Guerrilla Re-Mars-tered"]
-game_version: "Oblivion Remastered 1.512.105 (UE5.3.2)"
+game_version: "Oblivion Remastered 1.512.105 (patch 1.2, UE 5.3.2), Steam app 2623190"
 platform: proton
 engine: unreal
 route: native-hook
-tools: ["RE-UE4SS 3.0.1", "mingw-w64 (x86_64)", "Proton 11.0", "Binary Ninja", "gamescope"]
+tools: ["RE-UE4SS 3.0.1 Beta (experimental, bc66bb1)", "mingw-w64 (x86_64)", "Proton 11.0", "Binary Ninja", "gamescope"]
 anti_cheat: "none (single-player, lab copy of the game)"
 status: in-progress
-agents: ["Claude Code (Sonnet 5.5; written by Claude, audited claim by claim on 2026-11-05, see docs/kb-drafts/AUDIT.md)"]
+agents: ["Claude Code (Sonnet 5.5; written, then audited claim by claim on 2026-11-05)"]
 humans: []
 date: 2026-11-05
-links: []
+links: ["ue4ss-lua-actor-move-cost-model-oblivion-remastered.md", "rfg-destruction-passthrough-into-oblivion-remastered.md", "https://github.com/UE4SS-RE/RE-UE4SS"]
 tags: ["ue4ss", "native", "processevent", "package-loadlib", "interpolation", "mingw", "actors", "performance"]
 ---
 
@@ -23,15 +23,16 @@ tags: ["ue4ss", "native", "processevent", "package-loadlib", "interpolation", "m
 
 ## Setup
 
-- Oblivion Remastered 1.512.105 (UE5.3.2 shipping), Proton 11.0 on Linux, RE-UE4SS 3.0.1 (embedded Lua 5.4), lab copy of the game only.
-- Workload: 1,479 hidden-then-shown static mesh actors that follow rigid-body states from a second game process (Red Faction: Guerrilla) through a shared-memory file. Native calls per second: "14,000 to 17,000 peak" in the first draft is [unverified] (the stress runs logged 672,663 to 705,455 calls in total, `evidence/native-stress-run2.txt`).
+- Oblivion Remastered 1.512.105 (Steam, UE5.3.2 shipping), Proton 11.0 on Linux, RE-UE4SS 3.0.1 Beta at bc66bb1 (an experimental build from RE-UE4SS's main branch, 17 July 2025, not the v3.0.1 release; it embeds Lua 5.4.7), lab copy of the game only.
+- Workload: 1,479 hidden-then-shown static mesh actors that follow rigid-body states from a second game process (Red Faction: Guerrilla) through a shared-memory file ([the passthrough note](rfg-destruction-passthrough-into-oblivion-remastered.md)). Native calls per second: "14,000 to 17,000 peak" in the first draft is [unverified] (the stress runs logged 672,663 to 705,455 calls in total, `evidence/native-stress-run2.txt`).
+- Source and evidence paths (`src/`, `evidence/`, `docs/`) are in the project's own repository, which isn't public. The decompile the constants were checked against stays private too, outside any repository.
 - Build: `x86_64-w64-mingw32-gcc -O2 -s -shared -o geomod_native.dll geomod_native.c -lkernel32 -lm`. No UE headers and no UE4SS C++ ABI are needed.
 
 ## Route and why
 
-- UE4SS Lua alone is slow per call: `K2_SetActorLocationAndRotation` costs 23 to 33 microseconds from Lua because of its `FHitResult` out parameter; `K2_TeleportTo` (no out parameter) costs 6.4. Raising the Lua update rate to smooth motion cost frame rate (per-frame Lua: GeoPass 170 to 183 ms per second, minimum fps 20 to 31).
+- UE4SS Lua alone is slow per call: `K2_SetActorLocationAndRotation` costs 23 to 33 microseconds from Lua because of its `FHitResult` out parameter; `K2_TeleportTo` (no out parameter) costs 6.4. Raising the Lua update rate to smooth motion cost frame rate (per-frame Lua: GeoPass 170 to 183 ms per second, minimum fps 20 to 31). The Lua-side measurements are in [the cost model note](ue4ss-lua-actor-move-cost-model-oblivion-remastered.md).
 - A plain DLL can be loaded with `package.loadlib("...\\geomod_native.dll", "*")` (a guard DLL already ran this way) and its exported functions come back as Lua functions with `package.loadlib(path, "name")`.
-- UE4SS.dll does NOT export the raw Lua C API (`objdump -p` shows C++ mangled symbols and two plain C names, `execute_lua_in_mod` and `get_lua_state_by_mod_name`). So the DLL cannot push arguments or results through the Lua stack. The route that works: exported functions take the `lua_State*`, ignore it, return 0, and all data travels through a shared file that Lua writes with `string.pack` and the DLL maps (`CreateFileMapping` on `Z:\dev\shm\...` under Proton).
+- UE4SS.dll does NOT export the raw Lua C API (`objdump -p` shows C++ mangled symbols and two plain C names, `execute_lua_in_mod` and `get_lua_state_by_mod_name`). That's how RE-UE4SS builds it: at bc66bb1 Lua is a static library (`deps/first/LuaRaw`) compiled without `LUA_BUILD_AS_DLL`, so `lua_*` stays internal, and those two names are the `extern "C"` exports in `UE4SS/include/LuaLibrary.hpp`. So the DLL cannot push arguments or results through the Lua stack. The route that works: exported functions take the `lua_State*`, ignore it, return 0, and all data travels through a shared file that Lua writes with `string.pack` and the DLL maps (`CreateFileMapping` on `Z:\dev\shm\...` under Proton).
 
 ## How the game works (what we had to learn)
 

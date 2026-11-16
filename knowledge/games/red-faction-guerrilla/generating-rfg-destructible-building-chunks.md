@@ -8,32 +8,44 @@ platform: proton
 engine: native
 route: data
 tools: ["Python 3", "hkpack.py", "chunkwrite.py", "genchunk.py", "walk.py"]
-anti_cheat: "none"
+anti_cheat: "none; single player only: RFG has online PvP and leaderboards, so the swapped chunks ran in an offline lab copy"
 status: in-progress
-agents: ["Antigravity (Gemini 3.8 Flash High, first draft and the generator code the format claims come from)", "Claude Code (Sonnet 5.5; audit of every claim on 2026-11-05, see docs/kb-drafts/AUDIT.md)"]
+agents: ["Antigravity (Gemini 3.8 Flash High; first draft and the generator code the format claims come from)", "Claude Code (Sonnet 5.5; the 2026-11-05 audit of every claim)"]
 humans: []
 date: 2026-11-05
-links: []
+links: ["../the-elder-scrolls-iv-oblivion-remastered/rfg-destruction-rules-rebuilt-inside-oblivion-remastered.md", "../the-elder-scrolls-iv-oblivion-remastered/rfg-destruction-passthrough-into-oblivion-remastered.md", "control-resonant-dylan-takeover-retargeted-animations.md", "rf-gmod-gravity-gun-sandbox-and-armageddon-port.md", "https://github.com/rfg-modding/RFGM.Formats", "https://github.com/rfg-modding/RfgToolsPlusPlus"]
 tags: ["rfg", "geomod", "destruction", "chunks", "havok", "tagfile", "binary-format", "convex-hulls"]
 ---
 
 # Generating destructible building chunks for Red Faction Guerrilla
 
-> How the repo's Python generators write replacement destructible-building chunks (`cchk_pc` CPU part, `gchk_pc` GPU
-> part) that Red Faction: Guerrilla Re-Mars-tered loads and breaks with its own solver. Labels: [real run] the game loaded
-> or broke it and an evidence file records it; [synthetic] a host-side script I re-ran on 2026-11-05 on the user's own
-> extracted data; [source] decompiler dump or generator code read; [unverified] no evidence found. Real runs: a generated
-> 900-brick wall and the 1,479-piece Chorrol house loaded, stood and broke under rockets (stages 5 and 7). The claims that
-> community tools (RfgToolsPlusPlus, Nanoforge) "treat chunks as unsupported blobs" and that "no public toolchain exists"
-> were in the first draft and have no evidence here [unverified]; removed.
+> How the project's own Python generators write replacement destructible-building chunks (`cchk_pc` CPU part, `gchk_pc`
+> GPU part) that Red Faction: Guerrilla Re-Mars-tered loads and breaks with its own solver. Labels: [real run] the game
+> loaded or broke it and an evidence file records it; [synthetic] a host-side script I re-ran on 2026-11-05 on the user's
+> own extracted data; [source] decompiler dump or generator code read; [unverified] no evidence found. Real runs: a
+> generated 900-brick wall and the 1,479-piece Chorrol house loaded, stood and broke under rockets (stages 5 and 7). This
+> is the RFG half of the Oblivion Remastered destruction project
+> ([rebuilt rules](../the-elder-scrolls-iv-oblivion-remastered/rfg-destruction-rules-rebuilt-inside-oblivion-remastered.md),
+> [passthrough](../the-elder-scrolls-iv-oblivion-remastered/rfg-destruction-passthrough-into-oblivion-remastered.md)).
+> Community readers exist: [RFGM.Formats](https://github.com/rfg-modding/RFGM.Formats)' `Meshes/ChunkFile.cs` (the format
+> library Nanoforge uses) and [RfgTools++](https://github.com/rfg-modding/RfgToolsPlusPlus)' `ChunkMesh.cpp` read this
+> layout and skip the Havok block by its size; neither writes chunks.
 
 ## Setup
 
-- **Game Build:** Red Faction: Guerrilla Re-Mars-tered, Steam app 667720, 32-bit `rfg.exe`. The "cs:4931" build label in the first draft has no source [unverified].
+- **Game Build:** Red Faction: Guerrilla Re-Mars-tered, Steam app 667720, 32-bit `rfg.exe`. The "cs:4931" build label in
+  the first draft has no source here [unverified]. The two RFG notes on main pin the Steam exe as cs:4931 with SHA-256
+  `0d52039e…71a2df4` ([the Dylan mod note](control-resonant-dylan-takeover-retargeted-animations.md)); this copy's hash
+  wasn't recorded, so whether their addresses and these are for the same exe isn't checked.
+- **Single player only:** RFG Re-Mars-tered has online PvP and Steam leaderboards (its Steam page). The chunk swap ran in
+  a lab copy kept offline; keep the proxy out of any copy you play online.
 - **Operating Environment:** Proton 11.0 on Linux (not Windows 11).
 - **Tools:** Custom standalone Python 3 toolchain (`chunkwrite.py`, `hkpack.py`, `genchunk.py`, `walk.py`),
   they read the user's own extracted game files (a template chunk, `terr01` data) and are not self-contained.
-- **Injection Route:** in-memory hook at `0x936860` serving generated buffers from a 48 MB reserved buffer, so no pack or `asm_pc` is rewritten [source `src/rfg/chunkswap.h`; real run, stages 4 and 5].
+- **Private files:** the generators, checks and evidence paths in this note are in the project's own repository, which
+  isn't public. The decompiler output is kept private too, outside any repository.
+- **Injection Route:** in-memory hook at `0x936860` serving generated buffers from a 48 MB reserved buffer, so no pack or
+  `asm_pc` is rewritten [source `src/rfg/chunkswap.h`; real run, stages 4 and 5].
 
 ## Route and why
 
@@ -48,7 +60,11 @@ tags: ["rfg", "geomod", "destruction", "chunks", "havok", "tagfile", "binary-for
 ## How the game works (what we had to learn)
 
 ### Chunk file layout and running offset (`0x9360f0`) [source: decompiler dump, re-read 2026-11-05; synthetic: `src/chunk/gen/walk.py`]
-The loader copies a 0x290-byte header, starts at offset `0x2C0` and advances a running offset section by section. The alignments below match the dump (16-byte for the first three, 128 before the destruction block, 64 for the rest); the order is the one `walk.py` emulates:
+The loader copies a 0x290-byte header, starts at offset `0x2C0` and advances a running offset section by section. The
+alignments below match the dump (16-byte for the first three, 128 before the destruction block, 64 for the rest); the
+order is the one `walk.py` emulates. RFGM.Formats' `ChunkFile.cs` walks the same layout: 656 header bytes, then offset
+704, the same alignments, 96-byte `GeneralObject`s (the mover records), 116-byte `ScriptPoint`s (the attach points) and
+520-byte `ObjectIdentifier`s (the object table).
 1. **Mesh CPU Header (offset `0x2C0`):** Submesh and render block definitions (`0x53f450`).
 2. **Texture Name Table:** 16-byte aligned list of texture string references.
 3. **Material Map (`0x53f1a0`):** 16-byte aligned index mapping.
@@ -57,16 +73,25 @@ The loader copies a 0x290-byte header, starts at offset `0x2C0` and advances a r
 6. **Destruction Block (`0x9286a0`):** 128-byte aligned destroyable structure.
 7. **Collision Block (`0x928440`):** 64-byte aligned Havok collision data behind a 16-byte `MCKH` header.
 8. **Attach Points Table (`0x74` bytes):** 64-byte aligned attachment metadata.
-9. **Object Table (`0x208` bytes):** 64-byte aligned chunk object records (`0x928880`); the "stored to `chunk_struct + 0x1C8`" detail was not re-checked [unverified].
+9. **Object Table (`0x208` bytes):** 64-byte aligned chunk object records (`0x928880`). Its offset is the header field at
+   `+0x1C8` (`ObjectIdentifiersOffset` in RFGM.Formats' `ChunkFileHeader.cs`), which fits the "stored to
+   `chunk_struct + 0x1C8`" detail; the dump wasn't re-read for it.
 
 ### Destroyable structure [source: `src/chunk/chunkwrite.py` field sizes; synthetic: byte-identical round trip of the template and of the generated wall (461,840 bytes)]
-- **Pieces (64 bytes each):** bounds (`bmin`, `bmax`), position, centre of mass, mass, link array offset and flags. ("mass = volume" is [unverified].)
+The piece, piece extra, link index, link and DLOD sizes match RFGM.Formats' `Meshes/Chunks/*.cs` and RfgTools++'s
+`ChunkTypes.h`; neither library reads the transform buffer's layout.
+- **Pieces (64 bytes each):** bounds (`bmin`, `bmax`), position, centre of mass, mass, link array offset and flags.
+  ("mass = volume" is [unverified].)
 - **Piece Extra (12 bytes each):** Maps piece index to its collision hull index, render subpiece index, and material
-  name CRC32 hash.
+  name CRC32 hash (RFGM.Formats' `SubpieceData`: a Havok shape offset, the collision model and render subpiece as uint16,
+  and `PhysicalMaterialNameChecksum`).
 - **Link index lists:** 2-byte indices per piece (`genchunk.py`).
-- **Links (16 bytes each):** piece A, piece B, contact area. "Flags set to 1" is [unverified].
-- **DLOD records (60 bytes each)** [source `chunkwrite.py`]. The purpose ("hierarchical LOD switching") and the `dlod_key` encoding are [unverified].
-- **AABB tree** over the pieces (`tree.py`; used for raycasts and blasts is [unverified]; the tree's containment and reachability are checked [synthetic]).
+- **Links (16 bytes each):** RFGM.Formats' `Link` reads a strength (`YieldMax`, int32), the contact area (float), piece A
+  and piece B (int16 each) and a flags byte. "Flags set to 1" is [unverified].
+- **DLOD records (60 bytes each)** [source `chunkwrite.py`]. The purpose ("hierarchical LOD switching") and the
+  `dlod_key` encoding are [unverified].
+- **AABB tree** over the pieces (`tree.py`; used for raycasts and blasts is [unverified]; the tree's containment and
+  reachability are checked [synthetic]).
 - **Transform buffer:** 16 bytes per piece [unverified].
 
 ### Material name hashing [source: decompiler dump of `0x56b9a0`; synthetic: two values re-derived on 2026-11-05]
@@ -74,32 +99,46 @@ The loader copies a 0x290-byte header, starts at offset `0x2C0` and advances a r
 - Seed initialized to 0; string converted to lowercase.
 - The table is `0x1518b80` in the dump (standard CRC-32 polynomial `0xEDB88320` is how `zone.py` builds it).
 - Process bytes with `hash = (hash >> 8) ^ Table[(char ^ hash) & 0xFF]`; **no final bitwise NOT (`~`)**.
-- "All 116,259 piece hashes in `terr01_l0.vpp_pc` matched `rfg_materials.xtbl`" is stated in `docs/PASSTHROUGH_PLAN.md`; I did not re-run it [creator report inside the repo]. I re-derived `"concrete-normal"` = `0xB83AF548` and `"default"` = `0x7E32DFA1` with the algorithm above [synthetic].
+- "All 116,259 piece hashes in `terr01_l0.vpp_pc` matched `rfg_materials.xtbl`" is stated in `docs/PASSTHROUGH_PLAN.md`;
+  I did not re-run it [creator report inside the repo]. I re-derived `"concrete-normal"` = `0xB83AF548` and `"default"` =
+  `0x7E32DFA1` with the algorithm above [synthetic].
+- This is RfgTools++'s `Hash::HashVolitionCRC` with seed 0 (its table comes from Gibbed.Volition); both values come out
+  the same with it.
 
 ### Havok collision block [source: `src/chunk/hkpack.py`; synthetic: `src/chunk/test_hk.py`, re-run 2026-11-05]
 - A 16-byte container header (`MCKH`, version 3, block size, model count) precedes a 32-bit Havok 2014.2.5 data block with
-  an `hkpListShape` root and `hkpConvexVerticesShape` children (radius 0.005 copied from the template: `docs/PIECE_COLLISION.md`; RFG's own hulls mostly use 0.05, see gotcha 7). **Hull vertices and planes must be local to the piece, not the chunk (gotcha 5).**.
+  an `hkpListShape` root and `hkpConvexVerticesShape` children (radius 0.005 copied from the template:
+  `docs/PIECE_COLLISION.md`; RFG's own hulls mostly use 0.05, see gotcha 7). **Hull vertices and planes must be local to
+  the piece, not the chunk (gotcha 5).** RfgTools++ and RFGM.Formats check the same `MCKH` magic and read the block size
+  from the third word to skip it.
 - **Contradicted:** the first draft called it a "binary tagfile ... not a packfile ... zero pointer fixup tables".
   `hkpack.py` parses and rewrites local, global and virtual fixups and calls it a packfile (its docstring also says
   "binary tagfile"; `docs/PASSTHROUGH_PLAN.md` says packfile). Treat the format as a packfile with fixups.
+  RfgTools++'s reader names it a binary tagfile (`ReadHavokBinaryTagfile`) but only skips it.
+  `techniques/havok-hkx-chunked-packfile-family.md` lists 2014.2.5-r1 as a classic binary packfile, which fits.
 - **Verified [synthetic]:** `test_hk.py` parses 434 collision blocks of the user's `terr01` data and rebuilds 434 of 434
   byte-identically. The vertex packing ("transposed 4-vector blocks") was not re-checked [unverified].
 
 ### RFG static floor box and body fields [real run, `evidence/floor-box.txt`, 2026-11-05]
-The floor recipe from the passthrough note works: a zeroed 0x104 descriptor, defaults set, a box shape, then the create call returned a
-valid handle and did not crash. Values read back from the live body: collision filter word `0x00010002` (group 1, layer 2), quality 0,
-motion 5 (fixed). Body field offsets read in the dump and confirmed on live bodies: filter word at body+0x2C, quality at +0x2A, motion at
-+0xE8 [source plus real run; the enum names are inferred from Havok]. Loose pieces: quality 2 by the constructor (dump) and filter
-`0x0006002C` or `0x0006002A` (live). RFG's own hull convex radius is mostly 0.05 (45% of 10,591 hulls); our generator wrote 0.005 [synthetic, hull census].
+The floor recipe from the passthrough note works: a zeroed 0x104 descriptor, defaults set, a box shape, then the create
+call returned a valid handle and did not crash. Values read back from the live body: collision filter word `0x00010002`
+(group 1, layer 2), quality 0, motion 5 (fixed). Body field offsets read in the dump and confirmed on live bodies: filter
+word at body+0x2C, quality at +0x2A, motion at +0xE8 [source plus real run; the enum names are inferred from Havok,
+and motion 5 as FIXED matches `havok_body_set_movable` in
+[the rf-gmod note](rf-gmod-gravity-gun-sandbox-and-armageddon-port.md)].
+Loose pieces: quality 2 by the constructor (dump) and filter `0x0006002C` or `0x0006002A` (live). RFG's own hull convex
+radius is mostly 0.05 (45% of 10,591 hulls); our generator wrote 0.005 [synthetic, hull census].
 
 ### Ground anchors [source: `zone.py`, `genchunk.py`; synthetic: `test_gen.py` check 7; real run: stage 7 stood until hit]
 - The zone file lists anchor piece indices in the `world_anchors` property (`zone.py`); the stock template has 46.
-- Anchored pieces carry piece flag `0x02` (test_gen counts 46 pieces with `flags & 2`). `test_gen.py` checks by breadth-first search
-  that every piece reaches an anchor. That the solver *requires* an anchor is inferred, not separately tested.
+- Anchored pieces carry piece flag `0x02` (test_gen counts 46 pieces with `flags & 2`). `test_gen.py` checks by
+  breadth-first search that every piece reaches an anchor. That the solver *requires* an anchor is inferred, not
+  separately tested.
 
 ## Build steps
 
-1. **Extract template chunk:** `0105safehousegarage_camo.cchk_pc` and `.gchk_pc` from the user's `terr01` data (the `.vpp_pc` source is [unverified]).
+1. **Extract template chunk:** `0105safehousegarage_camo.cchk_pc` and `.gchk_pc` from the user's `terr01` data (the
+   `.vpp_pc` source is [unverified]).
 2. **Define Piece Geometry:**
    - Define bounding boxes, contact areas, and link pairs for target architecture (e.g., 900 bricks in `make_wall.py`).
    - Put the lowest pieces on the 46 anchor indices and set flag `0x02` (`make_house.py` docstring).
@@ -116,7 +155,8 @@ motion 5 (fixed). Body field offsets read in the dump and confirmed on live bodi
 Host-side suites and in-game runs:
 
 ### Host-side suite (`test_gen.py`) [synthetic, re-run 2026-11-05: ALL 9 CHECKS PASSED on the generated 900-brick wall]
-The first draft said it ran on the house chunks too: contradicted (the script asserts 900 pieces; no house run is recorded). The house chunk was validated by loading it in RFG (stage 7).
+The first draft said it ran on the house chunks too: contradicted (the script asserts 900 pieces; no house run is
+recorded). The house chunk was validated by loading it in RFG (stage 7).
 1. **Center of Mass:** All COM vectors lie strictly within [bmin, bmax] with zero tolerance violations.
 2. **Round-Trip Serialization:** `chunkwrite.py` deserializes and reserializes 461,840 bytes (first draft: 461,824) byte-identically.
 3. **Collision Integrity:** All 900 convex hulls match piece bounding boxes within 1e-3 m.
@@ -124,14 +164,20 @@ The first draft said it ran on the house chunks too: contradicted (the script as
 5. **AABB Tree Structure:** 100% piece reachability from root; strict parent bounding-box containment.
 6. **Touching Link Validation:** All 1,732 links (wall) join touching pieces with non-zero contact area.
 7. **Anchor Connectivity:** BFS graph traversal verifies 100% of pieces reach ground anchors.
-8. **GPU Mesh Check (`0x4c2f30`):** All 16 rules of `validate_gpu.py` pass (its model of `0x4c2f30` and `0x53f450`, not the engine itself).
-9. **Running Offset Walk (`walk.py`):** The emulated loader walk lands on the `0x208` object record (`"default"`, `0x7E32DFA1`) at `0x070A00`.
+8. **GPU Mesh Check (`0x4c2f30`):** All 16 rules of `validate_gpu.py` pass (its model of `0x4c2f30` and `0x53f450`, not
+   the engine itself).
+9. **Running Offset Walk (`walk.py`):** The emulated loader walk lands on the `0x208` object record (`"default"`,
+   `0x7E32DFA1`) at `0x070A00`.
 
 ### In-engine runs [real run]
 - **Wall Simulation (`evidence/stage5-wall.txt`, `stage5-generated-wall.mp4`):** RFG loaded the generated wall chunk as
   `rfg_mover 4a020006`. 14 rocket strikes broke pieces dynamically by RFG's solver rules (167 to 314 active movers),
   with zero crashes and zero engine warning dialogs.
-- **Showcase House (`evidence/stage7-house.txt`, `stage7-house-collapse.mp4`):** Loaded 1,479 pieces, 5,078 links, 46 anchors; it stood, and 12 rockets brought it down under RFG's solver (`CHECKPOINT.md`). About 1% of hulls are strongly non-convex.
+- **Showcase House (`evidence/stage7-house.txt`, `stage7-house-collapse.mp4`):** Loaded 1,479 pieces, 5,078 links, 46
+  anchors; it stood, and 12 rockets brought it down under RFG's solver (`CHECKPOINT.md`). Gotcha 6 counts the hulls whose
+  planes don't fit their own vertices.
+- **Not verified:** a house-sized `test_gen` run, the staged `HULL_RADIUS=0.05` and `HULL_INFLATE_THIN` variants, the
+  y -17.5 delete plane, and authoring joints from `dynamic_links` (Open questions).
 
 ## Gotchas
 
@@ -139,9 +185,11 @@ The first draft said it ran on the house chunks too: contradicted (the script as
    - **Symptom [unverified in detail]:** RFG fails to spawn the building mover. The notes record the fix, not a log
      (`CHECKPOINT.md` stage 5: "64-byte alignment before the collision block").
    - **Cause [source]:** the loader aligns the running offset to 64 bytes after the destruction block (decompiler dump
-     of `0x9360f0`); the generator first used 16. In the generated wall the destruction block ends at `0x3BED0`, which
-     rounds to `0x3BF00` [synthetic, `walk.py`]. The first draft's follow-on story (the loader reading the ASCII text
-     "hkBaseObject" as a header, a 7.6 MB size, a running offset of `0x788D00`) has no evidence in the repo [unverified].
+     of `0x9360f0`); the generator first used 16. RFGM.Formats does the same: it aligns to 64 after the destroyables and
+     expects the header's `CollisionModelDataOffset` there. In the generated wall the destruction block ends at
+     `0x3BED0`, which rounds to `0x3BF00` [synthetic, `walk.py`]. The first draft's follow-on story (the loader reading
+     the ASCII text "hkBaseObject" as a header, a 7.6 MB size, a running offset of `0x788D00`) has no evidence in the repo
+     [unverified].
    - **Fix [real run]:** 64-byte `_align(...)` calls in `genchunk.py`; the wall then loaded.
 2. **GPU mesh check rejection dialog (`0x4c2f30`).**
    - **Symptom [source]:** the engine strings `Mesh verification crc's do not match for GPU data` exist in the dump
@@ -149,7 +197,8 @@ The first draft said it ran on the house chunks too: contradicted (the script as
    - **Cause / fix [real run, `CHECKPOINT.md` stage 5: "GPU mesh trailing check value and padding"]:** the GPU file needs the
      check value repeated after the vertices and the consumed size to match (255,620 bytes for the wall [synthetic]); the
      generator pads the `.gchk_pc` to 2048 bytes (`genchunk.py` line "Pad GPU file to sector boundary") and writes the
-     size into the pre-destruction header at `0x204`. The first draft's "read overruns" explanation is [unverified].
+     size into the chunk header at `0x204` (`RenderGpuDataSize` in RFGM.Formats' `ChunkFileHeader.cs`). The first
+     draft's "read overruns" explanation is [unverified].
 3. **Stale object, attach and mover entries from the template.** The generator reuses the template's counts and emits
    a single `0x208` record for `"default"` [source: `genchunk.py`, `walk.py`]. The first draft said it sets `c74 = 0` and
    `c60 = 0`; the walk shows 0 bytes for the `0x60` records but 33 bytes of padding for the `0x74` step, so treat "c74 = 0"
@@ -184,7 +233,8 @@ The first draft said it ran on the house chunks too: contradicted (the script as
         layers against layer 2 were already set and there was no group block; with a "fix" applied 42% were still sunk [real run].
      5. *Initial penetration:* only 5 of 1,479 pieces start under the terrain (0.3 m, none ever loose); of 682 loose pieces, 0 started below it; sinking rose with start height and size [synthetic, `lab` recording frame 0].
      6. *Tunnelling:* sinkers moved less than their thickness per step in 76% of cases (median 0.14 m per step against 0.63 m thick), entered slowly (0.15 m deep at first sight) and then free-fell with no braking [synthetic].
-   - **The decisive test [real run, `evidence/floor-box.txt`]:** a fixed 60 x 2 x 60 m box under the site, recipe below, top at the pad height.
+   - **The decisive test [real run, `evidence/floor-box.txt`]:** a fixed 60 x 2 x 60 m box under the site, recipe above
+     ("RFG static floor box and body fields"), top at the pad height.
      The pieces fell through the box too (51.3% more than 3 m below at 60 s, baseline 36 to 42%). So the cause could not be the terrain; it had to be the pieces.
      Comparing hull frames against RFG's own chunks then gave the answer. Rule: when a generated body passes through a floor
      you built, check the body's shape frame before the floor.
@@ -205,6 +255,9 @@ The first draft said it ran on the house chunks too: contradicted (the script as
 
 - Generators: `src/chunk/gen/genchunk.py`, `make_wall.py`, `src/chunk/house/make_house.py`.
 - Checks: `src/chunk/gen/validate_gpu.py`, `walk.py`, `test_gen.py`, `src/chunk/test_hk.py`. No game data is in this note.
+- The generated chunk pairs are game-derived files: they keep the template's headers and material data from the user's
+  own `terr01` files, and the house chunk carries the Oblivion house's geometry. They stay in the lab copy on the user's
+  machine, never in a repository or a release; anyone else generates them from their own installs.
 
 ## Cost and time
 

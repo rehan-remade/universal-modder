@@ -3,17 +3,17 @@ kind: game
 title: "UE4SS Lua cost model for moving many actors in Oblivion Remastered"
 game: "The Elder Scrolls IV: Oblivion Remastered"
 games_also: ["Red Faction: Guerrilla Re-Mars-tered"]
-game_version: "Oblivion Remastered 1.512.105 (UE5.3.2)"
+game_version: "Oblivion Remastered 1.512.105 (patch 1.2, UE 5.3.2), Steam app 2623190"
 platform: proton
 engine: unreal
 route: loader-api
-tools: ["RE-UE4SS 3.0.1", "Proton 11.0", "perf-house.sh", "bench-calls.lua", "gamescope"]
-anti_cheat: "none"
+tools: ["RE-UE4SS 3.0.1 Beta (experimental, bc66bb1)", "Proton 11.0", "perf-house.sh", "bench-calls.lua", "gamescope"]
+anti_cheat: "none (single-player, lab copy of the game)"
 status: in-progress
-agents: ["Antigravity (Gemini 3.8 Flash High, first draft of everything above Gotcha 5)", "Claude Code (Sonnet 5.5; Gotchas 5 to 8, and the audit of every claim on 2026-11-05, see docs/kb-drafts/AUDIT.md)"]
+agents: ["Antigravity (Gemini 3.8 Flash High; first draft of everything above Gotcha 5)", "Claude Code (Sonnet 5.5; Gotchas 5 to 8 and the 2026-11-05 audit of every claim)"]
 humans: []
 date: 2026-11-05
-links: []
+links: ["native-processevent-from-a-plain-dll-in-oblivion-remastered.md", "rfg-destruction-passthrough-into-oblivion-remastered.md", "https://github.com/UE4SS-RE/RE-UE4SS"]
 tags: ["ue4ss", "lua", "performance", "profiling", "actors", "staticfindobject", "out-parameters", "cost-model"]
 ---
 
@@ -25,13 +25,17 @@ tags: ["ue4ss", "lua", "performance", "profiling", "actors", "staticfindobject",
 > game-thread time in the mod [real run, `evidence/perf-phase0-run1.txt`]. Caching actor pointers (a `StaticFindObject` by path
 > cost about 5 ms per call) removed most of it. With the hidden second game capped at 60 fps, four valid collapse runs
 > measured 36.3 to 44.0 fps (minimum 33 to 37) [real run]. Lua at 10 Hz still looked choppy (74 percent frozen frames), which
-> is why a native mover was built afterwards (see the ProcessEvent note). The 30 fps "gate" was a plan target; the user
-> later said frame rate gates nothing for now (`CHECKPOINT.md`, 2026-11-03).
+> is why a native mover was built afterwards (see
+> [the ProcessEvent note](native-processevent-from-a-plain-dll-in-oblivion-remastered.md)). The 30 fps "gate" was a plan
+> target; the user later said frame rate gates nothing for now (`CHECKPOINT.md`, 2026-11-03).
 
 ## Setup
 
-- **Target Engine:** Unreal Engine 5.3.2 (shipping build 1.512.105), Win64 running under Proton 11.0 on Linux.
-- **Scripting Layer:** RE-UE4SS v3.0.1 Beta (Git SHA bc66bb1 per its log) [real run]; the Lua 5.4 version is [unverified].
+- **Target Engine:** Unreal Engine 5.3.2 (shipping build 1.512.105, Steam), Win64 running under Proton 11.0 on Linux.
+- **Scripting Layer:** RE-UE4SS v3.0.1 Beta (Git SHA bc66bb1 per its log) [real run]: an experimental build from
+  RE-UE4SS's main branch (17 July 2025), not the v3.0.1 release. Its Lua is 5.4.7 (`deps/first/LuaRaw` at that commit).
+- **Private files:** the scripts and evidence paths in this note (`tests/`, `tools/`, `evidence/`, `docs/`) are in the
+  project's own repository, which isn't public.
 - **Measurement hardware:** Linux, AMD RX 9070 XT GPU [real run, `docs/PERFORMANCE_PLAN.md`], headless under gamescope. The CPU model is [unverified].
 - **Test Workload:** 1,479 individual static mesh actors for the Chorrol house
   (`BP_ChorrolHouseUpper01`).
@@ -167,7 +171,8 @@ Tested under identical conditions with RFG capped at 60 fps (A = baseline Lua wi
 ## Open questions
 
 - **Smoothness vs update rate:** Lua decodes at 10 Hz (not 9). The per-frame interpolation was moved into a native
-  library, `geomod_native.dll` (not `geomod_guard.dll`, which is the crash guard); see the ProcessEvent note.
+  library, `geomod_native.dll` (not `geomod_guard.dll`, which is the crash guard); see
+  [the ProcessEvent note](native-processevent-from-a-plain-dll-in-oblivion-remastered.md).
   19 to 20 percent frozen frames remain [real run].
 - **Dynamic shadows:** a test of shadows, distance fields and cull distance on the 1,479 pieces found no change in
   standing cost (Gotcha 8); the first draft's question is answered for those switches, not for Lumen or Virtual Shadow Map cost in general.

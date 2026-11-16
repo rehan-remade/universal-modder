@@ -3,17 +3,17 @@ kind: game
 title: "Red Faction Guerrilla destruction passthrough into Oblivion Remastered"
 game: "The Elder Scrolls IV: Oblivion Remastered"
 games_also: ["Red Faction: Guerrilla Re-Mars-tered"]
-game_version: "Oblivion Remastered 1.512.105 (UE5.3.2); RFG Re-Mars-tered Steam app 667720"
+game_version: "Oblivion Remastered 1.512.105 (patch 1.2, UE 5.3.2), Steam app 2623190; RFG Re-Mars-tered, Steam app 667720"
 platform: proton
 engine: unreal
 route: passthrough
-tools: ["RE-UE4SS 3.0.1", "Proton 11.0", "retoc 0.1.5", "Blender (headless)"]
-anti_cheat: "none"
+tools: ["RE-UE4SS 3.0.1 Beta (experimental, bc66bb1)", "Proton 11.0", "retoc 0.1.5", "Blender (headless)"]
+anti_cheat: "none; Oblivion Remastered is single-player. RFG has online PvP and leaderboards, so its lab copy runs headless and offline (the proxy blocks the network) and the proxy never goes online"
 status: in-progress
-agents: ["Antigravity (Gemini 3.8 Flash High, first draft of the Setup, Route, How-the-game-works, Build, Verification, Gotchas and Assets text)", "Claude Code (Sonnet 5.5; wrote the ground sections and, on 2026-11-05, audited every claim against repo evidence, see docs/kb-drafts/AUDIT.md)"]
+agents: ["Antigravity (Gemini 3.8 Flash High; first draft of Setup, Route, How the game works, Build, Verification, Gotchas and Assets)", "Claude Code (Sonnet 5.5; the ground sections and the 2026-11-05 audit of every claim)"]
 humans: []
 date: 2026-11-13
-links: []
+links: ["rfg-destruction-rules-rebuilt-inside-oblivion-remastered.md", "../red-faction-guerrilla/generating-rfg-destructible-building-chunks.md", "../red-faction-guerrilla/control-resonant-dylan-takeover-retargeted-animations.md", "https://github.com/UE4SS-RE/RE-UE4SS", "https://github.com/trumank/retoc"]
 tags: ["passthrough", "cross-process", "havok", "destruction", "shared-memory", "seqlock", "ue5", "lua"]
 ---
 
@@ -22,20 +22,28 @@ tags: ["passthrough", "cross-process", "havok", "destruction", "shared-memory", 
 > A cross-process passthrough mod: Red Faction: Guerrilla Re-Mars-tered (RFG, 32-bit) runs hidden beside Oblivion
 > Remastered (64-bit UE5.3.2 under Proton) and computes building destruction with its own Havok solver, while Oblivion
 > draws the fractured house pieces. State crosses through a shared file (`/dev/shm/geomod_bridge.bin`) with a
-> sequence counter (odd while writing). Evidence labels in brackets: [real run] = the game(s) ran it and an evidence file
-> records it; [source] = code read, not run; [stub] = host-side test; [design] = planned; [unverified] = no evidence found.
+> sequence counter (odd while writing). Evidence labels in brackets (`techniques/evidence-levels-for-mashup-claims.md`):
+> [real run] = the game(s) ran it and an evidence file records it; [source] = code read, not run; [stub] = host-side test;
+> [design] = planned; [unverified] = no evidence found.
 > Real runs so far: stages 1 to 5, 7, 8 and 9 in lab copies, plus one user play-test of the 1,479-piece house
-> (2026-11-04). The build is not finished: pieces rest on the wrong ground (see "Two grounds").
+> (2026-11-04). The build is not finished: pieces rest on the wrong ground (see "Two grounds"). Since 2026-11-05 this
+> route is the measuring oracle for [the rebuilt rules](rfg-destruction-rules-rebuilt-inside-oblivion-remastered.md)
+> (last section).
 
 ## Setup
 
-- **Host (Oblivion Remastered):** Steam build 1.512.105, Unreal Engine 5.3.2, Win64 running under Proton on Linux.
-  Scripting through RE-UE4SS v3.0.1 Beta (Git SHA bc66bb1, from the loader's own log) [real run]. Lab runs are headless
-  under gamescope [real run].
+- **Host (Oblivion Remastered):** Steam (app 2623190), version 1.512.105 (patch 1.2, July 2025), Unreal Engine 5.3.2,
+  Win64 running under Proton on Linux. Scripting through RE-UE4SS v3.0.1 Beta (Git SHA bc66bb1, from the loader's own
+  log) [real run]. bc66bb1 is a commit on RE-UE4SS's main branch from 17 July 2025, so this is an experimental build, not
+  the v3.0.1 release (d935b5b, February 2024). Lab runs are headless under gamescope [real run].
 - **Guest (Red Faction Guerrilla):** Steam app 667720, Re-Mars-tered 32-bit executable (`rfg.exe`), Proton 11.0,
   run headless with a proxy DLL that blocks the network [source: the lab launcher requires it]. The player starts at
   `-1863.6, 22.2, -1447.2` (RFG metres) [real run, `evidence/stage2-bridge.txt`]. (An earlier draft said the player is
   "parked" there to keep the zone active: the position is measured, the reason is [unverified].)
+- **Offline only:** Oblivion Remastered is single-player, but RFG Re-Mars-tered has online PvP and Steam leaderboards (its
+  Steam page). The proxy lives only in RFG's lab copy, which runs offline; remove it before playing RFG online.
+- **Private files:** every path in this note (`evidence/`, `docs/`, `src/`, `tools/`, `CHECKPOINT.md` and the rest) is
+  in the project's own repository, which isn't public. The decompiler output is kept private too, outside any repository.
 - **Inter-Process Transport:** a file in `/dev/shm`, mapped by RFG through the Wine `Z:` drive (`CreateFileMapping`
   in `src/rfg/bridge.h`) and read by Oblivion's Lua with ordinary file I/O [real run, `evidence/stage2-bridge.txt`].
 - **Asset Pipeline:** convex hulls computed with headless Blender (`hulls_blender.py`); meshes cooked versioned
@@ -53,6 +61,9 @@ tags: ["passthrough", "cross-process", "havok", "destruction", "shared-memory", 
   injection. No evidence for any of them exists in the repo [unverified], so they are not repeated here.
 - **Why passthrough works, as measured:** RFG's own solver broke a custom 1,479-piece house under rockets (stage 7) and
   under hammer and arrow hits on a wall (stage 9) while Oblivion drew it [real run].
+- **Related notes:** `techniques/choosing-a-mashup-route.md`, `techniques/geometry-transfer-host-draws-guest-meshes.md`
+  (the host draws the guest's pieces), `techniques/bridge-contracts-ownership-units-and-lifecycle.md` (the
+  `docs/CONTRACT.md` below) and `techniques/collision-and-combat-bridging.md` (stage 9).
 
 ## How the game works (what we had to learn)
 
@@ -88,8 +99,11 @@ tags: ["passthrough", "cross-process", "havok", "destruction", "shared-memory", 
 ### Chunk Replacement Hook
 - Custom buildings go in through an in-memory hook on the chunk-receive function at `0x936860` (`src/rfg/chunkswap.h`),
   not by rebuilding packs, so pack and `asm_pc` size limits do not apply. The hook serves chunk files from a 48 MB buffer
-  reserved at DLL load, replacing `0105safehousegarage_camo` (the stock hut at the stage 3 site). RFG verifies no chunk
-  checksums at load [source, and real run: a byte-identical rewrite loaded and 10 rockets broke it, `evidence/stage4-swap.txt`].
+  reserved at DLL load, replacing `0105safehousegarage_camo` (the stock hut at the stage 3 site). Per the decompile, RFG
+  checks no chunk checksums at load, apart from the GPU file's check value, which has to match the CPU file's
+  ([chunk note](../red-faction-guerrilla/generating-rfg-destructible-building-chunks.md), gotcha 2) [source]. The stage 4
+  run (a byte-identical rewrite loaded and 10 rockets broke it, `evidence/stage4-swap.txt`) [real run] can't confirm
+  that: a byte-identical file carries the original's checksums.
   The replacement keeps the stock zone's 46 ground-anchor indices (`docs/PASSTHROUGH_PLAN.md`).
 
 ### Two grounds: RFG's and Chorrol's do not match (2026-11-04)
@@ -127,8 +141,9 @@ tags: ["passthrough", "cross-process", "havok", "destruction", "shared-memory", 
 
 ### Reading RFG's terrain height (`0x83b3f0`) [MEASURED]
 - `get_terrain_height` at `0x83b3f0` in RFG Re-Mars-tered (`rfg.exe`, Steam app 667720) is `cdecl` with five stack
-  arguments: `float* out, float x, float z, char flag, int64_t* material`. Evidence [source]: about 107 call sites in the decompiler
-  dump, all with five arguments. (The claim "56 followed by `add esp, 0x14`" was not re-checked [unverified].) It zeroes `*out` first and returns a success flag in AL,
+  arguments: `float* out, float x, float z, char flag, int64_t* material`. Evidence [source]: about 107 call sites in the
+  decompiler dump, all with five arguments. (The claim "56 followed by `add esp, 0x14`" was not re-checked [unverified].)
+  It zeroes `*out` first and returns a success flag in AL,
   so a miss must be detected from the return value, not from a preloaded NaN (a host test with a stub that zeroes the output
   caught that design error before it reached the game). Most callers pass flag 0 and a null material.
 - **Live result:** called from the game thread inside the bridge tick, 3 s after the site is known, it found 961 of 961
@@ -137,9 +152,14 @@ tags: ["passthrough", "cross-process", "havok", "destruction", "shared-memory", 
 - Published as a seqlocked block at bridge offset `0x70000` (magic, seq, centre, step, 31 x 31 floats in RFG metres).
 
 ### RFG static floor: the recipe WORKS [real run, 2026-11-05]; the rest below was the study
-A live test created the box with this recipe (valid handle, filter `0x00010002`, quality 0, motion 5, no crash; `evidence/floor-box.txt`). It did not stop the pieces, because the hull frame was wrong, not the floor (chunk note, gotcha 5). The text below is the original study.
+A live test created the box with this recipe (valid handle, filter `0x00010002`, quality 0, motion 5, no crash;
+`evidence/floor-box.txt`). It did not stop the pieces, because the hull frame was wrong, not the floor
+([chunk note](../red-faction-guerrilla/generating-rfg-destructible-building-chunks.md), gotcha 5). Motion 5 as FIXED matches
+`havok_body_set_movable` in [the rf-gmod note](../red-faction-guerrilla/rf-gmod-gravity-gun-sandbox-and-armageddon-port.md).
+The text below is the original study.
 A static invisible box under the pad would stop pieces falling into pits. Two research reports named different RFG
-functions; reading the decompile (not running it) gives this candidate recipe, **none of it tried in the game**:
+functions; reading the decompile (not running it) gives this candidate recipe, **none of it tried in the game at the
+time**:
 a zeroed 0x104-byte descriptor, `0x8168f0` (fastcall) to set defaults, shape type 3 (box, full sizes) with fixed motion
 and quality values copied from the road collider caller `0x91b210`, then `0x83dba0` (cdecl, one argument) which
 creates the rigid body and adds it to the Havok world. Field meanings (quality 0, motion 5) are inferred from Havok's enums;
@@ -153,11 +173,13 @@ Labels as above. The generators are in the project repo; none of the game's data
 
 1. **Fracture and piece export [real run, `CHECKPOINT.md` stage 6].** The 46 house meshes (216,058 triangles) were exported
    from Oblivion's packages; 29 of 63 meshes match the live bounds exactly, the rest are Nanite fallbacks up to 9 cm smaller.
-   The house is fractured into 1,479 pieces; convex hulls are computed per piece (about 1% of hulls are strongly
-   non-convex). The piece table is `site_pieces.lua`. The fracture algorithm is not documented in the repo
+   The house is fractured into 1,479 pieces; convex hulls are computed per piece (295 of 1,479 had a vertex outside
+   their own planes, gotcha 6 of the chunk note; the earlier "about 1% strongly non-convex" used a different measure).
+   The piece table is `site_pieces.lua`. The fracture algorithm is not documented in the repo
    [unverified]; an earlier draft said "Voronoi" and "convex pieces with broken-stone inner faces".
 2. **Chunk generation [real run, stages 5 and 7].** `src/chunk/gen/genchunk.py` and `src/chunk/house/make_house.py` write the
-   replacement chunk files (1,479 pieces, convex hulls, 5,078 links, 46 anchors) to match the stock chunk's layout.
+   replacement chunk files (1,479 pieces, convex hulls, 5,078 links, 46 anchors) to match the stock chunk's layout
+   ([chunk note](../red-faction-guerrilla/generating-rfg-destructible-building-chunks.md)).
 3. **Cook for Oblivion [real run].** Cook the piece meshes versioned for UE5.3.2 and pack with `retoc to-zen`.
 4. **Deploy and launch [real run, `tools/rfg-lab.sh`].** Start RFG headless with the DLL pointed at the chunk files; its menu
    appears about 45 s in and the level load must wait until 50 s; confirm the bridge counters advance; start Oblivion with
@@ -207,11 +229,14 @@ was reproduced on a second machine.
    because the swap had not run. What is known: the wall material `MIC_chorrolhouseupper01_01` (root `M_Layered_Base`)
    renders on cooked pieces and cut faces use `MIC_Rubble01` (`DECISIONS.md`, `CHECKPOINT.md`).
 4. **Loose pieces vanish or run out.** The first draft blamed a load balancer that culls outside the camera frustum
-   [unverified; the frustum part is not in the decompile notes]. What the notes do show [source, `research/RFG_STRESS_SOLVER.md`]:
-   the object balancer works from a step-time pressure, and pools are fixed (`rfg_mover` 4000, `general_mover` 3072,
-   `object_debris` 500; an empty pool returns null and evicts nothing). Persistent rubble is implemented in the lab DLL (hold
-   `destruction_sweep` off while the render pool has room, `src/rfg/proxy.c`) [source; kept-rubble runs in
-   `docs/PERFORMANCE_PLAN.md`]. A Lua "lingering piece cache" was not found in `main.lua` [unverified].
+   [unverified; the frustum part is not in the decompile notes]. What the notes do show [source,
+   `research/RFG_STRESS_SOLVER.md`]: the object balancer works from a step-time pressure, and pools are fixed (`rfg_mover`
+   4000, `general_mover` 3072, `object_debris` 500; an empty pool returns null and evicts nothing). Persistent rubble is
+   implemented in the lab DLL (hold `destruction_sweep` off while the render pool has room, `src/rfg/proxy.c`) [source;
+   kept-rubble runs in `docs/PERFORMANCE_PLAN.md`]. A Lua "lingering piece cache" was not found in `main.lua` [unverified].
+   [The Dylan mod note](../red-faction-guerrilla/control-resonant-dylan-takeover-retargeted-animations.md) (Despawn and
+   physics) found the same pool sizes on the Steam exe, plus the two fade starters that schedule most rubble's fade when it
+   breaks off, and a free-count guard that keeps debris spawning.
 5. **Two Proton prefixes.** The plan assumed normal Windows shared memory might not cross prefixes
    (`docs/PASSTHROUGH_PLAN.md`); a file in `/dev/shm` through the `Z:` drive does cross [real run, `DECISIONS.md`]. Named
    pipes and named mappings were not tested [unverified].
@@ -220,37 +245,42 @@ was reproduced on a second machine.
    terrain under the pad is solid (heightfield and ray both 14.98 m), yet 41% of loose pieces (293 of 713 in the captured end
    state) end more than 3 m below RFG's ground at their own x,z; the lowest seen mid-run was 21.8 m below, the end-state pile is
    about 10 m deep. Root cause not proven (suspect: the collision-layer matrix between loose-piece and terrain layers).
-   **Update 2026-11-05: root cause found [real run].** The generated pieces' collision hulls were in chunk-local instead of piece-local
-   coordinates, so pieces fell through terrain and through a fixed test box alike; the sunk share fell from 35/63/88/81% by height bin to
-   about 11% (`evidence/hullfix-sink-bins.txt`, `convex-sink-bins.txt`). The layer matrix, terrain streaming, a terrain hole,
-   initial penetration and tunnelling were all measured and ruled out; full story in gotcha 5 of the chunk-generation note.
-   The remaining 10% are thin pieces that fall below about y -17.5, where RFG deletes them. Display-side fixes (terrain warp, floor clamp)
-   stay on for the ground mismatch, not for sinking.
+   **Update 2026-11-05: root cause found [real run].** The generated pieces' collision hulls were in chunk-local instead
+   of piece-local coordinates, so pieces fell through terrain and through a fixed test box alike; the sunk share fell from
+   35/63/88/81% by height bin to about 11% (`evidence/hullfix-sink-bins.txt`, `convex-sink-bins.txt`). The layer matrix,
+   terrain streaming, a terrain hole, initial penetration and tunnelling were all measured and ruled out; full story in
+   gotcha 5 of [the chunk note](../red-faction-guerrilla/generating-rfg-destructible-building-chunks.md).
+   The remaining 10% are thin pieces that fall below about y -17.5, where RFG appears to delete them (chunk note, gotcha 7).
+   Display-side fixes (terrain warp, floor clamp) stay on for the ground mismatch, not for sinking.
    A raw line-trace grid is not ground: roofs, trees and walls need a filter.
 7. **First in-engine film washed out or hung.** [real run, `docs/PLAN_STATE.md`, `evidence/film-hq.out`] On-demand
    `CaptureScene()` stopped after 62 frames and came out washed out (no exposure history; a second try hung after 3
    frames). Capturing every frame gave 287 frames in 53.5 s at 1920x1080 (5.3 fps, median gap 183 ms).
-8. **A "valid" test that never swapped.** [real run, `docs/PLAN_STATE.md` 2026-11-04 retraction] A global set from the lab eval is
-   invisible to the game's Lua (separate Lua states). Fix: request the swap through the bridge file (u32 at `0x7F000`) and
-   require the `SWAP: real house hidden` line. An earlier similar failure: a nil global in `do_swap` hid the swap in every
-   perf run from commit 227f785 until its fix (`CHECKPOINT.md`).
+8. **A "valid" test that never swapped.** [real run, `docs/PLAN_STATE.md` 2026-11-04 retraction] A global set from the lab
+   eval is invisible to the game's Lua (separate Lua states). Fix: request the swap through the bridge file (u32 at
+   `0x7F000`) and require the `SWAP: real house hidden` line. An earlier similar failure: a nil global in `do_swap` hid
+   the swap in every perf run from commit 227f785 until its fix (`CHECKPOINT.md`).
 
 ## Assets
 
 - 46 original house meshes, 216,058 triangles, exported from Oblivion's packages [real run, `CHECKPOINT.md`].
 - 1,479 piece meshes with convex hulls (Blender used for hulls) [real run]; fracture algorithm [unverified].
 - Cooked into IoStore files under `Paks/~mods/` via `retoc 0.1.5` [real run].
+- All of it, and the RFG chunk pair, is built from the user's own two installs and stays on that machine: the meshes,
+  pieces and pak are Oblivion's geometry, and the chunk keeps a stock RFG chunk's headers and materials. None of it goes
+  in the project repository (Build steps) or a release; anyone else builds it from their own copies.
 
 ## Cost and time
 
 - Work spanned 2026-11-02 to 2026-11-05 over many sessions [git history]. No external service costs recorded.
   "Zero external network dependencies" from the first draft is [unverified]; some research was done on the web.
 
-### 2026-11-13: where this route went
+## Where this route went (2026-11-13)
 Since 2026-11-05 the project no longer passes RFG's simulation through. RFG's rules are rebuilt in our own code inside
 Oblivion and Unreal moves the pieces; the passthrough described here is kept as the measuring oracle (the same house as a
-chunk in the real RFG, the same rockets). What that taught us is in the note "Red Faction Guerrilla's destruction rules
-rebuilt inside Oblivion Remastered, measured against the real game". Everything above is as audited on 2026-11-05.
+chunk in the real RFG, the same rockets). What that taught us is in
+[the rebuilt-rules note](rfg-destruction-rules-rebuilt-inside-oblivion-remastered.md). Everything above is as audited on
+2026-11-05.
 
 ## Open questions
 
