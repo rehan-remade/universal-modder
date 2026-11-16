@@ -966,9 +966,14 @@ BY_NAME, BY_CONTENT = "env file (secrets?)", "FAL_KEY assignment"
     (".env.example", ENV_PLACEHOLDER, None),          # a template passes...
     (".env.sample", ENV_PLACEHOLDER, None),
     (".env.template", ENV_PLACEHOLDER, None),
+    (".env.dist", ENV_PLACEHOLDER, None),
     (".env.local.example", ENV_PLACEHOLDER, None),
     (".env.example", ENV_KEY, BY_CONTENT),            # ...but its content is scanned
     (".env.local.example", ENV_KEY, BY_CONTENT),
+    ("config.env.example", ENV_KEY, BY_CONTENT),      # so is a template of config.env
+    ("mod/sub/.env.local", ENV_PLACEHOLDER, BY_NAME),  # at any depth
+    (".envrc", "use flake\n", None),                  # direnv's file isn't a secret by name...
+    (".envrc", "export " + ENV_KEY, BY_CONTENT),      # ...but its keys are
 ])
 def test_publish_check_env_variants(tmp_path, capsys, name, body, reason):
     make(tmp_path, {"README.md": "My mod", name: body})

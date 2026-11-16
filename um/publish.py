@@ -3,8 +3,10 @@
     um publish check ./MyMod --game "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Terraria"
 
 FAIL  files byte-identical to files in the game install (redistributing game files), leaked API keys
-      (FAL_KEY, Anthropic, GitHub, AWS...), .env files. This mod's own installed copy (Mods/<Id>/,
-      BepInEx/plugins/<name>/, named by Info.json, manifest.json or a .csproj) isn't compared; other mods are.
+      (FAL_KEY, Anthropic, GitHub, AWS...), .env files in any case (.env, *.env, .env.local, .env.production...;
+      templates such as .env.example, and direnv's .envrc, are scanned for keys instead). This mod's own installed
+      copy (Mods/<Id>/, BepInEx/plugins/<name>/, named by Info.json, manifest.json or a .csproj) isn't compared;
+      other mods are.
 WARN  decompiler fingerprints in source (FUN_xxxx / DAT_xxxx / sub_XXXX, "// Decompiled with", ILSpy/dnSpy
       headers) - reimplement or reference instead of shipping decompiled code; big engine archives
       (.pak/.bsa/.ba2/.vpk/.rpf/.utoc...) that may carry original assets; absolute user paths; no README /
@@ -45,13 +47,14 @@ SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", ".pytest_ca
 TEXT_EXT = {".cs", ".c", ".cpp", ".h", ".hpp", ".py", ".lua", ".js", ".ts", ".json", ".toml", ".ini", ".cfg", ".txt", ".md", ".xml",
             ".yaml", ".yml", ".rs", ".java", ".kt", ".gd", ".rpy", ".psc", ".sh", ".ps1", ".bat", ".gml", ".hlsl", ".glsl", ".env"}
 ARCHIVE_EXT = {".pak", ".utoc", ".ucas", ".bsa", ".ba2", ".vpk", ".rpf", ".pck", ".assets", ".bundle", ".sga", ".big", ".wad", ".bdt", ".archive"}
-ENV_TEMPLATE_EXT = {".example", ".sample", ".template"}
+# an env file's committed template (.env.example, .env.dist...): its keys are checked, its name isn't a failure
+ENV_TEMPLATE_EXT = {".example", ".sample", ".template", ".dist"}
 
 
 def _is_env_file(name: str) -> bool:
-    """.env, config.env and .env.local / .env.production (not .envrc), in any case."""
+    """.env, config.env and .env.local / .env.production, in any case (Windows treats .ENV as .env)."""
     low = name.lower()
-    return low == ".env" or low.endswith(".env") or low.startswith(".env.")
+    return low.endswith(".env") or low.startswith(".env.")
 
 
 def _sha1(p: Path) -> str:
@@ -145,11 +148,13 @@ def check(mod: str, game: str | None = None) -> int:
                     break
     for f in files:
         rel = f.relative_to(root).as_posix()        # same report on every OS (Windows would print src\Mod.cs)
-        if _is_env_file(f.name) and f.suffix.lower() not in ENV_TEMPLATE_EXT:
+        env = _is_env_file(f.name)
+        if env and f.suffix.lower() not in ENV_TEMPLATE_EXT:
             fails.append(f"env file (secrets?): {rel}")
         if f.suffix.lower() in ARCHIVE_EXT and f.stat().st_size > 5 << 20:
             warns.append(f"large engine archive ({f.stat().st_size >> 20} MB): {rel} - make sure it holds only your own assets")
-        if f.suffix.lower() in TEXT_EXT or _is_env_file(f.name):
+        # env files and their templates have no text suffix (.env.local, config.env.example), nor has direnv's .envrc
+        if f.suffix.lower() in TEXT_EXT or env or _is_env_file(f.stem) or f.name.lower() == ".envrc":
             try:
                 txt = f.read_text(errors="replace")
             except OSError:
