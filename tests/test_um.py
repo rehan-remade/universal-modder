@@ -531,14 +531,7 @@ def test_steam_games_utf8(tmp_path, monkeypatch, library_name, install_name, gam
         encoding="utf-8",
     )
     monkeypatch.setattr(scan, "steam_roots", lambda: [root])
-
-    # Emulate a non-UTF-8 Windows default on every test platform, using real files.
-    original_read_text = Path.read_text
-
-    def read_text(path, encoding=None, errors=None, **kwargs):
-        return original_read_text(path, encoding=encoding or "cp1252", errors=errors, **kwargs)
-
-    monkeypatch.setattr(Path, "read_text", read_text)
+    _cp1252_default(monkeypatch)
 
     assert scan.steam_games() == [{
         "store": "steam", "appid": "123", "name": game_name,
@@ -570,6 +563,7 @@ def test_epic_games_utf8(tmp_path, monkeypatch):
 
 
 def test_unity_app_info_utf8(tmp_path, monkeypatch):
+    # app.info is the company and product name on two lines, in UTF-8 whatever the build machine's code page
     _cp1252_default(monkeypatch)
     _, det = engine_of(tmp_path, {
         "UnityPlayer.dll": b"MZ", "Game_Data/globalgamemanagers": b"\0" * 20,
