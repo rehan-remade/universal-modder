@@ -1,22 +1,22 @@
 ---
 kind: game
 title: 'Lua mods without REPENTOGON: a follower clone, a costume on the back, an undroppable trinket, safe refactoring'
-game: 'The Binding of Isaac: Repentance+'
+game: 'The Binding of Isaac: Rebirth'
 games_also: []
-game_version: 'Repentance+ v1.9.7.17 (Steam)'
+game_version: 'Repentance+ v1.9.7.17 (Steam 250900)'
 platform: windows
 engine: native
 route: loader-api
 tools: [ModUploader, Python + Pillow, lupa, luaparser]
-anti_cheat: none (Steam Workshop mods; online co-op not touched)
+anti_cheat: 'none; single player and local co-op only (Repentance+ online play needs every mod disabled, and no Daily Runs with mods on)'
 status: in-progress
 agents:
 - Claude Code (Opus 5.5)
 humans: [fareria]
 date: '2026-11-07'
 links:
-- https://steamcommunity.com/sharedfiles/filedetails/?id=3828867916
-tags: [lua, no-repentogon, clone, costume, trinket, refactoring, workshop]
+- https://steamcommunity.com/sharedfiles/filedetails/?id=3835155895
+tags: [lua, no-repentogon, clone, costume, trinket, refactoring, workshop, repentance-plus]
 ---
 # Lua mods without REPENTOGON: a follower clone, a costume on the back, an undroppable trinket, safe refactoring
 
@@ -29,6 +29,10 @@ tags: [lua, no-repentogon, clone, costume, trinket, refactoring, workshop]
 ## Setup
 - The Binding of Isaac: Repentance+ v1.9.7.17, Steam, Windows 10. REPENTOGON installed but deliberately not used:
   every feature must work without it.
+- **Single player and local co-op only.** Repentance+ online co-op needs every mod disabled and a restart (the
+  official FAQ), and the game won't start a Daily Run with mods or the debug console on.
+- Spare Me remakes the idea of the Workshop mod Clone Regeneration (which needs REPENTOGON) on the vanilla API.
+  It was rebuilt from that mod's description and in-game behaviour, with no code or art taken from it.
 - Game resources extracted with the game's own `tools/ResourceExtractor` into `extracted_resources/`; used only
   as a reference for file names and frame layouts (not shipped).
 - Checks run outside the game: `luaparser` (syntax), a stub loader on `lupa` that runs `main.lua` with fake API
@@ -45,7 +49,8 @@ here is built from the vanilla API only.
   `gfxroot` yourself doubles the folder and the icon is silently blank.
 - **anm2 sheet paths** are relative to the anm2's own folder. `Path="totem_revive/totem.png"` inside
   `gfx/totem_revive/totem.anm2` points to `gfx/totem_revive/totem_revive/totem.png`: the sprite renders at the
-  right size and position but invisible, with no error anywhere.
+  right size and position but invisible, with no error anywhere. The Binding of Terraria note in this folder hit
+  the same rule.
 - **Player sprite layout** (`gfx/001.000_player.anm2`): body animations `WalkDown/Up/Left/Right` (20 frames)
   plus head overlay `HeadDown/...` (4 frames); 15 layers, the skin sheet on all but layer 13 (`ghost`). Body frame
   pivot (16,25) at y+2, head pivot (16,28) at y-5 from the entity point.
@@ -115,8 +120,6 @@ here is built from the vanilla API only.
 
 ## Assets
 Icons, clone UI hearts and the back costume were hand-placed pixel grids (Python + Pillow) in a fixed palette.
-For Cheap Trick, an image model (fal, Nano Banana 2.1 edit) turned an anime reference into pixel-art references
-first; the final sprites were redrawn by hand from them, because direct downscaling lost detail and the outline.
 
 ## Cost and time
 Spare Me v1: about 30 minutes from spec to a working, published mod, including three in-game test rounds by the
