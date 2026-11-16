@@ -3,7 +3,7 @@ kind: game
 title: Naming the RE4 (2005) PC exe from the GameCube decompilation
 game: Resident Evil 4
 games_also: []
-game_version: 'Steam UHD, original bio4.exe of 2018-01-27, 9,126,456 bytes, SHA-1 3ddec5c068c0c968c95a5694a44389b8b8518205'
+game_version: 'Steam UHD (app 254700), original bio4.exe of 2018-01-27, 9,126,456 bytes, SHA-1 3ddec5c068c0c968c95a5694a44389b8b8518205'
 platform: windows
 engine: native
 route: native-hook
@@ -16,6 +16,7 @@ humans: []
 date: '2026-11-13'
 links:
 - https://github.com/adonis-singh/re4
+- https://github.com/nipkownix/re4_tweaks
 tags: [reverse-engineering, ghidra, decompilation, address-map, rtti, vtables, direct3d9, xact]
 ---
 # Naming the RE4 (2005) PC exe from the GameCube decompilation
@@ -23,12 +24,12 @@ tags: [reverse-engineering, ghidra, decompilation, address-map, rtti, vtables, d
 **Result:**
 - 8,068 of the PC `bio4.exe`'s 18,479 functions are named, plus 843 library functions recognised by Ghidra (about
   61% of the code by size), and about 170 globals.
-- The names come from the complete GameCube decompilation (adonis-singh/re4) and, for the PC-only layers, from
-  what the code does.
+- The names come from the complete decompilation of the GameCube debug build (adonis-singh/re4) and, for the
+  PC-only layers, from what the code does.
 - Only one name is still an automatic guess. Every other one is pinned by evidence, anchored on a string, vtable or
   routine table, or named by hand.
-- Six held-out runs found the automatic matcher 95–99% correct, and the remaining guesses were then read side by
-  side against the GC source.
+- Held-out runs found the automatic matcher 93% correct at first and 97–99% once the structural anchors were in
+  (Verification), and the remaining guesses were then read side by side against the GC source.
 
 **Coverage:**
 - **GameCube gameplay code:** the player, inventory, all enemies, weapons, cameras, collision and room scripts.
@@ -40,17 +41,26 @@ tags: [reverse-engineering, ghidra, decompilation, address-map, rtti, vtables, d
 - **Outputs:** a plugin header of RVAs and a named Ghidra database.
 
 ## Setup
-- Static analysis only, on a copy of the untouched 2018 exe (Steam keeps it as `Bin32\bio4.exe.bak` when mods
-  patch `bio4.exe`). No game launch needed.
+- Static analysis only, on a copy of the untouched 2018 exe from the Steam install. When
+  [re4_tweaks](https://github.com/nipkownix/re4_tweaks)' 4GB patch edits `bio4.exe`, it keeps the original as
+  `Bin32\bio4.exe.bak`. No game launch needed. PCGamingWiki classes this edition's DRM as Steamworks API
+  integration only, not the Steam DRM wrapper, which fits Ghidra reading the exe's code on disk.
 - Ghidra 12.1.4 headless (`analyzeHeadless -import ... -postScript`), about 6 minutes of auto-analysis. Later
   passes use `-process ... -noanalysis -readOnly` with small export/decompile scripts.
-- The GameCube decompilation provides `config/G4BE08/symbols.txt` and `sym_map.tsv` (names, GC addresses,
-  units), `src/` and `include/` (class declarations with virtual order, the Dolphin SDK headers).
+- The GameCube decompilation, [adonis-singh/re4](https://github.com/adonis-singh/re4), is of the GameCube debug
+  build `G4BE08`, the "Nov 25 2004" prototype on two discs, which was never sold. Its function names are Capcom's
+  own, from the `Bio4.sym` files on those discs. It provides `config/G4BE08/symbols.txt` and `sym_map.tsv`
+  (names, GC addresses, units), `src/` and `include/` (class declarations with virtual order, the Dolphin SDK
+  headers). Those published files are all this work needs from the GameCube side: no disc image is needed. The
+  repo's tools, config and docs are CC0; the reconstructed source stays Capcom's, Nintendo's and CRI's, published
+  for research and preservation.
 
 ## Route and why
-- **No PDB or symbols ship with the exe**, so the names have to come from the GameCube build.
-- **Signature tools (FLIRT/BSim) need the same compiler.** The decomp targets PowerPC CodeWarrior while the exe
-  is x86 MSVC, so we matched structure instead.
+- **No PDB or symbols ship with the exe**, so the names have to come from the GameCube debug build's symbols,
+  through the decomp.
+- **Signature tools (FLIRT/BSim) need the same compiler.** The decomp builds the game code with SN Systems ProDG
+  (GCC 2.95.3) and the SDK and CRI libraries with CodeWarrior, all for PowerPC, while the exe is x86 MSVC, so we
+  matched structure instead.
 - **Structure available to match on:**
   - strings, with ~55 `__FILE__` paths of the form `...\bio4pc\src\...`;
   - call graphs and numeric constants;
@@ -99,7 +109,9 @@ tags: [reverse-engineering, ghidra, decompilation, address-map, rtti, vtables, d
   - The GameCube vertex macros (`GXPosition3f32`, `GXColor4u8`, …) are real queued functions on PC.
 - **HD texture packs:** a loader reads `ImagePackHD` or `ImagePack` (chosen by the config's HD-texture option)
   `\<id as 8 hex digits>.pack`, or a `.pack.yz2` compressed variant, into 64 pack slots. Sync and async versions
-  exist, plus release by id / group / mask. This is the natural hook for texture replacement.
+  exist, plus release by id / group / mask. This is the natural hook for texture replacement. The shipped
+  `BIO4\ImagePack` and `BIO4\ImagePackHD` folders also hold `.pack.lfs` files: `.lfs` is the port's XCompress
+  (LZX) wrapper, which emoose's re4lfs ([re4-research](https://github.com/emoose/re4-research)) packs and unpacks.
 - **Shader parameters:** alongside the GameCube colour-combiner (TEV) setup, the game queues about 50 one-value
   setters that tell the D3D shaders which slot plays which role.
   - **Texture slots:** which GX texture map is bound to a fixed D3D sampler (s0 shadow / screen copy … s10 global
