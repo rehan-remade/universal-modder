@@ -2,7 +2,7 @@
 kind: game
 title: Randomizer mode (GML via UndertaleModTool CLI, run with -game so the install stays vanilla)
 game: Fantasy Maiden Wars Dream of the Stray Dreamer
-games_also: ["Fantasy Maiden Wars DoSD", "東方幻想魔録"]
+games_also: ["Fantasy Maiden Wars DoSD", "幻想少女大戦"]
 game_version: "Steam 3575980, build 25976175, fmw_dosd.exe 1.1.0.0 (x64), as of 2026-11-09"
 platform: windows
 engine: gamemaker
@@ -31,7 +31,9 @@ most features in game. Several late fixes are built but not yet seen in game, he
 
 ## Setup
 - Steam 3575980, build 25976175, `fmw_dosd.exe` 1.1.0.0, x64.
-- `data.win` (33 MB) is FORM/GEN8 with **bytecode 17**: the modern GMS2 VM, not YYC, so the GML decompiles cleanly.
+- `data.win` (33 MB) is FORM/GEN8 with **bytecode 17**: the modern GMS2 VM, not YYC, so the GML decompiles cleanly
+  ([the YYC-vs-VM technique note](../../techniques/gamemaker-yyc-vs-vm-check-the-code-chunks-before-trusting-th.md)
+  has the check).
 - UndertaleModTool CLI 0.9.2.0 (`UndertaleModCli.exe load <data.win> -s <script.csx> -o <out.win>`).
   The GUI build was used for browsing.
 - Saves: `%LOCALAPPDATA%\fmw_dosd\savedata`. Config: `<game>\options.ini`. The game sandbox only allows relative
@@ -51,8 +53,9 @@ most features in game. Several late fixes are built but not yet seen in game, he
   - `data\` holds 338 files (1.8 GB) named by md5 hash. Each is a chain of concatenated zlib streams: CSV/INI/JSON
     text (unit, stage and weapon tables, map grids) and raw RGBA pixel buffers.
   - `meta\dat.meta` is a plain index: u32 count, then `name\0 file\0 u32 offset u32 size`.
-  - `meta\data*.meta` (20 files) are **encrypted** (magic `3a a5`, power-of-two sizes) with GameMaker's
-    `buffer_encode_ext` and a password string. The password and loader are in the GML; search the decompile
+  - `meta\data*.meta` (20 files) are **encrypted** (magic `3a a5`, power-of-two sizes) with `buffer_encode_ext`
+    and a password string. `buffer_encode_ext` is the game's own GML function, not a GameMaker built-in (the
+    manual's buffer functions have no such name). The password and loader are in the GML; search the decompile
     for `.meta`.
     - The game's own hex parser (`hex_to_dec_fast`) has a quirk that a re-encoder must reproduce, or a round trip
       differs.
@@ -81,9 +84,13 @@ most features in game. Several late fixes are built but not yet seen in game, he
 ## Build steps
 1. Back up the vanilla `data.win`. Decompile with the UTMT CLI to get every code entry (3005 here) as text.
 2. Write new scripts as `gml_GlobalScript_*.gml`, and copy the vanilla scripts you hook (keep pristine copies to diff).
+   The decompile and those copies are the game's code: keep them private, outside any repo.
 3. Build: Python generators turn the tables into GML data scripts, then
-   `UndertaleModCli.exe load data.win.orig -s import.csx -o out/data.win < /dev/null`.
-   The csx imports every `src/*.gml`. **Check the log for success**, because the CLI exits 0 either way.
+   `UndertaleModCli.exe load data.win.orig -s import.csx -o out/data.win -f < /dev/null`
+   (`-f` overwrites an existing `out/data.win`; without it 0.9.2.0 refuses and exits 1).
+   The csx imports every `src/*.gml`. **Check the log for the import result.** The CLI exits 1 only when the script
+   throws (`CodeImportGroup.Import()` does on compile errors); a failure the script catches or reports with
+   `ScriptError` still exits 0 and saves the file.
 4. Run without touching the install: `<game>\fmw_dosd.exe -game <path>\data.win`.
    - The working directory becomes the folder holding that `data.win`, so it needs `data\` and `meta\` (we use
      directory **junctions** to the game's folders), the two Steam DLLs, `options.ini` and any custom sprite folder.
@@ -107,8 +114,11 @@ most features in game. Several late fixes are built but not yet seen in game, he
   spell-card padding in other stages, the weapon-slot guard), custom battle sprites for a character without art.
 
 ## Gotchas
-1. **The UTMT CLI hangs forever in scripts.** **Cause:** it waits on stdin. **Fix:** redirect `< /dev/null`, and
-   grep the log for the import result; don't trust the exit code.
+1. **The UTMT CLI hangs forever in scripts.** **Cause:** when stdin is redirected, the 0.9.2.0 CLI reads it to end
+   of file before it does anything (`Program.Main`), so a shell whose stdin never closes hangs it (as in the
+   [DELTARUNE reskin note](../deltarune/creator-driven-reskin-and-russian-chapter-1.md)). **Fix:** feed it empty
+   stdin (`< /dev/null`, or `< NUL` in cmd), and grep the log for the import result: the exit code only catches a
+   script that throws (Build step 3).
 2. **`obj.rando` was truthy on objects that never set it.** **Cause:** a script asset named `rando` exists, and GML
    resolves an unknown instance variable to the asset index. **Fix:** never name a script like any instance variable.
 3. **The randomizer seeded too late, so the opening party was vanilla.** **Cause:** `title_start(0)` runs the
@@ -142,6 +152,8 @@ most features in game. Several late fixes are built but not yet seen in game, he
 - One character with no battle art got user-provided PNG frames, loaded at runtime with `sprite_add` from a mod
   folder.
 - His dialogue lines were user-written and compiled into a GML data script by a generator.
+- A release can carry those frames and lines only if they're the user's own work, or used with the artist's
+  permission.
 
 ## Cost and time
 About five sessions (2026-11-07 to 2026-11-09), with the human testing between builds.
