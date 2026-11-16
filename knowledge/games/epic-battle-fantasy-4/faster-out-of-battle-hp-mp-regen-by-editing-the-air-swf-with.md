@@ -5,7 +5,7 @@ game: Epic Battle Fantasy 4
 games_also: []
 game_version: Steam 265610, AIR app EpicBattleFantasy4 v1.0.0 (SWF 171,914,112 bytes, as of 2026-11-15)
 platform: windows
-engine: adobe-air
+engine: unknown
 route: managed-patch
 tools: ["JPEXS FFDec 26.5.0", "Eclipse Temurin JRE 21.0.13 x64"]
 anti_cheat: none (offline single-player; Steam only for achievements/cloud via the FRESteamWorks ANE)
@@ -59,6 +59,7 @@ over the original. The user confirmed in game that it works.
 1. Back up `Epic Battle Fantasy 4.swf` and all `*.meow` saves.
 2. Export scripts:
    `java -jar ffdec.jar -export script <outdir> "Epic Battle Fantasy 4.swf"` (~1.5 min, 1953 scripts).
+   The export is the game's decompiled code: keep `<outdir>` private, outside any repo.
 3. Copy `Maps.as` and `MapPlayer.as` out of the export (default package) and make three edits:
    - In `Maps.handleKeys`, fire the heal when the timer is `>= 3` instead of `== 30` (10 ticks/s).
    - In `MapPlayer.passiveHeal`, the HP divisor goes 30 → 15.
@@ -68,6 +69,8 @@ over the original. The user confirmed in game that it works.
    `<jre64>\bin\java.exe -Xmx6g -jar ffdec.jar -replace <backup.swf> <out.swf> Maps Maps.as MapPlayer MapPlayer.as`
    (prints "This feature is EXPERIMENTAL"; exit 0).
 5. Copy `out.swf` over the game's SWF. To uninstall, copy the backup back. Steam "verify files" also restores it.
+   `out.swf` is the whole game with two classes changed, so it stays in your own install. Share the mod as these
+   steps (or a patch applied to the player's own SWF), never the SWF.
 
 ## Verification
 - Static: re-exported just those two classes from the built SWF
