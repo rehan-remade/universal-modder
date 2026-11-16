@@ -16,6 +16,7 @@ humans: []
 date: '2026-11-15'
 links:
 - https://github.com/riperiperi/FreeSO
+- https://github.com/cheat-engine/cheat-engine
 tags: [the-sims, simantics, clock, time-scale, motives, need-decay, cheat-engine, steamstub, x86]
 ---
 # Slow in-game clock and slower need decay per need (drops only, optional Energy refill %), as a Cheat Engine table
@@ -34,9 +35,10 @@ tags: [the-sims, simantics, clock, time-scale, motives, need-decay, cheat-engine
 ## Setup
 - The Sims Legacy Collection, Steam app 3314060, Windows 10 22H2 x64. `Sims.exe` is 32-bit, PE timestamp
   0x67e72e1b, `changelist.txt` = 936127. ASLR is on (image base moves every run), so all addresses below are
-  RVAs (offsets from the module base, i.e. `Sims.exe+RVA` in Cheat Engine).
+  RVAs (offsets from the module base, i.e. `Sims.exe+RVA` in Cheat Engine). Steam's public build has been
+  17905164 since 2025-04-03 (SteamCMD), which fits the PE timestamp (2025-03-28).
 - No mods or loaders installed. Cheat Engine 7.x for the final table.
-- Analysis: Python 3 with capstone (disassembly) and keystone (assembling the test hook); see Gotcha 2 for why
+- Analysis: Python 3 with capstone (disassembly) and keystone (assembling the test hook); see Gotcha 1 for why
   the analysis reads the running process instead of the file.
 
 ## Route and why
@@ -86,8 +88,10 @@ tags: [the-sims, simantics, clock, time-scale, motives, need-decay, cheat-engine
   So the mod's percentage applies at every game speed.
 
 ## Build steps
-1. Cheat Engine: attach to `Sims.exe`, load the table below (save it as `Sims Slow Clock.CT`), tick
-   "Slow clock". Default 50% (48 real minutes per game day at normal speed).
+1. Cheat Engine: attach to `Sims.exe`. The block below is an Auto Assembler script, not a `.CT` file: open
+   Memory View > Tools > Auto Assemble, paste it, use File > Assign to current cheat table, name the entry
+   "Slow clock" and save the table as `Sims Slow Clock.CT`. Tick "Slow clock". Default 50% (48 real minutes per
+   game day at normal speed).
 2. The child entry "Clock speed" (`sc_div`) picks the rate: 1 = 50%, 2 = 25%, 4 = 12.5%, 10 = 5%; any whole N
    gives 50%/N. Untick for vanilla.
 
@@ -177,8 +181,8 @@ In the .CT, add a 4-byte child record at address `sc_div` with a dropdown list (
 ## Gotchas
 1. **The exe on disk is unreadable (entropy 8.0 in `.text`).** Cause: SteamStub; there is a `.bind` section and
    the entry point is inside it. Fix: for analysis, read the image from the running process after start-up (the
-   wrapper has decrypted it by then). Do not ship a modified exe; a memory hook (CE table, live tool) avoids
-   touching the wrapper at all.
+   wrapper has decrypted it by then), and keep any dump of it private, outside any repo. Do not ship a modified
+   exe; a memory hook (CE table, live tool) avoids touching the wrapper at all.
 2. **Memory dump at 0x400000 gave wrong string addresses.** Cause: ASLR is on (DllCharacteristics 0x8140), the
    image was at 0x270000 that run. Fix: get the module base (EnumProcessModulesEx) and work in RVAs; absolute
    pointers inside the dump are relocated to that run's base.
