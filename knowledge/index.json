@@ -5147,6 +5147,45 @@
   ]
  },
  {
+  "path": "games/mario-kart-world/renodx-psychov35-hdr-tone-mapping-and-per-player-controller-.md",
+  "kind": "game",
+  "title": "RenoDX PsychoV35 HDR tone mapping and per-player controller remapping in the mkw-recomp static recompilation",
+  "game": "Mario Kart World",
+  "games_also": [],
+  "game_version": "Switch 2 Mario Kart World as dumped by the player, run through mkw-recomp 0.1.13 (Windows x64)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "decomp-recomp",
+  "tools": [
+   "mkw-recomp 0.1.13 (github.com/adriadam10/mkw-recomp) and its main branch of 2026-11-18",
+   "Vulkan SDK 1.4.363.0 (spirv-cross, glslangValidator, spirv-val)",
+   "llvm-mingw + SDL3 via the repo's tools/build/windeps.py, uv",
+   "RenoDX PsychoV35 (github.com/clshortfuse/renodx, MIT)"
+  ],
+  "anti_cheat": "none in the recompiled runtime; online play not involved (local split-screen and offline only)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-18",
+  "links": [
+   "https://github.com/adriadam10/mkw-recomp",
+   "https://github.com/adriadam10/mkw-recomp/pull/580",
+   "https://github.com/clshortfuse/renodx"
+  ],
+  "tags": [
+   "hdr",
+   "renodx",
+   "tonemapping",
+   "spir-v",
+   "static-recompilation",
+   "nintendo-epd",
+   "split-screen",
+   "input-remapping"
+  ]
+ },
+ {
   "path": "games/meccha-chameleon/meccha-chameleon-mod-kit-maps-local-manifest-loading-via-ste.md",
   "kind": "game",
   "title": "MECCHA CHAMELEON: Mod Kit maps, local manifest loading via SteamWorkshopMapSubsystem, UE4SS PvE hunter",
