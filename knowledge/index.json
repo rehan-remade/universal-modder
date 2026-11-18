@@ -6758,6 +6758,55 @@
   ]
  },
  {
+  "path": "games/outer-wilds/real-balatro-playable-on-outer-wilds-landing-camera-screen-p.md",
+  "kind": "game",
+  "title": "Real Balatro playable on Outer Wilds' landing-camera screen (passthrough: shared-memory frames and mouse)",
+  "game": "Outer Wilds",
+  "games_also": [
+   "Balatro"
+  ],
+  "game_version": "Outer Wilds 1.1.16.1372 (Steam 753640), Unity 2019.4.39f1 Mono; Balatro 1.0.1o (Steam 2379780)",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "passthrough",
+  "tools": [
+   "OWML 2.15.1",
+   "Outer Wilds Mod Manager",
+   "OuterWildsGameLibs 1.1.16.1372 (net48)",
+   "lovely (version.dll build)",
+   "Steamodded 1.0.0-beta-1224a (present, not needed)",
+   "LuaJIT FFI",
+   "ilspycmd 9.1",
+   ".NET SDK 9.0.310",
+   "Python 3 + Pillow"
+  ],
+  "anti_cheat": "none (both single-player; Balatro is only ever started by the mod with its own Steam AppId)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-15",
+  "links": [
+   "https://github.com/ow-mods/owml",
+   "https://github.com/ethangreen-dev/lovely-injector"
+  ],
+  "tags": [
+   "mashup",
+   "passthrough",
+   "frame-compositing",
+   "shared-memory",
+   "seqlock",
+   "owml",
+   "lovely",
+   "love2d",
+   "landing-camera",
+   "render-texture",
+   "input-forwarding",
+   "focus"
+  ]
+ },
+ {
   "path": "games/outer-wilds/real-minecraft-running-inside-outer-wilds-passthrough-frame-.md",
   "kind": "game",
   "title": "Real Minecraft composited into Outer Wilds (first slice): shared memory under Proton, a raw FBO readback and a four-colour landmark oracle",
