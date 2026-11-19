@@ -106,13 +106,15 @@ tags: [sourcemod, extension, webassembly, lua, mlua, scripting-runtime, interop,
   - A Jockey incap became a bounty in the Rust mod. The claim message reached the SourcePawn plugin's
     forward and the Lua script.
   - Swapping a rebuilt DLL with unload/load reconnected through the bridge.
+  - Sandbox fixes: a temporary script ran every check from one command (Gotchas 3-6): runaway pattern
+    stopped, `persist` number keys survived a hot reload, device names refused, planted `__gc` ignored.
 - **Linux.** A C harness loads all three `.so` files under WSL with a fake bridge, connects the ports
   through the hub and checks that a Rust → Lua call crosses all three libraries.
 - **Static checks.** lua-language-server `--check` on the example scripts and the annotations.
 - **Not verified:**
   - a real Linux srcds;
   - Versus mode or other players joining;
-  - the latest sandbox fixes in game (simulator and Linux smoke test only).
+  - the bridge refusing a runtime built for a different interface version (simulator only).
 
 ## Gotchas
 1. **The server crashed in `sourcemod.logic.dll` on `sm exts reload`** after installing a rebuilt extension.
@@ -129,8 +131,10 @@ tags: [sourcemod, extension, webassembly, lua, mlua, scripting-runtime, interop,
    with an instruction budget and a 1 s wall-clock check. **Cause:** the pattern matcher backtracks
    polynomially inside one C call, where the hook can't fire; the wall-clock check only ran after it
    returned. A Lua-side guard counting `.`-wildcards missed `%a*` and `[^x]*`. **Fix:** vendor the lua-src
-   crate (`[patch.crates-io]`) and add a step budget to `match()` in `lstrlib.c` (20M calls per search,
-   about 0.1 s). Running out raises an ordinary "pattern too complex" error.
+   crate (`[patch.crates-io]`) and add a step budget to `match()` in `lstrlib.c` (5M calls per search;
+   measured in game, a runaway search stops after 0.05 s, where 50M took 0.5 s). Running out raises an
+   ordinary "pattern too complex" error. Declare the C sources in a `build.rs` (`rerun-if-changed`):
+   Cargo doesn't treat them as inputs, so an edited budget was silently not rebuilt.
 4. **A script could still create an unstoppable finalizer** despite a guarded `setmetatable`. **Cause:**
    the sandbox's own constructors (entities, vectors) used the raw `setmetatable` on metatables the script
    could reach (`Entity` is global, and `getmetatable(vec3())` returns the vector metatable). **Fix:**
