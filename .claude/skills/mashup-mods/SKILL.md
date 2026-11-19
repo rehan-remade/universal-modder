@@ -66,7 +66,8 @@ back as triangles plus voxels. [LibertyCraft](https://github.com/mrborghini/libe
 and kept the guest side. The design below is the standard way to build it.
 1. **Guest process** (e.g. Minecraft with a Fabric mod, or a headless reimplementation): runs the simulation
    and publishes state every tick. That's entities/blocks near the player, or a rendered layer.
-2. **Transport**, all on `127.0.0.1`:
+2. **Transport**, all on `127.0.0.1`, which doesn't keep out a web page in the player's browser (see "Networking"
+   in `skills/mod-any-game/references/safety.md`):
    - state: a shared-memory ring buffer (`CreateFileMapping`) or UDP/named pipes;
    - control: JSON lines or HTTP;
    - GPU frames: DXGI shared handles (`CreateSharedHandle` / `OpenSharedResource1` + keyed mutex), Vulkan

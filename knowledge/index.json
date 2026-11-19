@@ -879,7 +879,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-25",
+  "date": "2026-11-01",
   "links": [
    "https://github.com/etkramer/SplitScreenMod",
    "https://github.com/etkramer/SplitScreenMod/pull/21",
@@ -887,6 +887,7 @@
    "https://github.com/etkramer/SplitScreenMod/pull/23",
    "https://github.com/etkramer/SplitScreenMod/pull/25",
    "https://github.com/etkramer/SplitScreenMod/pull/26",
+   "https://github.com/etkramer/SplitScreenMod/pull/30",
    "https://github.com/Kendoismebutmaybenot/SplitScreenMod-fixes",
    "https://github.com/Team-BmSDK/BmSDK-AC"
   ],
@@ -929,12 +930,12 @@
    "OpenCode (muse-spark-1.3)",
    "Claude Code (Opus 5.5)",
    "OpenCode (deepseek-v4.1-flash-free)",
-   "Freebuff (Buffy, model not recorded; wrote the note)"
+   "Freebuff (DeepSeek V4.1 1017; wrote the first version of the note)"
   ],
   "humans": [
    "@NotTrevino"
   ],
-  "date": "2026-10-22",
+  "date": "2026-10-30",
   "links": [
    "https://github.com/gildor2/UEViewer",
    "https://github.com/vgmstream/vgmstream",
@@ -1090,6 +1091,51 @@
   ]
  },
  {
+  "path": "games/beamng-drive/unpack-mod-before-editing.md",
+  "kind": "game",
+  "title": "Unpack a BeamNG.drive mod before editing: rebadge and taillights on an unpacked vehicle",
+  "game": "BeamNG.drive",
+  "games_also": [],
+  "game_version": "0.40.4.0.296339 (Steam)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "asset-only",
+  "tools": [
+   "Blender 4.5.10 (headless import/render)",
+   "PowerShell",
+   "XML editing of the .dae"
+  ],
+  "anti_cheat": "none; offline single player only (BeamMP, the third-party multiplayer mod, was not used)",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [
+   "@Puneru"
+  ],
+  "date": "2026-11-04",
+  "links": [
+   "https://documentation.beamng.com/modding/mod-support/mod_packing/",
+   "https://documentation.beamng.com/modding/mod-support/overwritting/",
+   "https://documentation.beamng.com/modding/file_formats/materials/",
+   "https://documentation.beamng.com/modding/vehicle/sections/flexbodies/",
+   "https://beamng.com/game/support/policies/modding-guidelines/"
+  ],
+  "tags": [
+   "beamng",
+   "torque3d",
+   "vehicle",
+   "dae",
+   "jbeam",
+   "materials",
+   "glowmap",
+   "unpack",
+   "blender",
+   "rebadge",
+   "taillights"
+  ]
+ },
+ {
   "path": "games/black-myth-wukong/reshade-depth-dead-end.md",
   "kind": "game",
   "title": "Black Myth: Wukong, Unreal 5.0: injection works, ReShade render depth does not",
@@ -1124,6 +1170,47 @@
    "denuvo",
    "passthrough",
    "render-injection"
+  ]
+ },
+ {
+  "path": "games/blur/blur-ds-exact-size-zip-splicing.md",
+  "kind": "game",
+  "title": "Exact-size zip splicing for Blur DS texture edits",
+  "game": "Blur",
+  "games_also": [],
+  "game_version": "Blur DS beta, Europe, unreleased; 64 MB NDS ROM, title BLUR, game code BBRP, maker code 36",
+  "platform": "console",
+  "engine": "unknown",
+  "route": "asset-only",
+  "tools": [
+   "Python 3 (struct, zlib)",
+   "melonDS 1.1",
+   "COLLADA .dae export (mesh comparison)"
+  ],
+  "anti_cheat": "none \u2014 unreleased offline beta",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash Free)"
+  ],
+  "humans": [
+   "@GameBreaker20XX"
+  ],
+  "date": "2026-10-21",
+  "links": [
+   "https://github.com/melonDS-emu/melonDS"
+  ],
+  "tags": [
+   "nds",
+   "zip",
+   "deflate",
+   "exact-size",
+   "splicing",
+   "texture",
+   "palette",
+   "firebrand",
+   "octane",
+   "blur",
+   "rom-patching"
   ]
  },
  {
@@ -1226,6 +1313,53 @@
   ]
  },
  {
+  "path": "games/brutalistick-vr/custom-music-player-with-its-own-music-plate-in-the-vr-setti.md",
+  "kind": "game",
+  "title": "Custom music player with its own Music plate in the VR settings menu",
+  "game": "BRUTALISTICK VR",
+  "games_also": [],
+  "game_version": "Steam app 2669380, Unity 6000.0.59f2 (IL2CPP x64), MelonLoader 0.7.3 Open-Beta / .NET 6",
+  "platform": "windows",
+  "engine": "unity-il2cpp",
+  "route": "loader-api",
+  "tools": [
+   "MelonLoader 0.7.3 Open-Beta",
+   "Il2CppDumper (dump.cs)",
+   "dotnet 6 SDK (net6.0 class library)",
+   "ffmpeg (generated test tones)",
+   "NLayer 1.16.0 and NVorbis 0.10.5 (embedded decoders)",
+   "Thunderstore (zip uploaded by hand, no CLI)"
+  ],
+  "anti_cheat": "none; single-player VR game, and Steam starts BrutalistickVR.exe directly",
+  "status": "released",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-11-05",
+  "links": [
+   "https://github.com/Skibidi41Rizz/CustomMusic",
+   "https://thunderstore.io/c/brutalistick-vr/p/SkIbidiRizTEAM/CustomMusic/",
+   "https://github.com/LavaGang/MelonLoader",
+   "https://github.com/naudio/NLayer",
+   "https://github.com/NVorbis/NVorbis",
+   "https://github.com/Perfare/Il2CppDumper"
+  ],
+  "tags": [
+   "audio",
+   "music",
+   "mci",
+   "winmm",
+   "harmony",
+   "ui",
+   "settings-menu",
+   "melonloader",
+   "il2cpp",
+   "vr",
+   "thunderstore"
+  ]
+ },
+ {
   "path": "games/call-of-duty-4-modern-warfare/cod4-iw3-vs-waw-t4-engine-architecture-and-modding.md",
   "kind": "game",
   "title": "Call of Duty 4: Modern Warfare (IW 3.0) vs World at War (Treyarch T4) Engine Architecture and Modding Comparison",
@@ -1319,6 +1453,176 @@
    "gltf",
    "audio",
    "provenance"
+  ]
+ },
+ {
+  "path": "games/call-of-duty-black-ops-ii/bo1-maps-to-bo2-shader-slots-and-lighting.md",
+  "kind": "game",
+  "title": "Black Ops 1 Zombies maps in Black Ops II: technique slot tables, lightmap formats and the crashes behind a working Kino port",
+  "game": "Call of Duty: Black Ops II",
+  "games_also": [
+   "Call of Duty: Black Ops",
+   "Call of Duty: World at War"
+  ],
+  "game_version": "Black Ops II Zombies Steam build 24784239 via Plutonium T6 (launcher revision 5369 when written); source Black Ops Steam build 87954; tested October 2026",
+  "platform": "windows",
+  "engine": "iw",
+  "route": "data",
+  "tools": [
+   "B2W (our BO1 fork)",
+   "OpenAssetTools",
+   "Ghidra headless",
+   "Capstone",
+   "fxc D3DDisassemble",
+   "Python 3.13"
+  ],
+  "anti_cheat": "VAC on Steam multiplayer and Plutonium T6's own anti-cheat, not involved: data only (converted mod zones), played solo. Sources are our own installs, and the converted zones stay private.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "AryaBlue"
+  ],
+  "date": "2026-11-08",
+  "links": [
+   "https://github.com/AryaBlue/BO1-B2W",
+   "https://github.com/Ticass/B2W",
+   "https://github.com/Laupetin/OpenAssetTools"
+  ],
+  "tags": [
+   "zombies",
+   "t5",
+   "t6",
+   "map-port",
+   "shaders",
+   "techniques",
+   "lighting",
+   "lightmap",
+   "light-grid",
+   "converter"
+  ]
+ },
+ {
+  "path": "games/call-of-duty-black-ops-ii/external-fbx-to-a-walkable-t6-map.md",
+  "kind": "game",
+  "title": "Black Ops II: linking a walkable Zombies map from your own FBX files with the OpenAssetTools BSP linker",
+  "game": "Call of Duty: Black Ops II",
+  "game_version": "Black Ops II Zombies, Steam build 24784239, run through Plutonium T6 (launcher revision 5369 when written); tested 2026-10-20",
+  "platform": "windows",
+  "engine": "iw",
+  "route": "data",
+  "tools": [
+   "OpenAssetTools T6 linker as vendored in B2W (B2W commit af7b672d)",
+   "our own Python FBX writer"
+  ],
+  "anti_cheat": "VAC on Steam multiplayer and Plutonium T6's own anti-cheat, not involved: data only (a mod folder of linked zones), played solo. No client patching or injection in this route.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "AryaBlue"
+  ],
+  "date": "2026-11-08",
+  "links": [
+   "https://github.com/Ticass/B2W",
+   "https://github.com/Laupetin/OpenAssetTools"
+  ],
+  "tags": [
+   "zombies",
+   "t6",
+   "bsp",
+   "fbx",
+   "collision",
+   "linker",
+   "map-port",
+   "ipak",
+   "lighting"
+  ]
+ },
+ {
+  "path": "games/call-of-duty-black-ops-ii/openassettools-x64-zone-loading.md",
+  "kind": "game",
+  "title": "OpenAssetTools can load T4, T5 and T6 zones in a 64-bit process",
+  "game": "Call of Duty: Black Ops II",
+  "games_also": [
+   "Call of Duty: Black Ops",
+   "Call of Duty: World at War"
+  ],
+  "game_version": "Zones from Steam Black Ops II Zombies build 24784239 and our own World at War and Black Ops installs; tested 2026-10-31",
+  "platform": "windows",
+  "engine": "iw",
+  "route": "other",
+  "tools": [
+   "OpenAssetTools as vendored in B2W (upstream commit 7d027e8f plus B2W's vendor/OpenAssetTools.patch)",
+   "MSBuild"
+  ],
+  "anti_cheat": "None involved: offline reads of our own zone files. No game process.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "AryaBlue"
+  ],
+  "date": "2026-11-08",
+  "links": [
+   "https://github.com/Laupetin/OpenAssetTools",
+   "https://github.com/Ticass/B2W"
+  ],
+  "tags": [
+   "fastfile",
+   "zones",
+   "x64",
+   "tools",
+   "openassettools",
+   "t4",
+   "t5",
+   "t6"
+  ]
+ },
+ {
+  "path": "games/call-of-duty-black-ops-iii/bo2-map-to-bo3-usermap-collision-and-navmesh.md",
+  "kind": "game",
+  "title": "Black Ops III: a walkable Zombies usermap with a working navmesh from another map's geometry and clip brushes",
+  "game": "Call of Duty: Black Ops III",
+  "games_also": [
+   "Call of Duty: Black Ops II"
+  ],
+  "game_version": "Black Ops III Steam, version 100.2.2.7.109.0 (Steam build 24784313) when tested 2026-10-21; Mod Tools Steam build 5284267",
+  "platform": "windows",
+  "engine": "iw",
+  "route": "data",
+  "tools": [
+   "Black Ops III Mod Tools (cod2map, linker, gdtdb)",
+   "OpenAssetTools Unlinker",
+   "Ghidra",
+   "REA",
+   "Python"
+  ],
+  "anti_cheat": "VAC on multiplayer, not involved: a usermap built with the official Mod Tools and played solo. Personal test; the converted map stays private and never goes on the Workshop.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "AryaBlue"
+  ],
+  "date": "2026-11-08",
+  "links": [
+   "https://github.com/Laupetin/OpenAssetTools"
+  ],
+  "tags": [
+   "zombies",
+   "t6",
+   "t7",
+   "usermap",
+   "collision",
+   "navmesh",
+   "cod2map",
+   "map-port",
+   "plane-cap"
   ]
  },
  {
@@ -1730,6 +2034,109 @@
   ]
  },
  {
+  "path": "games/collapse/collapse-2008-formats-memory-timing-and-8876086c.md",
+  "kind": "game",
+  "title": "Collapse (2008): data formats, the init_heap fence, the engine's leaks and races, and the collapsefix 1.0.1 fix",
+  "game": "Collapse",
+  "games_also": [],
+  "game_version": "Steam app 289620, build 222225, collapse.exe 2,392,108 B, SHA-256 3003600f\u2026bded283, PE timestamp 2008-10-13 (has the 1.1 AA option, no fullscreen-vsync path)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "Python 3 + pefile + capstone (via uv)",
+   "Ghidra 12.1.4 headless (full decompile to text, kept private; run twice to compare)",
+   "Frida 17.24.3 (spawn; the main probe hooks system DLLs only, the navmesh and gamepad tests also hook game code)",
+   "own .table reader/writer and package v8 extractor (Python)",
+   "Zig 0.17 (32-bit test host)",
+   "um win shot (ffmpeg gfxcapture)",
+   "WinDbg 1.2610 + ProcDump 12.02 (unhandled-exception dump)",
+   "Python minidump (dump triage)"
+  ],
+  "anti_cheat": "none. Single-player, no online mode. The Steam exe has no SteamStub and no steam_api (DRM-free); the LAA patcher sets one header bit on that exe only and refuses any other hash. Retail discs reportedly used StarForce (not checked).",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "wh1tem0nst3r"
+  ],
+  "date": "2026-10-28",
+  "links": [
+   "examples/collapse-collapsefix",
+   "https://web.archive.org/web/20250811064700/https://www.playground.ru/collapse/file/patch_collapse_v1_1-863187",
+   "https://web.archive.org/web/20251022211914/https://www.wsgf.org/dr/collapse/en",
+   "https://web.archive.org/web/20260709041135/https://www.pcgamingwiki.com/wiki/Collapse",
+   "https://web.archive.org/web/20081120161419/http://creoteam.com/forum/",
+   "https://steamcommunity.com/app/289620/discussions/0/540743128682268318/",
+   "https://web.archive.org/web/20170623084809/http://forum.xentax.com/viewtopic.php?f=10&t=11253",
+   "https://gee.cs.oswego.edu/pub/misc/malloc.c"
+  ],
+  "tags": [
+   "collapse-devastated-world",
+   "creoteam",
+   "d3d9",
+   "vc6",
+   "table",
+   "package",
+   "dxt",
+   "init-heap",
+   "large-address-aware",
+   "gettickcount",
+   "frame-pacing",
+   "8876086c",
+   "invalidcall",
+   "fov",
+   "setup-ini",
+   "frida"
+  ]
+ },
+ {
+  "path": "games/convrgence/ingame-mods-tab-and-vr-performance.md",
+  "kind": "game",
+  "title": "Native-looking in-game Mods settings tab (and which performance knobs moved VR frames)",
+  "game": "CONVRGENCE",
+  "games_also": [],
+  "game_version": "1.1.0, Steam BuildID 26164481",
+  "platform": "windows",
+  "engine": "unity-il2cpp",
+  "route": "loader-api",
+  "tools": [
+   "MelonLoader 0.7.3",
+   "AssetRipper GUI (headless web)",
+   "UnityPy",
+   "ilspycmd (ILSpy CLI)",
+   "WPR/WPA (Windows Performance Recorder/Analyzer)",
+   "HarmonyX"
+  ],
+  "anti_cheat": "none found (single-player VR extraction shooter, Steam starts CONVRGENCE.exe directly); it has Steam leaderboards, so keep modded runs off them",
+  "status": "working",
+  "agents": [
+   "OpenCode (GLM)"
+  ],
+  "humans": [
+   "Arttu (full VR verification, patience through ~35 game restarts)"
+  ],
+  "date": "2026-10-31",
+  "links": [
+   "https://github.com/LavaGang/MelonLoader",
+   "https://github.com/AssetRipper/AssetRipper",
+   "https://github.com/K0lb3/UnityPy",
+   "https://github.com/BepInEx/Il2CppInterop"
+  ],
+  "tags": [
+   "vr",
+   "settings-ui",
+   "pause-menu",
+   "in-game-menu",
+   "melonloader-ui-clone",
+   "volumetric-fog",
+   "aura2",
+   "force-close",
+   "field-write-vs-method-call"
+  ]
+ },
+ {
   "path": "games/crash-bandicoot-n-sane-trilogy/croc-inside-crash-n-sane-live-two-engine-mashup.md",
   "kind": "game",
   "title": "Croc inside Crash N. Sane: live two-engine mashup and native port",
@@ -1939,6 +2346,49 @@
   ]
  },
  {
+  "path": "games/cult-of-the-lamb/custom-motion-vectors-and-an-ngx-dlss-host-for-cult-of-the-l.md",
+  "kind": "game",
+  "title": "Custom motion vectors and an NGX DLSS host for Cult of the Lamb (Unity DX11, no native upscaler)",
+  "game": "Cult of the Lamb",
+  "games_also": [],
+  "game_version": "Steam build 25223484, v1.5.26.1058",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "native-hook",
+  "tools": [
+   "BepInEx 5.4.21",
+   "HarmonyX",
+   "ILSpy 8.2",
+   "RenderDoc 1.46",
+   "NVIDIA DLSS SDK (nvngx 310.x)",
+   "BepInEx.ConfigurationManager v19.1",
+   "MSVC 2022"
+  ],
+  "anti_cheat": "none (single player and local co-op; no online mode)",
+  "status": "working",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "https://github.com/NVIDIA/DLSS",
+   "https://renderdoc.org",
+   "https://github.com/BepInEx/BepInEx.ConfigurationManager",
+   "https://docs.bepinex.dev",
+   "https://thunderstore.io/c/cult-of-the-lamb/p/BepInEx/BepInExPack_CultOfTheLamb/"
+  ],
+  "tags": [
+   "cult-of-the-lamb",
+   "unity",
+   "motion-vectors",
+   "dlss",
+   "ngx",
+   "native-hook",
+   "upscaling"
+  ]
+ },
+ {
   "path": "games/cyberpunk-2077/akimbo-pistols-on-the-2-5-native-dual-wield.md",
   "kind": "game",
   "title": "Custom akimbo pistols on patch 2.5's native dual wield (player animsets, seeded ItemIDs, Audioware sound swap)",
@@ -2090,6 +2540,53 @@
   ]
  },
  {
+  "path": "games/daggerfall-unity/arena-in-daggerfall-dfu-mod-builds-tests-and-arena-reference.md",
+  "kind": "game",
+  "title": "TES Arena in Daggerfall Unity: three-platform .dfmod builds, background tests, DOSBox reference",
+  "game": "Daggerfall Unity",
+  "games_also": [
+   "The Elder Scrolls: Arena"
+  ],
+  "game_version": "Daggerfall Unity 1.1.1 (portable), Unity 2019.4.40f1; Arena CD version (ACD.EXE) with its bundled DOSBox 0.74",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "loader-api",
+  "tools": [
+   "Unity 2019.4.40f1",
+   "Unity Hub 3.20 + Unity CLI 1.0.0-beta.13",
+   "UnityPy 1.25",
+   "DOSBox 0.74",
+   "um publish check"
+  ],
+  "anti_cheat": "none",
+  "status": "released",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-01",
+  "links": [
+   "https://github.com/Interkarma/daggerfall-unity",
+   "https://github.com/afritz1/OpenTESArena",
+   "https://github.com/K0lb3/UnityPy",
+   "https://store.steampowered.com/app/1812290/The_Elder_Scrolls_Arena/"
+  ],
+  "tags": [
+   "daggerfall-unity",
+   "dfmod",
+   "assetbundle",
+   "unity-2019",
+   "cross-platform",
+   "unity-cli",
+   "licensing",
+   "self-test",
+   "background-testing",
+   "dosbox",
+   "reference-oracle",
+   "bring-your-own-game"
+  ]
+ },
+ {
   "path": "games/dark-souls-ii/visible-arsenal-six-slot-cosmetics.md",
   "kind": "game",
   "title": "Visible Arsenal: all six equipped weapons shown on the character, through native cosmetic model parts",
@@ -2130,6 +2627,57 @@
    "parallel-rendering",
    "replay-tests",
    "compatibility"
+  ]
+ },
+ {
+  "path": "games/dark-souls-remastered/craft-souls-minecraft-drives-dark-souls-passthrough.md",
+  "kind": "game",
+  "title": "Craft Souls: Minecraft played inside Dark Souls: Remastered (passthrough bridge, RE map of the game)",
+  "game": "Dark Souls: Remastered",
+  "games_also": [
+   "Minecraft"
+  ],
+  "game_version": "Steam AppID 570940, app 1.03.1 (file 1.0.0.0), DarkSoulsRemastered.exe 50,286,344 bytes, SHA-256 A45AAA36...8D7B, SizeOfImage 0x319B000",
+  "platform": "windows",
+  "engine": "fromsoft",
+  "route": "passthrough",
+  "tools": [
+   "ReShade 6.8 add-on API",
+   "Minecraft 1.21.1 + Fabric",
+   "Ghidra 12.1.4 (headless, JDK 21)",
+   "REA MCP",
+   "Python 3 (pefile, ReadProcessMemory)",
+   "DSR-Gadget (offsets only)"
+  ],
+  "anti_cheat": "no client anti-cheat found by um scan; part of .text is encrypted on disk (protection), left alone: the exe stays as installed and all patches are in memory; servers are live, so offline only (add-on removed before going online)",
+  "status": "in-progress",
+  "agents": [
+   "Copilot SDK in VS Code (model not recorded)",
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-02",
+  "links": [
+   "https://github.com/JKAnderson/DSR-Gadget",
+   "https://soulsmodding.com/",
+   "https://github.com/rehan-remade/universal-modder/tree/main/examples/minecraft-gta5-passthrough",
+   "https://reshade.me",
+   "https://fabricmc.net",
+   "https://github.com/morluto/rea"
+  ],
+  "tags": [
+   "minecraft",
+   "passthrough",
+   "reshade-addon",
+   "depth-compositing",
+   "camera",
+   "havok",
+   "collision-geometry",
+   "game-thread-hook",
+   "event-scripts",
+   "params",
+   "fmg",
+   "live-memory-diff"
   ]
  },
  {
@@ -2561,6 +3109,221 @@
   ]
  },
  {
+  "path": "games/dishonored-2/domino-phantasmal-link-past-4-targets.md",
+  "kind": "game",
+  "title": "Domino (Phantasmal Link) past 4 targets: a 5-byte exe patch",
+  "game": "Dishonored 2",
+  "games_also": [],
+  "game_version": "GOG 1.77.9 (DRM-free), Dishonored2.exe 42,591,232 bytes, PE timestamp 0x5c050611 (2018-12-03), x64",
+  "platform": "windows",
+  "engine": "idtech",
+  "route": "native-hook",
+  "tools": [
+   "python 3.15",
+   "pefile",
+   "capstone",
+   "numpy",
+   "Cheat Engine",
+   "universal-modder um"
+  ],
+  "anti_cheat": "none (single-player, GOG build has no DRM)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-14",
+  "links": [
+   "https://github.com/chipolux/disrev"
+  ],
+  "tags": [
+   "void-engine",
+   "idtech5",
+   "domino",
+   "phantasmal-link",
+   "hard-coded-limit",
+   "idlist",
+   "fixed-pool",
+   "exe-patch",
+   "resources-index"
+  ]
+ },
+ {
+  "path": "games/dishonored-2/gog-exe-fixes-with-an-added-code-section.md",
+  "kind": "game",
+  "title": "Seventeen hard-coded fixes as one on-disk exe patcher with an added code section (GOG build)",
+  "game": "Dishonored 2",
+  "games_also": [
+   "Dishonored: Death of the Outsider"
+  ],
+  "game_version": "GOG 1.77.9 (DRM-free), Dishonored2.exe 42,591,232 bytes, PE timestamp 0x5c050611 (2018-12-03), x64",
+  "platform": "windows",
+  "engine": "idtech",
+  "route": "native-hook",
+  "tools": [
+   "python 3.15",
+   "pefile",
+   "capstone",
+   "keystone-engine",
+   "numpy",
+   "Cheat Engine",
+   "universal-modder um"
+  ],
+  "anti_cheat": "none (single-player, GOG build has no DRM)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-14",
+  "links": [],
+  "tags": [
+   "void-engine",
+   "idtech5",
+   "exe-patch",
+   "pe-section",
+   "code-cave",
+   "keystone",
+   "powers",
+   "blink",
+   "far-reach",
+   "wwise",
+   "occlusion",
+   "havok",
+   "cvars",
+   "ai-awareness",
+   "player-state-machine",
+   "live-probe"
+  ]
+ },
+ {
+  "path": "games/dishonored-2/iggy-ui-bytecode-patches-and-decl-findings.md",
+  "kind": "game",
+  "title": "Iggy UI bytecode patches (same-length AVM2 rewrites) and decl, material and map findings",
+  "game": "Dishonored 2",
+  "games_also": [
+   "Dishonored: Death of the Outsider"
+  ],
+  "game_version": "GOG 1.77.9 (DRM-free), Dishonored2.exe PE timestamp 0x5c050611; DOTO GOG 1.145, Dishonored_DO.exe 0x5c0584aa",
+  "platform": "windows",
+  "engine": "idtech",
+  "route": "data",
+  "tools": [
+   "python 3.15",
+   "own AVM2 disassembler and re-encoder",
+   "zlib",
+   "the user's resource export/import tool"
+  ],
+  "anti_cheat": "none (single-player, GOG build has no DRM)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-14",
+  "links": [
+   "https://github.com/chipolux/disrev",
+   "https://www.nexusmods.com/dishonored2/mods/30",
+   "https://www.nexusmods.com/dishonored2/mods/31"
+  ],
+  "tags": [
+   "void-engine",
+   "idtech5",
+   "iggy",
+   "avm2",
+   "as3",
+   "flash-ui",
+   "decl",
+   "materials",
+   "dark-vision",
+   "resources-index",
+   "voidmod",
+   "physhape"
+  ]
+ },
+ {
+  "path": "games/dishonored-death-of-the-outsider/porting-dishonored-2-exe-fixes-to-death-of-the-outsider.md",
+  "kind": "game",
+  "title": "Porting Dishonored 2 exe fixes to Death of the Outsider, plus Displace and Blink marker smoothing (GOG)",
+  "game": "Dishonored: Death of the Outsider",
+  "games_also": [
+   "Dishonored 2"
+  ],
+  "game_version": "GOG 1.145 (DRM-free), Dishonored_DO.exe 43,757,056 bytes, PE timestamp 0x5c0584aa (2018-12-03), x64",
+  "platform": "windows",
+  "engine": "idtech",
+  "route": "native-hook",
+  "tools": [
+   "python 3.15",
+   "pefile",
+   "capstone",
+   "keystone-engine",
+   "Cheat Engine",
+   "universal-modder um"
+  ],
+  "anti_cheat": "none (single-player, GOG build has no DRM)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-14",
+  "links": [],
+  "tags": [
+   "void-engine",
+   "idtech5",
+   "exe-patch",
+   "pe-section",
+   "port",
+   "displace",
+   "blink",
+   "fx-markers",
+   "results-chart",
+   "sliding",
+   "live-probe"
+  ]
+ },
+ {
+  "path": "games/don-t-starve-together/lua-weapon-item.md",
+  "kind": "game",
+  "title": "Official Lua mod API: a new weapon item",
+  "game": "Don't Starve Together",
+  "games_also": [],
+  "game_version": "Steam app 322330 (exact build not yet pinned); Windows 11 10.0.26200",
+  "platform": "windows",
+  "engine": "native",
+  "route": "loader-api",
+  "tools": [
+   "Don't Starve Mod Tools (Steam app 245850; autocompiler, ModUploader)",
+   "Python + Pillow",
+   "image_gen.py (the author's own local A1111/ComfyUI text-to-image adapter, not published)"
+  ],
+  "anti_cheat": "none found by um scan; official Lua mod API + Steam Workshop are the sanctioned route. Online co-op and PvP game: an item mod belongs in a world or server you run, with friends who agreed",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (deepseek-v4-pro)"
+  ],
+  "humans": [],
+  "date": "2026-11-05",
+  "links": [
+   "https://github.com/kleientertainment/ds_mod_tools",
+   "https://kleiforums.com/forums/forum/79-dont-starve-together-mods-and-tools/",
+   "https://kleiforums.com/forums/topic/140881-documentation-new-recipe-system-functions-other-info/"
+  ],
+  "tags": [
+   "klei",
+   "lua",
+   "loader-api",
+   "mod-tools",
+   "workshop",
+   "weapon",
+   "item",
+   "tex",
+   "atlas",
+   "inventory-icon"
+  ]
+ },
+ {
   "path": "games/dragon-s-dogma-2/blink-strike-teleports-behind-the-target-reframework-lua-ski.md",
   "kind": "game",
   "title": "Blink Strike teleports behind the target (REFramework Lua skill rework)",
@@ -2754,7 +3517,7 @@
   "games_also": [
    "Fallout: New Vegas"
   ],
-  "game_version": "The Beast 1.7.1 (Steam 3008130, pinned after Steam pushed 1.8.1); FalloutNV.exe 1.4.0.525 (Steam 22380, 4GB-patched); Windows 11 (Shadow cloud PC)",
+  "game_version": "The Beast 1.7.1 (Steam 3008130, pinned after Steam pushed 1.8.1, public build 26402545, on 2026-11-05); FalloutNV.exe 1.4.0.525 (Steam 22380, public build 1510068, 4GB-patched); Windows 11 (Shadow cloud PC)",
   "platform": "windows",
   "engine": "unknown",
   "route": "passthrough",
@@ -2767,24 +3530,36 @@
    "a Python 3 hub (TCP, JSON lines) between the two plugins and an overlay",
    "ViGEmBus virtual pad (tests only)"
   ],
-  "anti_cheat": "none in single player; co-op never used",
+  "anti_cheat": "none listed: Steam starts DyingLightGame_TheBeast_x64_rwdi.exe directly, and its store data shows no anti-cheat or third-party DRM. No step edits that exe. The game has online co-op, so this is single player only with the online setting off; co-op was never used",
   "status": "in-progress",
   "agents": [
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-11-05",
+  "date": "2026-11-06",
   "links": [
    "../../techniques/bridge-contracts-ownership-units-and-lifecycle.md",
-   "../../techniques/collision-and-combat-bridging.md"
+   "../../techniques/collision-and-combat-bridging.md",
+   "../../techniques/choosing-a-mashup-route.md",
+   "../../techniques/evidence-levels-for-mashup-claims.md",
+   "../../techniques/rebuilt-guest-engine-inside-a-host.md",
+   "../fallout-new-vegas/ai-companion-in-fallout-new-vegas-through-an-xnvse-jip-file-.md",
+   "https://vivanewvegas.moddinglinked.com/",
+   "https://github.com/xNVSE/NVSE",
+   "https://github.com/jazzisparis/JIP-LN-NVSE",
+   "https://github.com/carxt/JohnnyGuitarNVSE",
+   "https://github.com/ThirteenAG/Ultimate-ASI-Loader",
+   "https://github.com/GooseMcGee/DyingLight-GMod"
   ],
   "tags": [
+   "mashup",
    "passthrough",
    "hidden-game",
    "rules-engine",
    "stand-in-actors",
    "xnvse",
    "asi-loader",
+   "c-engine",
    "vats",
    "pip-boy",
    "version-pinning"
@@ -3070,6 +3845,42 @@
   ]
  },
  {
+  "path": "games/epic-battle-fantasy-4/faster-out-of-battle-hp-mp-regen-by-editing-the-air-swf-with.md",
+  "kind": "game",
+  "title": "Faster out-of-battle HP/MP regen by editing the AIR SWF with FFDec",
+  "game": "Epic Battle Fantasy 4",
+  "games_also": [],
+  "game_version": "Steam 265610, AIR app EpicBattleFantasy4 v1.0.0 (SWF 171,914,112 bytes, as of 2026-11-15)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "managed-patch",
+  "tools": [
+   "JPEXS FFDec 26.5.0",
+   "Eclipse Temurin JRE 21.0.13 x64"
+  ],
+  "anti_cheat": "none (offline single-player; Steam only for achievements/cloud via the FRESteamWorks ANE)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "SophiaUrabe"
+  ],
+  "date": "2026-11-15",
+  "links": [
+   "https://github.com/jindrapetrik/jpexs-decompiler"
+  ],
+  "tags": [
+   "flash",
+   "actionscript3",
+   "adobe-air",
+   "swf",
+   "ffdec",
+   "regen",
+   "rpg"
+  ]
+ },
+ {
   "path": "games/etrian-odyssey-2-hd/etria-inside-eo2-bepinex-protected-il2cpp.md",
   "kind": "game",
   "title": "Etrian Odyssey 1's labyrinth and battles running inside Etrian Odyssey 2 HD (BepInEx on a protected IL2CPP build)",
@@ -3277,6 +4088,46 @@
   ]
  },
  {
+  "path": "games/fantasy-maiden-wars-dream-of-the-stray-dreamer/randomizer-mode-gml-via-undertalemodtool-cli-run-with-game-s.md",
+  "kind": "game",
+  "title": "Randomizer mode (GML via UndertaleModTool CLI, run with -game so the install stays vanilla)",
+  "game": "Fantasy Maiden Wars Dream of the Stray Dreamer",
+  "games_also": [
+   "Fantasy Maiden Wars DoSD",
+   "\u5e7b\u60f3\u5c11\u5973\u5927\u6226"
+  ],
+  "game_version": "Steam 3575980, build 25976175, fmw_dosd.exe 1.1.0.0 (x64), as of 2026-11-09",
+  "platform": "windows",
+  "engine": "gamemaker",
+  "route": "managed-patch",
+  "tools": [
+   "UndertaleModTool CLI 0.9.2.0 (03c7048)",
+   "Python 3 (own data/cipher tools)",
+   "PowerShell (loader setup)"
+  ],
+  "anti_cheat": "none (offline single-player, Steamworks only)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "SophiaUrabe"
+  ],
+  "date": "2026-11-15",
+  "links": [
+   "https://github.com/UnderminersTeam/UndertaleModTool"
+  ],
+  "tags": [
+   "gamemaker",
+   "gms2",
+   "data-win",
+   "utmt",
+   "randomizer",
+   "srpg",
+   "touhou"
+  ]
+ },
+ {
   "path": "games/far-cry-6/dunia-engine-modding-and-swf-format.md",
   "kind": "game",
   "title": "Far Cry 6 \u2014 Dunia engine modding and the SWF/FEU UI format",
@@ -3363,6 +4214,46 @@
    "unity-mono",
    "boat",
    "thrust"
+  ]
+ },
+ {
+  "path": "games/final-fantasy-resonance/reward-multiplier-for-exp-gil-and-mrp-via-the-difficulty-dat.md",
+  "kind": "game",
+  "title": "Reward multiplier for Exp, Gil and MRP via the difficulty DataTable (UE4SS Lua)",
+  "game": "Final Fantasy Resonance",
+  "games_also": [],
+  "game_version": "Steam 3259780, build 24250053, exe FileVersion 1.0.0.0, UE 5.6 (game module \"mucha\")",
+  "platform": "windows",
+  "engine": "unreal",
+  "route": "loader-api",
+  "tools": [
+   "UE4SS experimental v3.0.1-1195-g1ceefac8 (2026-11-01)"
+  ],
+  "anti_cheat": "none (single player; Steamworks only, no EAC/BattlEye/EOS). Denuvo is on the exe and was left untouched: UE4SS loads through a proxy dwmapi.dll and the exe on disk does not change.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "@ATabor89"
+  ],
+  "date": "2026-11-01",
+  "links": [
+   "https://github.com/UE4SS-RE/RE-UE4SS",
+   "https://github.com/UE4SS-RE/RE-UE4SS/blob/main/docs/lua-api/classes/udatatable.md"
+  ],
+  "tags": [
+   "ue4ss",
+   "lua",
+   "datatable",
+   "reward-multiplier",
+   "exp",
+   "gold",
+   "grinding",
+   "runtime-umg",
+   "overlay",
+   "denuvo",
+   "hotkeys"
   ]
  },
  {
@@ -4286,7 +5177,7 @@
   "title": "Reading the whole vehicle fleet: archive names, RTPC values, mesh payloads and Havok collision",
   "game": "Just Cause 3",
   "games_also": [],
-  "game_version": "2016 release build, JustCause3.exe timestamp 0x5787641c; every mesh declares RBMDL 1.16.0, every physics file Havok 2014.1.0-r1",
+  "game_version": "Steam build 20206564 (2025-12-17), JustCause3.exe timestamp 0x5787641c; every mesh declares RBMDL 1.16.0, every physics file Havok 2014.1.0-r1",
   "platform": "windows",
   "engine": "native",
   "route": "asset-only",
@@ -4299,12 +5190,13 @@
   "anti_cheat": "none (single-player, offline, read-only)",
   "status": "working",
   "agents": [
-   "Freebuff (Buffy, model not recorded; wrote the note)"
+   "Freebuff (DeepSeek V4.1 1017; ran the grab passes and wrote the first version)",
+   "Claude Code (Opus 5.5)"
   ],
   "humans": [
    "@NotTrevino"
   ],
-  "date": "2026-10-22",
+  "date": "2026-10-30",
   "links": [
    "https://github.com/aaronkirkham/jc-model-renderer",
    "https://github.com/aaronkirkham/ava-format-lib",
@@ -4324,12 +5216,62 @@
   ]
  },
  {
+  "path": "games/just-cause-3/translating-the-batmobile-row-ledger.md",
+  "kind": "game",
+  "title": "Translating the Batmobile into a Just Cause 3 vehicle: a row ledger from two file grabs",
+  "game": "Just Cause 3",
+  "games_also": [
+   "Batman: Arkham Knight"
+  ],
+  "game_version": "JC3: Steam build 20206564 (2025-12-17), JustCause3.exe timestamp 0x5787641c. BmAK: GOG Premium Edition 1.999, buildId 57731640734362250",
+  "platform": "windows",
+  "engine": "native",
+  "route": "asset-only",
+  "tools": [
+   "custom Python generators with --write/--check (one per translation card)",
+   "Gibbed.JustCause3 tools",
+   "Blender 5.2 (headless)",
+   "Capstone (executable store-site search)"
+  ],
+  "anti_cheat": "none (single-player, offline)",
+  "status": "in-progress",
+  "agents": [
+   "Freebuff (DeepSeek V4.1 1017)",
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "@NotTrevino"
+  ],
+  "date": "2026-10-30",
+  "links": [
+   "https://github.com/tim42/gibbed-justcause3-tools-fork",
+   "https://github.com/aaronkirkham/jc-model-renderer",
+   "https://github.com/gildor2/UEViewer",
+   "https://github.com/Team-BmSDK/BmSDK-AK",
+   "https://github.com/capstone-engine/capstone"
+  ],
+  "tags": [
+   "porting",
+   "cross-game",
+   "vehicles",
+   "translation-ledger",
+   "batmobile",
+   "damage-model",
+   "weapons",
+   "audio",
+   "lights",
+   "collision",
+   "verification",
+   "agent-workflow"
+  ]
+ },
+ {
   "path": "games/just-cause-3/vehicle-mesh-editing-added-geometry-loads-with-matching-toc.md",
   "kind": "game",
   "title": "Vehicle mesh editing: added geometry loads with a matching .ee.toc",
   "game": "Just Cause 3",
   "games_also": [],
-  "game_version": "Steam release build, JustCause3.exe timestamp 0x5787641c (2016); model files declare RBMDL v1.16.0",
+  "game_version": "Steam build 20206564 (2025-12-17), JustCause3.exe timestamp 0x5787641c (2016); model files declare RBMDL v1.16.0",
   "platform": "windows",
   "engine": "native",
   "route": "asset-only",
@@ -5218,6 +6160,70 @@
   ]
  },
  {
+  "path": "games/middle-earth-shadow-of-war/mini-tribes-easterling-and-deserter-captain-rows.md",
+  "kind": "game",
+  "title": "Mini tribes: Easterling and Gondorian-deserter captains in their own Nemesis rows, built from the game's own models and deployed to Lithlad and Gorgoroth",
+  "game": "Middle-earth: Shadow of War",
+  "games_also": [],
+  "game_version": "Steam build 3095001 (exe 1.0.8874.0, public branch, unchanged since 2018-09-05) with The Desolation of Mordor expansion (Steam app 533110), Windows 10 22H2. Every asset comes from that same Steam copy: the Easterling mercenaries from the expansion's data (DLC4 in the game's records), the Gondorian soldiers from the Minas Ithil base data. No other game was used.",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "custom C# gamedb reader-writer + two config-driven builders (PowerShell Add-Type)",
+   "Python 3.12 (save decrypt/edit, world-object dump, bone check)",
+   "Ghidra 12.1.4 (headless, analysis only) + Temurin JDK 21",
+   "QuickBMS + aluigi shadow_of_mordor.bms 0.4",
+   "MinGW-w64 GCC 16.2 (w64devkit: OfflineMode v0.13, diagnostic trace plugin)"
+  ],
+  "anti_cheat": "none; single-player only. The mod is game.gamedb + string tables (+ world stations in the imported Ud\u00fbn region only); the exe file is untouched (SteamStub/Denuvo untouched). Every build and test ran offline with the offline-mode DLL installed (never signed in to WB).",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "DeimozZarco"
+  ],
+  "date": "2026-11-06",
+  "links": [
+   "knowledge/games/middle-earth-shadow-of-war/offline-mode-and-local-garrison.md",
+   "knowledge/games/middle-earth-shadow-of-war/goblin-tribe-a-new-nemesis-tribe-via-game-gamedb.md",
+   "knowledge/games/middle-earth-shadow-of-war/falmer-tribe-a-skyrim-creature-as-a-nemesis-tribe.md",
+   "knowledge/games/middle-earth-shadow-of-war/small-mods-new-orc-bodies-talion-armour-and-mesh-draw-counts.md",
+   "knowledge/games/middle-earth-shadow-of-war/map-import-shadow-of-mordor-udun-as-a-new-region.md",
+   "knowledge/games/middle-earth-shadow-of-war/save-format-decrypt-and-collectible-quests.md"
+  ],
+  "tags": [
+   "nemesis",
+   "captains",
+   "mini-tribe",
+   "faction",
+   "army-screen",
+   "rows",
+   "refill",
+   "promotion-events",
+   "dominate",
+   "garrison",
+   "pit-fight",
+   "raise-dead",
+   "skeleton",
+   "anim-base",
+   "voices",
+   "personalities",
+   "character-bundle",
+   "preload",
+   "body-type",
+   "armour-pickers",
+   "name-table",
+   "titles",
+   "strings",
+   "spawn-locations",
+   "gamedb",
+   "save-editing",
+   "npc-id"
+  ]
+ },
+ {
   "path": "games/middle-earth-shadow-of-war/offline-mode-and-local-garrison.md",
   "kind": "game",
   "title": "Offline mode and local Garrison: a winhttp stand-in for WB's Hydra server",
@@ -5233,7 +6239,7 @@
    "custom C# read-only process-memory reader (PowerShell Add-Type)",
    "Python 3.12 + capstone (string/RTTI/xref scans)"
   ],
-  "anti_cheat": "none. SteamStub/Denuvo on the exe is untouched: the mod is a proxy winhttp.dll next to the exe and patches no code.",
+  "anti_cheat": "none. SteamStub/Denuvo on the exe is untouched: the mod is a proxy winhttp.dll next to the exe, and the exe file is never changed. Since v0.13 it replaces one game function (the captain id writer) in memory at run time; NpcIdHook=0 turns that off.",
   "status": "working",
   "agents": [
    "Claude Code (Opus 5.5)"
@@ -5348,6 +6354,69 @@
    "inventory",
    "chunks",
    "reverse-engineering"
+  ]
+ },
+ {
+  "path": "games/middle-earth-shadow-of-war/small-mods-new-orc-bodies-talion-armour-and-mesh-draw-counts.md",
+  "kind": "game",
+  "title": "Small mods: two new orc body types for grunts and captains, a Talion armour/sword replacer, and the engine facts behind their bugs (MMSH draw counts, armour cloth in .skel, captain body items, save orc records)",
+  "game": "Middle-earth: Shadow of War",
+  "games_also": [
+   "The Elder Scrolls V: Skyrim Special Edition",
+   "Solo Leveling: Arise Overdrive"
+  ],
+  "game_version": "Steam build 3095001 (public branch, unchanged since 2018-09-05), Windows 10 22H2; asset sources: Skyrim Special Edition Steam build 24914197 (SkyrimSE.exe 1.7.104.0) and Solo Leveling: Arise Overdrive Steam build 24663924",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Python 3.12 + numpy/Pillow (own MMSH/SKEL/.tex/.bndl/.arch06 tools)",
+   "Blender 3.6.23 + blender_niftools_addon 0.1.1 (NIF import)",
+   "Blender 4.2.3 (conform + texture-projection scripts, headless)",
+   "UnityPy (Solo Leveling skinned mesh export)",
+   "custom C# gamedb reader-writer (PowerShell Add-Type)",
+   "texconv",
+   "QuickBMS + aluigi shadow_of_mordor.bms 0.4"
+  ],
+  "anti_cheat": "none; extra archives + game.gamedb, exe untouched. All testing offline through the offline-mode DLL and its local Garrison (never signed in to WB).",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "DeimozZarco"
+  ],
+  "date": "2026-10-29",
+  "links": [
+   "knowledge/games/middle-earth-shadow-of-war/falmer-tribe-a-skyrim-creature-as-a-nemesis-tribe.md",
+   "knowledge/games/middle-earth-shadow-of-war/offline-mode-and-local-garrison.md",
+   "knowledge/games/middle-earth-shadow-of-war/save-format-decrypt-and-collectible-quests.md",
+   "https://github.com/niftools/blender_niftools_addon",
+   "https://pypi.org/project/UnityPy/",
+   "https://github.com/ReaperAnon/Middle-Earth-Mod-Loader",
+   "https://www.nexusmods.com/middleearthshadowofwar/mods/278",
+   "https://github.com/LordMonstey/Monstey-Mesh-Publisher"
+  ],
+  "tags": [
+   "nemesis",
+   "grunts",
+   "captains",
+   "body-types",
+   "body-replacement",
+   "garrison",
+   "mmsh",
+   "mesh",
+   "draw-count",
+   "havok",
+   "cloth",
+   "skel",
+   "player-armour",
+   "replacer",
+   "textures",
+   "glow",
+   "save-editing",
+   "gamedb",
+   "role-weights"
   ]
  },
  {
@@ -5822,6 +6891,126 @@
   ]
  },
  {
+  "path": "games/minecraft/runtime-dimensions-parallel-universe-portals-and-whole-dimen.md",
+  "kind": "game",
+  "title": "Runtime dimensions, parallel-universe portals and whole-dimension endings in Forge 26.3",
+  "game": "Minecraft",
+  "games_also": [],
+  "game_version": "Minecraft Java 26.3, Forge 66.1.5",
+  "platform": "windows",
+  "engine": "java",
+  "route": "loader-api",
+  "tools": [
+   "ForgeGradle 7",
+   "JDK 25",
+   "Vineflower-decompiled reference sources (kept outside the repo)"
+  ],
+  "anti_cheat": "none (single player, own dedicated server)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-14",
+  "links": [
+   "https://github.com/MinecraftForge/MinecraftForge",
+   "https://github.com/Vineflower/vineflower"
+  ],
+  "tags": [
+   "dimensions",
+   "portals",
+   "shaders",
+   "saveddata",
+   "world-scale",
+   "respawn",
+   "forge-config",
+   "dedicated-server",
+   "forge"
+  ]
+ },
+ {
+  "path": "games/minecraft/terraforming-tool-with-exact-undo-minecraft-26-3-forge.md",
+  "kind": "game",
+  "title": "A terraforming tool grown to 283 modes in Minecraft 26.3 Forge: exact undo for entities, effects, zones and animations, safe file input, regeneration from the seed, contained destructive modes",
+  "game": "Minecraft",
+  "games_also": [],
+  "game_version": "Minecraft Java 26.3, Forge 66.1.5 (ForgeGradle 7, Java 25)",
+  "platform": "windows",
+  "engine": "java",
+  "route": "loader-api",
+  "tools": [
+   "Forge 66.1.5",
+   "ForgeGradle 7",
+   "decompiled 26.3 sources for API checks (kept out of the repo)",
+   "scripted dev clients",
+   "a dev dedicated server"
+  ],
+  "anti_cheat": "none (single player and a dev dedicated server the user runs)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-16",
+  "links": [
+   "https://github.com/MinecraftForge/MinecraftForge"
+  ],
+  "tags": [
+   "terraforming",
+   "undo",
+   "world-editing",
+   "file-input",
+   "regeneration",
+   "saved-data",
+   "zones",
+   "gui",
+   "destruction",
+   "containment",
+   "interactions",
+   "self-test",
+   "dedicated-server",
+   "forge"
+  ]
+ },
+ {
+  "path": "games/monster-hunter-wilds/heavy-bowgun-solo-cheats-reframework-lua.md",
+  "kind": "game",
+  "title": "Heavy Bowgun cheats for offline single player, with a multiplayer cut-off (REFramework Lua)",
+  "game": "Monster Hunter Wilds",
+  "games_also": [],
+  "game_version": "Steam 2246340, Ver.1.042.00.03 (the 2026-10-28 patch), build 25921695; REFramework nightly commit d052e8fd, TDB 81",
+  "platform": "windows",
+  "engine": "re-engine",
+  "route": "loader-api",
+  "tools": [
+   "REFramework (Lua)",
+   "Vortex (deploy)",
+   "lupa (offline Lua syntax check + stub dry runs)"
+  ],
+  "anti_cheat": "no client anti-cheat (Steam + Denuvo DRM, left alone); online co-op, SOS and Capcom's online Arena/Challenge Quest rankings exist, so offline single player only. The script also switches itself off when another player is in your instance or quest",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-08",
+  "links": [],
+  "tags": [
+   "weapons",
+   "bowgun",
+   "ammo",
+   "gauges",
+   "fire-rate",
+   "damage",
+   "guard",
+   "hit-hooks",
+   "motion-speed",
+   "item-pouch",
+   "solo-only",
+   "offline"
+  ]
+ },
+ {
   "path": "games/mount-and-blade-ii-bannerlord/bannercraft-minecraft-gameplay-bridge.md",
   "kind": "game",
   "title": "BannerCraft: Minecraft gameplay through a local two-mod bridge",
@@ -6181,6 +7370,54 @@
   ]
  },
  {
+  "path": "games/nuclear-option/new-aircraft-with-blueprinter-nobp-b25h-ga25x-nimrod.md",
+  "kind": "game",
+  "title": "Three new flyable aircraft in Nuclear Option with Blueprinter .nobp (B-25H, GA-25X, Hawker Nimrod)",
+  "game": "Nuclear Option",
+  "game_version": "Early Access 0.34.3 (Steam app 2168680); still working on the later 0.34 patches (0.34.6 = public build 26327221)",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "loader-api",
+  "tools": [
+   "Blueprinter 2.1.1 (NOBlueprinter-Editor project)",
+   "Unity 2022.3.62f2 (batch mode)",
+   "AssetRipper (stock prefab and script export, reference only)",
+   "BepInEx 5.4.23.5",
+   "HarmonyX",
+   ".NET SDK 8.0.318",
+   "Blender 5.2.2",
+   "fal (nano-banana-2.1, image-to-3D)"
+  ],
+  "anti_cheat": "none found; played in single player only, and never for public servers (see Multiplayer in Setup)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-02",
+  "links": [
+   "https://github.com/nikkorap/NOBlueprinter-Releases",
+   "https://github.com/nikkorap/NOBlueprinter-Editor",
+   "https://github.com/Combat787/NOMM",
+   "https://github.com/KopterBuzz/NOMNOM",
+   "https://github.com/AssetRipper/AssetRipper",
+   "https://github.com/BepInEx/BepInEx"
+  ],
+  "tags": [
+   "aircraft",
+   "new-unit",
+   "blueprinter",
+   "flight-model",
+   "damage-model",
+   "cockpit",
+   "carrier",
+   "taildragger",
+   "biplane",
+   "hud",
+   "bombs"
+  ]
+ },
+ {
   "path": "games/outer-wilds/portal-2-portal-gun-in-outer-wilds-1-1-16-owml-see-through-p.md",
   "kind": "game",
   "title": "Portal 2 portal gun in Outer Wilds 1.1.16 (OWML): see-through portals, momentum, ship and scout",
@@ -6281,6 +7518,49 @@
   ]
  },
  {
+  "path": "games/padre-got-a-gun/fusion-2-5-build-296-decode-and-event-patch.md",
+  "kind": "game",
+  "title": "Decoding a Clickteam Fusion 2.5 (build 296) data file and patching its events",
+  "game": "Padre Got A Gun",
+  "games_also": [],
+  "game_version": "V1.3, itch.io standalone (V1.2 decoded too). Clickteam Fusion 2.5 runtime build 296.9 (Modules/mmfs2.dll 3.0.296.9), 32-bit exe",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "Python 3 (standard library only)",
+   "NebulaFD September 2026 Update (commit a24d4d1)",
+   "ilspycmd",
+   "um scan"
+  ],
+  "anti_cheat": "none: offline single-player, DRM-free. The .dat's Protection chunk holds only a 4-byte checksum of the event, object and frame data (Gotcha 6), with no key, serial or licence data, so it isn't DRM or an ownership check",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "https://github.com/AITYunivers/NebulaFD",
+   "https://github.com/CTFAK/CTFAK2.0",
+   "https://github.com/fnmwolf/Anaconda"
+  ],
+  "tags": [
+   "clickteam-fusion",
+   "fusion-2.5",
+   "build-296",
+   "ccn",
+   "pamu",
+   "chunk-encryption",
+   "events",
+   "protection-checksum",
+   "nebulafd",
+   "conpty",
+   "data-mod",
+   "itch-io"
+  ]
+ },
+ {
   "path": "games/pathfinder-wrath-of-the-righteous/mass-effect-biotics-kinetic-barriers-and-rifles-as-a-wotr-cl.md",
   "kind": "game",
   "title": "Mass Effect biotics, kinetic barriers and rifles as a WotR class (UMM, blueprints in code)",
@@ -6317,6 +7597,43 @@
    "mass-effect",
    "unity-mod-manager",
    "save-compat"
+  ]
+ },
+ {
+  "path": "games/phantom-blade-zero/hold-start-hud-toggle-and-per-group-combat-vfx-switches-ue4s.md",
+  "kind": "game",
+  "title": "Hold-Start HUD toggle and per-group combat VFX switches, UE4SS Lua wired into the Mods Menu",
+  "game": "Phantom Blade Zero",
+  "games_also": [],
+  "game_version": "Steam build with exe product version CL-301524_JKS-17219 (steam 4115450), Unreal Engine 5.7",
+  "platform": "windows",
+  "engine": "unreal",
+  "route": "loader-api",
+  "tools": [
+   "UE4SS (UE4SS for Phantom Blade Zero 1.0.1, Nexus mod 5)",
+   "PBZ Mods Menu 0.4.3 (Nexus mod 149) + PBZModsMenuBridge 0.3.0",
+   "lupa (offline Lua compile checks)"
+  ],
+  "anti_cheat": "none (single player; Steam lists no anti-cheat). Denuvo (Steam's DRM notice) is on the exe and stays untouched: UE4SS loads through a proxy dwmapi.dll and no game file changes.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-03",
+  "links": [
+   "https://github.com/UE4SS-RE/RE-UE4SS",
+   "https://www.nexusmods.com/phantombladezero/mods/5",
+   "https://www.nexusmods.com/phantombladezero/mods/44"
+  ],
+  "tags": [
+   "hud",
+   "vfx",
+   "niagara",
+   "enhanced-input",
+   "commonui",
+   "mods-menu",
+   "controller"
   ]
  },
  {
@@ -7040,6 +8357,50 @@
   ]
  },
  {
+  "path": "games/red-faction-guerrilla/generating-rfg-destructible-building-chunks.md",
+  "kind": "game",
+  "title": "Generating destructible building chunks for Red Faction Guerrilla",
+  "game": "Red Faction: Guerrilla Re-Mars-tered",
+  "games_also": [],
+  "game_version": "Steam app 667720 (rfg.exe, Re-Mars-tered)",
+  "platform": "proton",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "Python 3",
+   "hkpack.py",
+   "chunkwrite.py",
+   "genchunk.py",
+   "walk.py"
+  ],
+  "anti_cheat": "none; single player only: RFG has online PvP and leaderboards, so the swapped chunks ran in an offline lab copy",
+  "status": "in-progress",
+  "agents": [
+   "Antigravity (Gemini 3.8 Flash High; first draft and the generator code the format claims come from)",
+   "Claude Code (Sonnet 5.5; the 2026-11-05 audit of every claim)"
+  ],
+  "humans": [],
+  "date": "2026-11-05",
+  "links": [
+   "../the-elder-scrolls-iv-oblivion-remastered/rfg-destruction-rules-rebuilt-inside-oblivion-remastered.md",
+   "../the-elder-scrolls-iv-oblivion-remastered/rfg-destruction-passthrough-into-oblivion-remastered.md",
+   "control-resonant-dylan-takeover-retargeted-animations.md",
+   "rf-gmod-gravity-gun-sandbox-and-armageddon-port.md",
+   "https://github.com/rfg-modding/RFGM.Formats",
+   "https://github.com/rfg-modding/RfgToolsPlusPlus"
+  ],
+  "tags": [
+   "rfg",
+   "geomod",
+   "destruction",
+   "chunks",
+   "havok",
+   "tagfile",
+   "binary-format",
+   "convex-hulls"
+  ]
+ },
+ {
   "path": "games/red-faction-guerrilla/rf-gmod-gravity-gun-sandbox-and-armageddon-port.md",
   "kind": "game",
   "title": "rf-gmod: a Garry's Mod-style sandbox (gravity gun, physgun, HL2 weapons, noclip) in RFG Re-Mars-tered, with an untested Armageddon port",
@@ -7147,6 +8508,43 @@
    "eye-tracking",
    "tobii",
    "render-pipeline"
+  ]
+ },
+ {
+  "path": "games/resident-evil-4/naming-the-re4-2005-pc-exe-from-the-gamecube-decompilation.md",
+  "kind": "game",
+  "title": "Naming the RE4 (2005) PC exe from the GameCube decompilation",
+  "game": "Resident Evil 4",
+  "games_also": [],
+  "game_version": "Steam UHD (app 254700), original bio4.exe of 2018-01-27, 9,126,456 bytes, SHA-1 3ddec5c068c0c968c95a5694a44389b8b8518205",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "Ghidra 12.1.4 headless",
+   "Python 3.10",
+   "MSVC 2019 (header compile test)"
+  ],
+  "anti_cheat": "none (single-player)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-13",
+  "links": [
+   "https://github.com/adonis-singh/re4",
+   "https://github.com/nipkownix/re4_tweaks"
+  ],
+  "tags": [
+   "reverse-engineering",
+   "ghidra",
+   "decompilation",
+   "address-map",
+   "rtti",
+   "vtables",
+   "direct3d9",
+   "xact"
   ]
  },
  {
@@ -7299,6 +8697,49 @@
    "saves",
    "repak",
    "iostore"
+  ]
+ },
+ {
+  "path": "games/satisfactory/working-hologram-opacity-slider-in-the-vanilla-options-menu-.md",
+  "kind": "game",
+  "title": "Working hologram opacity slider in the vanilla Options menu (SML 3.12 C++ mod)",
+  "game": "Satisfactory",
+  "games_also": [],
+  "game_version": "1.2.5.0 (build/CL 517554, UE 5.6.1-CSS), Steam, SML 3.12.0",
+  "platform": "windows",
+  "engine": "unreal",
+  "route": "loader-api",
+  "tools": [
+   "SML 3.12 starter project (headers CL517554) + Alpakit",
+   "Unreal Engine 5.6.1-CSS (satisfactorymodding/UnrealEngine 5.6.1-css-83)",
+   "Visual Studio 2022 17.14 (MSVC 14.38)",
+   "wwise-cli 0.2.4 (Wwise 2025.1.6.9117, integration 2025.1.6.4248)",
+   "UE Python editor scripting (asset authoring)",
+   "um win (shot/drive), um backup, um publish check"
+  ],
+  "anti_cheat": "none (Satisfactory has no anti-cheat; client-side visual mod, RequiredOnRemote false)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-11",
+  "links": [
+   "https://github.com/satisfactorymodding/SatisfactoryModLoader",
+   "https://docs.ficsit.app/satisfactory-modding/latest/Development/UpdatingFromSml311.html",
+   "https://github.com/mircearoata/wwise-cli"
+  ],
+  "tags": [
+   "hologram",
+   "build-mode",
+   "options-menu",
+   "fgusersetting",
+   "game-features",
+   "post-process",
+   "custom-depth-stencil",
+   "translucency",
+   "dynamic-material-instance",
+   "smart-app-control"
   ]
  },
  {
@@ -7779,6 +9220,57 @@
   ]
  },
  {
+  "path": "games/sprocket/new-wheel-models-for-sprocket-without-a-loader-cloned-addres.md",
+  "kind": "game",
+  "title": "New wheel models for Sprocket, by patching game data or from a BepInEx plugin: cloned Addressables bundles, binary catalog.bin keys and part icons on Unity 6000.3 IL2CPP",
+  "game": "Sprocket",
+  "games_also": [],
+  "game_version": "Steam 1674170: stable 0.2.55.5 (buildid 25392405) and experimental 0.2.56.x (buildid 25910892), both Unity 6000.3.21f1 IL2CPP, metadata v39, Addressables 2.9.1",
+  "platform": "windows",
+  "engine": "unity-il2cpp",
+  "route": "loader-api",
+  "tools": [
+   "BepInEx 6 be.788",
+   "Sprocket Mod Loader 1.2.3",
+   "HarmonyX",
+   "UnityPy 1.25.4",
+   "AddressablesTools (nesrak1) @3dbc8210",
+   "Blender 5.2 (bpy, Cycles bake)",
+   ".NET 8 SDK",
+   "Python 3.12"
+  ],
+  "anti_cheat": "none found by um scan (single-player); editor/sandbox only. Data route: no game code touched. Plugin route: Harmony postfixes at run time, no game file changed",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "J1ND3R9"
+  ],
+  "date": "2026-10-29",
+  "links": [
+   "https://github.com/nesrak1/AddressablesTools",
+   "https://github.com/K0lb3/UnityPy",
+   "https://github.com/Hans21223/Sprocket-Mod-Loader",
+   "https://github.com/Hans21223/Sprocket-Quality-of-Life"
+  ],
+  "tags": [
+   "vehicle-parts",
+   "wheels",
+   "engines",
+   "addressables",
+   "binary-catalog",
+   "unitypy",
+   "spriteatlas",
+   "icons",
+   "procedural-models",
+   "blender",
+   "bepinex",
+   "harmony",
+   "il2cpp-interop"
+  ]
+ },
+ {
   "path": "games/star-wars-battlefront-ii-2005/porting-a-skinned-starcraft-ii-character-onto-the-swbf2-2005.md",
   "kind": "game",
   "title": "Porting a skinned StarCraft II character onto the SWBF2 (2005) infantry skeleton",
@@ -8077,6 +9569,132 @@
   ]
  },
  {
+  "path": "games/terminator-dark-fate-defiance/defianceloader-plugins-data-mods-and-engine-facts.md",
+  "kind": "game",
+  "title": "Native DefianceLoader plugins and data mods: engine facts, tables, lbox, multi-slot weapons, editors",
+  "game": "Terminator: Dark Fate - Defiance",
+  "games_also": [],
+  "game_version": "1.09.1223 (Steam app 1839950, the loader's steam-2026-10-07) with DefianceLoader 1.9.0, plugin ABI 5",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "native-hook",
+  "tools": [
+   "DefianceLoader 1.9.0",
+   "MSVC (Visual Studio 2022)",
+   "IDA",
+   "Python 3"
+  ],
+  "anti_cheat": "none seen; all of this is single player, and the plugins aren't marked multiplayer safe, so the loader blocks the game's online connection while they're active",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-31",
+  "links": [
+   "https://github.com/DefianceLoader/DefianceLoader"
+  ],
+  "tags": [
+   "frontedge",
+   "cats-who-play",
+   "leonardo",
+   "galileo",
+   "facets",
+   "plugins",
+   "spreadsheetml",
+   "lbox",
+   "table-merge",
+   "map-editor",
+   "crash-analysis"
+  ]
+ },
+ {
+  "path": "games/terminator-dark-fate-defiance/porting-mechanics-and-vehicles-from-gostomelskie-bogatyri.md",
+  "kind": "game",
+  "title": "Rebuilding mechanics of a sister engine branch as plugins: morale, stamina, towing, supply, vehicles",
+  "game": "Terminator: Dark Fate - Defiance",
+  "games_also": [
+   "Ukrainian Warfare: Gostomel Heroes",
+   "Gostomelskie bogatyri"
+  ],
+  "game_version": "TDF 1.09.1223 (Steam) with DefianceLoader 1.9.0; Gostomelskie bogatyri build of 2026-09-10 (update 1.2.634.5 of Ukrainian Warfare: Gostomel Heroes on Steam, app 3902520)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "reimplementation",
+  "tools": [
+   "DefianceLoader 1.9.0",
+   "MSVC (Visual Studio 2022)",
+   "IDA",
+   "Python 3",
+   "Maya (mayapy)"
+  ],
+  "anti_cheat": "none seen; single player only",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-31",
+  "links": [
+   "https://github.com/DefianceLoader/DefianceLoader"
+  ],
+  "tags": [
+   "frontedge",
+   "cats-who-play",
+   "sister-branch",
+   "morale",
+   "stamina",
+   "towing",
+   "trailers",
+   "supply",
+   "covers",
+   "skeletons",
+   "rtti-diff"
+  ]
+ },
+ {
+  "path": "games/terminator-dark-fate-defiance/porting-syrian-warfare-maps-triggers-and-effects.md",
+  "kind": "game",
+  "title": "Syrian Warfare's maps, triggers, buildings and effects converted to run in Terminator: Dark Fate - Defiance",
+  "game": "Terminator: Dark Fate - Defiance",
+  "games_also": [
+   "Syrian Warfare"
+  ],
+  "game_version": "TDF 1.09.1223 (Steam) with DefianceLoader 1.9.0; Syrian Warfare x86, a 2018 build (released 2017, Steam app 485980)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Python 3",
+   "IDA",
+   "texconv",
+   "TDF's own map editor",
+   "TDF's Luac.exe"
+  ],
+  "anti_cheat": "none seen; single player only",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-31",
+  "links": [
+   "https://github.com/microsoft/DirectXTex",
+   "https://github.com/recastnavigation/recastnavigation"
+  ],
+  "tags": [
+   "frontedge",
+   "cats-who-play",
+   "map-port",
+   "land-format",
+   "triggers",
+   "lua-bytecode",
+   "psyfx",
+   "mlms",
+   "detour"
+  ]
+ },
+ {
   "path": "games/terraria/eye-of-cthulhu-rl-agent.md",
   "kind": "game",
   "title": "An RL agent that beats the Eye of Cthulhu: decompiled boss AI to a simulator, then back into the real game",
@@ -8319,52 +9937,6 @@
   ]
  },
  {
-  "path": "games/test-drive-unlimited-2/playing-tdu2-online-with-project-paradise-2.md",
-  "kind": "game",
-  "title": "Playing Test Drive Unlimited 2 online with Project Paradise 2 (server, NAT, migration, driver regressions)",
-  "game": "Test Drive Unlimited 2",
-  "games_also": [],
-  "game_version": "retail; community server current as of 2026-03",
-  "platform": "windows",
-  "engine": "unknown",
-  "route": "passthrough",
-  "tools": [
-   "Project Paradise 2 server + launcher (project-paradise2.de)",
-   "dgVoodoo2",
-   "DXVK",
-   "TDU2 Unpacker GUI"
-  ],
-  "anti_cheat": "Community-run. Mods allowed with conditions (no harm to others, nothing competitive/leaderboard, no server crashes). The PP2 launcher closes the game while a process on its cheat/RE-tool list is running (Gotcha 11). No anti-cheat bypass documented.",
-  "status": "in-progress",
-  "agents": [
-   "OpenCode (DeepSeek V4.1 Flash)"
-  ],
-  "humans": [
-   "Selene0623"
-  ],
-  "date": "2026-10-05",
-  "links": [
-   "https://project-paradise2.de/",
-   "https://turboduck.net/forums/topic/28390-test-drive-unlimited-2-modding-wiki/",
-   "https://github.com/djey47/tdumt2",
-   "https://github.com/Project-Paradise-2/Gamelauncher"
-  ],
-  "tags": [
-   "tdu2",
-   "project-paradise",
-   "multiplayer",
-   "p2p",
-   "nat",
-   "upnp",
-   "port-forwarding",
-   "amd",
-   "nvidia",
-   "drivers",
-   "revival-server",
-   "savegame-migration"
-  ]
- },
- {
   "path": "games/test-drive-unlimited-2/reading-tdu2-vehicle-physics-havok-packfiles.md",
   "kind": "game",
   "title": "TDU2 vehicle physics: the Havok 5.5.0 packfile format inside .bnk containers",
@@ -8431,7 +10003,6 @@
   ],
   "date": "2026-10-05",
   "links": [
-   "https://project-paradise2.de/",
    "https://turboduck.net/forums/topic/28390-test-drive-unlimited-2-modding-wiki/",
    "https://github.com/djey47/tdumt2"
   ],
@@ -8686,6 +10257,45 @@
   ]
  },
  {
+  "path": "games/the-binding-of-isaac-rebirth/lua-mods-without-repentogon-a-follower-clone-a-costume-on-th.md",
+  "kind": "game",
+  "title": "Lua mods without REPENTOGON: a follower clone, a costume on the back, an undroppable trinket, safe refactoring",
+  "game": "The Binding of Isaac: Rebirth",
+  "games_also": [],
+  "game_version": "Repentance+ v1.9.7.17 (Steam 250900)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "loader-api",
+  "tools": [
+   "ModUploader",
+   "Python + Pillow",
+   "lupa",
+   "luaparser"
+  ],
+  "anti_cheat": "none; single player and local co-op only (Repentance+ online play needs every mod disabled, and no Daily Runs with mods on)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "fareria"
+  ],
+  "date": "2026-11-07",
+  "links": [
+   "https://steamcommunity.com/sharedfiles/filedetails/?id=3835155895"
+  ],
+  "tags": [
+   "lua",
+   "no-repentogon",
+   "clone",
+   "costume",
+   "trinket",
+   "refactoring",
+   "workshop",
+   "repentance-plus"
+  ]
+ },
+ {
   "path": "games/the-dark-legions/reloaded-single-dll-fix.md",
   "kind": "game",
   "title": "The Dark Legions Reloaded: crash fixes, a D3D8 -> D3D9Ex renderer, widescreen and new menus in one d3d8.dll",
@@ -8729,6 +10339,187 @@
   ]
  },
  {
+  "path": "games/the-elder-scrolls-iv-oblivion-remastered/native-processevent-from-a-plain-dll-in-oblivion-remastered.md",
+  "kind": "game",
+  "title": "Native per-frame actor mover for Oblivion Remastered: ProcessEvent from a plain DLL loaded by UE4SS Lua",
+  "game": "The Elder Scrolls IV: Oblivion Remastered",
+  "games_also": [
+   "Red Faction: Guerrilla Re-Mars-tered"
+  ],
+  "game_version": "Oblivion Remastered 1.512.105 (patch 1.2, UE 5.3.2), Steam app 2623190",
+  "platform": "proton",
+  "engine": "unreal",
+  "route": "native-hook",
+  "tools": [
+   "RE-UE4SS 3.0.1 Beta (experimental, bc66bb1)",
+   "mingw-w64 (x86_64)",
+   "Proton 11.0",
+   "Binary Ninja",
+   "gamescope"
+  ],
+  "anti_cheat": "none (single-player, lab copy of the game)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Sonnet 5.5; written, then audited claim by claim on 2026-11-05)"
+  ],
+  "humans": [],
+  "date": "2026-11-05",
+  "links": [
+   "ue4ss-lua-actor-move-cost-model-oblivion-remastered.md",
+   "rfg-destruction-passthrough-into-oblivion-remastered.md",
+   "https://github.com/UE4SS-RE/RE-UE4SS"
+  ],
+  "tags": [
+   "ue4ss",
+   "native",
+   "processevent",
+   "package-loadlib",
+   "interpolation",
+   "mingw",
+   "actors",
+   "performance"
+  ]
+ },
+ {
+  "path": "games/the-elder-scrolls-iv-oblivion-remastered/rfg-destruction-passthrough-into-oblivion-remastered.md",
+  "kind": "game",
+  "title": "Red Faction Guerrilla destruction passthrough into Oblivion Remastered",
+  "game": "The Elder Scrolls IV: Oblivion Remastered",
+  "games_also": [
+   "Red Faction: Guerrilla Re-Mars-tered"
+  ],
+  "game_version": "Oblivion Remastered 1.512.105 (patch 1.2, UE 5.3.2), Steam app 2623190; RFG Re-Mars-tered, Steam app 667720",
+  "platform": "proton",
+  "engine": "unreal",
+  "route": "passthrough",
+  "tools": [
+   "RE-UE4SS 3.0.1 Beta (experimental, bc66bb1)",
+   "Proton 11.0",
+   "retoc 0.1.5",
+   "Blender (headless)"
+  ],
+  "anti_cheat": "none; Oblivion Remastered is single-player. RFG has online PvP and leaderboards, so its lab copy runs headless and offline (the proxy blocks the network) and the proxy never goes online",
+  "status": "in-progress",
+  "agents": [
+   "Antigravity (Gemini 3.8 Flash High; first draft of Setup, Route, How the game works, Build, Verification, Gotchas and Assets)",
+   "Claude Code (Sonnet 5.5; the ground sections and the 2026-11-05 audit of every claim)"
+  ],
+  "humans": [],
+  "date": "2026-11-13",
+  "links": [
+   "rfg-destruction-rules-rebuilt-inside-oblivion-remastered.md",
+   "../red-faction-guerrilla/generating-rfg-destructible-building-chunks.md",
+   "../red-faction-guerrilla/control-resonant-dylan-takeover-retargeted-animations.md",
+   "https://github.com/UE4SS-RE/RE-UE4SS",
+   "https://github.com/trumank/retoc"
+  ],
+  "tags": [
+   "passthrough",
+   "cross-process",
+   "havok",
+   "destruction",
+   "shared-memory",
+   "seqlock",
+   "ue5",
+   "lua"
+  ]
+ },
+ {
+  "path": "games/the-elder-scrolls-iv-oblivion-remastered/rfg-destruction-rules-rebuilt-inside-oblivion-remastered.md",
+  "kind": "game",
+  "title": "Red Faction Guerrilla's destruction rules rebuilt inside Oblivion Remastered, measured against the real game",
+  "game": "The Elder Scrolls IV: Oblivion Remastered",
+  "games_also": [
+   "Red Faction: Guerrilla Re-Mars-tered"
+  ],
+  "game_version": "Oblivion Remastered 1.512.105 (patch 1.2, UE 5.3.2), Steam app 2623190; RFG Re-Mars-tered, Steam app 667720",
+  "platform": "proton",
+  "engine": "unreal",
+  "route": "reimplementation",
+  "tools": [
+   "RE-UE4SS 3.0.1 Beta (experimental build)",
+   "Proton 11.0",
+   "mingw-w64",
+   "Blender (headless)",
+   "UE 5.3.2 editor commandlet (cook)",
+   "retoc",
+   "Binary Ninja",
+   "python3 + numpy"
+  ],
+  "anti_cheat": "none; Oblivion Remastered is single-player. RFG has online PvP and leaderboards, so both lab copies run offline and the RFG proxy never goes online",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Fable 5.2; plan, reading, analysis, this note)",
+   "Claude Code (Opus 5.5; code)",
+   "Claude Code (Sonnet 5.5; lab runs)"
+  ],
+  "humans": [],
+  "date": "2026-11-13",
+  "links": [
+   "rfg-destruction-passthrough-into-oblivion-remastered.md",
+   "../red-faction-guerrilla/generating-rfg-destructible-building-chunks.md",
+   "../../techniques/fractured-mesh-look-match-ue5.md",
+   "https://github.com/UE4SS-RE/RE-UE4SS",
+   "https://github.com/trumank/retoc"
+  ],
+  "tags": [
+   "destruction",
+   "reimplementation",
+   "oracle",
+   "chaos",
+   "havok",
+   "collision",
+   "depenetration",
+   "trace-replay",
+   "ue4ss",
+   "lua",
+   "physics"
+  ]
+ },
+ {
+  "path": "games/the-elder-scrolls-iv-oblivion-remastered/ue4ss-lua-actor-move-cost-model-oblivion-remastered.md",
+  "kind": "game",
+  "title": "UE4SS Lua cost model for moving many actors in Oblivion Remastered",
+  "game": "The Elder Scrolls IV: Oblivion Remastered",
+  "games_also": [
+   "Red Faction: Guerrilla Re-Mars-tered"
+  ],
+  "game_version": "Oblivion Remastered 1.512.105 (patch 1.2, UE 5.3.2), Steam app 2623190",
+  "platform": "proton",
+  "engine": "unreal",
+  "route": "loader-api",
+  "tools": [
+   "RE-UE4SS 3.0.1 Beta (experimental, bc66bb1)",
+   "Proton 11.0",
+   "perf-house.sh",
+   "bench-calls.lua",
+   "gamescope"
+  ],
+  "anti_cheat": "none (single-player, lab copy of the game)",
+  "status": "in-progress",
+  "agents": [
+   "Antigravity (Gemini 3.8 Flash High; first draft of everything above Gotcha 5)",
+   "Claude Code (Sonnet 5.5; Gotchas 5 to 8 and the 2026-11-05 audit of every claim)"
+  ],
+  "humans": [],
+  "date": "2026-11-05",
+  "links": [
+   "native-processevent-from-a-plain-dll-in-oblivion-remastered.md",
+   "rfg-destruction-passthrough-into-oblivion-remastered.md",
+   "https://github.com/UE4SS-RE/RE-UE4SS"
+  ],
+  "tags": [
+   "ue4ss",
+   "lua",
+   "performance",
+   "profiling",
+   "actors",
+   "staticfindobject",
+   "out-parameters",
+   "cost-model"
+  ]
+ },
+ {
   "path": "games/the-king-of-fighters-xiii/kyo-passed-through-from-kof-xiii-into-a-custom-arena-stepped.md",
   "kind": "game",
   "title": "Kyo passed through from KOF XIII into a custom arena: stepped frames, native hit injection and a shared GPU layer",
@@ -8763,6 +10554,43 @@
    "frida",
    "cmodule",
    "performance"
+  ]
+ },
+ {
+  "path": "games/the-outer-worlds-2/restore-abandoned-companion-inez-save-edit.md",
+  "kind": "game",
+  "title": "Restore an abandoned companion (Inez) by editing a Game Pass save",
+  "game": "The Outer Worlds 2",
+  "games_also": [],
+  "game_version": "Microsoft Store / Game Pass PC package Microsoft.OE-Arkansas 1.299.4920.0; saves written by game builds 1.0.3.0, 1.0.4.1 and 1.0.5.0",
+  "platform": "windows",
+  "engine": "unreal",
+  "route": "data",
+  "tools": [
+   "Python 3 (stdlib zlib, struct, ctypes)",
+   "oo2core_8_win64.dll from another installed game (read-only Oodle decoding, not redistributed)",
+   "gh"
+  ],
+  "anti_cheat": "none (single-player)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-12",
+  "links": [
+   "https://github.com/Z1ni/XGP-save-extractor"
+  ],
+  "tags": [
+   "save-editing",
+   "companions",
+   "quests",
+   "global-variables",
+   "xbox-wgs",
+   "game-pass",
+   "iostore",
+   "oodle",
+   "unreal-5"
   ]
  },
  {
@@ -8802,6 +10630,47 @@
    "permadeath",
    "title-menu",
    "character-swap"
+  ]
+ },
+ {
+  "path": "games/the-sims-legacy-collection/slow-in-game-clock-half-speed-or-slower-with-animations-and-.md",
+  "kind": "game",
+  "title": "Slow in-game clock and slower need decay per need (drops only, optional Energy refill %), as a Cheat Engine table",
+  "game": "The Sims Legacy Collection",
+  "games_also": [
+   "The Sims"
+  ],
+  "game_version": "Steam 3314060, Sims.exe PE timestamp 0x67e72e1b, changelist.txt 936127",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "Cheat Engine",
+   "Python ctypes (ReadProcessMemory/WriteProcessMemory)",
+   "capstone",
+   "keystone"
+  ],
+  "anti_cheat": "none (offline game); Sims.exe is wrapped in SteamStub (see Gotchas)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-15",
+  "links": [
+   "https://github.com/riperiperi/FreeSO",
+   "https://github.com/cheat-engine/cheat-engine"
+  ],
+  "tags": [
+   "the-sims",
+   "simantics",
+   "clock",
+   "time-scale",
+   "motives",
+   "need-decay",
+   "cheat-engine",
+   "steamstub",
+   "x86"
   ]
  },
  {
@@ -9112,6 +10981,45 @@
   ]
  },
  {
+  "path": "games/total-war-warhammer-iii/bigger-units-scale-every-model-including-workshop-mods.md",
+  "kind": "game",
+  "title": "Bigger Units: every battle model 1.75x, including units from Workshop mods, via a generated DB patch pack",
+  "game": "Total War: WARHAMMER III",
+  "games_also": [],
+  "game_version": "9.0.4.0 (Warhammer3.exe), Steam build 25961564, Windows 11",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "Python 3.14 (stdlib compression.zstd)",
+   "agent-written PFH5 pack reader/writer",
+   "RPFM schema_wh3.ron"
+  ],
+  "anti_cheat": "none (EOS SDK ships for crossplay only); tested in single-player custom battles and campaign",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "knowledge/games/total-war-warhammer-iii/valkia-khorne-subjugation-reusing-archaon-dilemmas.md",
+   "https://github.com/Frodo45127/rpfm",
+   "https://github.com/Frodo45127/rpfm-schemas"
+  ],
+  "tags": [
+   "warscape",
+   "total-war",
+   "db-tables",
+   "variants",
+   "unit-scale",
+   "formation-spacing",
+   "compatibility-patch",
+   "generator",
+   "workshop"
+  ]
+ },
+ {
   "path": "games/total-war-warhammer-iii/valkia-khorne-subjugation-reusing-archaon-dilemmas.md",
   "kind": "game",
   "title": "Archaon-style subjugation for Valkia the Bloody: a script-only Warscape mod that reuses CA's own dilemmas",
@@ -9147,6 +11055,55 @@
    "archaon",
    "warriors-of-chaos",
    "khorne"
+  ]
+ },
+ {
+  "path": "games/touhou-puppet-dance-performance-shard-of-dreams/nuzlocke-in-game-randomizer-and-qol-items-via-a-tpdphook-ext.md",
+  "kind": "game",
+  "title": "Nuzlocke, in-game randomizer and QoL items via a TPDPHook-Extended fork",
+  "game": "Touhou Puppet Dance Performance Shard of Dreams",
+  "games_also": [
+   "\u5e7b\u60f3\u4eba\u5f62\u6f14\u821e-\u30e6\u30e1\u30ce\u30ab\u30b1\u30e9-",
+   "TPDP SoD Extended"
+  ],
+  "game_version": "SoD 1.103 + Shard of Dreams Extended V4 (SoD_Extended_Setup_V4.exe, data Sep 2022, dxgi.dll Aug 2022) + English translation patch; FocasLens' own release (not on Steam), with the base game installed",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "TPDPHook-Extended (php42) @ac012c3 forked",
+   "TPDP-Dev-Tools 1.4.1 (php42)",
+   "tpdp-randomizer 1.3.0 (php42, GPLv3)",
+   "MSVC 14.44 / VS2022 BuildTools CMake (Win32)",
+   "Python pefile + capstone",
+   "innoextract 1.9",
+   "ILSpy"
+  ],
+  "anti_cheat": "none. The game has optional netplay (Extended V4 points it at its own community server); everything here is offline single-player, the network code was not touched, and fork saves stay out of netplay",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "SophiaUrabe"
+  ],
+  "date": "2026-11-15",
+  "links": [
+   "https://github.com/php42/TPDPHook-Extended",
+   "https://github.com/php42/TPDP-Dev-Tools",
+   "https://github.com/php42/tpdp-randomizer",
+   "http://fo-lens.net/enbu_ap/"
+  ],
+  "tags": [
+   "touhou",
+   "focaslens",
+   "dxlib",
+   "x86",
+   "dxgi-proxy",
+   "nuzlocke",
+   "randomizer",
+   "event-script",
+   "save-format"
   ]
  },
  {
@@ -9302,7 +11259,7 @@
    "Codex (GPT-6)"
   ],
   "humans": [],
-  "date": "2026-10-20",
+  "date": "2026-11-14",
   "links": [
    "https://store.steampowered.com/app/1379870/Tribal_Hunter/",
    "https://github.com/UnderminersTeam/UndertaleModTool",
@@ -9315,7 +11272,9 @@
    "sprites",
    "collision",
    "audio",
-   "archive-validation"
+   "archive-validation",
+   "test-harness",
+   "wine"
   ]
  },
  {
@@ -9623,6 +11582,147 @@
   ]
  },
  {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-active-reload-and-cloned-abilities.md",
+  "kind": "game",
+  "title": "Space Marine 2 active reload (press window, jam, HUD flash) and cloned abilities via enum extension",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026); built Oct 8-16 2026, ability work Oct 8-23 2026. Mod Tools app 3856330 build 25506153",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Saber SM2 Mod Tools (ModEditor docs, enum extension sample)",
+   "Python 3 (zipfile, struct, numpy, PyYAML)",
+   "own Morpheme .nmb patcher",
+   "own .sani clip writer and event-track codec",
+   "own Wwise bank writer",
+   "WwiseConsole 2019.2",
+   "own sslbin disassembler (reading compiled logic only)"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "active-reload",
+   "reload",
+   "firearm",
+   "morpheme",
+   "animation-network",
+   "action-controller",
+   "blueprint",
+   "hud",
+   "wwise",
+   "abilities",
+   "enum-extension",
+   "war-cry"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-building-a-new-map-with-the-map-converter.md",
+  "kind": "game",
+  "title": "A brand-new playable map in Space Marine 2 with Saber's Map Converter, plus hub scene edits",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026). Mod Tools app 3856330 build 25506153 (ModelConverter --map_mode, UsfExporter, Furnace, AIConverter, TerrainConverter, LightProbeConverter, resolve_scene_resources)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Saber SM2 Mod Tools (ModelConverter --map_mode, UsfExporter convert_tpl.py, furnace.exe, TextureConverter / convert_pct.py)",
+   "Saber's shipped converter source (ToolsSource: MapConverter.cs, MapBuilder)",
+   "Python 3 (own glTF writer, tpl_markup / lods_base patchers, lwi_container and dom_list readers)",
+   "Blender (preview renders with back-face culling, BC6H decode)",
+   "a small Win32 window-text reader for hidden crash dialogs"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "https://spacemarine2-modding.prismray.io/"
+  ],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "swarm-engine",
+   "map",
+   "level",
+   "map-converter",
+   "furnace",
+   "gltf",
+   "lwi",
+   "instancing",
+   "grass",
+   "collision",
+   "cdt",
+   "sky",
+   "lighting",
+   "shadows",
+   "prefab",
+   "water",
+   "hub",
+   "dom-list",
+   "navmesh"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-hub-battle-barge-thunderhawk-and-usables.md",
+  "kind": "game",
+  "title": "Space Marine 2 Battle Barge hub: replacing the hero Thunderhawk, a walk-in ramp with push-button seats, the launch countdown, hidden collision and usables",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026). Mod Tools app 3856330 build 25506153",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "Saber SM2 Mod Tools (ModelConverter, UsfExporter)",
+   "Python 3 (struct, zipfile, numpy)",
+   "own cd_list / class_list / dom_list / lwi_container codecs",
+   "own .sani clip codec and Morpheme .nmb patcher",
+   "own sslbin disassembler",
+   "Blender (offline preview renders)"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "hub",
+   "battle-barge",
+   "thunderhawk",
+   "vehicle",
+   "usable",
+   "level-sequence",
+   "xseq",
+   "smart",
+   "collision",
+   "lwi",
+   "cd-list",
+   "dom-list",
+   "countdown",
+   "textures",
+   "banners"
+  ]
+ },
+ {
   "path": "games/warhammer-40-000-space-marine-2/sm2-missions-scenarios-faction-swaps-and-esd-spawning.md",
   "kind": "game",
   "title": "Space Marine 2 missions: scenario faction swaps, level files, the ESD spawn director and rebaking a navmesh with spawn points",
@@ -9645,7 +11745,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-13",
+  "date": "2026-10-29",
   "links": [],
   "tags": [
    "space-marine-2",
@@ -9687,7 +11787,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-15",
+  "date": "2026-10-29",
   "links": [
    "https://spacemarine2-modding.prismray.io/",
    "https://www.nexusmods.com/warhammer40000spacemarine2/mods/233"
@@ -9728,7 +11828,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-13",
+  "date": "2026-10-29",
   "links": [],
   "tags": [
    "space-marine-2",
@@ -9746,7 +11846,10 @@
    "custom-head",
    "ai-mesh",
    "collision",
-   "cloth"
+   "cloth",
+   "skin-weights",
+   "mml-cfg",
+   "parallax"
   ]
  },
  {
@@ -9773,7 +11876,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-15",
+  "date": "2026-10-29",
   "links": [],
   "tags": [
    "space-marine-2",
@@ -9791,7 +11894,13 @@
    "execution",
    "interplay",
    "xseq",
-   "spawning"
+   "spawning",
+   "bio-titan",
+   "boss-ai",
+   "melee-timing",
+   "gore",
+   "wwise",
+   "root-motion"
   ]
  },
  {
@@ -9827,6 +11936,116 @@
    "armoury",
    "talker",
    "constructor"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-one-constructor-for-every-class-and-fast-usf-builds.md",
+  "kind": "game",
+  "title": "Every Space Marine 2 class on one soldier armour constructor, and glTF-to-USF rebuilds in minutes instead of an hour",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [],
+  "game_version": "Steam build 25799387 (Patch 15.1, Oct 2026). Mod Tools app 3856330: game-folder ModelConverter v13.0.0, Mod Tools ModelConverter release + ToolsSource v14.0.0, UsfExporter, CDTConverter",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "asset-only",
+  "tools": [
+   "Saber SM2 Mod Tools (ModelConverter, UsfExporter convert_tpl.py, CDTConverter)",
+   "ModelConverter rebuilt from Saber's GPL ToolsSource (.NET 11 preview SDK, offline, against the shipped SharpGLTF/Newtonsoft DLLs)",
+   "Python 3 (json, hashlib, struct)",
+   "PowerShell build scripts"
+  ],
+  "anti_cheat": "EasyAntiCheat. Everything here uses Saber's official mods folder (client_pc/root/mods), which flags the session 'Mods Detected' (private lobbies, separate progression). No injection, no EAC interaction, PvE only.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [],
+  "tags": [
+   "space-marine-2",
+   "saber",
+   "swarm-engine",
+   "tpl",
+   "usf",
+   "gltf",
+   "modelconverter",
+   "usfexport",
+   "constructor",
+   "armour",
+   "customization-library",
+   "build-speed",
+   "incremental-build",
+   "byte-identical",
+   "shader-cache"
+  ]
+ },
+ {
+  "path": "games/warhammer-40-000-space-marine-2/sm2-porting-assets-from-other-games.md",
+  "kind": "game",
+  "title": "Porting owned content from other games into Space Marine 2 (personal use): Witcher 3 level kit, Space Marine 1 Orks, Gears of War E-Day, Elden Ring, Helldivers 2",
+  "game": "Warhammer 40,000: Space Marine 2",
+  "games_also": [
+   "The Witcher 3",
+   "Elden Ring",
+   "Gears of War: E-Day",
+   "Warhammer 40,000: Space Marine - Master Crafted Edition",
+   "Helldivers 2",
+   "Red Dead Redemption 2"
+  ],
+  "game_version": "SM2 Steam build 25799387 (Patch 15.1, Oct 2026), most work on Patch 14.x-15; Saber Mod Tools (Oct 2026: ModelConverter, UsfExporter, Map Converter + Furnace, TextureConverter). Sources: The Witcher 3 Remastered 5.01 (GOG), Space Marine Master Crafted Edition (Steam), Gears of War: E-Day (UE 5.5 IoStore build; store and build id not recorded), Elden Ring + Shadow of the Erdtree (Steam), Helldivers 2 (Steam, Stingray)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "asset-only",
+  "tools": [
+   "Saber SM2 Mod Tools (ModelConverter --map_mode, UsfExporter, Furnace, TextureConverter)",
+   "Blender (headless, isolated user profile)",
+   "Witcher3-Blender-Tools (dingdio) Blender add-on",
+   "own SpeedTree 7 .srt parser (Python)",
+   "filediver v0.7.58 (Helldivers 2 extractor)",
+   "own UE 5.5 IoStore + ACL v2.1 readers (Python)",
+   "own Havok 2010.2 packfile reader (Python)",
+   "Wwise 2019.2.15 WwiseConsole",
+   "ffmpeg",
+   "Python 3 (numpy, scipy)"
+  ],
+  "anti_cheat": "SM2 has EasyAntiCheat: every build here loads through Saber's official mods folder (Mods Detected, private lobbies), no injection. Source games with anti-cheat (Elden Ring EAC, Gears E-Day EAC, Helldivers 2 GameGuard, EAC since 2026-10-20) were never launched or patched for this work; their files were read offline from the author's own installs.",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "https://github.com/dingdio/Witcher3-Blender-Tools",
+   "https://github.com/xypwn/filediver",
+   "https://github.com/nfrechette/acl"
+  ],
+  "tags": [
+   "space-marine-2",
+   "cross-game",
+   "port",
+   "asset-conversion",
+   "mashup",
+   "witcher-3",
+   "redengine",
+   "speedtree",
+   "map-converter",
+   "furnace",
+   "lwi",
+   "elden-ring",
+   "gears-of-war",
+   "unreal-5",
+   "iostore",
+   "acl",
+   "space-marine-1",
+   "havok",
+   "helldivers-2",
+   "stingray",
+   "wwise",
+   "opus",
+   "retarget",
+   "personal-use"
   ]
  },
  {
@@ -9895,7 +12114,7 @@
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-10-15",
+  "date": "2026-10-29",
   "links": [],
   "tags": [
    "space-marine-2",
@@ -9915,7 +12134,11 @@
    "sound",
    "crosshair",
    "hud",
-   "equipment"
+   "equipment",
+   "heroic-version",
+   "honor-shop",
+   "executions",
+   "ik"
   ]
  },
  {
@@ -10179,6 +12402,55 @@
   ]
  },
  {
+  "path": "games/white-knuckle/modding-routes-and-the-asset-database-api.md",
+  "kind": "game",
+  "title": "White Knuckle: the four modding routes, and the built-in asset-database API that registers new content without Harmony",
+  "game": "White Knuckle",
+  "games_also": [],
+  "game_version": "Steam build 26218267 (app 3195790), Unity 6000.3.9f1 Mono, run on Linux through Proton Experimental; BepInEx 5.4.23.5 via r2modman 'WhiteKnuckle' profiles",
+  "platform": "proton",
+  "engine": "unity-mono",
+  "route": "loader-api",
+  "tools": [
+   "BepInEx 5.4.23.5 (Doorstop 4, winhttp proxy)",
+   "r2modman (flatpak)",
+   "ilspycmd 8.2.0.7535 on .NET 8",
+   "dotnet SDK 8.0.426 targeting netstandard2.1",
+   "um scan",
+   "WKLib 0.3.1",
+   "WKMapLoader 1.3.1",
+   "ResourcefulHands 1.0.1"
+  ],
+  "anti_cheat": "none. Single-player, but runs are ranked on leaderboards: keep runs with modded content off them. um scan reports no anti-cheat and none was found in the install.",
+  "status": "working",
+  "agents": [
+   "Jcode (Claude Opus 4.6)"
+  ],
+  "humans": [],
+  "date": "2026-10-26",
+  "links": [
+   "https://github.com/monksilly/WKLib",
+   "https://monksilly.github.io/WKLib/"
+  ],
+  "tags": [
+   "white-knuckle",
+   "unity",
+   "unity-6",
+   "bepinex",
+   "r2modman",
+   "proton",
+   "asset-database",
+   "scriptableobject",
+   "addressables",
+   "doorstop",
+   "thunderstore",
+   "glb",
+   "blender",
+   "resource-pack",
+   "recon"
+  ]
+ },
+ {
   "path": "games/with-your-coworker/linux-kde-plasma-6-wayland-click-through-and-argb-transparen.md",
   "kind": "game",
   "title": "Linux KDE Plasma 6 Wayland click-through and ARGB transparency fix",
@@ -10256,6 +12528,39 @@
    "bmd6model",
    "asset-extraction",
    "crossover"
+  ]
+ },
+ {
+  "path": "games/wolfenstein-the-old-blood/wolfenstein-the-old-blood-id-tech-5-datamining-dmodel-bmvtr-.md",
+  "kind": "game",
+  "title": "Wolfenstein: The Old Blood: id Tech 5 datamining (dmodel, bmvtr subtitles, chapter/challenge decls, Wolf3D nightmare levels, map export)",
+  "game": "Wolfenstein: The Old Blood",
+  "games_also": [],
+  "game_version": "Steam app 350080, buildid 616161, WolfOldBlood_x64.exe 28,457,040 bytes (shippingretail, OpenGL)",
+  "platform": "windows",
+  "engine": "idtech",
+  "route": "asset-only",
+  "tools": [
+   "python 3.12 + numpy 2.x + Pillow",
+   "ffmpeg (H.264 re-encode)",
+   "three.js 0.160.0 (offline viewer)"
+  ],
+  "anti_cheat": "none (single-player, no online client)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-02",
+  "links": [],
+  "tags": [
+   "id-tech-5",
+   "datamining",
+   "unused-content",
+   "gltf",
+   "virtual-texture",
+   "subtitles",
+   "level-export"
   ]
  },
  {
@@ -10789,6 +13094,33 @@
   ]
  },
  {
+  "path": "techniques/an-in-game-settings-menu-in-an-il2cpp-unity-game-clone-the-g.md",
+  "kind": "technique",
+  "title": "An in-game settings menu in an IL2CPP Unity game: clone the game's own tab and drive it from Harmony",
+  "status": "working",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-11-05",
+  "links": [
+   "https://github.com/Skibidi41Rizz/CustomMusic",
+   "https://github.com/Skibidi41Rizz/CustomMusic/blob/main/MusicPanel.cs",
+   "https://github.com/BepInEx/Il2CppInterop"
+  ],
+  "tags": [
+   "unity",
+   "il2cpp",
+   "melonloader",
+   "harmony",
+   "ui",
+   "tmp",
+   "vr",
+   "settings-menu",
+   "prefab-clone"
+  ]
+ },
+ {
   "path": "techniques/asus-aura-usb-protocol.md",
   "kind": "technique",
   "title": "ASUS AURA USB protocol: opcodes, zone table and the unresolved TUF X570 4-pin header",
@@ -10950,6 +13282,49 @@
    "validators",
    "ik",
    "watchdog"
+  ]
+ },
+ {
+  "path": "techniques/bannerlord-weather-particles-fog-exposure.md",
+  "kind": "technique",
+  "title": "Weather in Bannerlord mods: particles, fog, exposure, map layers and campaign AI",
+  "status": "working",
+  "game": "Mount & Blade II: Bannerlord",
+  "games_also": [],
+  "game_version": "v1.4.8 (Steam, Windows 10) with War Sails' NavalDLC module installed; Bannerlord.Harmony, UIExtenderEx and MCM v5 from the Workshop",
+  "platform": "windows",
+  "engine": "bannerlord",
+  "route": "loader-api",
+  "tools": [
+   "Bannerlord module system (C# net472 SubModule, Prefabs XML)",
+   "Bannerlord.Harmony",
+   "ilspycmd",
+   "an in-mod autotest that drives custom battles and the campaign map and takes screenshots"
+  ],
+  "anti_cheat": "BattlEye, multiplayer only; this module is single player (campaign and custom battles) and stays out of multiplayer",
+  "agents": [
+   "Claude Code (Opus 5.5)",
+   "Claude Code subagents (model not recorded)"
+  ],
+  "humans": [],
+  "date": "2026-11-11",
+  "links": [
+   "https://github.com/BUTR/Bannerlord.Harmony",
+   "https://github.com/BUTR/Bannerlord.UIExtenderEx",
+   "https://github.com/Aragas/Bannerlord.MBOptionScreen"
+  ],
+  "tags": [
+   "bannerlord",
+   "weather",
+   "particles",
+   "prefabs",
+   "fog",
+   "exposure",
+   "campaign-map",
+   "ai",
+   "harmony",
+   "sound",
+   "performance"
   ]
  },
  {
@@ -11646,7 +14021,24 @@
    "readprocessmemory",
    "conventional-memory",
    "focus-stealing",
-   "wmi"
+   "wmi",
+   "flaky-tests",
+   "retries",
+   "orphan-processes",
+   "job-objects",
+   "host-ram",
+   "stack-depth",
+   "near-heap",
+   "umb",
+   "bios-clock",
+   "benchmark",
+   "bisect",
+   "test-selection",
+   "hidden-windows",
+   "layered-windows",
+   "slot-sizing",
+   "session-0",
+   "crash-recorder"
   ]
  },
  {
@@ -11964,6 +14356,30 @@
   ]
  },
  {
+  "path": "techniques/feather-pass-for-game-birds-in-headless-blender-conforming-c.md",
+  "kind": "technique",
+  "title": "Feather pass for game birds in headless Blender: conforming contour-feather cards, custom normals and a Fluff blend shape",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-10-30",
+  "links": [
+   "https://www.fws.gov/lab/featheratlas/"
+  ],
+  "tags": [
+   "blender",
+   "bpy",
+   "birds",
+   "feathers",
+   "creature",
+   "unity",
+   "blend-shapes",
+   "procedural-modelling"
+  ]
+ },
+ {
   "path": "techniques/finding-a-single-player-game-s-writable-player-position-from-outside.md",
   "kind": "technique",
   "title": "Finding a single-player game's writable player position from outside the process: uncapped sweep, poke test and self-match filters (Prototype passthrough)",
@@ -12018,6 +14434,46 @@
    "https://web.archive.org/web/20231023061958/https://forum.xentax.com/viewtopic.php?t=4256",
    "https://github.com/noidex0/fh6-model-tools",
    "https://github.com/Nenkai/ForzaTools/tree/master/ForzaTools.Bundles"
+  ]
+ },
+ {
+  "path": "techniques/fractured-mesh-look-match-ue5.md",
+  "kind": "technique",
+  "title": "Making a fractured copy of a UE5 mesh look like the original (UV channels, V flip, normal frames, sun drift)",
+  "game": "The Elder Scrolls IV: Oblivion Remastered",
+  "game_version": "Oblivion Remastered 1.512.105 (patch 1.2, UE 5.3.2), Steam app 2623190",
+  "platform": "proton",
+  "engine": "unreal",
+  "route": "reimplementation",
+  "tools": [
+   "RE-UE4SS 3.0.1 Beta (experimental build)",
+   "retoc",
+   "Blender 4.x (bisect fracture)",
+   "UE 5.3.2 editor commandlet (cook)",
+   "python3"
+  ],
+  "anti_cheat": "none (single-player)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-07",
+  "links": [
+   "../games/the-elder-scrolls-iv-oblivion-remastered/rfg-destruction-rules-rebuilt-inside-oblivion-remastered.md",
+   "https://github.com/trumank/retoc",
+   "https://github.com/UE4SS-RE/RE-UE4SS"
+  ],
+  "tags": [
+   "unreal",
+   "materials",
+   "uv",
+   "normals",
+   "fracture",
+   "destruction",
+   "swap",
+   "a-b-test",
+   "time-of-day"
   ]
  },
  {
@@ -12439,6 +14895,33 @@
   ]
  },
  {
+  "path": "techniques/motion-vectors-for-a-neural-upscaler-in-a-game-that-has-none.md",
+  "kind": "technique",
+  "title": "Motion vectors for a neural upscaler in a game that has none: a camera homography first, entities on demand",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (DeepSeek V4.1 Flash)"
+  ],
+  "humans": [],
+  "date": "2026-10-29",
+  "links": [
+   "https://github.com/NVIDIA/DLSS",
+   "https://renderdoc.org",
+   "https://github.com/umar-afzaal/LumeniteFX"
+  ],
+  "tags": [
+   "motion-vectors",
+   "depth",
+   "dlss",
+   "ngx",
+   "upscaling",
+   "homography",
+   "unity",
+   "bepinex",
+   "validation"
+  ]
+ },
+ {
   "path": "techniques/mwcc-register-allocation-vreg-index-colouring-rule-and-the-l.md",
   "kind": "technique",
   "title": "MWCC register allocation: vreg-index colouring rule, lifetime-split lever, and sub-address-temp lever",
@@ -12568,7 +15051,9 @@
   "humans": [],
   "date": "2026-10-25",
   "links": [
-   "https://github.com/eb4x/ghidra-plugin-rtlink"
+   "https://github.com/eb4x/ghidra-plugin-rtlink",
+   "https://github.com/keystone-engine/keystone",
+   "https://github.com/capstone-engine/capstone"
   ],
   "tags": [
    "dos",
@@ -12582,7 +15067,19 @@
    "x86-16",
    "memory-pressure",
    "conventional-memory",
-   "page-cache"
+   "page-cache",
+   "umb",
+   "gates",
+   "hook-dispatcher",
+   "relocations",
+   "keystone",
+   "assembler",
+   "8086-compatibility",
+   "calling-convention",
+   "general-midi",
+   "stack-buffer-overflow",
+   "text-drawing",
+   "register-clobbering"
   ]
  },
  {
@@ -13292,6 +15789,43 @@
   ]
  },
  {
+  "path": "techniques/upper-memory-for-patched-dos-games-in-dosbox-code-in-a-umb-e.md",
+  "kind": "technique",
+  "title": "Upper memory for patched DOS games in DOSBox: code in a UMB, EMS off, an XMS-backed EMS for sound drivers, transient modules",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-02",
+  "links": [
+   "https://www.dosbox.com/",
+   "https://github.com/dosbox-staging/dosbox-staging",
+   "https://github.com/joncampbell123/dosbox-x",
+   "https://github.com/unicorn-engine/unicorn"
+  ],
+  "tags": [
+   "dos",
+   "dosbox",
+   "umb",
+   "upper-memory",
+   "xms",
+   "xms-cache",
+   "unreal-mode",
+   "int21h-hook",
+   "ems",
+   "int67h",
+   "sound-drivers",
+   "dma",
+   "code-modules",
+   "overlays",
+   "conventional-memory",
+   "binary-patching",
+   "x86-16",
+   "guest-memory"
+  ]
+ },
+ {
   "path": "techniques/when-the-first-real-run-fails-suspect-the-oracle-re-deriving.md",
   "kind": "technique",
   "title": "When the first real run fails, suspect the oracle: re-deriving failures from raw traces and mutating real data",
@@ -13313,6 +15847,39 @@
    "collision",
    "tmodloader",
    "mashup"
+  ]
+ },
+ {
+  "path": "techniques/white-knuckle-library-mods-what-each-offers.md",
+  "kind": "technique",
+  "title": "White Knuckle's library mods: what each actually offers, and when to skip them for the game's own registry",
+  "status": "working",
+  "tools": [
+   "ilspycmd 8.2.0.7535 on .NET 8",
+   "BepInEx 5.4.23.5",
+   "r2modman"
+  ],
+  "agents": [
+   "Jcode (Claude Opus 4.6)"
+  ],
+  "humans": [],
+  "date": "2026-10-27",
+  "links": [
+   "https://github.com/monksilly/WKLib",
+   "https://monksilly.github.io/WKLib/",
+   "https://github.com/one-nora/ImuiBepInEx",
+   "https://github.com/monksilly/ResourcefulHands"
+  ],
+  "tags": [
+   "white-knuckle",
+   "unity",
+   "unity-6",
+   "bepinex",
+   "library-survey",
+   "modding-api",
+   "thunderstore",
+   "decompile",
+   "harmony"
   ]
  },
  {

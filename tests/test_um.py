@@ -365,6 +365,52 @@ def test_cli_prints_text_a_legacy_console_cannot_encode(tmp_path, monkeypatch):
     assert "The boon pool ≥ 3 → cached" in raw.getvalue().decode("utf-8")
 
 
+def test_kb_check_fails_without_a_knowledge_root(monkeypatch, capsys):
+    # a wheel install outside a clone has no knowledge/; "PASS: 0 notes checked" would turn a CI gate green
+    from um import cli, kb
+    monkeypatch.setattr(kb, "local_root", lambda: None)
+    with pytest.raises(SystemExit) as e:
+        cli.main(["kb", "check", "--index"])
+    assert e.value.code != 0
+    assert "PASS" not in capsys.readouterr().out
+
+
+def _kb_check(*args) -> int:
+    from um import cli
+    with pytest.raises(SystemExit) as e:
+        cli.main(["kb", "check", *args])
+    return e.value.code
+
+
+def test_kb_check_fails_on_a_root_with_no_notes(tmp_path, monkeypatch, capsys):
+    from um import kb
+    monkeypatch.setattr(kb, "local_root", lambda: None)
+    (tmp_path / "empty").mkdir()
+    for root in ("missing", "empty"):
+        assert _kb_check("--root", str(tmp_path / root)) == 1, root
+        out, err = capsys.readouterr()
+        assert "PASS" not in out and "um: " in err, root
+
+
+def test_kb_check_index_is_not_skipped_when_notes_are_named(tmp_path, monkeypatch, capsys):
+    # named notes are still checked without a knowledge folder, but --index can't pass without one, and with one
+    # it checks the index
+    from um import kb
+    root = tmp_path / "knowledge"
+    note = root / "techniques" / "t.md"
+    note.parent.mkdir(parents=True)
+    note.write_text("---\nkind: technique\ntitle: t\ntags: [x]\ndate: 2026-10-10\nagents: [a]\n---\n# t\n", encoding="utf-8")
+    monkeypatch.setattr(kb, "local_root", lambda: None)
+    assert _kb_check(str(note)) == 0 and "PASS: 1 notes checked" in capsys.readouterr().out
+    assert _kb_check(str(note), "--index") == 1
+    assert "FAIL --index" in capsys.readouterr().out
+    assert _kb_check(str(note), "--index", "--root", str(root)) == 1
+    assert "INDEX.md is out of date" in capsys.readouterr().out
+    (root / "INDEX.md").write_text(kb.build_index(root)[0], **kb.TEXT)
+    assert _kb_check(str(note), "--index", "--root", str(root)) == 0
+    assert _kb_check("--index", "--root", str(root)) == 0
+
+
 def test_tool_exe_does_not_set_dotnet_engine(tmp_path):
     # Kenshi shape: the only managed binary is a tool (Forgotten Construction
     # Set); the big game binary is native, so the engine must not be dotnet.
@@ -451,12 +497,52 @@ def test_mindustry_route(tmp_path, name):
     assert all(rt["route"] != scan.ENGINES["java"][2] for rt in r["routes"])
 
 
+@pytest.mark.parametrize("exe", ["bin64/dontstarve_steam_x64.exe", "bin/dontstarve_steam.exe",   # Windows
+                                 "bin64/dontstarve_steam_x64",                                    # Linux, no .exe
+                                 "bin64/dontstarve_dedicated_server_nullrenderer_x64.exe"])       # dedicated server
+def test_klei_detected(tmp_path, exe):
+    # Don't Starve Together's exe only hosts the Lua in data/databundles/scripts.zip: mods are Lua, not proxy DLLs (#484)
+    key, _ = engine_of(tmp_path, {exe: b"MZ", "data/databundles/scripts.zip": b"PK"})
+    assert key == "klei"
+
+
+@pytest.mark.parametrize("name", ["Don't Starve Together", "dst"])
+def test_dont_starve_together_route(tmp_path, name):
+    # by name or by the files, the Lua mod API comes first and proxy DLLs are only the generic fallback
+    r = _named_game(tmp_path, name, {"bin64/dontstarve_steam_x64.exe": _pe(False, arch=0x8664),
+                                     "data/databundles/scripts.zip": b"PK", "mods/modsettings.lua": "--"})
+    assert r["engine"]["key"] == "klei" and r["routes"][0]["route"] == scan.DST_ROUTE and "mods" in r["mod_folders"]
+    assert [rt["playbook"] for rt in r["routes"]] == ["misc-engines.md", "native.md"]
+    # single-player Don't Starve keeps its Lua loose in data/scripts/: not this key or route
+    r = _named_game(tmp_path, "dont_starve", {"bin/dontstarve_steam.exe": _pe(False), "data/scripts/mods.lua": "--"})
+    assert r["engine"]["key"] != "klei" and all(rt["route"] != scan.DST_ROUTE for rt in r["routes"])
+
+
 @pytest.mark.parametrize("name", ["The Binding of Isaac Rebirth", "isaac"])
 def test_isaac_route(tmp_path, name):
     # the Steam folder has no colon, so the Lua route must come from isaac-ng.exe, ahead of the native proxy-DLL one
     r = _named_game(tmp_path, name, {"isaac-ng.exe": _pe(False), "resources/packed/graphics.a": b"x"})
     assert r["routes"][0]["route"] == scan.KNOWN["the binding of isaac: rebirth"][0]
     assert r["routes"][0]["playbook"] == "isaac.md" and r["routes"][0]["why"] == "known game"
+
+
+def test_white_knuckle_route(tmp_path):
+    # Unity Mono, but the game's own registry (CL_AssetManager.AddNewDatabase) is the route, ahead of the engine default
+    r = _named_game(tmp_path, "White Knuckle", {"UnityPlayer.dll": b"MZ",
+                                                "White Knuckle_Data/Managed/Assembly-CSharp.dll": b"MZ"})
+    assert r["engine"]["key"] == "unity-mono"
+    assert r["routes"][0]["route"] == scan.KNOWN["white knuckle"][0] and r["routes"][0]["why"] == "known game"
+    assert "AddNewDatabase" in r["routes"][0]["route"] and r["routes"][0]["playbook"] == "unity.md"
+
+
+def test_bepinex_folder_without_core_warns(tmp_path):
+    # a mod manager keeps the real BepInEx in a profile, so an install's BepInEx/ with no core/ loads nothing
+    def warned(name, files):
+        return any("no core/" in w for w in _named_game(tmp_path, name, files)["warnings"])
+
+    assert warned("Decoy", {"BepInEx/plugins/SomeMod-1.8.5.zip": b"PK"})
+    assert not warned("Installed", {"BepInEx/core/BepInEx.dll": b"MZ", "BepInEx/plugins/Mod.dll": b"MZ"})
+    assert not warned("Vanilla", {})
 
 
 def test_vdf():
@@ -485,8 +571,16 @@ def test_steam_games_utf8(tmp_path, monkeypatch, library_name, install_name, gam
         encoding="utf-8",
     )
     monkeypatch.setattr(scan, "steam_roots", lambda: [root])
+    _cp1252_default(monkeypatch)
 
-    # Emulate a non-UTF-8 Windows default on every test platform, using real files.
+    assert scan.steam_games() == [{
+        "store": "steam", "appid": "123", "name": game_name,
+        "path": str(game_path), "workshop": None,
+    }]
+
+
+def _cp1252_default(monkeypatch):
+    """Emulate a non-UTF-8 Windows default for Path.read_text on every test platform."""
     original_read_text = Path.read_text
 
     def read_text(path, encoding=None, errors=None, **kwargs):
@@ -494,10 +588,28 @@ def test_steam_games_utf8(tmp_path, monkeypatch, library_name, install_name, gam
 
     monkeypatch.setattr(Path, "read_text", read_text)
 
-    assert scan.steam_games() == [{
-        "store": "steam", "appid": "123", "name": game_name,
-        "path": str(game_path), "workshop": None,
-    }]
+
+def test_epic_games_utf8(tmp_path, monkeypatch):
+    # the launcher writes its .item manifests as UTF-8; read as cp1252 the install folder doesn't exist and the game vanishes
+    install = tmp_path / "Jeu\u00e9"
+    install.mkdir()
+    manifests = tmp_path / "Manifests"
+    manifests.mkdir()
+    (manifests / "ABC.item").write_text(json.dumps(dict(
+        AppName="Example", DisplayName="Example Game\u2122", InstallLocation=str(install)), ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setattr(scan, "epic_manifests", lambda: manifests)
+    _cp1252_default(monkeypatch)
+    assert scan.epic_games() == [dict(store="epic", appid="Example", name="Example Game\u2122", path=str(install))]
+
+
+def test_unity_app_info_utf8(tmp_path, monkeypatch):
+    # app.info is the company and product name on two lines, in UTF-8 whatever the build machine's code page
+    _cp1252_default(monkeypatch)
+    _, det = engine_of(tmp_path, {
+        "UnityPlayer.dll": b"MZ", "Game_Data/globalgamemanagers": b"\0" * 20,
+        "Game_Data/app.info": "Caf\u00e9 Studio\n\u30b2\u30fc\u30e0",
+    })
+    assert det["company"] == "Caf\u00e9 Studio" and det["product"] == "\u30b2\u30fc\u30e0"
 
 
 def test_steam_root_from_registry(tmp_path, monkeypatch):
@@ -562,7 +674,7 @@ def test_slay_the_spire_2_is_not_sts1(tmp_path):
 def test_online_only_matches_whole_names():
     # a substring test told agents to stop on single-player games: Rusty Lake ("rust"), Battlefield 1942, MW2 (2009)
     for offline in ["Rusty Lake Paradise", "Rusted Warfare", "Battlefield 1942", "Call of Duty: Modern Warfare 2 (2009)",
-                    "Deadlock: Planetary Conquest", "The Final Station", "Trusty Rusty"]:
+                    "Call of Duty (2003)", "Deadlock: Planetary Conquest", "The Final Station", "Trusty Rusty"]:
         assert scan.online_only(offline) is None, offline
     for online in ["Rust", "Counter-Strike 2", "Call of Duty®", "Tom Clancy's Rainbow Six® Siege", "PUBG: BATTLEGROUNDS",
                    "Overwatch® 2", "Deadlock", "NARAKA: BLADEPOINT"]:
@@ -576,6 +688,22 @@ def test_scan_warns_only_for_online_games(tmp_path):
         for i in range(6):
             (d / f"f{i}.txt").write_text("x")
         assert any("online competitive" in w for w in scan.scan(str(d))["warnings"]) == warned, name
+
+
+def test_scan_call_of_duty_2003_is_not_the_live_service_game(tmp_path):
+    # the 2003 game installs to a folder named plain "Call of Duty", the same name as today's launcher: it was told to stop
+    for sub, files, warned in [("2003", ["CoDSP.exe", "CoDMP.exe", "main/pak0.pk3", "pb/pbcl.dll"], False),
+                               ("launcher", ["cod.exe"], True)]:
+        d = tmp_path / sub / "Call of Duty"
+        for rel in files + [f"f{i}.txt" for i in range(6)]:
+            (d / rel).parent.mkdir(parents=True, exist_ok=True)
+            (d / rel).write_bytes(b"x")
+        r = scan.scan(str(d))
+        assert any("online competitive" in w for w in r["warnings"]) == warned, sub
+    # its multiplayer still gets the PunkBuster warning, which keeps modded clients out of online play
+    r = scan.scan(str(tmp_path / "2003" / "Call of Duty"))
+    assert "PunkBuster" in r["anti_cheat"]
+    assert any(w.startswith("anti-cheat present (PunkBuster)") and "never inject into online play" in w for w in r["warnings"])
 
 
 def _fake_host(monkeypatch, os_name, machine, wsl=False):
@@ -902,6 +1030,39 @@ def test_publish_check_own_installed_copy_is_named_by_metadata_only(tmp_path, ca
     assert "lib/ModMenu.dll  (== Mods/ModMenu/ModMenu.dll)" in out and "lib/Foo.dll  (== Mods/Foo/Foo.dll)" in out
     assert "lib/Assembly-CSharp.dll  (== Game_Data/Managed/Assembly-CSharp.dll)" in out
     assert publish._own_names([tmp_path / "mod" / "src/N7Plugin.csproj"]) == {"n7"}
+
+
+# assembled at runtime so this file doesn't trip the toolkit's own publish check
+ENV_KEY = "FAL" + "_KEY=" + "abcdefghijklmnopqrstuvwxyz0123"
+ENV_PLACEHOLDER = "FAL" + "_KEY=\n"
+BY_NAME, BY_CONTENT = "env file (secrets?)", "FAL_KEY assignment"
+
+
+@pytest.mark.parametrize("name,body,reason", [
+    (".env", ENV_PLACEHOLDER, BY_NAME),               # fails by name (unchanged)
+    ("config.env", ENV_PLACEHOLDER, BY_NAME),         # fails by name (unchanged)
+    (".env.local", ENV_PLACEHOLDER, BY_NAME),         # .env.* fails by name
+    (".env.production", ENV_PLACEHOLDER, BY_NAME),
+    (".ENV.local", ENV_PLACEHOLDER, BY_NAME),         # any case
+    ("Config.ENV", ENV_PLACEHOLDER, BY_NAME),
+    (".env.example", ENV_PLACEHOLDER, None),          # a template passes...
+    (".env.sample", ENV_PLACEHOLDER, None),
+    (".env.template", ENV_PLACEHOLDER, None),
+    (".env.dist", ENV_PLACEHOLDER, None),
+    (".env.local.example", ENV_PLACEHOLDER, None),
+    (".env.example", ENV_KEY, BY_CONTENT),            # ...but its content is scanned
+    (".env.local.example", ENV_KEY, BY_CONTENT),
+    ("config.env.example", ENV_KEY, BY_CONTENT),      # so is a template of config.env
+    ("mod/sub/.env.local", ENV_PLACEHOLDER, BY_NAME),  # at any depth
+    (".envrc", "use flake\n", None),                  # direnv's file isn't a secret by name...
+    (".envrc", "export " + ENV_KEY, BY_CONTENT),      # ...but its keys are
+])
+def test_publish_check_env_variants(tmp_path, capsys, name, body, reason):
+    make(tmp_path, {"README.md": "My mod", name: body})
+    code = publish.check(str(tmp_path))
+    fails = [ln for ln in capsys.readouterr().out.splitlines() if ln.startswith("FAIL ")]
+    assert code == (1 if reason else 0), fails
+    assert all(reason in ln for ln in fails), fails
 
 
 @pytest.mark.parametrize("label,key", [
@@ -1264,6 +1425,63 @@ def test_backup_repeated_restores_keep_undo_snapshots(tmp_path, backup_same_seco
             assert z.read("save.dat") == state.encode()
 
 
+def test_backup_rejects_reserved_manifest_file(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(backup, "_root", lambda name: (tmp_path / "snaps" / name).mkdir(parents=True, exist_ok=True)
+                        or tmp_path / "snaps" / name)
+    src = tmp_path / "src"
+    make(src, {"_um_manifest.json": "user data", "save.dat": "v1"})
+    with pytest.raises(SystemExit):
+        backup.create(str(src), name="t")
+    assert "reserved snapshot metadata file: _um_manifest.json" in capsys.readouterr().err
+    assert not (tmp_path / "snaps" / "t").exists()
+
+
+def test_backup_restore_stops_at_a_reserved_manifest_file_in_the_folder(tmp_path, backup_same_second, capsys):
+    # the automatic snapshot before the restore can't take that folder either: nothing may change until it's moved
+    src = tmp_path / "src"
+    make(src, {"save.dat": "v1"})
+    backup.create(str(src), name="t")
+    make(src, {"save.dat": "v2", "_um_manifest.json": "{}"})
+    with pytest.raises(SystemExit):
+        backup.restore("t", yes=True)
+    assert f"{src} contains reserved snapshot metadata file" in capsys.readouterr().err
+    assert (src / "save.dat").read_text() == "v2"
+    (src / "_um_manifest.json").unlink()
+    backup.restore("t", yes=True)
+    assert (src / "save.dat").read_text() == "v1"
+
+
+def test_backup_keeps_a_nested_file_named_like_the_manifest(tmp_path, backup_same_second):
+    # only the top level collides with the snapshot's manifest
+    src = tmp_path / "src"
+    make(src, {"sub/_um_manifest.json": "user data"})
+    backup.create(str(src), name="t")
+    make(src, {"sub/_um_manifest.json": "changed"})
+    backup.restore("t", yes=True)
+    assert (src / "sub" / "_um_manifest.json").read_text() == "user data"
+
+
+def test_backup_older_snapshot_with_two_manifest_members_restores_the_users_file(tmp_path, backup_same_second):
+    # snapshots from before the refusal hold the folder's file first and the manifest last, under one name.
+    # Restoring the last one wrote the manifest over the user's file, and then blocked backing up the folder
+    import hashlib
+    import warnings
+    dest = tmp_path / "dest"
+    files = {"_um_manifest.json": b"ORIGINAL USER DATA", "save.dat": b"s"}
+    zp = backup._root("old") / "20260101-000000.zip"
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")  # the duplicate name
+        with backup.zipfile.ZipFile(zp, "w") as z:
+            for rel, data in files.items():
+                z.writestr(rel, data)
+            z.writestr("_um_manifest.json", json.dumps(dict(source=str(dest), created="20260101-000000", note="", files={
+                rel: dict(size=len(data), sha1=hashlib.sha1(data).hexdigest()) for rel, data in files.items()})))
+    assert set(backup._manifest(zp)["files"]) == set(files)
+    backup.restore("old", yes=True)
+    assert (dest / "_um_manifest.json").read_bytes() == b"ORIGINAL USER DATA"
+    assert (dest / "save.dat").read_bytes() == b"s"
+
+
 def test_backup_handles_pre_1980_timestamps(tmp_path, monkeypatch):
     import os
     monkeypatch.setattr(backup, "_root", lambda name: (tmp_path / "snaps" / name).mkdir(parents=True, exist_ok=True)
@@ -1294,6 +1512,308 @@ def test_backup_diff_and_restore_round_trip(tmp_path, monkeypatch):
     assert (src / "sub" / "cfg.ini").read_text() == "a=1"
     assert not (src / "extra.log").exists()
     assert backup.snapshots("t-pre-restore")  # the state before the restore was kept
+
+
+def test_backup_relative_source_restores_to_original_folder(tmp_path, backup_same_second, monkeypatch):
+    a, b = tmp_path / "a", tmp_path / "b"
+    make(a, {"saves/save.dat": "origin"})
+    make(b, {"saves/save.dat": "other cwd"})
+    monkeypatch.chdir(a)
+    zp = backup.create("saves", name="relative")
+    assert backup._manifest(zp)["source"] == str(a / "saves")
+    make(a, {"saves/save.dat": "new origin"})
+
+    monkeypatch.chdir(b)  # restore without --to from another working directory
+    assert backup.diff("relative")["changed"] == ["save.dat"]
+    backup.restore("relative", yes=True)
+    assert (a / "saves" / "save.dat").read_text() == "origin"
+    assert (b / "saves" / "save.dat").read_text() == "other cwd"
+
+
+def test_backup_expands_home_in_recorded_source(tmp_path, backup_same_second, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path / "home"))
+    make(tmp_path / "home", {"saves/save.dat": "origin"})
+    zp = backup.create("~/saves", name="home")
+    assert backup._manifest(zp)["source"] == str(tmp_path / "home" / "saves")
+
+
+def test_backup_symlinked_source_keeps_link_name(tmp_path, backup_same_second):
+    real = tmp_path / "d" / "real-saves"
+    make(real, {"save.dat": "origin"})
+    link = tmp_path / "Terraria"
+    try:
+        link.symlink_to(real, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlinks not available")
+    zp = backup.create(str(link))
+    assert zp.parent.name == "terraria"
+    assert backup._manifest(zp)["source"] == str(link)
+
+
+def test_backup_dotdot_after_symlink_follows_the_os(tmp_path, backup_same_second):
+    if os.name == "nt":
+        pytest.skip("Windows itself resolves .. lexically")
+    real = tmp_path / "d" / "real"
+    make(tmp_path / "d", {"real/keep.txt": "", "x/save.dat": "via link"})
+    make(tmp_path, {"x/save.dat": "lexical"})
+    link = tmp_path / "link"
+    try:
+        link.symlink_to(real, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlinks not available")
+    zp = backup.create(str(link / ".." / "x"), name="t")
+    with backup.zipfile.ZipFile(zp) as z:
+        assert z.read("save.dat") == b"via link"  # the folder the OS reaches, as before the fix
+
+
+def test_backup_dot_source_is_named_after_the_folder(tmp_path, backup_same_second, monkeypatch):
+    make(tmp_path / "Terraria", {"save.dat": "origin"})
+    monkeypatch.chdir(tmp_path / "Terraria")
+    zp = backup.create(".")
+    assert zp.parent.name == "terraria"  # not "", which put the zip in the backups root
+    assert backup._manifest(zp)["source"] == str(tmp_path / "Terraria")
+
+
+def test_backup_source_with_dotdot_does_not_need_the_cwd_later(tmp_path, backup_same_second, monkeypatch):
+    # recorded as cwd/../saves, deleting the folder it was typed from made diff report every file as removed,
+    # and restore skipped the pre-restore snapshot and recreated that folder
+    work = tmp_path / "work"
+    make(work, {"saves/save.dat": "origin", "mod/x.txt": ""})
+    monkeypatch.chdir(work / "mod")
+    zp = backup.create("../saves", name="t")
+    assert backup._manifest(zp)["source"] == str(work / "saves")
+    monkeypatch.chdir(tmp_path)
+    shutil.rmtree(work / "mod")
+    make(work, {"saves/save.dat": "changed"})
+    assert backup.diff("t")["changed"] == ["save.dat"]
+    backup.restore("t", yes=True)
+    assert (work / "saves" / "save.dat").read_text() == "origin"
+    assert backup.snapshots("t-pre-restore") and not (work / "mod").exists()
+
+
+def test_backup_dotdot_source_is_named_after_the_folder(tmp_path, backup_same_second, monkeypatch):
+    make(tmp_path / "Terraria", {"sub/save.dat": "origin"})
+    monkeypatch.chdir(tmp_path / "Terraria" / "sub")
+    zp = backup.create("..")
+    assert zp.parent.name == "terraria"  # not "..", which put the zip outside backups/
+    assert backup._manifest(zp)["source"] == str(tmp_path / "Terraria")
+
+
+def test_backup_to_and_target_expand_home(tmp_path, backup_same_second, monkeypatch):
+    # a shell leaves ~ alone when it's quoted, and cmd always does: this made a literal ./~ folder
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path / "home"))
+    monkeypatch.chdir(tmp_path)
+    make(tmp_path / "src", {"save.dat": "origin"})
+    backup.create(str(tmp_path / "src"), name="t")
+    backup.restore("t", to="~/x", yes=True)
+    assert (tmp_path / "home" / "x" / "save.dat").read_text() == "origin"
+    assert backup.diff("t", "~/x")["target"] == str(tmp_path / "home" / "x")
+    assert not (tmp_path / "~").exists()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="WSL path conversion")
+def test_backup_wsl_windows_source_is_recorded_converted(tmp_path, backup_same_second, monkeypatch):
+    from um import common
+    monkeypatch.setattr(common, "is_wsl", lambda: True)
+    real = common.to_posix  # map /mnt/c to a temp folder so the converted path exists
+    monkeypatch.setattr(backup, "to_posix", lambda p: real(p).replace("/mnt/c/", f"{tmp_path}/c/", 1))
+    make(tmp_path / "c" / "Games" / "saves", {"save.dat": "origin"})
+    zp = backup.create("C:\\Games\\saves", name="w")
+    assert backup._manifest(zp)["source"] == f"{tmp_path}/c/Games/saves"
+    make(tmp_path / "c" / "Games" / "saves", {"save.dat": "changed"})
+    backup.restore("w", yes=True)
+    assert (tmp_path / "c" / "Games" / "saves" / "save.dat").read_text() == "origin"
+
+
+def _record_source(zp: Path, source: str):
+    """Rewrite a snapshot's manifest as one made before sources were stored absolute."""
+    with backup.zipfile.ZipFile(zp) as z:
+        members = {n: z.read(n) for n in z.namelist()}
+    manifest = json.loads(members["_um_manifest.json"])
+    manifest["source"] = source
+    members["_um_manifest.json"] = json.dumps(manifest).encode()
+    with backup.zipfile.ZipFile(zp, "w") as z:
+        for n, data in members.items():
+            z.writestr(n, data)
+
+
+def test_backup_legacy_home_source_restores_to_home(tmp_path, backup_same_second, monkeypatch):
+    home = tmp_path / "home"
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    make(home, {"saves/save.dat": "origin"})
+    zp = backup.create(str(home / "saves"), name="home")
+    _record_source(zp, "~/saves")
+    make(home, {"saves/save.dat": "changed"})
+    monkeypatch.chdir(tmp_path)
+    backup.restore("home", yes=True)
+    assert (home / "saves" / "save.dat").read_text() == "origin"
+    assert not (tmp_path / "~").exists()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="WSL path conversion")
+def test_backup_legacy_windows_source_still_works_under_wsl(tmp_path, backup_same_second, monkeypatch):
+    from um import common
+    src = tmp_path / "saves"
+    make(src, {"save.dat": "origin"})
+    _record_source(backup.create(str(src), name="legacy"), "C:\\Games\\saves")
+    monkeypatch.setattr(common, "is_wsl", lambda: True)
+    assert backup.diff("legacy")["target"] == "/mnt/c/Games/saves"  # converted before the absolute check
+
+
+def test_backup_legacy_relative_source_needs_explicit_folder(tmp_path, backup_same_second, monkeypatch, capsys):
+    src = tmp_path / "saves"
+    make(src, {"save.dat": "origin"})
+    _record_source(backup.create(str(src), name="legacy"), "saves")
+    other = tmp_path / "other"
+    make(other, {"saves/save.dat": "other cwd"})
+    monkeypatch.chdir(other)
+
+    for call in (lambda: backup.diff("legacy"), lambda: backup.restore("legacy", yes=True)):
+        with pytest.raises(SystemExit):
+            call()
+        assert "relative source (saves)" in capsys.readouterr().err
+    assert (other / "saves" / "save.dat").read_text() == "other cwd"
+    assert not backup.snapshots("legacy-pre-restore")
+    make(src, {"save.dat": "changed"})
+    backup.restore("legacy", to=str(src), yes=True)  # an explicit folder still works
+    assert (src / "save.dat").read_text() == "origin"
+
+
+@pytest.fixture
+def um_home(tmp_path, monkeypatch):
+    home = tmp_path / "um-home"
+    monkeypatch.setenv("UM_HOME", str(home))
+    return home
+
+
+def _snapshot_of(home: Path, name: str, members: dict, source: str, files: dict | None = None) -> Path:
+    """A zip laid out like a snapshot, whatever it holds. files is the manifest's list, by default the members' sizes
+    and SHA-1s."""
+    import hashlib
+    zp = home / "backups" / name / "20260101-000000.zip"
+    zp.parent.mkdir(parents=True, exist_ok=True)
+    if files is None:
+        files = {rel: dict(size=len(data), sha1=hashlib.sha1(data).hexdigest()) for rel, data in members.items()}
+    with backup.zipfile.ZipFile(zp, "w", backup.zipfile.ZIP_DEFLATED) as z:
+        for rel, data in members.items():
+            z.writestr(rel, data)
+        z.writestr("_um_manifest.json", json.dumps(dict(source=source, created="20260101-000000", note="", files=files)))
+    return zp
+
+
+def _symlink(link: Path, target: Path):
+    try:
+        link.symlink_to(target, target_is_directory=target.is_dir())
+    except (OSError, NotImplementedError) as e:  # Windows without Developer Mode or admin
+        pytest.skip(f"can't create symlinks here: {e}")
+
+
+@pytest.mark.parametrize("member", ["../sibling/x", "sub/../../sibling/x", "..\\sibling\\x", "<absolute>", "C:/sibling/x",
+                                    "C:sibling"])
+def test_backup_restore_writes_only_inside_the_folder(tmp_path, um_home, member, capsys):
+    dest, sibling = tmp_path / "dest", tmp_path / "sibling"
+    make(dest, {"save.dat": "current"})
+    member = (sibling / "x").as_posix() if member == "<absolute>" else member
+    _snapshot_of(um_home, "t", {"save.dat": b"old", member: b"X"}, source=str(dest))
+    with pytest.raises(SystemExit):
+        backup.restore("t", yes=True)
+    assert "nothing was changed" in capsys.readouterr().err
+    assert (dest / "save.dat").read_text() == "current"  # refused before the first file, not at the bad one
+    assert [p.name for p in dest.iterdir()] == ["save.dat"] and not sibling.exists()
+    assert not backup.snapshots("t-pre-restore")
+
+
+@pytest.mark.parametrize("link", ["save.dat", "sub"])
+def test_backup_restore_does_not_write_through_links(tmp_path, um_home, link, capsys):
+    # a link in the folder, the file itself or a folder on the way, would put the snapshot's bytes somewhere else
+    dest, outside = tmp_path / "dest", tmp_path / "outside"
+    make(outside, {"save.dat": "not yours", "cfg.ini": "not yours"})
+    make(dest, {"sub/cfg.ini": "current"} if link == "save.dat" else {"save.dat": "current"})
+    _symlink(dest / link, outside / "save.dat" if link == "save.dat" else outside)
+    _snapshot_of(um_home, "t", {"save.dat": b"old", "sub/cfg.ini": b"old"}, source=str(dest))
+    with pytest.raises(SystemExit):
+        backup.restore("t", yes=True)
+    assert "symlink or junction" in capsys.readouterr().err
+    assert (outside / "save.dat").read_text() == "not yours" and (outside / "cfg.ini").read_text() == "not yours"
+    assert (dest / link).is_symlink()  # refused, not replaced
+    assert (dest / ("sub/cfg.ini" if link == "save.dat" else "save.dat")).read_text() == "current"
+    assert not backup.snapshots("t-pre-restore")
+
+
+def test_backup_restore_clean_does_not_delete_through_links(tmp_path, um_home, monkeypatch):
+    # --clean deletes what the scan found; on Windows the scan goes into junctions
+    dest, outside = tmp_path / "dest", tmp_path / "outside"
+    make(outside, {"keep.txt": "not yours"})
+    make(dest, {"save.dat": "current"})
+    _symlink(dest / "linked", outside)
+    backup.create(str(dest), name="t")
+    scanned = backup.diff
+    monkeypatch.setattr(backup, "diff", lambda *a: {**scanned(*a), "added": ["linked/keep.txt"]})
+    with pytest.raises(SystemExit):
+        backup.restore("t", clean=True, yes=True)
+    assert (outside / "keep.txt").read_text() == "not yours"
+
+
+def test_backup_restore_into_a_linked_folder(tmp_path, um_home):
+    # the folder itself may be a link (saves moved to another drive): only links below it are refused
+    real, dest = tmp_path / "other-drive" / "saves", tmp_path / "saves"
+    make(real, {"save.dat": "v1", "sub/cfg.ini": "a=1"})
+    _symlink(dest, real)
+    backup.create(str(dest), name="t")
+    make(real, {"save.dat": "v2", "sub/cfg.ini": "a=2"})
+    backup.restore("t", yes=True)
+    assert (real / "save.dat").read_text() == "v1" and (real / "sub" / "cfg.ini").read_text() == "a=1"
+    assert dest.is_symlink()
+    assert backup.snapshots("t-pre-restore")
+
+
+@pytest.mark.parametrize("members", [{"a.dat": b"old a", "b.dat": b"OLD B"},          # other bytes, same size
+                                     {"a.dat": b"old a", "b.dat": b"old b, longer"},  # other size
+                                     {"a.dat": b"old a"}])                            # missing
+def test_backup_restore_checks_every_member_first(tmp_path, um_home, members, capsys):
+    import hashlib
+    dest = tmp_path / "dest"
+    make(dest, {"a.dat": "current", "b.dat": "current"})
+    files = {rel: dict(size=len(data), sha1=hashlib.sha1(data).hexdigest()) for rel, data in
+             {"a.dat": b"old a", "b.dat": b"old b"}.items()}
+    _snapshot_of(um_home, "t", members, source=str(dest), files=files)
+    with pytest.raises(SystemExit):
+        backup.restore("t", yes=True)
+    assert "b.dat" in capsys.readouterr().err
+    assert (dest / "a.dat").read_text() == "current" and (dest / "b.dat").read_text() == "current"
+    assert not backup.snapshots("t-pre-restore")
+
+
+def test_backup_restore_refuses_a_damaged_archive(tmp_path, um_home, capsys):
+    src = tmp_path / "src"
+    make(src, {"save.dat": bytes(range(256)) * 20})
+    zp = backup.create(str(src), name="t")
+    with backup.zipfile.ZipFile(zp) as z:
+        info = z.getinfo("save.dat")
+    data = bytearray(zp.read_bytes())
+    data[info.header_offset + 30 + len(info.filename) + info.compress_size // 2] ^= 0xFF
+    zp.write_bytes(data)
+    make(src, {"save.dat": "current"})
+    with pytest.raises(SystemExit):
+        backup.restore("t", yes=True)
+    assert "size or SHA-1 differs" in capsys.readouterr().err
+    assert (src / "save.dat").read_text() == "current"
+
+
+def test_is_link_counts_reparse_points_that_lead_elsewhere(monkeypatch):
+    # Windows: a junction or another name-surrogate reparse point leads elsewhere; OneDrive's files on demand and
+    # deduplicated files are reparse points too, but writing to them stays in place
+    import stat
+    import types
+    from um import common
+    for tag, link in [(0xA0000003, True), (0xA000000C, True), (0xA000001D, True),  # junction, symlink, WSL symlink
+                      (0x9000601A, False), (0x80000013, False)]:                    # OneDrive cloud file, dedup
+        st = types.SimpleNamespace(st_mode=stat.S_IFREG, st_file_attributes=stat.FILE_ATTRIBUTE_REPARSE_POINT, st_reparse_tag=tag)
+        monkeypatch.setattr(common, "os", types.SimpleNamespace(lstat=lambda p: st))
+        assert common.is_link(Path("x")) is link, hex(tag)
 
 
 # --------------------------------------------------------------------------- comfy

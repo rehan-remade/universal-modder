@@ -76,7 +76,8 @@ the game window's **client area**.
 - **Test scenes:** a mod-side timeline (spawn waves at frame N, fire at N+30), a scenario with triggers
   (AoE2 via AoE2ScenarioParser), a dedicated test world with a pristine backup.
 - **Agent bridge:** a JSON-lines socket inside the mod on `127.0.0.1` (see
-  `examples/terraria-tmodloader/reference/AgentBridge.cs`).
+  `examples/terraria-tmodloader/reference/AgentBridge.cs`). It hangs up on a line that isn't JSON, which keeps a web
+  page's HTTP request from reaching its commands.
   - Commands like `observe` (menu options or world state as text), `click <id>`, `controls`, `step`.
   - Handle every request on the game's main thread after an update, so replies are consistent.
   - Read menus generically from the UI tree, so the agent sees what a player would. Leave destructive

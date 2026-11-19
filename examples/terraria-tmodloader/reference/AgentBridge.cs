@@ -96,6 +96,8 @@ namespace YourMod
 				string line;
 				while ((line = r.ReadLine()) != null)
 				{
+					// a web page can POST to this port, but its request opens with an HTTP line: hang up before the body runs
+					if (!line.StartsWith('{')) return;
 					var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
 					inbox.Enqueue((line, tcs));
 					w.WriteLine(tcs.Task.Result); // answered on the main thread, after the next update
