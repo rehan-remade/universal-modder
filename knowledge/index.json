@@ -6367,17 +6367,22 @@
   "anti_cheat": "none (single player, own dedicated server)",
   "status": "working",
   "agents": [
-   "Claude Code (Claude Opus 5.5)"
+   "Claude Code (Opus 5.5)"
   ],
   "humans": [],
   "date": "2026-11-14",
-  "links": [],
+  "links": [
+   "https://github.com/MinecraftForge/MinecraftForge",
+   "https://github.com/Vineflower/vineflower"
+  ],
   "tags": [
    "dimensions",
    "portals",
    "shaders",
    "saveddata",
    "world-scale",
+   "respawn",
+   "forge-config",
    "dedicated-server",
    "forge"
   ]
