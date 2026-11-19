@@ -86,7 +86,8 @@ Python 3.
 ## How it works
 
 - **Transport.** A local WebSocket on `127.0.0.1:25599` carries JSON: the host's camera pose each frame, plus
-  ground columns, commands and key state. The rendered frame goes a different way — **POSIX shared memory**,
+  ground columns, commands and key state. It has no token, so any program on the machine can use it; web pages
+  can't, because the link refuses any handshake with an `Origin` header, which browsers always send. The rendered frame goes a different way — **POSIX shared memory**,
   `/dev/shm/blockcraft-frame`, which the Proton-side host opens as `Z:\dev\shm\blockcraft-frame`. Three
   seqlocked slots, each holding colour (RGBA8), depth (float32) and overlay (the hand and HUD), with a header
   carrying the pose that produced each frame. `docs/CONTRACT.md` is the authoritative layout.

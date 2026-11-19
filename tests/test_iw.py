@@ -55,6 +55,36 @@ def test_fastfile_dump_stays_in_its_folder(tmp_path):
     assert not (tmp_path / "escape.gsc").exists() and not (tmp_path.parent / "escape.gsc").exists()
 
 
+def _symlink(link: Path, target: Path):
+    try:
+        link.symlink_to(target, target_is_directory=target.is_dir())
+    except (OSError, NotImplementedError) as e:  # Windows without Developer Mode or admin
+        pytest.skip(f"can't create symlinks here: {e}")
+
+
+@pytest.mark.parametrize("link", ["maps", "maps/test.gsc"])
+def test_fastfile_dump_does_not_write_through_links(tmp_path, link):
+    outside, out = tmp_path / "outside", tmp_path / "out"
+    outside.mkdir()
+    (outside / "test.gsc").write_bytes(b"not yours")
+    (out / "maps").mkdir(parents=True) if link != "maps" else out.mkdir()
+    _symlink(out / link, outside if link == "maps" else outside / "test.gsc")
+    p = _zone(tmp_path, [_rawfile("maps/test.gsc", b"main() {}"), _rawfile("ui/menu.menu", b"{}")])
+    with pytest.raises(SystemExit):
+        fastfile.dump_fastfile(p, out)
+    assert (outside / "test.gsc").read_bytes() == b"not yours" and not (outside / "ui").exists()
+    assert not (out / "ui").exists()  # refused before writing anything
+
+
+def test_fastfile_dump_into_a_linked_folder(tmp_path):
+    # the output folder itself may be a link
+    real = tmp_path / "real"
+    real.mkdir()
+    _symlink(tmp_path / "out", real)
+    fastfile.dump_fastfile(_zone(tmp_path, [_rawfile("maps/test.gsc", b"main() {}")]), tmp_path / "out")
+    assert (real / "maps" / "test.gsc").read_bytes() == b"main() {}"
+
+
 def test_fastfile_reads_cod4_and_refuses_signed_zones(tmp_path):
     assert fastfile.decompress_fastfile(_zone(tmp_path, [], version=5, name="cod4.ff"))[0] == 5
     with pytest.raises(SystemExit):

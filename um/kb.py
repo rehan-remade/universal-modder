@@ -16,13 +16,16 @@ requests: that's how one agent's hard-won gotchas reach the next one. Ask your h
 from __future__ import annotations
 
 import datetime as dt
+import http.client
 import json
 import os
 import re
 import shutil
 import subprocess
+import sys
 import time
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from um.common import data_dir, die, need, text_utf8
@@ -42,6 +45,8 @@ MAX_NOTE_KB, MAX_MEDIA_MB = 120, 1.5
 # Notes and the index are UTF-8 with \n line ends on every OS. Without this, Windows reads and writes them in its
 # ANSI code page with \r\n: the index's "·" separators come out as invalid UTF-8 and `um kb check --index` fails.
 TEXT = {"encoding": "utf-8", "newline": "\n"}
+# a failed sync: the network, a connection dropped mid-file (http.client's errors aren't OSErrors), a bad answer
+SYNC_ERRORS = (OSError, ValueError, http.client.HTTPException)
 
 
 # --------------------------------------------------------------------------- where the notes are
@@ -61,25 +66,64 @@ def cache_root() -> Path:
     return data_dir() / "kb" / REPO.replace("/", "__") / "knowledge"
 
 
-def sync(quiet: bool = False) -> Path:
-    """Mirror knowledge/ from GitHub into the cache (git tree API + raw files; no auth needed)."""
+def _download(url: str, timeout: float) -> bytes:
+    request = urllib.request.Request(url, headers={"User-Agent": "universal-modder", "Accept": "application/vnd.github+json"})
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return response.read()
+
+
+def sync(quiet: bool = False, *, timeout: float = 20, workers: int = 8) -> Path:
+    """Mirror knowledge/ from GitHub into the cache (git tree API + raw files; no auth needed).
+
+    Downloads are bounded and concurrent. Progress goes to stderr so a caller parsing JSON from stdout is unaffected;
+    quiet only drops the closing line on stdout. The previous cache is replaced only after every selected file has
+    downloaded.
+    """
+    if timeout <= 0 or workers < 1:
+        raise ValueError("timeout and workers must be positive")
     api = f"https://api.github.com/repos/{REPO}/git/trees/{BRANCH}?recursive=1"
-    req = urllib.request.Request(api, headers={"User-Agent": "universal-modder", "Accept": "application/vnd.github+json"})
-    tree = json.load(urllib.request.urlopen(req, timeout=60))
+    tree = json.loads(_download(api, timeout))
     paths = [t["path"] for t in tree.get("tree", []) if t["type"] == "blob" and t["path"].startswith("knowledge/")
              and t["path"].endswith((".md", ".json"))]
+    if not paths:  # a branch without knowledge/, say: don't replace the cache with nothing
+        raise ValueError(f"no knowledge files on {REPO}@{BRANCH}")
     root = cache_root()
     tmp = root.with_name("knowledge.tmp")
     shutil.rmtree(tmp, ignore_errors=True)
-    for p in paths:
-        dst = tmp / p[len("knowledge/"):]
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        url = f"https://raw.githubusercontent.com/{REPO}/{BRANCH}/{p}"
-        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "universal-modder"}), timeout=60) as r:
-            dst.write_bytes(r.read())
+    tmp.mkdir(parents=True)
+    completed = 0
+    live = sys.stderr.isatty()  # a counter for a terminal: a tool call or a CI log would keep every update
+
+    def report():
+        if live:
+            print(f"\rknowledge sync: {completed}/{len(paths)}", end="", file=sys.stderr, flush=True)
+
+    if not live:
+        print(f"knowledge sync: {len(paths)} files...", file=sys.stderr, flush=True)
+    report()
+    pool = ThreadPoolExecutor(max_workers=min(workers, len(paths)))
+    try:
+        futures = {pool.submit(_download, f"https://raw.githubusercontent.com/{REPO}/{BRANCH}/{path}", timeout): path
+                   for path in paths}
+        for future in as_completed(futures):
+            path = futures[future]
+            destination = tmp / path[len("knowledge/"):]
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(future.result())
+            completed += 1
+            report()
+    except BaseException:
+        pool.shutdown(cancel_futures=True)  # on a stalled network each queued file would wait out its own timeout
+        shutil.rmtree(tmp, ignore_errors=True)
+        if live:
+            print(file=sys.stderr)
+        raise
+    pool.shutdown()
     shutil.rmtree(root, ignore_errors=True)
     tmp.rename(root)
     (root / ".synced").write_text(str(time.time()), **TEXT)
+    if live:
+        print(file=sys.stderr)
     if not quiet:
         print(f"synced {len(paths)} files from github.com/{REPO} -> {root}")
     return root
@@ -99,8 +143,10 @@ def resolve_root(explicit: str | None = None, remote: bool = False) -> Path:
     if stale:
         try:
             return sync(quiet=True)
-        except OSError as e:
-            if not root.exists():
+        except SYNC_ERRORS as e:
+            if root.exists():
+                print(f"knowledge sync failed ({e}); using the stale cache {root}", file=sys.stderr)
+            else:
                 die(f"no local knowledge/ and GitHub sync failed ({e}); clone https://github.com/{REPO}")
     return root
 
@@ -427,7 +473,10 @@ def open_pr(path: Path, yes: bool):
 def main(a):
     c = a.cmd
     if c == "sync":
-        sync()
+        try:
+            sync()
+        except SYNC_ERRORS as e:
+            die(f"GitHub sync failed: {e}")
         return
     if c == "search":
         root = resolve_root(a.root, a.remote)
@@ -463,7 +512,13 @@ def main(a):
         return
     if c == "check":
         root = Path(a.root) if a.root else local_root()
-        paths = [Path(x) for x in a.paths] or ([p for p, _, _ in notes(root)] if root else [])
+        if root and not root.is_dir():
+            die(f"not a folder: {root}")
+        if not root and not a.paths:
+            die("no local knowledge/ folder to check: run inside a clone of the repo, or pass --root or note paths")
+        paths = [Path(x) for x in a.paths] or [p for p, _, _ in notes(root)]
+        if not paths:
+            die(f"no notes to check in {root}")
         bad = 0
         for p in paths:
             fails, warns = check_note(p, root)
@@ -472,7 +527,10 @@ def main(a):
             for w in warns:
                 print(f"WARN {p}: {w}")
             bad += bool(fails)
-        if root and a.index and not a.paths:
+        if a.index and not root:
+            print("FAIL --index: no knowledge/ folder to check INDEX.md in; run inside a clone of the repo or pass --root")
+            bad += 1
+        elif a.index:
             idx, _ = build_index(root)
             if not (root / "INDEX.md").exists() or (root / "INDEX.md").read_text(encoding="utf-8") != idx:
                 print("FAIL knowledge/INDEX.md is out of date: run `um kb index`")
