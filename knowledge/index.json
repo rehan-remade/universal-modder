@@ -4032,6 +4032,46 @@
   ]
  },
  {
+  "path": "games/fantasy-maiden-wars-dream-of-the-stray-dreamer/randomizer-mode-gml-via-undertalemodtool-cli-run-with-game-s.md",
+  "kind": "game",
+  "title": "Randomizer mode (GML via UndertaleModTool CLI, run with -game so the install stays vanilla)",
+  "game": "Fantasy Maiden Wars Dream of the Stray Dreamer",
+  "games_also": [
+   "Fantasy Maiden Wars DoSD",
+   "\u5e7b\u60f3\u5c11\u5973\u5927\u6226"
+  ],
+  "game_version": "Steam 3575980, build 25976175, fmw_dosd.exe 1.1.0.0 (x64), as of 2026-11-09",
+  "platform": "windows",
+  "engine": "gamemaker",
+  "route": "managed-patch",
+  "tools": [
+   "UndertaleModTool CLI 0.9.2.0 (03c7048)",
+   "Python 3 (own data/cipher tools)",
+   "PowerShell (loader setup)"
+  ],
+  "anti_cheat": "none (offline single-player, Steamworks only)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "SophiaUrabe"
+  ],
+  "date": "2026-11-15",
+  "links": [
+   "https://github.com/UnderminersTeam/UndertaleModTool"
+  ],
+  "tags": [
+   "gamemaker",
+   "gms2",
+   "data-win",
+   "utmt",
+   "randomizer",
+   "srpg",
+   "touhou"
+  ]
+ },
+ {
   "path": "games/far-cry-6/dunia-engine-modding-and-swf-format.md",
   "kind": "game",
   "title": "Far Cry 6 \u2014 Dunia engine modding and the SWF/FEU UI format",
