@@ -13289,7 +13289,15 @@
    "stack-depth",
    "near-heap",
    "umb",
-   "bios-clock"
+   "bios-clock",
+   "benchmark",
+   "bisect",
+   "test-selection",
+   "hidden-windows",
+   "layered-windows",
+   "slot-sizing",
+   "session-0",
+   "crash-recorder"
   ]
  },
  {
@@ -14287,7 +14295,10 @@
    "assembler",
    "8086-compatibility",
    "calling-convention",
-   "general-midi"
+   "general-midi",
+   "stack-buffer-overflow",
+   "text-drawing",
+   "register-clobbering"
   ]
  },
  {
