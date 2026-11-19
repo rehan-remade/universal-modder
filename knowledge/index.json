@@ -3510,6 +3510,62 @@
   ]
  },
  {
+  "path": "games/dying-light-the-beast/new-vegas-as-the-hidden-rules-game-inside-dying-light-the-be.md",
+  "kind": "game",
+  "title": "New Vegas as the hidden rules game inside Dying Light The Beast: FNV's own hits, deaths, VATS and menus on stand-ins",
+  "game": "Dying Light: The Beast",
+  "games_also": [
+   "Fallout: New Vegas"
+  ],
+  "game_version": "The Beast 1.7.1 (Steam 3008130, pinned after Steam pushed 1.8.1, public build 26402545, on 2026-11-05); FalloutNV.exe 1.4.0.525 (Steam 22380, public build 1510068, 4GB-patched); Windows 11 (Shadow cloud PC)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "passthrough",
+  "tools": [
+   "Ultimate ASI Loader 10.0.0 (winmm.dll) for the Beast plugin",
+   "xNVSE 6.4.9",
+   "JIP LN NVSE 57.30",
+   "lStewieAl's Tweaks 10.05",
+   "Mod Organizer 2.5.2 (portable)",
+   "a Python 3 hub (TCP, JSON lines) between the two plugins and an overlay",
+   "ViGEmBus virtual pad (tests only)"
+  ],
+  "anti_cheat": "none listed: Steam starts DyingLightGame_TheBeast_x64_rwdi.exe directly, and its store data shows no anti-cheat or third-party DRM. No step edits that exe. The game has online co-op, so this is single player only with the online setting off; co-op was never used",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-06",
+  "links": [
+   "../../techniques/bridge-contracts-ownership-units-and-lifecycle.md",
+   "../../techniques/collision-and-combat-bridging.md",
+   "../../techniques/choosing-a-mashup-route.md",
+   "../../techniques/evidence-levels-for-mashup-claims.md",
+   "../../techniques/rebuilt-guest-engine-inside-a-host.md",
+   "../fallout-new-vegas/ai-companion-in-fallout-new-vegas-through-an-xnvse-jip-file-.md",
+   "https://vivanewvegas.moddinglinked.com/",
+   "https://github.com/xNVSE/NVSE",
+   "https://github.com/jazzisparis/JIP-LN-NVSE",
+   "https://github.com/carxt/JohnnyGuitarNVSE",
+   "https://github.com/ThirteenAG/Ultimate-ASI-Loader",
+   "https://github.com/GooseMcGee/DyingLight-GMod"
+  ],
+  "tags": [
+   "mashup",
+   "passthrough",
+   "hidden-game",
+   "rules-engine",
+   "stand-in-actors",
+   "xnvse",
+   "asi-loader",
+   "c-engine",
+   "vats",
+   "pip-boy",
+   "version-pinning"
+  ]
+ },
+ {
   "path": "games/elden-ring/cs2-conversion-of-elden-ring-offline-native-rust-dll-via-me3.md",
   "kind": "game",
   "title": "CS2 conversion of Elden Ring offline: native Rust DLL via me3 (fall death, spirit springs, 3D inspect, params)",
