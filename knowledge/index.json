@@ -9618,6 +9618,45 @@
   ]
  },
  {
+  "path": "games/the-binding-of-isaac-rebirth/lua-mods-without-repentogon-a-follower-clone-a-costume-on-th.md",
+  "kind": "game",
+  "title": "Lua mods without REPENTOGON: a follower clone, a costume on the back, an undroppable trinket, safe refactoring",
+  "game": "The Binding of Isaac: Rebirth",
+  "games_also": [],
+  "game_version": "Repentance+ v1.9.7.17 (Steam 250900)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "loader-api",
+  "tools": [
+   "ModUploader",
+   "Python + Pillow",
+   "lupa",
+   "luaparser"
+  ],
+  "anti_cheat": "none; single player and local co-op only (Repentance+ online play needs every mod disabled, and no Daily Runs with mods on)",
+  "status": "in-progress",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "fareria"
+  ],
+  "date": "2026-11-07",
+  "links": [
+   "https://steamcommunity.com/sharedfiles/filedetails/?id=3835155895"
+  ],
+  "tags": [
+   "lua",
+   "no-repentogon",
+   "clone",
+   "costume",
+   "trinket",
+   "refactoring",
+   "workshop",
+   "repentance-plus"
+  ]
+ },
+ {
   "path": "games/the-dark-legions/reloaded-single-dll-fix.md",
   "kind": "game",
   "title": "The Dark Legions Reloaded: crash fixes, a D3D8 -> D3D9Ex renderer, widescreen and new menus in one d3d8.dll",
