@@ -6350,9 +6350,47 @@
   ]
  },
  {
-  "path": "games/minecraft/scaling-a-terraforming-tool-to-150-modes-in-minecraft-26-3-forge.md",
+  "path": "games/minecraft/runtime-dimensions-parallel-universe-portals-and-whole-dimen.md",
   "kind": "game",
-  "title": "Scaling a terraforming tool to 150 modes in Minecraft 26.3 Forge: entity and effect undo, safe file input, regeneration from the seed",
+  "title": "Runtime dimensions, parallel-universe portals and whole-dimension endings in Forge 26.3",
+  "game": "Minecraft",
+  "games_also": [],
+  "game_version": "Minecraft Java 26.3, Forge 66.1.5",
+  "platform": "windows",
+  "engine": "java",
+  "route": "loader-api",
+  "tools": [
+   "ForgeGradle 7",
+   "JDK 25",
+   "Vineflower-decompiled reference sources (kept outside the repo)"
+  ],
+  "anti_cheat": "none (single player, own dedicated server)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-14",
+  "links": [
+   "https://github.com/MinecraftForge/MinecraftForge",
+   "https://github.com/Vineflower/vineflower"
+  ],
+  "tags": [
+   "dimensions",
+   "portals",
+   "shaders",
+   "saveddata",
+   "world-scale",
+   "respawn",
+   "forge-config",
+   "dedicated-server",
+   "forge"
+  ]
+ },
+ {
+  "path": "games/minecraft/terraforming-tool-with-exact-undo-minecraft-26-3-forge.md",
+  "kind": "game",
+  "title": "A terraforming tool grown to 283 modes in Minecraft 26.3 Forge: exact undo for entities, effects, zones and animations, safe file input, regeneration from the seed, contained destructive modes",
   "game": "Minecraft",
   "games_also": [],
   "game_version": "Minecraft Java 26.3, Forge 66.1.5 (ForgeGradle 7, Java 25)",
@@ -6363,7 +6401,8 @@
    "Forge 66.1.5",
    "ForgeGradle 7",
    "decompiled 26.3 sources for API checks (kept out of the repo)",
-   "scripted dev clients"
+   "scripted dev clients",
+   "a dev dedicated server"
   ],
   "anti_cheat": "none (single player and a dev dedicated server the user runs)",
   "status": "working",
@@ -6372,13 +6411,21 @@
   ],
   "humans": [],
   "date": "2026-11-16",
-  "links": [],
+  "links": [
+   "https://github.com/MinecraftForge/MinecraftForge"
+  ],
   "tags": [
    "terraforming",
    "undo",
    "world-editing",
    "file-input",
    "regeneration",
+   "saved-data",
+   "zones",
+   "gui",
+   "destruction",
+   "containment",
+   "interactions",
    "self-test",
    "dedicated-server",
    "forge"
