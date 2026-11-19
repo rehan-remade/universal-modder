@@ -6791,6 +6791,54 @@
   ]
  },
  {
+  "path": "games/nuclear-option/new-aircraft-with-blueprinter-nobp-b25h-ga25x-nimrod.md",
+  "kind": "game",
+  "title": "Three new flyable aircraft in Nuclear Option with Blueprinter .nobp (B-25H, GA-25X, Hawker Nimrod)",
+  "game": "Nuclear Option",
+  "game_version": "Early Access 0.34.3 (Steam app 2168680); still working on the later 0.34 patches (0.34.6 = public build 26327221)",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "loader-api",
+  "tools": [
+   "Blueprinter 2.1.1 (NOBlueprinter-Editor project)",
+   "Unity 2022.3.62f2 (batch mode)",
+   "AssetRipper (stock prefab and script export, reference only)",
+   "BepInEx 5.4.23.5",
+   "HarmonyX",
+   ".NET SDK 8.0.318",
+   "Blender 5.2.2",
+   "fal (nano-banana-2.1, image-to-3D)"
+  ],
+  "anti_cheat": "none found; played in single player only, and never for public servers (see Multiplayer in Setup)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-02",
+  "links": [
+   "https://github.com/nikkorap/NOBlueprinter-Releases",
+   "https://github.com/nikkorap/NOBlueprinter-Editor",
+   "https://github.com/Combat787/NOMM",
+   "https://github.com/KopterBuzz/NOMNOM",
+   "https://github.com/AssetRipper/AssetRipper",
+   "https://github.com/BepInEx/BepInEx"
+  ],
+  "tags": [
+   "aircraft",
+   "new-unit",
+   "blueprinter",
+   "flight-model",
+   "damage-model",
+   "cockpit",
+   "carrier",
+   "taildragger",
+   "biplane",
+   "hud",
+   "bombs"
+  ]
+ },
+ {
   "path": "games/outer-wilds/portal-2-portal-gun-in-outer-wilds-1-1-16-owml-see-through-p.md",
   "kind": "game",
   "title": "Portal 2 portal gun in Outer Wilds 1.1.16 (OWML): see-through portals, momentum, ship and scout",
