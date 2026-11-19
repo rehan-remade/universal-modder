@@ -3789,6 +3789,42 @@
   ]
  },
  {
+  "path": "games/epic-battle-fantasy-4/faster-out-of-battle-hp-mp-regen-by-editing-the-air-swf-with.md",
+  "kind": "game",
+  "title": "Faster out-of-battle HP/MP regen by editing the AIR SWF with FFDec",
+  "game": "Epic Battle Fantasy 4",
+  "games_also": [],
+  "game_version": "Steam 265610, AIR app EpicBattleFantasy4 v1.0.0 (SWF 171,914,112 bytes, as of 2026-11-15)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "managed-patch",
+  "tools": [
+   "JPEXS FFDec 26.5.0",
+   "Eclipse Temurin JRE 21.0.13 x64"
+  ],
+  "anti_cheat": "none (offline single-player; Steam only for achievements/cloud via the FRESteamWorks ANE)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "SophiaUrabe"
+  ],
+  "date": "2026-11-15",
+  "links": [
+   "https://github.com/jindrapetrik/jpexs-decompiler"
+  ],
+  "tags": [
+   "flash",
+   "actionscript3",
+   "adobe-air",
+   "swf",
+   "ffdec",
+   "regen",
+   "rpg"
+  ]
+ },
+ {
   "path": "games/etrian-odyssey-2-hd/etria-inside-eo2-bepinex-protected-il2cpp.md",
   "kind": "game",
   "title": "Etrian Odyssey 1's labyrinth and battles running inside Etrian Odyssey 2 HD (BepInEx on a protected IL2CPP build)",
