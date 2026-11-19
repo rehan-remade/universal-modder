@@ -432,6 +432,7 @@ KNOWN = {
                                       "isaac.md"),
     "call of duty: world at war": ("dual route: zero-linker data override in mods/<name>/*.iwd (GSC/CSC, IWI textures, weapons) + mod.ff via linker_pc.exe for binary assets; T4M (d3d9.dll) raises asset limits; solo or a co-op lobby you host, never public servers", "iw-engine.md"),
     "call of duty 4: modern warfare": ("data overrides in mods/<name>/*.iwd + mod.ff via linker_pc.exe; single-player, or a multiplayer server you run (CoD4X)", "iw-engine.md"),
+    "call of duty (2003)": ("pk3 (zip) mods: GSC scripts under maps/ plus assets, in a mod folder next to main/, loaded with +set fs_game <folder>; single-player, or a multiplayer server you run (PunkBuster is set per server with sv_punkbuster)", "misc-engines.md"),
     "minecraft": ("Fabric (Mixin) or NeoForge", "minecraft.md"),
     "white knuckle": ("BepInEx 5 plugin (netstandard2.1) that registers content through the game's own API: build a "
                       "WKAssetDatabase with ScriptableObject.CreateInstance and pass it to CL_AssetManager.AddNewDatabase "
@@ -447,6 +448,7 @@ KNOWN = {
 KNOWN_FILES = [
     ("call of duty: world at war", ("codwaw.exe", "codwawmp.exe")),
     ("call of duty 4: modern warfare", ("iw3sp.exe", "iw3mp.exe")),
+    ("call of duty (2003)", ("codsp.exe", "codmp.exe")),
     ("dwarf fortress", ("data/vanilla/*/info.txt", "dwarf fortress.exe", "dwarfort")),
     ("mindustry", ("mindustry.exe", "mindustry.json", "mindustry.jar", "mindustry.app/contents/resources/desktop.jar")),
     ("the binding of isaac: rebirth", ("isaac-ng.exe",)),
