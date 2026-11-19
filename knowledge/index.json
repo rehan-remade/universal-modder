@@ -10501,6 +10501,47 @@
   ]
  },
  {
+  "path": "games/the-sims-legacy-collection/slow-in-game-clock-half-speed-or-slower-with-animations-and-.md",
+  "kind": "game",
+  "title": "Slow in-game clock and slower need decay per need (drops only, optional Energy refill %), as a Cheat Engine table",
+  "game": "The Sims Legacy Collection",
+  "games_also": [
+   "The Sims"
+  ],
+  "game_version": "Steam 3314060, Sims.exe PE timestamp 0x67e72e1b, changelist.txt 936127",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "Cheat Engine",
+   "Python ctypes (ReadProcessMemory/WriteProcessMemory)",
+   "capstone",
+   "keystone"
+  ],
+  "anti_cheat": "none (offline game); Sims.exe is wrapped in SteamStub (see Gotchas)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-15",
+  "links": [
+   "https://github.com/riperiperi/FreeSO",
+   "https://github.com/cheat-engine/cheat-engine"
+  ],
+  "tags": [
+   "the-sims",
+   "simantics",
+   "clock",
+   "time-scale",
+   "motives",
+   "need-decay",
+   "cheat-engine",
+   "steamstub",
+   "x86"
+  ]
+ },
+ {
   "path": "games/the-witcher-3/the-witcher-3-remastered-bundle-container-and-cr2w-decoded.md",
   "kind": "game",
   "title": "The Witcher 3 Remastered: .bundle container and CR2W, decoded",
