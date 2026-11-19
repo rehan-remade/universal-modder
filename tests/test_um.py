@@ -497,6 +497,27 @@ def test_mindustry_route(tmp_path, name):
     assert all(rt["route"] != scan.ENGINES["java"][2] for rt in r["routes"])
 
 
+@pytest.mark.parametrize("exe", ["bin64/dontstarve_steam_x64.exe", "bin/dontstarve_steam.exe",   # Windows
+                                 "bin64/dontstarve_steam_x64",                                    # Linux, no .exe
+                                 "bin64/dontstarve_dedicated_server_nullrenderer_x64.exe"])       # dedicated server
+def test_klei_detected(tmp_path, exe):
+    # Don't Starve Together's exe only hosts the Lua in data/databundles/scripts.zip: mods are Lua, not proxy DLLs (#484)
+    key, _ = engine_of(tmp_path, {exe: b"MZ", "data/databundles/scripts.zip": b"PK"})
+    assert key == "klei"
+
+
+@pytest.mark.parametrize("name", ["Don't Starve Together", "dst"])
+def test_dont_starve_together_route(tmp_path, name):
+    # by name or by the files, the Lua mod API comes first and proxy DLLs are only the generic fallback
+    r = _named_game(tmp_path, name, {"bin64/dontstarve_steam_x64.exe": _pe(False, arch=0x8664),
+                                     "data/databundles/scripts.zip": b"PK", "mods/modsettings.lua": "--"})
+    assert r["engine"]["key"] == "klei" and r["routes"][0]["route"] == scan.DST_ROUTE and "mods" in r["mod_folders"]
+    assert [rt["playbook"] for rt in r["routes"]] == ["misc-engines.md", "native.md"]
+    # single-player Don't Starve keeps its Lua loose in data/scripts/: not this key or route
+    r = _named_game(tmp_path, "dont_starve", {"bin/dontstarve_steam.exe": _pe(False), "data/scripts/mods.lua": "--"})
+    assert r["engine"]["key"] != "klei" and all(rt["route"] != scan.DST_ROUTE for rt in r["routes"])
+
+
 @pytest.mark.parametrize("name", ["The Binding of Isaac Rebirth", "isaac"])
 def test_isaac_route(tmp_path, name):
     # the Steam folder has no colon, so the Lua route must come from isaac-ng.exe, ahead of the native proxy-DLL one

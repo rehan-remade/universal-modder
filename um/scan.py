@@ -385,6 +385,10 @@ MOD_DIRS = ["mods", "mod", "addons", "plugins", "custom", "workshop", "usermods"
 BANNERLORD_ROUTE = ("official module system: Modules/<id>/SubModule.xml + ModuleData XML/XSLT and C# MBSubModuleBase; "
                    "optional Bannerlord.Harmony for managed patches; inspect the installed TaleWorlds DLLs")
 BANNERLORD_BIN_DIRS = ("win64_shipping_client", "gaming.desktop.x64_shipping_client", "win64_shipping_weditor")
+# Don't Starve Together, matched by name (KNOWN) or by its files (the klei engine key)
+DST_ROUTE = ("official Lua mod API: mods/<name>/ (modinfo.lua + modmain.lua + prefabs/, api_version=10), with the game's own Lua "
+             "in data/databundles/scripts.zip as the reference; Don't Starve Mod Tools (free Steam app 245850): autocompiler "
+             "builds .tex/.xml and anim .zip files, ModUploader publishes to the Workshop")
 KNOWN = {
     "mount & blade ii: bannerlord": (BANNERLORD_ROUTE, "bannerlord.md"),
     "mount & blade ii bannerlord": (BANNERLORD_ROUTE, "bannerlord.md"),
@@ -410,6 +414,7 @@ KNOWN = {
     "balatro": ("Steamodded + lovely (Lua injection into the LÖVE game)", "misc-engines.md"),
     "kenshi": ("FCS .mod data mods + asset overrides in mods/<name>/ mirroring data/ (load order in the launcher or KMM); code via RE_Kenshi + KenshiLib C++ plugins (VS2010 v100 x64, GPLv3, listed in the mod's RE_Kenshi.json) - the game exe is native, no CLR", "native.md"),
     "factorio": ("official Lua modding API (mods/ folder, data.lua + control.lua)", "misc-engines.md"),
+    "don't starve together": (DST_ROUTE, "misc-engines.md"),
     "mindustry": ("the built-in mod loader, no patching: mod.hjson/mod.json + content/<type>/*.hjson|json (blocks, units, items...), "
                   "sprites/ (sprites-override/ replaces vanilla), scripts/main.js; Java mods are jars from Anuken/MindustryJavaModTemplate. "
                   "Mods go in %APPDATA%/Mindustry/mods, ~/.local/share/Mindustry/mods, or <install>/saves/mods on Steam", "misc-engines.md"),
@@ -510,6 +515,7 @@ ENGINES = {
     "cocos": ("Cocos2d-x", "native.md", "Lua/JS scripts if bundled; else native hooks"),
     "haxe": ("Haxe/OpenFL/HaxeFlixel", "misc-engines.md", "assets/ overrides; hscript mod loaders where present (Polymod)"),
     "iw": ("IW engine (Call of Duty)", "iw-engine.md", "data overrides in mods/<name>/*.iwd (GSC/CSC scripts, IWI textures, weapons) + mod.ff via the Mod Tools' linker_pc.exe; um fastfile reads rawfiles out of your own .ff"),
+    "klei": ("Klei Lua engine (Don't Starve family)", "misc-engines.md", DST_ROUTE),
     "native": ("Unknown native engine", "native.md", "proxy-DLL loader + function hooks (MinHook/SafetyHook), memory reading; Ghidra/IDA + x64dbg + Cheat Engine"),
 }
 
@@ -547,6 +553,13 @@ def detect(ix: Index) -> tuple[list[tuple[str, int, list[str], dict]], dict]:
             except (OSError, ET.ParseError, LookupError, ValueError):
                 pass
         add("bannerlord", 100, [dll, "modules/native/submodule.xml"], **det)
+
+    # Klei's engine (Don't Starve Together): the game logic is Lua in data/databundles/scripts.zip, and the exe in bin/ or
+    # bin64/ only hosts it, so mods are Lua, not proxy DLLs. The Linux builds have no .exe, and the dedicated server's exe is
+    # dontstarve_dedicated_server_nullrenderer*. Single-player Don't Starve keeps its Lua loose in data/scripts/ instead.
+    klei = ix.find("bin/dontstarve_*", "bin64/dontstarve_*") if "data/databundles/scripts.zip" in ix.files else []
+    if klei:
+        add("klei", 100, klei[:1] + ["data/databundles/scripts.zip"])
 
     # Unity
     data_dirs = [d for d in {"/".join(f.split("/")[:-1]) for f in ix.find("*_data/globalgamemanagers", "*_data/data.unity3d", "*_data/maindata")}]
