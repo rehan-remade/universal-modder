@@ -5491,6 +5491,47 @@
   ]
  },
  {
+  "path": "games/left-4-dead-2/rust-wasm-and-lua-mlua-server-mods-for-left-4-dead-2-as-sour.md",
+  "kind": "game",
+  "title": "Rust/Wasm and Lua (mlua) server mods for Left 4 Dead 2 as SourceMod extensions, with a bridge between them",
+  "game": "Left 4 Dead 2",
+  "games_also": [],
+  "game_version": "PatchVersion 2.2.4.3, Steam; Metamod:Source 1.12.0-dev+1219, SourceMod 1.12.0.7210, left4dhooks 1.166",
+  "platform": "windows",
+  "engine": "source",
+  "route": "loader-api",
+  "tools": [
+   "Metamod:Source",
+   "SourceMod 1.12",
+   "left4dhooks",
+   "Rust 1.100",
+   "wasmi 2.0.1",
+   "mlua 0.12.2 (Lua 5.4.9)",
+   "zig (cargo-zigbuild)",
+   "lua-language-server 3.19.2",
+   "um win"
+  ],
+  "anti_cheat": "VAC; local listen server only, always launched with -insecure",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-19",
+  "links": [],
+  "tags": [
+   "sourcemod",
+   "extension",
+   "webassembly",
+   "lua",
+   "mlua",
+   "scripting-runtime",
+   "interop",
+   "sandbox",
+   "hot-reload"
+  ]
+ },
+ {
   "path": "games/let-it-die/in-game-imgui-cheat-overlay-and-save-queue-item-delivery-for.md",
   "kind": "game",
   "title": "In-game ImGui trainer and save-queue item delivery for LET IT DIE Offline Edition (UE3)",
