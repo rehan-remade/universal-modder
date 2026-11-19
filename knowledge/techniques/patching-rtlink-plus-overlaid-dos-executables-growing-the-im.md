@@ -7,7 +7,7 @@ agents:
 humans: []
 date: '2026-10-25'
 links: ["https://github.com/eb4x/ghidra-plugin-rtlink", "https://github.com/keystone-engine/keystone", "https://github.com/capstone-engine/capstone"]
-tags: [dos, rtlink, overlays, vm-manager, binary-patching, mz-exe, trampolines, code-cave, x86-16, memory-pressure, conventional-memory, page-cache, umb, gates, hook-dispatcher, relocations, keystone, assembler, 8086-compatibility, calling-convention, general-midi]
+tags: [dos, rtlink, overlays, vm-manager, binary-patching, mz-exe, trampolines, code-cave, x86-16, memory-pressure, conventional-memory, page-cache, umb, gates, hook-dispatcher, relocations, keystone, assembler, 8086-compatibility, calling-convention, general-midi, stack-buffer-overflow, text-drawing, register-clobbering]
 ---
 # Patching RTLink/Plus overlaid DOS executables: growing the image and calling new code safely from overlays
 
@@ -62,7 +62,9 @@ eb4x's doc writes it `210d:0d91` because Ghidra loads the image at segment 0x100
 pair a resident-target trampoline), which rewrites the offset word of the calling `lcall` and continues through
 the far jump that follows it.
 On a call, the manager also inspects the caller's call target to decide whether the call comes from an
-overlay page; only then does it protect the caller's return address against the page being discarded.
+overlay page; only then does it protect the caller's return address against the page being discarded. In
+VICEROY the first call through a stub is classified at `110D:2FD2`, and the routine that follows the call target
+is at `110D:3254` (`210D:2FD2` and `210D:3254` in Ghidra's numbering).
 - **Working layout (18 bytes):** the hook site in the overlay does `lcall NEWSEG:t`, and
   `t: call fixsegs; jmp far v; v: lcall <vector>; ljmp NEWSEG:hook`. The manager follows a `call near` only
   when a `jmp far` comes next, so this chain reaches the vector call and is recognised. fixsegs fills the
@@ -141,13 +143,31 @@ So:
 - measure the game's own low-water free memory in the heaviest scenarios (see the DOSBox note's guest-RAM
   section), set a budget for the inserted block with a safety margin, and test it automatically;
 - for more room, lower the cache caps: each paragraph taken from the cache gives one back to the budget
-  (VICEROY: 16 and 32 KB smaller caches showed no slowdown over several turns, even with EMS/XMS off).
+  (VICEROY: 16 and 32 KB smaller caches showed no slowdown over several turns, even with EMS/XMS off);
+- whatever shrinks the pool (lower caps, or less free memory for the cache extra), keep it at least as big as
+  two overlays that call each other need together: gotcha 29's intermittent evm0012 came with a pool cut below
+  that (cause narrowed, not confirmed).
 
 ### Hooks that record state must tell real actions from look-ups
 Games often run the same routine to *ask* something as to *do* it (VICEROY's AI "lifts" a ship's passengers
 to count them, then puts them back; the Europe screen lifts them to list them). A hook that records state on
 that routine (here: which ship carries which unit) must recognise the look-only callers, or it records things
 that never happened. List every caller of the routine you hook and classify each one.
+
+### Several patchers at once: hand out space from one ledger
+With several people or agents patching in parallel (one git branch each), "find a free gap and use it"
+breaks: on VICEROY (2026-10-27) three branches put hooks in the same unused 96 bytes, a fourth placed its
+new block on top of another branch's, and two used the same save-chunk number. Each branch passed its
+own tests; the clash only shows at merge, or worse, after it.
+- Once the original free code area is full, give each feature its own block appended to the inserted
+  image, and compute every block's base from the previous block's end (never a literal address), so a
+  block that grows shifts the later ones instead of overlapping them.
+- Keep ONE record of every claim: code ranges, block order and size, data-segment holes, save-chunk ids
+  and page-cache cuts, with an owner and a merged/reserved status. Hand space out with a small script that
+  takes a lock file (`O_EXCL`), picks the lowest free range and appends the reservation; refuse requests
+  for the full fixed area.
+- Check it at build time: fail if the tree uses a range not reserved for that owner, overlaps another
+  owner, or gives a block a literal base. Compare each branch with its merge base, not current master.
 
 ### Stress-test it
 With EMS/XMS available the manager rarely discards pages, so a broken hook fails only now and then. Run the
@@ -168,7 +188,8 @@ this manager and confirmed in game on it only. Gotcha 22's fix is planned, not b
 manager's routine bodies byte-identical across the games it covers (only their offsets move), so the trampoline rule
 should carry over, but run the emulated call test on your own binary before trusting it. The call-target rule, the
 BP-chain walk and the page-pool startup were read from VICEROY's manager and its error messages; eb4x's doc doesn't
-cover them.
+cover them. Gotcha 29's cause is narrowed from the crash addresses, not confirmed: the manager's thunk-skip path
+hasn't been trapped yet.
 
 ## Gotchas
 1. **About 1 run in 10-20: debug assertion popups, garbage prompts with nonsense values, an R6003 divide by
@@ -202,11 +223,12 @@ cover them.
 9. **A state-recording hook tied units to AI ships that never sailed.** (2026-10-25.) **Cause:** the hooked
    routine was also called by the AI to count and put back. **Fix:** treat those call sites as look-only.
 10. **"evm0012" with a CS of DEAD after long play, about 1 run in 15 of a 40-turn soak.** (2026-10-28.) **Cause:**
-    given free upper memory, the manager built a page heap there, right under DOSBox's EMS page frame at E000. A
-    return into a page was re-vectored to a frame whose segment plus the module's offset gave DEAD (DE52 + 5B), so
-    the manager couldn't place the return address. The unpatched game has the same hazard (a few of its
-    test runs were flaky the same way). **Fix:** the start-up allocates all remaining upper memory after its own
-    block and keeps it, so the manager keeps its pages in conventional memory and EMS/XMS. 42 clean soaks after.
+    given free upper memory, the manager built a page heap there, right under DOSBox's EMS page frame at E000, and
+    moved page 15h (0x213 paragraphs, about 8.5 KB) to DE52, so it ended at E065, 0x65 paragraphs into the frame. A
+    return into that page was re-vectored to its code segment (DEAD = DE52 + 5B), and the manager couldn't place the
+    return address. The unpatched game has the same hazard (a few of its test runs were flaky the same way).
+    **Fix:** the start-up allocates all remaining upper memory after its own block and keeps it, so the manager
+    keeps its pages in conventional memory and EMS/XMS. 42 clean soaks after.
 11. **MSC run-time error R6001 at the end of a game, only with one feature in play.** (2026-10-28.) **Cause:** a
     patch moved an `lcall` three bytes on, so the patched bytes covered a word the overlay manager relocates; when
     the page loaded, the call was rewritten into garbage. Emulated tests passed because they didn't apply the
@@ -255,7 +277,7 @@ cover them.
     game's `fread` changes CX; the emulated test's stand-in for it did not, so the emulated test passed while the
     first in-game run took every new-version chunk for the old version. **Fix:** keep the length in memory or on the
     stack across the call. An emulated test can't catch this class of bug unless it runs the game's real routine or a
-    stand-in that clobbers every scratch register (which this project did not add).
+    stand-in that clobbers every scratch register (this project had none then; see gotcha 27).
 19. **A popup opened from a correctly framed hook still stopped with "evm0012 ... Return address could not be found
     on the BP chain".** (2026-11-03.) **Cause:** the hook was entered through the shared dispatcher, a plain
     `call far` from overlay code into the UMB that does not pass through the manager's vector, so the manager never
@@ -284,6 +306,50 @@ cover them.
     **Fix (planned):** pause silences every music channel and remembers each channel's last volume, resuming
     resends them; volume is done by scaling every channel-volume (CC 7) message as the player sends it and
     resending all channels on a change. The GM master-volume SysEx is ignored by some synths.
+23. **evm0012 "unvectored call" the second time a hook called a resident routine.** (2026-10-27.)
+    **Cause:** the hook made the far call as `push seg; push off; retf` into the resident routine; the
+    manager couldn't vector it. **Fix:** `call far cs:[ptr]` with the far pointer stored in the block.
+24. **The game jumped into garbage after the first menu choice through a new dialog hook.** (2026-10-27.)
+    **Cause:** two of the game's menu routines remove their own arguments (`retf N`), and the hook also
+    did `add sp` after the call, as for a C-style routine. **Fix:** read the callee's return instruction
+    before calling it; test the hook in an emulator that checks SP after the call.
+25. **Three branches' hooks in the same 96 free bytes.** (2026-10-27.) **Cause:** each agent picked "free"
+    space by reading the code in its own branch. **Fix:** the ledger above; nobody picks space by hand.
+26. **A freeze ("invalid opcode", stack inside a data array) after clicking a label in a new screen.**
+    (2026-11-11.) **Cause:** the game's text drawing routine copies the string into an 80-byte buffer on its
+    own stack with no length check. A composed line of 90 characters (a narrow font let it pass the pixel
+    width check) ran past the buffer into the saved BP and the return address. 81-86 characters only
+    overwrite the colours stored above the buffer, which is why a slightly long line had worked for weeks.
+    Enlarging the routine's frame was not safe (its saved parameters sit just below it). **Fix:** draw long
+    lines in pieces of at most 79 characters, each starting at the x the previous call returned (same
+    pixels); a build check that fails on any new string constant of 80+ characters; audit every caller of
+    the routine's entry points for composed lines (names + clauses at their longest).
+27. **A message box showed the first lines of the message file (its copyright header) instead of a
+    message.** (2026-11-11.) **Cause:** the hook kept the message key's pointer in CX across two calls to
+    the game's C routines; Microsoft C routines may clobber AX, BX, CX, DX and ES, so the key arrived as 0,
+    and the text lookup only seeks a key when the pointer is non-null - with null it reads the file from the
+    top. The emulated test faked those game calls without touching CX, so it passed. **Fix:** push/pop
+    around the calls; make every emulated fake of a game routine clobber the volatile registers, so tests
+    catch values held across calls. Also add a check that every message key the patch names exists in the
+    message files.
+28. **Moving a merged ledger record before its code was merged broke the space check on every other
+    branch.** (2026-11-11.) **Cause:** a feature needed to move three older data tables into freed space; the
+    records were repointed at once, but only the feature's branch had the new code, and the check reads
+    every live record against each tree. **Fix:** record the new homes as the feature's own reservations
+    (no overlap with anything) and swap the old records over in the same step that merges the feature.
+29. **evm0012 "Unvectored call to resident symbol" in an AI's turn, now and then, never on a reload.**
+    (2026-11-11, cause narrowed, not confirmed.) Reading the message: RTLink prints "near address" with an
+    absolute segment (not a map address) only when CS lies outside the resident image, i.e. inside the
+    page pool. Compare that address with each overlay's load frame: here CS was one overlay's frame but
+    the bytes there were another, smaller overlay's (both frames end at the top of the pool), and the
+    printed call was that overlay's code at the same linear address. So a far call into the second overlay
+    evicted the caller's overlay and returned straight into its old place without the manager's reload
+    thunk. It only happens when the patch has shrunk the page pool below the size of the two overlays
+    together (here 0x999 paragraphs vs 0xE99 needed; the original's pool holds both), which explains a
+    patch-only, intermittent crash. Leftover return records from resident calls are normal RTLink behaviour
+    (the original EXE has them too). Check every patch hook inside the calling overlay first (frames,
+    gates); then trap the manager's thunk-skip path in a debugger build instead of sampling, which is too
+    slow to see one short call.
 
 ## Seen in
 - Sid Meier's Colonization 3.0 (DOS, GOG release) binary-patching project (no public game note yet).
