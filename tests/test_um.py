@@ -552,8 +552,16 @@ def test_steam_games_utf8(tmp_path, monkeypatch, library_name, install_name, gam
         encoding="utf-8",
     )
     monkeypatch.setattr(scan, "steam_roots", lambda: [root])
+    _cp1252_default(monkeypatch)
 
-    # Emulate a non-UTF-8 Windows default on every test platform, using real files.
+    assert scan.steam_games() == [{
+        "store": "steam", "appid": "123", "name": game_name,
+        "path": str(game_path), "workshop": None,
+    }]
+
+
+def _cp1252_default(monkeypatch):
+    """Emulate a non-UTF-8 Windows default for Path.read_text on every test platform."""
     original_read_text = Path.read_text
 
     def read_text(path, encoding=None, errors=None, **kwargs):
@@ -561,10 +569,28 @@ def test_steam_games_utf8(tmp_path, monkeypatch, library_name, install_name, gam
 
     monkeypatch.setattr(Path, "read_text", read_text)
 
-    assert scan.steam_games() == [{
-        "store": "steam", "appid": "123", "name": game_name,
-        "path": str(game_path), "workshop": None,
-    }]
+
+def test_epic_games_utf8(tmp_path, monkeypatch):
+    # the launcher writes its .item manifests as UTF-8; read as cp1252 the install folder doesn't exist and the game vanishes
+    install = tmp_path / "Jeu\u00e9"
+    install.mkdir()
+    manifests = tmp_path / "Manifests"
+    manifests.mkdir()
+    (manifests / "ABC.item").write_text(json.dumps(dict(
+        AppName="Example", DisplayName="Example Game\u2122", InstallLocation=str(install)), ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setattr(scan, "epic_manifests", lambda: manifests)
+    _cp1252_default(monkeypatch)
+    assert scan.epic_games() == [dict(store="epic", appid="Example", name="Example Game\u2122", path=str(install))]
+
+
+def test_unity_app_info_utf8(tmp_path, monkeypatch):
+    # app.info is the company and product name on two lines, in UTF-8 whatever the build machine's code page
+    _cp1252_default(monkeypatch)
+    _, det = engine_of(tmp_path, {
+        "UnityPlayer.dll": b"MZ", "Game_Data/globalgamemanagers": b"\0" * 20,
+        "Game_Data/app.info": "Caf\u00e9 Studio\n\u30b2\u30fc\u30e0",
+    })
+    assert det["company"] == "Caf\u00e9 Studio" and det["product"] == "\u30b2\u30fc\u30e0"
 
 
 def test_steam_root_from_registry(tmp_path, monkeypatch):
