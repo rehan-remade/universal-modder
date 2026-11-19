@@ -10962,6 +10962,55 @@
   ]
  },
  {
+  "path": "games/touhou-puppet-dance-performance-shard-of-dreams/nuzlocke-in-game-randomizer-and-qol-items-via-a-tpdphook-ext.md",
+  "kind": "game",
+  "title": "Nuzlocke, in-game randomizer and QoL items via a TPDPHook-Extended fork",
+  "game": "Touhou Puppet Dance Performance Shard of Dreams",
+  "games_also": [
+   "\u5e7b\u60f3\u4eba\u5f62\u6f14\u821e-\u30e6\u30e1\u30ce\u30ab\u30b1\u30e9-",
+   "TPDP SoD Extended"
+  ],
+  "game_version": "SoD 1.103 + Shard of Dreams Extended V4 (SoD_Extended_Setup_V4.exe, data Sep 2022, dxgi.dll Aug 2022) + English translation patch; FocasLens' own release (not on Steam), with the base game installed",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "TPDPHook-Extended (php42) @ac012c3 forked",
+   "TPDP-Dev-Tools 1.4.1 (php42)",
+   "tpdp-randomizer 1.3.0 (php42, GPLv3)",
+   "MSVC 14.44 / VS2022 BuildTools CMake (Win32)",
+   "Python pefile + capstone",
+   "innoextract 1.9",
+   "ILSpy"
+  ],
+  "anti_cheat": "none. The game has optional netplay (Extended V4 points it at its own community server); everything here is offline single-player, the network code was not touched, and fork saves stay out of netplay",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "SophiaUrabe"
+  ],
+  "date": "2026-11-15",
+  "links": [
+   "https://github.com/php42/TPDPHook-Extended",
+   "https://github.com/php42/TPDP-Dev-Tools",
+   "https://github.com/php42/tpdp-randomizer",
+   "http://fo-lens.net/enbu_ap/"
+  ],
+  "tags": [
+   "touhou",
+   "focaslens",
+   "dxlib",
+   "x86",
+   "dxgi-proxy",
+   "nuzlocke",
+   "randomizer",
+   "event-script",
+   "save-format"
+  ]
+ },
+ {
   "path": "games/trackmania/trackmania-2020-custom-3d-skins.md",
   "kind": "game",
   "title": "Custom 3D car skins in Trackmania (2020) with Blender, Blendermania and gbx-py",
