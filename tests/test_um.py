@@ -706,6 +706,24 @@ def test_scan_call_of_duty_2003_is_not_the_live_service_game(tmp_path):
     assert any(w.startswith("anti-cheat present (PunkBuster)") and "never inject into online play" in w for w in r["warnings"])
 
 
+@pytest.mark.parametrize("name, files", [("Call of Duty", ["CoDSP.exe", "CoDMP.exe"]),   # retail / Steam installdir
+                                         ("cod1", ["CoDMP.exe"]),                       # renamed, multiplayer exe only
+                                         ("Call of Duty (2003)", [])])                  # Steam's library name
+def test_scan_call_of_duty_2003_route(tmp_path, name, files):
+    # the 2003 game scans as id Tech (main/*.pk3): its own route (fs_game, a server you run) comes first, not the generic one
+    r = _named_game(tmp_path, name, dict({f: b"x" for f in files}, **{"main/pak0.pk3": b"PK", "pb/pbcl.dll": b"x"}))
+    assert r["engine"]["key"] == "idtech"
+    assert r["routes"][0]["route"] == scan.KNOWN["call of duty (2003)"][0] and r["routes"][0]["why"] == "known game"
+    assert "fs_game" in r["routes"][0]["route"] and "sv_punkbuster" in r["routes"][0]["route"]
+    assert all(rt["route"] != scan.ENGINES["idtech"][2] for rt in r["routes"])
+    assert not any("online competitive" in w for w in r["warnings"])
+    assert any(w.startswith("anti-cheat present (PunkBuster)") for w in r["warnings"])   # still warned
+    # the live-service launcher's folder has none of those exes and gets neither the route nor a pass
+    r = _named_game(tmp_path / "hq", "Call of Duty", {"cod.exe": b"MZ"})
+    assert all(rt["route"] != scan.KNOWN["call of duty (2003)"][0] for rt in r["routes"])
+    assert any("online competitive" in w for w in r["warnings"])
+
+
 def _fake_host(monkeypatch, os_name, machine, wsl=False):
     import platform
     monkeypatch.setattr(scan, "is_mac", lambda: os_name == "macos")
