@@ -497,6 +497,27 @@ def test_mindustry_route(tmp_path, name):
     assert all(rt["route"] != scan.ENGINES["java"][2] for rt in r["routes"])
 
 
+@pytest.mark.parametrize("exe", ["bin64/dontstarve_steam_x64.exe", "bin/dontstarve_steam.exe",   # Windows
+                                 "bin64/dontstarve_steam_x64",                                    # Linux, no .exe
+                                 "bin64/dontstarve_dedicated_server_nullrenderer_x64.exe"])       # dedicated server
+def test_klei_detected(tmp_path, exe):
+    # Don't Starve Together's exe only hosts the Lua in data/databundles/scripts.zip: mods are Lua, not proxy DLLs (#484)
+    key, _ = engine_of(tmp_path, {exe: b"MZ", "data/databundles/scripts.zip": b"PK"})
+    assert key == "klei"
+
+
+@pytest.mark.parametrize("name", ["Don't Starve Together", "dst"])
+def test_dont_starve_together_route(tmp_path, name):
+    # by name or by the files, the Lua mod API comes first and proxy DLLs are only the generic fallback
+    r = _named_game(tmp_path, name, {"bin64/dontstarve_steam_x64.exe": _pe(False, arch=0x8664),
+                                     "data/databundles/scripts.zip": b"PK", "mods/modsettings.lua": "--"})
+    assert r["engine"]["key"] == "klei" and r["routes"][0]["route"] == scan.DST_ROUTE and "mods" in r["mod_folders"]
+    assert [rt["playbook"] for rt in r["routes"]] == ["misc-engines.md", "native.md"]
+    # single-player Don't Starve keeps its Lua loose in data/scripts/: not this key or route
+    r = _named_game(tmp_path, "dont_starve", {"bin/dontstarve_steam.exe": _pe(False), "data/scripts/mods.lua": "--"})
+    assert r["engine"]["key"] != "klei" and all(rt["route"] != scan.DST_ROUTE for rt in r["routes"])
+
+
 @pytest.mark.parametrize("name", ["The Binding of Isaac Rebirth", "isaac"])
 def test_isaac_route(tmp_path, name):
     # the Steam folder has no colon, so the Lua route must come from isaac-ng.exe, ahead of the native proxy-DLL one
@@ -531,8 +552,16 @@ def test_steam_games_utf8(tmp_path, monkeypatch, library_name, install_name, gam
         encoding="utf-8",
     )
     monkeypatch.setattr(scan, "steam_roots", lambda: [root])
+    _cp1252_default(monkeypatch)
 
-    # Emulate a non-UTF-8 Windows default on every test platform, using real files.
+    assert scan.steam_games() == [{
+        "store": "steam", "appid": "123", "name": game_name,
+        "path": str(game_path), "workshop": None,
+    }]
+
+
+def _cp1252_default(monkeypatch):
+    """Emulate a non-UTF-8 Windows default for Path.read_text on every test platform."""
     original_read_text = Path.read_text
 
     def read_text(path, encoding=None, errors=None, **kwargs):
@@ -540,10 +569,28 @@ def test_steam_games_utf8(tmp_path, monkeypatch, library_name, install_name, gam
 
     monkeypatch.setattr(Path, "read_text", read_text)
 
-    assert scan.steam_games() == [{
-        "store": "steam", "appid": "123", "name": game_name,
-        "path": str(game_path), "workshop": None,
-    }]
+
+def test_epic_games_utf8(tmp_path, monkeypatch):
+    # the launcher writes its .item manifests as UTF-8; read as cp1252 the install folder doesn't exist and the game vanishes
+    install = tmp_path / "Jeu\u00e9"
+    install.mkdir()
+    manifests = tmp_path / "Manifests"
+    manifests.mkdir()
+    (manifests / "ABC.item").write_text(json.dumps(dict(
+        AppName="Example", DisplayName="Example Game\u2122", InstallLocation=str(install)), ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setattr(scan, "epic_manifests", lambda: manifests)
+    _cp1252_default(monkeypatch)
+    assert scan.epic_games() == [dict(store="epic", appid="Example", name="Example Game\u2122", path=str(install))]
+
+
+def test_unity_app_info_utf8(tmp_path, monkeypatch):
+    # app.info is the company and product name on two lines, in UTF-8 whatever the build machine's code page
+    _cp1252_default(monkeypatch)
+    _, det = engine_of(tmp_path, {
+        "UnityPlayer.dll": b"MZ", "Game_Data/globalgamemanagers": b"\0" * 20,
+        "Game_Data/app.info": "Caf\u00e9 Studio\n\u30b2\u30fc\u30e0",
+    })
+    assert det["company"] == "Caf\u00e9 Studio" and det["product"] == "\u30b2\u30fc\u30e0"
 
 
 def test_steam_root_from_registry(tmp_path, monkeypatch):
@@ -608,7 +655,7 @@ def test_slay_the_spire_2_is_not_sts1(tmp_path):
 def test_online_only_matches_whole_names():
     # a substring test told agents to stop on single-player games: Rusty Lake ("rust"), Battlefield 1942, MW2 (2009)
     for offline in ["Rusty Lake Paradise", "Rusted Warfare", "Battlefield 1942", "Call of Duty: Modern Warfare 2 (2009)",
-                    "Deadlock: Planetary Conquest", "The Final Station", "Trusty Rusty"]:
+                    "Call of Duty (2003)", "Deadlock: Planetary Conquest", "The Final Station", "Trusty Rusty"]:
         assert scan.online_only(offline) is None, offline
     for online in ["Rust", "Counter-Strike 2", "Call of Duty®", "Tom Clancy's Rainbow Six® Siege", "PUBG: BATTLEGROUNDS",
                    "Overwatch® 2", "Deadlock", "NARAKA: BLADEPOINT"]:
@@ -622,6 +669,22 @@ def test_scan_warns_only_for_online_games(tmp_path):
         for i in range(6):
             (d / f"f{i}.txt").write_text("x")
         assert any("online competitive" in w for w in scan.scan(str(d))["warnings"]) == warned, name
+
+
+def test_scan_call_of_duty_2003_is_not_the_live_service_game(tmp_path):
+    # the 2003 game installs to a folder named plain "Call of Duty", the same name as today's launcher: it was told to stop
+    for sub, files, warned in [("2003", ["CoDSP.exe", "CoDMP.exe", "main/pak0.pk3", "pb/pbcl.dll"], False),
+                               ("launcher", ["cod.exe"], True)]:
+        d = tmp_path / sub / "Call of Duty"
+        for rel in files + [f"f{i}.txt" for i in range(6)]:
+            (d / rel).parent.mkdir(parents=True, exist_ok=True)
+            (d / rel).write_bytes(b"x")
+        r = scan.scan(str(d))
+        assert any("online competitive" in w for w in r["warnings"]) == warned, sub
+    # its multiplayer still gets the PunkBuster warning, which keeps modded clients out of online play
+    r = scan.scan(str(tmp_path / "2003" / "Call of Duty"))
+    assert "PunkBuster" in r["anti_cheat"]
+    assert any(w.startswith("anti-cheat present (PunkBuster)") and "never inject into online play" in w for w in r["warnings"])
 
 
 def _fake_host(monkeypatch, os_name, machine, wsl=False):
