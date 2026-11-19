@@ -73,9 +73,9 @@ the loader fills). Keep those stubs small and count them: they are the conventio
 
 ### Claim the rest of upper memory if a manager would use it
 After its own block, the loader here allocates every remaining UMB (up to 4 blocks) and keeps them until exit. The
-game's overlay manager otherwise built a page heap in upper memory right under the EMS frame and crashed on its
-segment arithmetic there (RTLink note, gotcha 10). Look at what your game's memory managers do with free UMBs before
-you leave any.
+game's overlay manager otherwise built a page heap in upper memory right under the EMS frame, where one page ran
+0x65 paragraphs into the frame, and crashed (RTLink note, gotcha 10). Look at what your game's memory managers do
+with free UMBs before you leave any.
 
 ### Turning EMS off when a sound driver needs EMS
 In this game the overlay manager uses EMS or XMS only as a small second-level page cache (the same size with
@@ -135,10 +135,11 @@ Reading a module from the EXE on every swap costs a DOS open, seek, read and clo
 - Keep the file path as the fallback: no XMS driver, a refused allocation, a read or move error, or an image outside
   the cached range all load from the EXE as before. Test each fallback (emulated here, with an emulated XMS driver).
 - XMS handles do not belong to a process: DOS frees nothing at exit. Hook int 21h after the cache is filled, and on
-  4Ch (exit) and 4B00h (exec: this game runs its ending and intro programs, which re-run the game in the same
-  process; see gotcha 5) free the block and restore the old vector, then chain on with the registers unchanged.
+  4Ch (exit) and 4B00h (exec) free the block and restore the old vector, then chain on with the registers unchanged.
   Restore the vector only while int 21h still points at your hook; other functions (including 4B03h overlay loads by
-  the sound drivers) pass straight through.
+  the sound drivers) pass straight through. This game's own handovers to its intro and ending programs don't call
+  4B00h: its run-time loads the next program with 4B03h (gotcha 5), so the 4B00h test never fires for them and the
+  block isn't freed at a handover. A fix was planned when that was found (2026-11-07).
 - Costs here: conventional memory 0, a few hundred bytes of manager code, 43 KB of XMS.
 - Two risks the design leaves open (reasoned from the design, neither observed or tested in game):
   - an abnormal end that does not come through the int 21h vector (a DOS Ctrl+Break or critical-error abort can
@@ -171,10 +172,11 @@ RTLink note (stray 67h forms run fine in DOSBox and aren't valid on an 8086 or 2
   swaps and refusals.
 
 ### Two cheap ways to free resident room
-- **Templates into tables.** The start-up code built the 10-byte gates from a byte-for-byte template of all 90
-  gates (0x31B bytes) in the start-up window. A 2-byte entry per gate (the hook's target), expanded by the start-up
-  code, does the same in 0x1A6 bytes all told; check that the expanded gates are byte-identical to the old build's
-  in an emulated start-up.
+- **Templates into tables.** The start-up code built the gates from a byte-for-byte template of all 90 of them (69
+  of the 10-byte vectored form and 21 of the 5-byte direct form for resident callers: 0x31B bytes) in the start-up
+  window. A 2-byte entry per gate (the hook's target), expanded by the start-up code, needs a 0xB4-byte table
+  instead, and the whole boot area went from 0x3F9 to 0x1A6 bytes; check that the expanded gates are byte-identical
+  to the old build's in an emulated start-up.
 - **Cold resident code into transient modules.** Survey every resident block first (size, hot or cold, owner):
   cold means rare dialogs, reports, one-off rules. Move the biggest cold bodies into transient modules and keep
   only a thunk and the quick checks resident (here: a rule for abandoned colonies kept its per-site checks and
@@ -191,9 +193,6 @@ RTLink note (stray 67h forms run fine in DOSBox and aren't valid on an 8086 or 2
 - How the effects sound through the emulated EMS: all test runs are muted; the bytes are compared, not listened to.
 - The intro program (a separate EXE with its own copy of the driver) finds no EMS with `ems=false`; it played no
   sampled effect in a 120 s run with EMS on either, so nothing seems lost, but that was not proven for every path.
-- Gotcha 5's "same PSP": DOSBox 0.74-2's 4B00h allocates a block and builds a new PSP there (`DOS_Execute`,
-  `SetupPSP`), so plain 4B00h doesn't explain why the next program owns the old blocks. How the C library's `exec`
-  gets there isn't pinned down in this note.
 
 ## Gotchas
 1. **No UMB although the conf says `umb=true`.** (2026-10-27, found while designing the loader.) **Cause:** DOSBox
@@ -214,9 +213,10 @@ RTLink note (stray 67h forms run fine in DOSBox and aren't valid on an 8086 or 2
    offset. **Fix:** write shift counts in hex in the generator and check the assembled shifts; the build refuses an
    emulated-EMS block that differs from its generator's output.
 5. **After a won game the score screen ended at the DOS prompt with "needs upper memory".** (2026-10-31.) **Cause:**
-   the game hands over to its other programs with the C library's `exec` (int 21h 4B00h), which loads the next
-   program into the same PSP; DOS keeps every block the old program allocated, including its UMB, the claim of the
-   rest and the int 67h hook pointing into it. When the chain came back to the game, it found no UMB. **Fix:** the
+   the game hands over to its other programs with its run-time's own `exec`, which copies a small loader into free
+   memory and loads the next EXE over the old one with int 21h 4B03h (load overlay), not 4B00h, so the PSP stays
+   the same. DOS keeps every block the old program allocated, including its UMB, the claim of the rest and the
+   int 67h hook pointing into it. When the chain came back to the game, it found no UMB. **Fix:** the
    loader first walks the MCB chain (UMB link on) and frees every upper block owned by its own PSP; if int 67h points
    into such a block and shows `EMMXXXX0`, it restores the saved vector and frees the emulation's XMS handle first.
    Test every program-to-program handover of the game (intro → game, game → ending → game, demo restarts), not only

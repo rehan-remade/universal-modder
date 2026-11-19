@@ -146,13 +146,18 @@ def steam_games() -> list[dict]:
     return games
 
 
-def epic_games() -> list[dict]:
+def epic_manifests() -> Path | None:
     base = Path(r"C:\ProgramData") if is_windows() else Path("/mnt/c/ProgramData") if is_wsl() else None
+    return base / "Epic/EpicGamesLauncher/Data/Manifests" if base else None
+
+
+def epic_games() -> list[dict]:
+    manifests = epic_manifests()
     out = []
-    if base:
-        for item in (base / "Epic/EpicGamesLauncher/Data/Manifests").glob("*.item"):
+    if manifests:
+        for item in manifests.glob("*.item"):
             try:
-                d = json.loads(item.read_text(errors="replace"))
+                d = json.loads(item.read_text(encoding="utf-8", errors="replace"))
             except (json.JSONDecodeError, OSError):
                 continue
             p = to_posix(d.get("InstallLocation", ""))
@@ -380,6 +385,10 @@ MOD_DIRS = ["mods", "mod", "addons", "plugins", "custom", "workshop", "usermods"
 BANNERLORD_ROUTE = ("official module system: Modules/<id>/SubModule.xml + ModuleData XML/XSLT and C# MBSubModuleBase; "
                    "optional Bannerlord.Harmony for managed patches; inspect the installed TaleWorlds DLLs")
 BANNERLORD_BIN_DIRS = ("win64_shipping_client", "gaming.desktop.x64_shipping_client", "win64_shipping_weditor")
+# Don't Starve Together, matched by name (KNOWN) or by its files (the klei engine key)
+DST_ROUTE = ("official Lua mod API: mods/<name>/ (modinfo.lua + modmain.lua + prefabs/, api_version=10), with the game's own Lua "
+             "in data/databundles/scripts.zip as the reference; Don't Starve Mod Tools (free Steam app 245850): autocompiler "
+             "builds .tex/.xml and anim .zip files, ModUploader publishes to the Workshop")
 KNOWN = {
     "mount & blade ii: bannerlord": (BANNERLORD_ROUTE, "bannerlord.md"),
     "mount & blade ii bannerlord": (BANNERLORD_ROUTE, "bannerlord.md"),
@@ -405,6 +414,7 @@ KNOWN = {
     "balatro": ("Steamodded + lovely (Lua injection into the LÖVE game)", "misc-engines.md"),
     "kenshi": ("FCS .mod data mods + asset overrides in mods/<name>/ mirroring data/ (load order in the launcher or KMM); code via RE_Kenshi + KenshiLib C++ plugins (VS2010 v100 x64, GPLv3, listed in the mod's RE_Kenshi.json) - the game exe is native, no CLR", "native.md"),
     "factorio": ("official Lua modding API (mods/ folder, data.lua + control.lua)", "misc-engines.md"),
+    "don't starve together": (DST_ROUTE, "misc-engines.md"),
     "mindustry": ("the built-in mod loader, no patching: mod.hjson/mod.json + content/<type>/*.hjson|json (blocks, units, items...), "
                   "sprites/ (sprites-override/ replaces vanilla), scripts/main.js; Java mods are jars from Anuken/MindustryJavaModTemplate. "
                   "Mods go in %APPDATA%/Mindustry/mods, ~/.local/share/Mindustry/mods, or <install>/saves/mods on Steam", "misc-engines.md"),
@@ -423,6 +433,14 @@ KNOWN = {
     "call of duty: world at war": ("dual route: zero-linker data override in mods/<name>/*.iwd (GSC/CSC, IWI textures, weapons) + mod.ff via linker_pc.exe for binary assets; T4M (d3d9.dll) raises asset limits; solo or a co-op lobby you host, never public servers", "iw-engine.md"),
     "call of duty 4: modern warfare": ("data overrides in mods/<name>/*.iwd + mod.ff via linker_pc.exe; single-player, or a multiplayer server you run (CoD4X)", "iw-engine.md"),
     "minecraft": ("Fabric (Mixin) or NeoForge", "minecraft.md"),
+    "white knuckle": ("BepInEx 5 plugin (netstandard2.1) that registers content through the game's own API: build a "
+                      "WKAssetDatabase with ScriptableObject.CreateInstance and pass it to CL_AssetManager.AddNewDatabase "
+                      "(items, perks, trinkets, gamemodes, levels, regions, cosmetics) - no Harmony needed; HarmonyX on "
+                      "Assembly-CSharp only for behaviour changes, BepInEx/patchers (Mono.Cecil) for pre-chainloader fixes. "
+                      "No compiler: WKMapLoader loads tag-named Blender .glb levels, ResourcefulHands does texture packs. "
+                      "WKLib is the community library. With r2modman, mods load from the profile it launches, not "
+                      "<install>/BepInEx. Single-player: keep runs with modded content off the leaderboards",
+                      "unity.md"),
 }
 
 # known games recognised by their files when the folder name doesn't say (renamed, portable or non-store installs)
@@ -457,6 +475,10 @@ ONLINE_ONLY = ["valorant", "league of legends", "fortnite", "apex legends", "pub
                "call of duty hq", "call of duty warzone", "destiny 2", "genshin impact", "escape from tarkov", "battlefield 2042",
                "battlefield 6", "overwatch", "overwatch 2", "counter strike 2", "dota 2", "marvel rivals", "the finals", "rust",
                "dead by daylight", "naraka bladepoint", "warframe", "deadlock"]
+# an ONLINE_ONLY name that an older game's install folder has too, and the files that tell that game apart: Call of Duty
+# (2003) installs to "Call of Duty" (the retail default and Steam's installdir), the live-service launcher's name. Its
+# multiplayer is left to the anti-cheat scan, as above: PunkBuster's pb/ folder still gets its warning
+NOT_ONLINE_FILES = {"call of duty": ("codsp.exe", "codmp.exe", "coduosp.exe", "coduomp.exe")}
 
 
 def _plain(name: str) -> str:
@@ -505,6 +527,7 @@ ENGINES = {
     "cocos": ("Cocos2d-x", "native.md", "Lua/JS scripts if bundled; else native hooks"),
     "haxe": ("Haxe/OpenFL/HaxeFlixel", "misc-engines.md", "assets/ overrides; hscript mod loaders where present (Polymod)"),
     "iw": ("IW engine (Call of Duty)", "iw-engine.md", "data overrides in mods/<name>/*.iwd (GSC/CSC scripts, IWI textures, weapons) + mod.ff via the Mod Tools' linker_pc.exe; um fastfile reads rawfiles out of your own .ff"),
+    "klei": ("Klei Lua engine (Don't Starve family)", "misc-engines.md", DST_ROUTE),
     "native": ("Unknown native engine", "native.md", "proxy-DLL loader + function hooks (MinHook/SafetyHook), memory reading; Ghidra/IDA + x64dbg + Cheat Engine"),
 }
 
@@ -543,6 +566,13 @@ def detect(ix: Index) -> tuple[list[tuple[str, int, list[str], dict]], dict]:
                 pass
         add("bannerlord", 100, [dll, "modules/native/submodule.xml"], **det)
 
+    # Klei's engine (Don't Starve Together): the game logic is Lua in data/databundles/scripts.zip, and the exe in bin/ or
+    # bin64/ only hosts it, so mods are Lua, not proxy DLLs. The Linux builds have no .exe, and the dedicated server's exe is
+    # dontstarve_dedicated_server_nullrenderer*. Single-player Don't Starve keeps its Lua loose in data/scripts/ instead.
+    klei = ix.find("bin/dontstarve_*", "bin64/dontstarve_*") if "data/databundles/scripts.zip" in ix.files else []
+    if klei:
+        add("klei", 100, klei[:1] + ["data/databundles/scripts.zip"])
+
     # Unity
     data_dirs = [d for d in {"/".join(f.split("/")[:-1]) for f in ix.find("*_data/globalgamemanagers", "*_data/data.unity3d", "*_data/maindata")}]
     if ix.has("*unityplayer.dll", "*unityplayer.so", "*unityplayer.dylib") or data_dirs:
@@ -552,7 +582,7 @@ def detect(ix: Index) -> tuple[list[tuple[str, int, list[str], dict]], dict]:
         info = f"{dd}/app.info" if dd else None
         if info and info in ix.files:
             try:
-                company, product = (ix.path(info).read_text(errors="replace").splitlines() + ["", ""])[:2]
+                company, product = (ix.path(info).read_text(encoding="utf-8", errors="replace").splitlines() + ["", ""])[:2]
                 det.update(company=company, product=product)
             except OSError:
                 pass
@@ -861,6 +891,8 @@ def scan(query: str) -> dict:
     known = next((v for k, v in sorted(KNOWN.items(), key=lambda kv: -len(kv[0])) if k == lname or (k in lname and len(k) > 5)), None) \
         or next((KNOWN[k] for k, pats in KNOWN_FILES if ix.has(*pats)), None)
     online = online_only(name)
+    if online and ix.has(*NOT_ONLINE_FILES.get(online, ())):
+        online = None
     routes = []
     if known:
         routes.append(dict(route=known[0], playbook=known[1], why="known game"))
@@ -882,6 +914,12 @@ def scan(query: str) -> dict:
         warnings.append(f"'{online}' is an online competitive game: modding its client breaks the ToS and gets accounts banned - stop, or use official tools only (Workshop/creative modes)")
     if any(l == "ScriptHookV" for l in loaders) and "rage" in key:
         warnings.append("ScriptHookV only works in story mode; launch GTA offline")
+    if ix.has("bepinex/*") and not ix.has("bepinex/core/*"):
+        warnings.append("there is a BepInEx folder in the install but it has no core/, so nothing in it can load: a mod manager "
+                        "(r2modman / Thunderstore Mod Manager) most likely keeps the real BepInEx in a profile folder elsewhere. "
+                        "Find the profile that actually launches (on Linux the game's Steam launch options name the manager's "
+                        "wrapper; on Windows it passes the profile on the command line) and install there - a DLL dropped in "
+                        "this folder will be silently ignored")
     report = dict(
         name=name, store=game.get("store"), appid=game.get("appid"), path=str(root),
         engine=dict(key=key, label=label, confidence=score, evidence=ev, **{k: v for k, v in det.items() if v not in (None, "")}),
