@@ -11091,7 +11091,9 @@
    "sprites",
    "collision",
    "audio",
-   "archive-validation"
+   "archive-validation",
+   "test-harness",
+   "wine"
   ]
  },
  {
