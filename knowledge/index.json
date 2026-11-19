@@ -7020,6 +7020,41 @@
   ]
  },
  {
+  "path": "games/price-for-freedom-gold-and-sand-demo/russian-fan-translation.md",
+  "kind": "game",
+  "title": "Full Russian fan translation of a Unity 6 IL2CPP game, with an installer",
+  "game": "Price for Freedom: Gold and Sand (Demo)",
+  "games_also": [],
+  "game_version": "demo 0.1.11, Unity 6000.0.58f2, IL2CPP, Steam (app 4049300)",
+  "platform": "windows",
+  "engine": "unity-il2cpp",
+  "route": "data",
+  "tools": [
+   "UnityPy",
+   "PyInstaller",
+   "um kb",
+   "custom Python scripts"
+  ],
+  "anti_cheat": "none (single-player)",
+  "status": "released",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-17",
+  "links": [],
+  "tags": [
+   "translation",
+   "localization",
+   "unity",
+   "il2cpp",
+   "global-metadata",
+   "string-literals",
+   "tmp-fonts",
+   "installer"
+  ]
+ },
+ {
   "path": "games/project-zomboid/a-viewpoint-companion-hud-end-to-end-sonar-ring-mod-isui-dra.md",
   "kind": "game",
   "title": "A Viewpoint companion HUD end to end: sonar ring mod, ISUI drawing, ModOptions, translations, mod.info and the Kahlua gotchas",
