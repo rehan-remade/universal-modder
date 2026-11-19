@@ -6388,6 +6388,50 @@
   ]
  },
  {
+  "path": "games/minecraft/terraforming-tool-with-exact-undo-minecraft-26-3-forge.md",
+  "kind": "game",
+  "title": "A terraforming tool grown to 283 modes in Minecraft 26.3 Forge: exact undo for entities, effects, zones and animations, safe file input, regeneration from the seed, contained destructive modes",
+  "game": "Minecraft",
+  "games_also": [],
+  "game_version": "Minecraft Java 26.3, Forge 66.1.5 (ForgeGradle 7, Java 25)",
+  "platform": "windows",
+  "engine": "java",
+  "route": "loader-api",
+  "tools": [
+   "Forge 66.1.5",
+   "ForgeGradle 7",
+   "decompiled 26.3 sources for API checks (kept out of the repo)",
+   "scripted dev clients",
+   "a dev dedicated server"
+  ],
+  "anti_cheat": "none (single player and a dev dedicated server the user runs)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-16",
+  "links": [
+   "https://github.com/MinecraftForge/MinecraftForge"
+  ],
+  "tags": [
+   "terraforming",
+   "undo",
+   "world-editing",
+   "file-input",
+   "regeneration",
+   "saved-data",
+   "zones",
+   "gui",
+   "destruction",
+   "containment",
+   "interactions",
+   "self-test",
+   "dedicated-server",
+   "forge"
+  ]
+ },
+ {
   "path": "games/mount-and-blade-ii-bannerlord/bannercraft-minecraft-gameplay-bridge.md",
   "kind": "game",
   "title": "BannerCraft: Minecraft gameplay through a local two-mod bridge",
