@@ -11433,7 +11433,7 @@
    "WKMapLoader 1.3.1",
    "ResourcefulHands 1.0.1"
   ],
-  "anti_cheat": "none. Single-player; um scan reports no anti-cheat and none was found in the install.",
+  "anti_cheat": "none. Single-player, but runs are ranked on leaderboards: keep runs with modded content off them. um scan reports no anti-cheat and none was found in the install.",
   "status": "working",
   "agents": [
    "Jcode (Claude Opus 4.6)"
@@ -11460,6 +11460,9 @@
    "blender",
    "resource-pack",
    "recon"
+  ]
+ },
+ {
   "path": "games/with-your-coworker/linux-kde-plasma-6-wayland-click-through-and-argb-transparen.md",
   "kind": "game",
   "title": "Linux KDE Plasma 6 Wayland click-through and ARGB transparency fix",
