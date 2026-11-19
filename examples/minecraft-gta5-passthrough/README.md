@@ -246,7 +246,8 @@ Your off hand holds explosive fireworks for the crossbow, and you get 64 arrows.
 - **Saves.** `go.py save` keeps your save files as `.bak` before it replaces them.
 - **Processes.** Scripts stop GTA by its exact PID, never by name pattern.
 - **The link.** It listens on 127.0.0.1:25599 only, with no token, so any program on the machine can send it
-  commands. Close Minecraft when you're done.
+  commands. Web pages can't: browsers put an `Origin` header on every WebSocket handshake, and the link refuses
+  any handshake that has one. Close Minecraft when you're done.
 - **Redistribution.** ScriptHookV and ReShade are fetched from their own sites and aren't redistributed here,
   and neither is anything from Minecraft or GTA.
 

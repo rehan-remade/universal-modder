@@ -7,7 +7,7 @@ agents:
 humans: []
 date: '2026-10-25'
 links: ["https://www.dosbox.com/"]
-tags: [dosbox, dos, automation, testing, background-input, postmessage, parallel, sandbox, screenshots, midi, overlays, memory-pressure, windows, guest-memory, readprocessmemory, conventional-memory, focus-stealing, wmi]
+tags: [dosbox, dos, automation, testing, background-input, postmessage, parallel, sandbox, screenshots, midi, overlays, memory-pressure, windows, guest-memory, readprocessmemory, conventional-memory, focus-stealing, wmi, flaky-tests, retries, orphan-processes, job-objects, host-ram, stack-depth, near-heap, umb, bios-clock]
 ---
 # Driving DOSBox games from tests: background input, parallel sandboxed instances and screen-state checks
 
@@ -81,9 +81,12 @@ tags: [dosbox, dos, automation, testing, background-input, postmessage, parallel
 ### Screenshots
 - **Exact frame, slow:** DOSBox's own capture (post Ctrl+F5); `captures=` in `[dosbox]` sets the folder. It
   writes a PNG of the emulated 320x200 frame, about 0.5 s per capture.
-- **Fast:** copy the window's client area (`PrintWindow`/`BitBlt`) and scale it to 320x200: about 5 ms. Check it
-  pixel for pixel against a Ctrl+F5 capture once per window size and fall back if they ever differ. The process
-  doing the copy must be DPI-aware, like DOSBox's window (gotcha 6).
+- **Fast:** copy the window's client area (`PrintWindow`/`BitBlt`) and scale it to 320x200: about 5 ms. The process
+  doing the copy must be DPI-aware, like DOSBox's window (gotcha 6). Check the copy once per window size **without
+  sending a key**: sample each game pixel's block at 1/4 and 3/4 as well as the centre and require them to agree
+  (99.5 % here), i.e. a plain block-scaled picture; warn and carry on if not. The first version compared with a Ctrl+F5
+  capture instead, and under load that put a stray F5 into the game (gotcha 22). Keep Ctrl+F5 for a minimised window
+  or an explicit "exact capture" mode.
 
 ### One sandbox per test process
 Give every test process its own folder (e.g. `work/run/<run id>/`) holding:
@@ -104,7 +107,52 @@ Parallel test runners, agents and git worktrees all launch DOSBox, so cap the to
 - Plus a load gate: beyond the first two games, wait while total CPU is over ~80 % or free RAM under ~1 GB
   (psutil).
 - Measured on an Intel Core Ultra 7 155U laptop (14 threads, 15.5 GB): each DOSBox at `cycles=max` costs about
-  9 % total CPU and 80 MB; 10 at once was the useful ceiling. CPU, not RAM, is the limit.
+  9 % total CPU and 80 MB; 10 at once was the useful ceiling. CPU, not RAM, limits one suite.
+- **RAM still runs out when several suites or agents overlap.** Each test is also a Python process, and a
+  parallel suite of in-game tests runs next to a pool of emulated (CPU-only) tests. On 2026-10-26 two full suites at
+  once (2 x 3 games plus their Python processes) ran the 15.5 GB laptop out of memory; the agent host then
+  killed the test runs, and the DOSBoxes survived them (gotcha 23). What is in place since:
+  - a machine-wide lock so only one full suite runs at a time, whichever checkout or worktree starts it (an OS byte
+    lock on a file in the home folder; the second suite waits);
+  - an automatic `-j`: 4 games when no DOSBox is running and at least 6 GB is free, else 3;
+  - for the agents: at most 3-4 parallel work streams of 2 games each, fewer while a full suite runs, checked against
+    free physical memory (about 3.8 GB was typical with everything running);
+  - emulated tests run below normal priority, so the timing-sensitive games keep their CPU.
+
+### Test DOSBoxes must end with their test
+Started through WMI, DOSBox is not a child of the test, so killing the test (Ctrl+C, `taskkill /F`, an agent host
+stopping a run) leaves it running, minimised and undriven. Three layers, all by exact PID:
+- **Job object:** after the launch, put the DOSBox into a kill-on-close job held by the test process; Windows
+  ends it however the test ends. Nested jobs work (the WMI-started process is already in the WMI host's job). No
+  extra process, no memory.
+- **Watchdog fallback** if the job can't be assigned: a windowless `pythonw` started through WMI waits on both
+  process handles and terminates DOSBox when the owner ends (about 7 MB; a hidden PowerShell `Wait-Process` would
+  cost 60-80 MB each).
+- **Sweep at start:** each sandbox gets an `owner.json` (owner PID and creation time, DOSBox PID and creation
+  time). Before launching, and when a runner starts, terminate DOSBoxes whose `-conf` is in one of your own
+  sandboxes and whose owner is gone. Decide "gone" by PID **and creation time** (PIDs are reused within minutes) and
+  re-check the creation time on the handle you terminate through. Never touch other confs (the human's own DOSBox),
+  manual sessions or unknown run ids.
+- Python children outlive a killed parent on Windows too, `ProcessPoolExecutor` workers included: runners that start
+  test processes put themselves in a kill-on-close job as well, or a killed runner leaves tests (and their games)
+  running.
+Measured: DOSBox gone 0.0 s after `taskkill /F` of its owner with the job, 0.1 s with the watchdog.
+
+### Retries and flaky tests
+After the main pass, retry each failed test up to 3 times, one at a time per test (different tests in parallel).
+- A pass on a retry counts, but is printed and recorded as `[FLAKY] name (passed on retry N)` in the run's record,
+  so flakes stay visible and get fixed later.
+- Stop retrying a test once it fails **identically** twice in a row: same exit code and same failure lines with
+  every number replaced by `#` (times, addresses, counts differ between tries). That is a real failure.
+- Keep every attempt's log (`name_try1.log` ...).
+- Record the failures of each full run, so you can rerun only those; such a rerun counts as a full pass only for
+  the same EXE, data files and test code.
+- What counts as a failure line: here a line starting with `[FAIL]` **or containing `Error`**, which catches
+  tracebacks a test forgot to turn into a failure. The price: a passing check whose name contains "Error" fails the
+  suite (gotcha 25).
+- Every run gets a private copy of the scenario saves folder (an environment variable points the tests at it),
+  removed afterwards, so parallel runs never read each other's half-written saves and never change the tracked
+  ones.
 
 ### Check the screen before and after every step
 Fixed sleeps followed by blind clicks are the main source of flaky and slow tests.
@@ -117,6 +165,10 @@ Fixed sleeps followed by blind clicks are the main source of flaky and slow test
   waiting for a long overall timeout.
 - Use the game's own files as the oracle where possible: the start-of-turn autosave tells you the turn
   advanced and holds the game state to assert on.
+- When you follow computer-player units across autosaves, match them by identity, never by slot or list position
+  (gotcha 27): units get deleted, the list renumbers, new units are appended, and the AI may move or merge the very
+  units the test watches. A try where the AI made the case untestable is inconclusive: reload and retry it, don't
+  pass or fail it.
 - Original vs patched (or several cases) run as parallel processes, not one after another.
 
 ### Read the game's state from guest RAM
@@ -125,6 +177,11 @@ block of its own process, so a host-side script can read it without touching the
 - `OpenProcess(PROCESS_VM_READ | PROCESS_QUERY_INFORMATION)`, walk the regions with `VirtualQueryEx`, and find
   the guest RAM block by a signature string from the game's data segment (or by its size); read the first
   1 MB + 64 KB with `ReadProcessMemory`. Read-only: no input, no focus, the game keeps running.
+- In DOSBox 0.74-2 (32-bit) guest address 0 is 0x20 bytes into that block (a heap-block header comes first).
+  Don't hard-code it: try offsets in steps of 16 and take the one where the BIOS data area's memory size word
+  (0040:0013) reads 640 KB and the MCB chain walks.
+- The same handle (with write access) can move the BIOS tick count at 0040:006C, the one write worth doing: see
+  gotcha 14.
 - Decode the DOS memory picture from there: the MCB chain (DOSBox's List of Lists sits at 0080:0026, the first
   MCB segment two bytes before it), the game's blocks and the largest free block.
 - Then read the game's own variables at their DGROUP addresses (turn phase, active unit, mode flags). In this
@@ -140,7 +197,21 @@ run time. Measure the worst case instead of guessing:
   refused and the game fell back to smaller ones; nothing crashed until far past the budget);
 - remember the store launcher: GOG starts this game through a front-end EXE that loads it into its own process
   and costs about 5 KB more than starting the game directly;
-- turn the result into a budget with a margin and an automated test that fails when a build exceeds it.
+- turn the result into a budget with a margin and an automated test that fails when a build exceeds it (here an
+  8 KB margin plus the launcher's 4,992 bytes);
+- sample from a thread every 0.25 s during the session and save a frame at each new low-water mark and each refused
+  allocation, so you see which screen costs most (here a native leader's greeting, which allocates a 49,128-byte buffer).
+Two more limits that patches eat silently, both readable from guest RAM:
+- **Stack depth.** If the program zero-fills its stack area at start (this game's main does, from the MSC stack-limit
+  word up to the initial SP), the lowest non-zero byte above the limit is the deepest the stack has ever been. Report the room left
+  and fail under a threshold; a patch that adds a big local buffer or deeper calls shows up at once.
+- **Near heap.** Walk the C runtime's near-heap blocks from its descriptor in the data segment (MSC: a header word
+  per block, size with the low bit set when free, `FFFE` as the end marker). Since the heap allocates from the
+  bottom, the end of the highest used block seen is its high-water mark. If you take part of the heap for your own
+  tables, give it a rule (here: the measured peak stays under half of what is left) and test it in the heaviest
+  sessions.
+- If the patch moves code into upper memory, add the UMB to the same picture: see
+  [Upper memory for patched DOS games in DOSBox](upper-memory-for-patched-dos-games-in-dosbox-code-in-a-umb-e.md).
 
 ### Silence
 `[mixer] nosound=true` silences DOSBox's mixer (Sound Blaster, OPL, PC speaker, CD audio). MIDI bypasses it
@@ -151,10 +222,16 @@ MIDI.
 Many DOS games use an overlay manager that swaps code in and out of conventional memory. A stress conf with
 `[dos] xms=false ems=false umb=false` makes it swap constantly; a bug that showed up once in 10-20 normal runs
 then fails every time (gotcha 3). Run the tests that touch your patched code under both confs.
+That conf only works while the game starts without upper memory. When this project moved its new code into a UMB
+(DOSBox 0.74 gives one only with `xms=true`), the stress conf was dropped; the overlay rules are now checked by an
+emulated test of every call site, and long soak runs (40 turns) look for rare crashes instead. Run the unpatched
+EXE with `umb=false` when you compare original and patched (see the upper memory note, gotcha 6).
 
 ## Not verified
 Only DOSBox 0.74-2 (SDL 1.2) on Windows 11, driving one game. DOSBox Staging and DOSBox-X's SDL2 builds have no
 `windib` or `directx` video driver (SDL2's is `windows`), so the input section won't carry over to them as written.
+The project ships player confs for Staging 0.83 and DOSBox-X 2026.10 but never ran either (not installed); the
+guest-RAM offset (0x20) was measured on the 32-bit 0.74-2 build only. The RAM figures are from one 15.5 GB laptop.
 
 ## Gotchas
 1. **Posted keys did nothing; clicks did nothing.** (2026-10-22.) **Cause:** DOSBox 0.74 picks SDL 1.2's DirectX
@@ -205,10 +282,21 @@ Only DOSBox 0.74-2 (SDL 1.2) on Windows 11, driving one game. DOSBox Staging and
     all" for manual clean-up only.
 14. **Fast retries kept replaying the same battle.** (2026-10-25.) **Cause:** the game seeds its RNG from the
     BIOS clock; restarts within the same tick replay the same rolls. **Fix:** a short random pause before
-    retrying a random event.
+    retrying a random event. **Update (2026-10-26): the pause was not enough.** A probe that set the guest clock
+    to fixed values at the title screen showed the outcome followed the tick count's low 15 bits at load time, so
+    the wall clock gave losing windows of about 11 minutes, and six retries with 0-2 s pauses (under 40 ticks) all
+    lost. Now each retry moves the guest's BIOS tick count (0040:006C) forward by a random 1-32768 ticks at the
+    title screen, through `WriteProcessMemory` on DOSBox's guest RAM: forward only, so no delay loop waits longer, and
+    re-read in case the emulator's own tick overwrote it. The write is refused within an hour of the midnight count
+    (0x1800B0; 0.74-2 has no wrap of its own, its `INT8_Handler` only adds 1, so past that int 21h 2Ch would report
+    hour 24), and DOSBox starts its clock from the host's local time, so after 22:00 host time the
+    harness starts DOSBox with `TZ` set 6 hours behind (2026-10-27: a run at 23:1x replayed the same roll on every
+    retry until it ran out of tries).
 15. **Saves rebuilt by parallel tests could be read half-written.** (2026-10-24.) **Cause:** several tests
     rebuild the same scenario save before running. **Fix:** skip the write when the bytes are identical, else
-    write a temp file and `os.replace` it, retrying while another process has it open.
+    write a temp file and `os.replace` it, retrying while another process has it open. Since 2026-10-30 each run
+    also gets a private copy of the saves folder (see "Retries and flaky tests"), and a builder that writes a save in
+    stages writes the stages to a per-process file: under `--repeat` a parallel run had loaded a first stage.
 16. **A game run "hung" with a unit waiting but no prompt, rarely and only under load.** (2026-10-25.) **Cause:**
     the test clicked "End of Turn" a second time; the click was made while the game was busy ending the turn,
     so the mouse driver's latched button state was read at the next turn's first input poll, where it put the
@@ -239,6 +327,63 @@ Only DOSBox 0.74-2 (SDL 1.2) on Windows 11, driving one game. DOSBox Staging and
     that was already running (for example, one waiting for a free slot) keeps the launch code it imported, so
     restart runs before you measure. And when you swap the launch code, test the whole launch function, not
     just the new helper: a leftover `return p.pid` after the change failed every in-game test.
+22. **Under a busy suite, the intro was skipped before the test sent any input.** (2026-10-27.) **Cause:** the
+    fast-grab self-check posted Ctrl+F5 to compare with DOSBox's own capture; under load DOSBox's key mapper
+    sometimes missed the Ctrl, F5 reached the game as a key, and the intro skips on any key. Any test could get that
+    stray key. **Fix:** the keyless block-scaling check (see "Screenshots"); 18 of 18 load-repro runs passed after.
+    Trade-off: it no longer compares with DOSBox's capture, so a grab wrong in some other way would pass.
+23. **After the test runs were killed for low memory, 10 DOSBoxes (about 670 MB) kept running.** (2026-10-26.)
+    **Cause:** the WMI launch (gotcha 21) makes DOSBox a child of the WMI host, not of the test, so nothing ended it.
+    **Fix:** job object, watchdog fallback and owner-checked sweep (see "Test DOSBoxes must end with their test").
+24. **The PC ran out of memory with two full suites running.** (2026-10-26.) **Cause:** two checkouts each
+    started a full suite (2 x 3 games plus their Python test processes); neither the 10-game cap nor the 1 GB
+    free-RAM gate stopped it. **Fix:** a machine-wide "one full suite at a time" lock and an
+    automatic `-j` that looks at free RAM (see "A machine-wide cap").
+25. **A new, passing test failed the suite.** (2026-11-01.) **Cause:** the runner counts any output line containing
+    `Error` as a failure, and the names of several passing checks contained "Error" (they tested an assembler's
+    error retry). **Fix:** renamed the checks. Either avoid the word in passing output or match failure lines more
+    strictly (e.g. `Traceback` and `[FAIL]` only); this project kept the broad rule.
+26. **A single test failed in a full suite and passed on a rerun, and the full run had to be redone by hand.**
+    (2026-10-25 to 10-28; e.g. one menu test in a 94-test suite.) **Cause:** rare load-dependent flakes (lost
+    clicks, late menus) that the screen checks don't catch every time.
+    **Fix:** automatic retries, logged as flaky, that stop when a test fails identically twice (see "Retries and
+    flaky tests"); fix the flakes the log lists rather than living with them.
+27. **A test of a computer player's behaviour failed now and then with an index error, or checked the wrong units.**
+    (2026-11-02: passed only on retry in one full suite, an index error in the next.) **Cause:** the test took "the AI's first
+    four land units in slot order" as the units it watched. Between autosaves the AI sometimes shipped some of them
+    to its colony, where they joined it and stopped being units, and other units (a new soldier, a veteran from the
+    New World) took their slots. **Fix:** align the AI's units from one autosave to the next by identity (a monotonic
+    matching on profession, then type and map square, allowing for deletions and appended units), and when the AI
+    removed the units the case needs, reload the scenario with a shifted guest clock (gotcha 14) and try again, up to
+    4 times.
+28. **One click in a test was missed now and then under a loaded suite, at a different click each time.**
+    (2026-11-03: 1 run in 3 of one test, in a full suite of 358.) **Cause:** a single 100 ms click while 4 DOSBoxes
+    shared the machine; the game polls the mouse only in its idle loop and sometimes didn't see the button down.
+    Run alone, 20 of 20 even shorter clicks registered. **Fix:** a `click_until` helper: click, wait for the
+    expected guest state, and click again (up to 3 times, 3 s each) only while that state is not reached. Use it
+    only for idempotent clicks; the end-state check still fails if the result is wrong.
+29. **Reference-screenshot tests failed after a feature changed how the map is drawn.** (2026-11-03: a fog of war
+    dimmed the ocean behind popups; 3 tests.) **Cause:** the reference shots were taken without the overlay, and
+    the differing pixels were outside the dialog being checked but inside the compared area. A fourth test failed
+    because its scenario's foreign units now stood out of sight and the fog rightly hid them. **Fix:** a helper
+    that turns the overlay off by its key and waits until its state byte in guest RAM reads off (no blind sleep;
+    it does nothing on the original EXE), called before the shot; give the scenario a unit next to the ones the
+    test must see.
+30. **After fixing a few failed tests, the runner refused to finish the full run with only those tests.**
+    (2026-11-03.) **Cause:** the run record keeps a hash of the test code; changed tests make the record stale, so
+    a rerun of the failed tests can't complete it and the whole suite (90 minutes) must run again. **Fix:** this is
+    the right rule (a test fix could hide a regression elsewhere), so gather every test fix from a failed full run
+    before starting the next one. Also cap paired variant runs (here an environment variable sets one variant job)
+    when rerunning a few tests next to another suite, so the DOSBox count stays in budget.
+31. **Integration conflicts in generated files that are committed to git.** (2026-11-04.) **Cause:** two branches
+    regenerated the same build output (the patch list, a generated game text file). **Fix:** never hand-merge
+    them: take either side and run the generator on the merged tree; check afterwards that the regenerated file
+    contains both branches' additions.
+32. **A cross-branch omission was caught at build time, not in the game.** (2026-11-05.) Two branches added
+    professions and a report page that lists professions; neither knew about the other. The report's generator
+    refused any build in which a profession in the game had no line in its table, so the integration build
+    stopped with the missing ids. **Fix / pattern:** for every data-driven table that must cover a growing set
+    (goods, professions, buildings), add a completeness check to its generator.
 
 ## Seen in
 - Sid Meier's Colonization 3.0 (DOS, GOG release; VICEROY.EXE, an RTLink-overlaid executable) binary-patching

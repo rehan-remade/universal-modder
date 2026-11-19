@@ -24,7 +24,7 @@ import sys
 import zlib
 from pathlib import Path
 
-from um.common import die
+from um.common import die, inside, open_out
 
 
 RAWFILE_PATTERN = re.compile(
@@ -121,20 +121,29 @@ def dump_fastfile(path: str | Path, out_dir: str | Path | None = None):
 
     target_dir = Path(out_dir) if out_dir else Path(p.stem + "_extracted")
     target_dir.mkdir(parents=True, exist_ok=True)
+    root = target_dir.resolve()  # the folder itself may be a link; nothing below it is followed
 
     print(f"Extracting {len(files)} files from {p.name} (version {version}) -> {target_dir}...")
     extracted_count = 0
     total_bytes = 0
 
+    # every path is checked before the first file is written
+    outputs = []
     for name, payload in files.items():
         # Prevent directory traversal attacks
         clean_name = os.path.normpath(name).lstrip("/\\")
         if clean_name.startswith(".."):
             continue
+        try:
+            outputs.append((inside(root, clean_name), payload))
+        except ValueError as e:
+            die(f"{name}: {e}. Extracted nothing: the dump writes only inside its folder and never through a symlink "
+                "or junction, so dump into an empty folder")
 
-        dest_file = target_dir / clean_name
+    for dest_file, payload in outputs:
         dest_file.parent.mkdir(parents=True, exist_ok=True)
-        dest_file.write_bytes(payload)
+        with open_out(dest_file) as f:
+            f.write(payload)
         extracted_count += 1
         total_bytes += len(payload)
 

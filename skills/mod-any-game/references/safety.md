@@ -71,7 +71,9 @@ legal advice. When a game's EULA or mod policy matters, read it (search "<publis
 - **Processes:** kill by exact PID. `pkill -f <pattern>` from an agent shell kills the agent's own shell.
   Don't leave topmost windows (`untop`), global hooks or orphaned ffmpeg/PowerShell processes behind.
 - **Networking:** bind any bridge, debugger or MCP server you add to `127.0.0.1` with a token. Some RE tools
-  bind `0.0.0.0` by default.
+  bind `0.0.0.0` by default. `127.0.0.1` doesn't stop a web page in the user's browser, so a bridge with no token
+  must keep pages out itself: a WebSocket server refuses handshakes with an `Origin` header (browsers always send
+  one), and a line-based socket hangs up on a first line that isn't its own protocol (an HTTP request).
 - **Scripts from strangers:** a viral mod's "download" is often malware. Only run loaders from their
   official repositories and releases.
 
