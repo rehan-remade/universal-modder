@@ -655,7 +655,7 @@ def test_slay_the_spire_2_is_not_sts1(tmp_path):
 def test_online_only_matches_whole_names():
     # a substring test told agents to stop on single-player games: Rusty Lake ("rust"), Battlefield 1942, MW2 (2009)
     for offline in ["Rusty Lake Paradise", "Rusted Warfare", "Battlefield 1942", "Call of Duty: Modern Warfare 2 (2009)",
-                    "Deadlock: Planetary Conquest", "The Final Station", "Trusty Rusty"]:
+                    "Call of Duty (2003)", "Deadlock: Planetary Conquest", "The Final Station", "Trusty Rusty"]:
         assert scan.online_only(offline) is None, offline
     for online in ["Rust", "Counter-Strike 2", "Call of Duty®", "Tom Clancy's Rainbow Six® Siege", "PUBG: BATTLEGROUNDS",
                    "Overwatch® 2", "Deadlock", "NARAKA: BLADEPOINT"]:
@@ -669,6 +669,22 @@ def test_scan_warns_only_for_online_games(tmp_path):
         for i in range(6):
             (d / f"f{i}.txt").write_text("x")
         assert any("online competitive" in w for w in scan.scan(str(d))["warnings"]) == warned, name
+
+
+def test_scan_call_of_duty_2003_is_not_the_live_service_game(tmp_path):
+    # the 2003 game installs to a folder named plain "Call of Duty", the same name as today's launcher: it was told to stop
+    for sub, files, warned in [("2003", ["CoDSP.exe", "CoDMP.exe", "main/pak0.pk3", "pb/pbcl.dll"], False),
+                               ("launcher", ["cod.exe"], True)]:
+        d = tmp_path / sub / "Call of Duty"
+        for rel in files + [f"f{i}.txt" for i in range(6)]:
+            (d / rel).parent.mkdir(parents=True, exist_ok=True)
+            (d / rel).write_bytes(b"x")
+        r = scan.scan(str(d))
+        assert any("online competitive" in w for w in r["warnings"]) == warned, sub
+    # its multiplayer still gets the PunkBuster warning, which keeps modded clients out of online play
+    r = scan.scan(str(tmp_path / "2003" / "Call of Duty"))
+    assert "PunkBuster" in r["anti_cheat"]
+    assert any(w.startswith("anti-cheat present (PunkBuster)") and "never inject into online play" in w for w in r["warnings"])
 
 
 def _fake_host(monkeypatch, os_name, machine, wsl=False):
