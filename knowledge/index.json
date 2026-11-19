@@ -5683,6 +5683,70 @@
   ]
  },
  {
+  "path": "games/middle-earth-shadow-of-war/mini-tribes-easterling-and-deserter-captain-rows.md",
+  "kind": "game",
+  "title": "Mini tribes: Easterling and Gondorian-deserter captains in their own Nemesis rows, built from the game's own models and deployed to Lithlad and Gorgoroth",
+  "game": "Middle-earth: Shadow of War",
+  "games_also": [],
+  "game_version": "Steam build 3095001 (exe 1.0.8874.0, public branch, unchanged since 2018-09-05) with The Desolation of Mordor expansion (Steam app 533110), Windows 10 22H2. Every asset comes from that same Steam copy: the Easterling mercenaries from the expansion's data (DLC4 in the game's records), the Gondorian soldiers from the Minas Ithil base data. No other game was used.",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "data",
+  "tools": [
+   "custom C# gamedb reader-writer + two config-driven builders (PowerShell Add-Type)",
+   "Python 3.12 (save decrypt/edit, world-object dump, bone check)",
+   "Ghidra 12.1.4 (headless, analysis only) + Temurin JDK 21",
+   "QuickBMS + aluigi shadow_of_mordor.bms 0.4",
+   "MinGW-w64 GCC 16.2 (w64devkit: OfflineMode v0.13, diagnostic trace plugin)"
+  ],
+  "anti_cheat": "none; single-player only. The mod is game.gamedb + string tables (+ world stations in the imported Ud\u00fbn region only); the exe file is untouched (SteamStub/Denuvo untouched). Every build and test ran offline with the offline-mode DLL installed (never signed in to WB).",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "DeimozZarco"
+  ],
+  "date": "2026-11-06",
+  "links": [
+   "knowledge/games/middle-earth-shadow-of-war/offline-mode-and-local-garrison.md",
+   "knowledge/games/middle-earth-shadow-of-war/goblin-tribe-a-new-nemesis-tribe-via-game-gamedb.md",
+   "knowledge/games/middle-earth-shadow-of-war/falmer-tribe-a-skyrim-creature-as-a-nemesis-tribe.md",
+   "knowledge/games/middle-earth-shadow-of-war/small-mods-new-orc-bodies-talion-armour-and-mesh-draw-counts.md",
+   "knowledge/games/middle-earth-shadow-of-war/map-import-shadow-of-mordor-udun-as-a-new-region.md",
+   "knowledge/games/middle-earth-shadow-of-war/save-format-decrypt-and-collectible-quests.md"
+  ],
+  "tags": [
+   "nemesis",
+   "captains",
+   "mini-tribe",
+   "faction",
+   "army-screen",
+   "rows",
+   "refill",
+   "promotion-events",
+   "dominate",
+   "garrison",
+   "pit-fight",
+   "raise-dead",
+   "skeleton",
+   "anim-base",
+   "voices",
+   "personalities",
+   "character-bundle",
+   "preload",
+   "body-type",
+   "armour-pickers",
+   "name-table",
+   "titles",
+   "strings",
+   "spawn-locations",
+   "gamedb",
+   "save-editing",
+   "npc-id"
+  ]
+ },
+ {
   "path": "games/middle-earth-shadow-of-war/offline-mode-and-local-garrison.md",
   "kind": "game",
   "title": "Offline mode and local Garrison: a winhttp stand-in for WB's Hydra server",
@@ -5698,7 +5762,7 @@
    "custom C# read-only process-memory reader (PowerShell Add-Type)",
    "Python 3.12 + capstone (string/RTTI/xref scans)"
   ],
-  "anti_cheat": "none. SteamStub/Denuvo on the exe is untouched: the mod is a proxy winhttp.dll next to the exe and patches no code.",
+  "anti_cheat": "none. SteamStub/Denuvo on the exe is untouched: the mod is a proxy winhttp.dll next to the exe, and the exe file is never changed. Since v0.13 it replaces one game function (the captain id writer) in memory at run time; NpcIdHook=0 turns that off.",
   "status": "working",
   "agents": [
    "Claude Code (Opus 5.5)"
@@ -6350,6 +6414,88 @@
   ]
  },
  {
+  "path": "games/minecraft/runtime-dimensions-parallel-universe-portals-and-whole-dimen.md",
+  "kind": "game",
+  "title": "Runtime dimensions, parallel-universe portals and whole-dimension endings in Forge 26.3",
+  "game": "Minecraft",
+  "games_also": [],
+  "game_version": "Minecraft Java 26.3, Forge 66.1.5",
+  "platform": "windows",
+  "engine": "java",
+  "route": "loader-api",
+  "tools": [
+   "ForgeGradle 7",
+   "JDK 25",
+   "Vineflower-decompiled reference sources (kept outside the repo)"
+  ],
+  "anti_cheat": "none (single player, own dedicated server)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-14",
+  "links": [
+   "https://github.com/MinecraftForge/MinecraftForge",
+   "https://github.com/Vineflower/vineflower"
+  ],
+  "tags": [
+   "dimensions",
+   "portals",
+   "shaders",
+   "saveddata",
+   "world-scale",
+   "respawn",
+   "forge-config",
+   "dedicated-server",
+   "forge"
+  ]
+ },
+ {
+  "path": "games/minecraft/terraforming-tool-with-exact-undo-minecraft-26-3-forge.md",
+  "kind": "game",
+  "title": "A terraforming tool grown to 283 modes in Minecraft 26.3 Forge: exact undo for entities, effects, zones and animations, safe file input, regeneration from the seed, contained destructive modes",
+  "game": "Minecraft",
+  "games_also": [],
+  "game_version": "Minecraft Java 26.3, Forge 66.1.5 (ForgeGradle 7, Java 25)",
+  "platform": "windows",
+  "engine": "java",
+  "route": "loader-api",
+  "tools": [
+   "Forge 66.1.5",
+   "ForgeGradle 7",
+   "decompiled 26.3 sources for API checks (kept out of the repo)",
+   "scripted dev clients",
+   "a dev dedicated server"
+  ],
+  "anti_cheat": "none (single player and a dev dedicated server the user runs)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-16",
+  "links": [
+   "https://github.com/MinecraftForge/MinecraftForge"
+  ],
+  "tags": [
+   "terraforming",
+   "undo",
+   "world-editing",
+   "file-input",
+   "regeneration",
+   "saved-data",
+   "zones",
+   "gui",
+   "destruction",
+   "containment",
+   "interactions",
+   "self-test",
+   "dedicated-server",
+   "forge"
+  ]
+ },
+ {
   "path": "games/mount-and-blade-ii-bannerlord/bannercraft-minecraft-gameplay-bridge.md",
   "kind": "game",
   "title": "BannerCraft: Minecraft gameplay through a local two-mod bridge",
@@ -6706,6 +6852,54 @@
    "unity",
    "server-authority",
    "local-conversion"
+  ]
+ },
+ {
+  "path": "games/nuclear-option/new-aircraft-with-blueprinter-nobp-b25h-ga25x-nimrod.md",
+  "kind": "game",
+  "title": "Three new flyable aircraft in Nuclear Option with Blueprinter .nobp (B-25H, GA-25X, Hawker Nimrod)",
+  "game": "Nuclear Option",
+  "game_version": "Early Access 0.34.3 (Steam app 2168680); still working on the later 0.34 patches (0.34.6 = public build 26327221)",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "loader-api",
+  "tools": [
+   "Blueprinter 2.1.1 (NOBlueprinter-Editor project)",
+   "Unity 2022.3.62f2 (batch mode)",
+   "AssetRipper (stock prefab and script export, reference only)",
+   "BepInEx 5.4.23.5",
+   "HarmonyX",
+   ".NET SDK 8.0.318",
+   "Blender 5.2.2",
+   "fal (nano-banana-2.1, image-to-3D)"
+  ],
+  "anti_cheat": "none found; played in single player only, and never for public servers (see Multiplayer in Setup)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-02",
+  "links": [
+   "https://github.com/nikkorap/NOBlueprinter-Releases",
+   "https://github.com/nikkorap/NOBlueprinter-Editor",
+   "https://github.com/Combat787/NOMM",
+   "https://github.com/KopterBuzz/NOMNOM",
+   "https://github.com/AssetRipper/AssetRipper",
+   "https://github.com/BepInEx/BepInEx"
+  ],
+  "tags": [
+   "aircraft",
+   "new-unit",
+   "blueprinter",
+   "flight-model",
+   "damage-model",
+   "cockpit",
+   "carrier",
+   "taildragger",
+   "biplane",
+   "hud",
+   "bombs"
   ]
  },
  {
@@ -8384,6 +8578,57 @@
    "oracle",
    "encrypted-paks",
    "live-read"
+  ]
+ },
+ {
+  "path": "games/sprocket/new-wheel-models-for-sprocket-without-a-loader-cloned-addres.md",
+  "kind": "game",
+  "title": "New wheel models for Sprocket, by patching game data or from a BepInEx plugin: cloned Addressables bundles, binary catalog.bin keys and part icons on Unity 6000.3 IL2CPP",
+  "game": "Sprocket",
+  "games_also": [],
+  "game_version": "Steam 1674170: stable 0.2.55.5 (buildid 25392405) and experimental 0.2.56.x (buildid 25910892), both Unity 6000.3.21f1 IL2CPP, metadata v39, Addressables 2.9.1",
+  "platform": "windows",
+  "engine": "unity-il2cpp",
+  "route": "loader-api",
+  "tools": [
+   "BepInEx 6 be.788",
+   "Sprocket Mod Loader 1.2.3",
+   "HarmonyX",
+   "UnityPy 1.25.4",
+   "AddressablesTools (nesrak1) @3dbc8210",
+   "Blender 5.2 (bpy, Cycles bake)",
+   ".NET 8 SDK",
+   "Python 3.12"
+  ],
+  "anti_cheat": "none found by um scan (single-player); editor/sandbox only. Data route: no game code touched. Plugin route: Harmony postfixes at run time, no game file changed",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "J1ND3R9"
+  ],
+  "date": "2026-10-29",
+  "links": [
+   "https://github.com/nesrak1/AddressablesTools",
+   "https://github.com/K0lb3/UnityPy",
+   "https://github.com/Hans21223/Sprocket-Mod-Loader",
+   "https://github.com/Hans21223/Sprocket-Quality-of-Life"
+  ],
+  "tags": [
+   "vehicle-parts",
+   "wheels",
+   "engines",
+   "addressables",
+   "binary-catalog",
+   "unitypy",
+   "spriteatlas",
+   "icons",
+   "procedural-models",
+   "blender",
+   "bepinex",
+   "harmony",
+   "il2cpp-interop"
   ]
  },
  {
