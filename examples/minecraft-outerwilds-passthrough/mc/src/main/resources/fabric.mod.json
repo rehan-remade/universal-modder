@@ -1,0 +1,32 @@
+{
+	"schemaVersion": 1,
+	"id": "blockcraft",
+	"version": "${version}",
+	"name": "BlockCraft",
+	"description": "Minecraft as the guest of another game: the host's camera drives Minecraft's, the host's ground becomes invisible blocks, and Minecraft's picture (colour + depth + overlay) is handed back through POSIX shared memory to be composited into the host's world.",
+	"authors": [
+		"Sven"
+	],
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"dev.sven.blockcraft.BlockCraft"
+		],
+		"client": [
+			"dev.sven.blockcraft.client.BlockCraftClient"
+		]
+	},
+	"mixins": [
+		{
+			"config": "blockcraft.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

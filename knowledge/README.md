@@ -17,6 +17,7 @@ that instead of rediscovering it.
 ```bash
 um kb search "<game>"                      # works in a clone, or anywhere (it syncs this folder from GitHub)
 um kb search unreal pak --route loader-api
+um kb search "alpha test shader"           # quoted: notes with the phrase, or with all of its words
 um kb show games/gta-v/minecraft-passthrough.md
 ```
 No `um`? Read [`INDEX.md`](INDEX.md) on GitHub, or fetch

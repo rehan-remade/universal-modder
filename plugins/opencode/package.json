@@ -1,0 +1,12 @@
+{
+  "name": "universal-modder",
+  "version": "0.2.0",
+  "type": "module",
+  "description": "OpenCode plugin for universal-modder: exposes the um CLI as a tool and registers the fal MCP server.",
+  "license": "MIT",
+  "repository": "https://github.com/rehan-remade/universal-modder",
+  "exports": "./index.ts",
+  "peerDependencies": {
+    "@opencode/plugin": "*"
+  }
+}

@@ -1,11 +1,11 @@
 ---
 kind: technique
 title: "Bridge contracts for two-game mods: ownership, units, transport and lifecycle"
-tags: [mashup, passthrough, shared-memory, seqlock, ring-buffer, endianness, coordinate-mapping, authority, lifecycle, restart, protocol-versioning]
-date: 2026-10-05
+tags: [mashup, passthrough, shared-memory, seqlock, ring-buffer, endianness, coordinate-mapping, units, health, authority, lifecycle, restart, protocol-versioning]
+date: 2026-10-10
 agents: ["Claude Code (Opus 5.5)"]
-humans: ["LeiiLo"]
-links: ["https://github.com/chasmlol/SkyCraft", "https://github.com/mrborghini/libertycraft"]
+humans: ["LeiiLo", "fabio-rovai"]
+links: ["https://github.com/chasmlol/SkyCraft", "https://github.com/mrborghini/libertycraft", "https://github.com/fabio-rovai/asset-passport/blob/main/docs/BRIDGES.md"]
 ---
 
 # Bridge contracts for two-game mods: ownership, units, transport and lifecycle
@@ -26,7 +26,9 @@ transplanted subsystem behind a C API, or a worker process. See `choosing-a-mash
 2. **Ownership table**: player position/physics, camera, world geometry, collision in each direction, NPCs,
    damage/health, inventory, saves, menus/pause/loading, and scripted events (cutscenes, vehicles,
    furniture). For each row: the owner, the hand-back trigger, and how control returns.
-3. **Units and axes**, written as a function both sides share.
+3. **Units and axes**, written as a function both sides share. For each game, name the unit length and the
+   page it comes from (not just "Source unit"), and say whether a ratio is measured or chosen for feel. Write
+   damage scaling and health ownership as separate lines.
 4. **Channels**: kind (snapshot, queue, byte ring, image), direction, rate, and the policy when full or late.
 5. **Protocol identity**: name, magic, version, byte order, and how each side detects the other restarting.
 6. **Lifecycle**: start order, pause, load/area change, death, disconnect, crash, uninstall.
@@ -42,17 +44,44 @@ transplanted subsystem behind a C API, or a worker process. See `choosing-a-mash
 | [Garry's Redemption](https://github.com/codeByAlexff/garrys-redemption) (design doc) | hidden Garry's Mod | native actors mirrored as invisible proxies; the guest drives grabbed/struck proxies, ownership returns after release and settling |
 
 ### Unit mappings
-| Project | Mapping |
-|---|---|
-| Minecraft × GTA V example | 1 GTA metre = 1 block; GTA (x, y, z) → MC (x, z + yOffset, −y); yaw = 180 − heading |
-| LibertyCraft (GTA IV) | 1 metre per block |
-| [NewVegasCraft](https://github.com/Davozh/new-vegascraft) (FNV 1.4.0.525) | 70 host units per block; host x-east/y-north/z-up → MC x / z + yOffset / −y; exterior yOffset fixed at −34 after per-load releveling moved builds by about 0.9 m |
-| Minecraft × Half-Life | 40 units per block; 72 units ≈ 1.8 m; health MC 20 → HL 100 (×5) |
-| [Faith Runner](https://github.com/tnrjns/faith-runner) in Skyrim | 70 units per metre |
-| [Killcraft](https://github.com/goonsn/Killcraft) (ULTRAKILL) | 2 host units per block |
-| Garry's Redemption design | 0.01905 m per Source unit, with a planned floating origin |
-| SkyCraft | 70 host units per block |
-| [2010 Rust Rewrite Mashup](https://github.com/chasmlol/2010-rust-rewrite-mashup) | 36 host units per block |
+The third column compares each mapping with the games' documented units and axes (see "Checking units, axes
+and health" below). A Minecraft block is 1 m.
+
+| Project | Mapping | Against the documented units |
+|---|---|---|
+| Minecraft × GTA V example | 1 GTA metre = 1 block; GTA (x, y, z) → MC (x, z + yOffset, −y); yaw = 180 − heading | no GTA V source found gives its axes or unit length, so the map (1 GTA unit per block) is unchecked |
+| LibertyCraft (GTA IV) | 1 metre per block | holds, but as a fact about Minecraft only; it says nothing about GTA IV's unit |
+| [NewVegasCraft](https://github.com/Davozh/new-vegascraft) (FNV 1.4.0.525) | 70 host units per block; host x-east/y-north/z-up → MC x / z + yOffset / −y; exterior yOffset fixed at −34 after per-load releveling moved builds by about 0.9 m | east and north agree with the GECK wiki; no GECK page found says which axis is up, so handedness is unchecked |
+| Minecraft × Half-Life | 40 units per block; 72 units ≈ 1.8 m; health MC 20 → HL 100 (×5) | 2.5 cm per unit, inside Valve's "2-3 centimeters" and 1.6% off its 1-inch scale; the ×5 is a damage constant, not a health conversion (gotcha 12) |
+| [Faith Runner](https://github.com/tnrjns/faith-runner) in Skyrim | 70 units per metre | matches Skyrim's 128 units = 6 ft (69.99 per metre); the linked repo (at `9470d75`) is the Bevy greybox build, in Unreal units (1 uu = 1 cm), with no Skyrim host, so where the 70 comes from isn't known |
+| [Killcraft](https://github.com/goonsn/Killcraft) (ULTRAKILL) | 2 host units per block | a gameplay scale: the README's `UnitsPerBlock` is 2 because it "makes the Minecraft player about V1's height" |
+| Garry's Redemption design | 0.01905 m per Source unit, with a planned floating origin | exactly Valve's 0.75-inch scale, 25% off the 1-inch one |
+| SkyCraft | 70 host units per block | 0.0125% off Skyrim's 128 units = 6 ft; its map in `docs/DESIGN.md` (`mc.z = -sky.y / 70`) matches both wikis' axes, handedness included |
+| [2010 Rust Rewrite Mashup](https://github.com/chasmlol/2010-rust-rewrite-mashup) | 36 host units per block | a gameplay scale: `voxel.rs` picks 36 so "the 70-unit soldier stands about two blocks tall" |
+
+### Checking units, axes and health
+Check the "Units and axes" function against the two games' documented facts before debugging it in game.
+Each fact needs a source page you can open; an unsourced fact never decides a check. Each check answers
+holds, refused, or undetermined (a fact it needs has no source):
+1. **Axis map:** the guest-to-host map that the two games' documented directions (east, north, up) imply.
+2. **Handedness:** the determinant of the declared map. A mirror must be declared, naming the world
+   direction it flips.
+3. **Unit ratio:** within a tolerance (2% in the table above) of what the documented unit lengths imply,
+   over every scale a game's sources give.
+4. **Health multiplier:** the host's maximum health over the guest's, or "native".
+
+Sources used for the table: Valve's [Unit](https://developer.valvesoftware.com/wiki/Unit) page ("roughly 1
+inch, 0.75 inches, or 2-3 centimeters"), the Creation Kit wiki's [Unit](https://ck.uesp.net/wiki/Unit) page
+("128 world units is equal to 6 feet"), the GECK wiki, and each project's own code or README.
+[Asset Passport](https://github.com/fabio-rovai/asset-passport)'s bridge checker (by fabio-rovai, MIT)
+implements the four checks as RDF/SHACL rules. Its
+[docs/BRIDGES.md](https://github.com/fabio-rovai/asset-passport/blob/main/docs/BRIDGES.md) has every source
+and quote, plus twelve wrong-on-purpose declarations it refuses (a naive x/y/z copy, an undeclared mirror,
+64 or 1000 units per block, health ×4...). If you write such rules in SPARQL on Oxigraph 0.5.x, parenthesise
+every arithmetic chain (`8-3-2` evaluates to 7 there,
+[oxigraph#1970](https://github.com/oxigraph/oxigraph/issues/1970)), and compute error terms in
+`xsd:double`: some `xsd:decimal` products and quotients come back unbound
+([oxigraph#1975](https://github.com/oxigraph/oxigraph/issues/1975)), so treat a missing value as a failure.
 
 ### Channel delivery policies (LibertyCraft, inherited from SkyCraft's Windows transport)
 - **Seqlock snapshots** for continuously replaced state (pose, player state). The counter is odd while
@@ -145,7 +174,22 @@ Start order / pause / level change / death / disconnect / crash / uninstall
 10. **Scripted openings with the guest in control.** SkyCraft's notes warn the Helgen cart opening may stall
     while Minecraft owns movement and suggest Alternate Start or a post-Helgen save. **Fix:** hand control
     back for scripted sequences, or document the workaround.
+11. **"Source unit" names no length.** **Symptom:** Minecraft × Half-Life (2.5 cm per unit) and Garry's
+    Redemption (1.905 cm) are about a quarter apart, and both fit Valve's Unit page. **Cause:** that page
+    gives three loose scales, and a contract that says "Source unit" picks none. **Fix:** name the scale and
+    link its page; mark a ratio chosen for feel (Killcraft's 2, the 2010 mashup's 36) as a gameplay scale,
+    not a measurement.
+12. **A health row that is really a damage constant.** **Symptom:** "health MC 20 → HL 100 (×5)" reads like a
+    health conversion. **Cause:** in the Half-Life bridge, `kMcToHlDamage` (5) scales Minecraft hits into
+    Half-Life damage, and Minecraft keeps the player's health while linked (`MinecraftOwnsHealth()`).
+    **Fix:** write damage scaling and health ownership as separate contract lines, and put the unit in the
+    damage message (gotcha 1).
 
 ## Verification
 Versions per project are in `skills/mashup-mods/references/mashup-cases.md`. Items
 marked "hypothesis" are inferences, not reproduced results.
+
+The Unit mappings table's third column and gotchas 11-12 are source inspection (2026-10-10): each
+declaration was compared with the wiki pages and the project's code or README; no bridge was run. The wiki
+pages don't always name the game they apply to (the GECK pages never name New Vegas, and Valve's Unit page
+covers id Software and Valve engines in general).

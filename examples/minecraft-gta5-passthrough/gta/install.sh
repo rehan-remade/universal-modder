@@ -14,7 +14,8 @@ WIN=${PASSTHROUGH_WIN_DIR:-'C:\dev\passthrough'}
 RUNTIME=${RUNTIME:-$HERE/third_party/runtime}
 BUILD=${BUILD:-$(wslpath -u "$WIN\\gta\\build")}
 ARGS='-nobattleye -noBE'
-FILES=(ScriptHookV.dll dinput8.dll args.txt MCPassthrough.asi ReShade64.asi ReShade.ini ReShadePreset.ini
+# ReShade.ini is not listed: --remove deletes it only if this installer created it (see the marker below)
+FILES=(ScriptHookV.dll dinput8.dll args.txt MCPassthrough.asi ReShade64.asi ReShadePreset.ini
 	reshade-shaders/Shaders/MCPassthrough.fx reshade-shaders/Shaders/ReShade.fxh reshade-shaders/Shaders/ReShadeUI.fxh)
 
 # the Steam libraries: the default ones and every other one listed in their libraryfolders.vdf
@@ -38,6 +39,7 @@ case $GTA in [A-Za-z]:*) GTA=$(wslpath -u "$GTA") ;; esac
 [ -f "$GTA/GTA5.exe" ] || { echo "GTA5.exe not found in: $GTA"; exit 1; }
 if [ "$1" = "--remove" ]; then
 	for f in "${FILES[@]}"; do rm -fv "$GTA/$f"; done
+	[ ! -f "$GTA/.mcpassthrough_reshade_ini" ] || rm -fv "$GTA/ReShade.ini" "$GTA/.mcpassthrough_reshade_ini"
 	rmdir "$GTA/reshade-shaders/Shaders" "$GTA/reshade-shaders" 2>/dev/null || true
 	exit 0
 fi
@@ -57,6 +59,7 @@ mkdir -p "$GTA/reshade-shaders/Shaders"
 cp -v "$HERE/shaders/MCPassthrough.fx" "$HERE/third_party/ReShade.fxh" "$HERE/third_party/ReShadeUI.fxh" "$GTA/reshade-shaders/Shaders/"
 if [ ! -f "$GTA/ReShade.ini" ]; then
 	printf '[GENERAL]\r\nEffectSearchPaths=.\\reshade-shaders\\Shaders\\\r\nTextureSearchPaths=.\\reshade-shaders\\Textures\\\r\nPresetPath=.\\ReShadePreset.ini\r\nPreprocessorDefinitions=RESHADE_DEPTH_INPUT_IS_REVERSED=1,RESHADE_DEPTH_INPUT_IS_UPSIDE_DOWN=0,RESHADE_DEPTH_INPUT_IS_LOGARITHMIC=0,RESHADE_DEPTH_LINEARIZATION_FAR_PLANE=1000\r\n\r\n[OVERLAY]\r\nTutorialProgress=4\r\nShowClock=0\r\nShowFPS=0\r\n\r\n[SCREENSHOT]\r\nSavePath=.\\\r\n' > "$GTA/ReShade.ini"
+	: > "$GTA/.mcpassthrough_reshade_ini"
 fi
 # the technique is always on; its McActive uniform (set by the add-on) keeps it a pure passthrough until
 # Minecraft frames arrive

@@ -10,9 +10,11 @@ doesn't exist yet: a weapon sprite, a boss, a unit rendered from 16 angles, a ti
 boss music, a voiced line.
 
 ## Setup (check once per session)
-- **Key.** `FAL_KEY` must be set (create one at https://fal.ai/dashboard/keys). `um fal` also reads it from
-  a `.env` file (`FAL_KEY=...`) in the working folder. Never write the key into mod files; `um publish check`
-  flags leaked keys.
+- **Key.** Create one at https://fal.ai/dashboard/keys. `um fal` takes `FAL_KEY` from the environment first,
+  then the key the human stored with `um fal key set` (a hidden prompt: the desktop keyring on Linux, through
+  libsecret's `secret-tool`; an owner-only `~/.secrets/fal-key` where there's no `secret-tool`), then
+  `FAL_KEY=...` in a `.env` in the working folder. `um fal key status` shows which source is used, with keys
+  masked. Never write the key into mod files or configs; `um publish check` flags leaked keys.
 - **MCP.** fal's hosted MCP server is `https://mcp.fal.ai/mcp` with header `Authorization: Bearer $FAL_KEY`.
   The repo pre-configures it for each agent:
   - Claude Code: `.mcp.json`
@@ -20,16 +22,36 @@ boss music, a voiced line.
   - Cursor: `.cursor/mcp.json`
   - VS Code/Copilot: `.vscode/mcp.json`
   - Gemini CLI: `gemini-extension.json`
+  - OpenCode: `opencode.json`
 
-  To add it by hand:
-  - Claude Code: `claude mcp add --transport http fal https://mcp.fal.ai/mcp --header "Authorization: Bearer $FAL_KEY"`
-  - Codex (`~/.codex/config.toml`): `[mcp_servers.fal]` with `url = "https://mcp.fal.ai/mcp"` and
-    `bearer_token_env_var = "FAL_KEY"`
-  - anything else: point its MCP config at the URL and header above.
+  They read `FAL_KEY` from the agent's environment, and without it the server doesn't connect. If the fal
+  MCP tools are missing, use `um fal` meanwhile and tell the human. They can start the agent with `FAL_KEY`
+  set (on Linux, from the keyring:
+  `export FAL_KEY="$(secret-tool lookup service fal.ai key api)"`), or add fal's OAuth endpoint, which takes
+  a browser sign-in instead of a key:
+  - Claude Code: `claude mcp add --transport http fal-oauth https://mcp.fal.ai/mcp-relay`, then
+    Authenticate it in `/mcp`
+  - Codex: `codex mcp add fal-oauth --url https://mcp.fal.ai/mcp-relay`, then `codex mcp login fal-oauth`
+  - anything else: a Streamable HTTP server at `https://mcp.fal.ai/mcp-relay` with OAuth and no header
+    (https://fal.ai/docs/documentation/setting-up/mcp)
+
+  Outside a clone, with a key: Codex takes `[mcp_servers.fal]` with `url = "https://mcp.fal.ai/mcp"` and
+  `bearer_token_env_var = "FAL_KEY"` in `~/.codex/config.toml`.
   MCP tools: `search_models`, `recommend_model`, `get_model_schema`, `get_pricing`, `run_model`,
   `submit_job`/`check_job`/`get_job_result`, `upload_file`, `search_docs`.
 - **No fal key?** For images, `um comfy` uses a local ComfyUI server instead (`um comfy status`, then
   `um comfy image "..." --sprite`). It has no audio, 3D or video recipes.
+- **Sprixen** is another hosted option for 2D art only. It's a separate paid service (an account, an API key
+  and credits), so ask the user before using it. `um sprixen` keeps one art style, resolution and view per
+  project (`um sprixen sprite "..." --style pixel_art --size 32x32`), turns a sprite id into a one-row sheet
+  of 2-12 frames (`um sprixen animate <sprite_id> --type walk`), and makes terrain tiles. The key goes in
+  `SPRIXEN_API_KEY` or `um sprixen key set`, and `um sprixen credits` shows the balance. No audio, 3D or video.
+- **Voidless** is another separate paid service for 2D art (an account on a plan with API access, an API key
+  and credits), so ask the user before using it. `um voidless sprite "..."` prints an asset id; `um voidless
+  rotate <asset_id>` adds the eight facings, and `um voidless animate <asset_id> --preset <key>` adds a set of
+  clips at the asset's size (`um voidless presets` lists the keys). `um voidless fetch <asset_id>` downloads
+  the frames again without generating. The key goes in `VOIDLESS_API_KEY` or `um voidless key set`, and
+  `um voidless credits` shows the balance. For 8 or 16 headings from a 3D model instead, see `um render3d`.
 - **CLI alternatives:** `pip install fal` gives `fal api <endpoint> key=value key:=json`; the genmedia CLI
   (`genmedia run ... --json --download`) is agent-friendly too.
 

@@ -53,8 +53,26 @@ Steamodded.
 - Community loaders:
   - Slay the Spire: ModTheSpire + BaseMod, `@SpirePatch`;
   - Starsector: official mod API;
-  - Project Zomboid: Lua mods plus Java.
+  - Project Zomboid: Lua mods plus Java;
+  - Mindustry: a built-in mod loader, so don't patch the jar. `mod.hjson` (or `mod.json`) at the mod's root,
+    content as `content/<type>/*.hjson|json` (`blocks`, `units`, `items`, `liquids`, ...), PNGs in `sprites/`
+    (`sprites-override/` replaces vanilla sprites), JavaScript in `scripts/main.js`, and Java mods as jars built
+    from Anuken's MindustryJavaModTemplate. Mods go in `%APPDATA%/Mindustry/mods`,
+    `~/.local/share/Mindustry/mods`, or `<install>/saves/mods` on Steam, as a folder or a zip.
 - Otherwise use a Java agent (`-javaagent`) with ASM/ByteBuddy, or Mixin.
+
+## Dwarf Fortress (v50+, Steam and itch.io)
+The game is native, but everything it shows comes from plain-text raws and PNG tile pages, so mods are data.
+- A mod is a folder in `mods/` with `info.txt` (`ID`, `NUMERIC_VERSION`, `NAME`, ...) next to `objects/` and
+  `graphics/` raws (vanilla's are in the install's `data/vanilla/*/` to read). `mods/` is in the user folder,
+  `Bay 12 Games/Dwarf Fortress` under `%APPDATA%` or `~/.local/share`, or in the install in portable mode
+  (`prefs/portable.txt`).
+- Mods are picked and ordered when a world is created, then copied into `data/installed_mods/`; the world keeps
+  that copy. Bump `NUMERIC_VERSION` after every edit and test in a new world. Raw errors go to `errorlog.txt`.
+- Replacement graphics conventionally declare `[REQUIRES_ID_AFTER_ME:vanilla_creatures_graphics]` (load before
+  vanilla). Same-ID graphics blocks merge across files.
+- Scripting: DFHack (a separate Steam app; Lua scripts and C++ plugins), loaded through DF's `dfhooks` library.
+- 0.47 and older (classic): edit `raw/objects/` in the install.
 
 ## Defold, Cocos2d-x, Haxe/OpenFL
 - Defold: `game.arcd`/`.arci` archives, Lua scripts. Unpackers exist.

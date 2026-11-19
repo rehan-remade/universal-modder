@@ -7,7 +7,7 @@ game_version: 'Wrath of the Lich King client 3.3.5a (build 12340, enUS, Direct3D
 platform: windows
 engine: native
 route: asset-only
-tools: [Python 3.12 (own M2/.skin writer, BLP and DBC tools), numpy, Pillow, Blender, StormLib/smpq, capstone, Ghidra 12.1]
+tools: ["Python 3.12 (own M2/.skin writer, BLP and DBC tools)", numpy, Pillow, Blender, StormLib/smpq, capstone, Ghidra 12.1]
 anti_cheat: 'none touched: a private server the user runs; only client data files (a patch MPQ) change'
 status: working
 agents:

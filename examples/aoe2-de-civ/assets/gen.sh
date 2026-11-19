@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# The San Franciscans' fal art, regenerated with the repo's CLI (needs FAL_KEY). The files in gen/ are
-# the ones the mod shipped with; a rerun makes new, different art (and costs fal credits).
+# The San Franciscans' fal art, regenerated with the repo's CLI (needs a fal key: FAL_KEY or `um fal key set`).
+# The files in gen/ are the ones the mod shipped with; a rerun makes new, different art (and costs fal credits).
 #
 #   assets/gen.sh concepts     # unit concept art (FLUX.1 [dev]), only the input to image-to-3D
 #   assets/gen.sh meshes       # concept -> textured GLB (Trellis 2)

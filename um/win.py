@@ -22,7 +22,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import ntpath
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -31,7 +33,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-from um.common import die, is_windows, is_wsl, ps_exe, to_posix, to_win
+from um.common import PS_UTF8, die, is_windows, is_wsl, ps_exe, text_console, text_utf8, to_posix, to_win
 
 HERE = Path(__file__).resolve().parent
 TOOLS = HERE / "ps1"          # shipped inside the package so `uv tool install` gets them too
@@ -47,8 +49,11 @@ def _check_platform():
 
 def powershell(script: str, timeout: float = 60) -> str:
     _check_platform()
-    r = subprocess.run([ps_exe(), "-NoProfile", "-NonInteractive", "-Command", script], capture_output=True, text=True, timeout=timeout,
-                       cwd="/mnt/c" if is_wsl() else None)
+    # Window titles and install paths are not ASCII: ask PowerShell for UTF-8 (PS_UTF8), so the bytes match
+    # text_utf8() instead of the console code page.
+    script = PS_UTF8 + script
+    r = subprocess.run([ps_exe(), "-NoProfile", "-NonInteractive", "-Command", script], capture_output=True,
+                       timeout=timeout, cwd="/mnt/c" if is_wsl() else None, **text_utf8())
     if r.returncode:
         die(f"powershell failed: {r.stderr.strip()[-1500:]}")
     return r.stdout.replace("\r", "")
@@ -141,8 +146,10 @@ def setup(args=None):
         (d / root).rename(d / "ffmpeg")
         z.unlink()
     ff = ffmpeg_win()
-    out = subprocess.run([ff, "-hide_banner", "-h", "filter=gfxcapture"], capture_output=True, text=True).stdout
-    print("ffmpeg", ff, "(gfxcapture ok)" if "gfxcapture" in out else "(WARNING: no gfxcapture in this build)")
+    # Ask for the filter list and match the name as a word. `-h filter=gfxcapture` answers a build that lacks
+    # it with "Unknown filter 'gfxcapture'." *on stdout*, which contains the name and so read as a pass.
+    out = subprocess.run([ff, "-hide_banner", "-filters"], capture_output=True, **text_utf8()).stdout
+    print("ffmpeg", ff, "(gfxcapture ok)" if " gfxcapture " in out else "(WARNING: no gfxcapture in this build)")
     enc = pick_encoder(ff)
     (d / "config.json").write_text(json.dumps(dict(encoder=enc)))
     print("encoder", enc)
@@ -152,7 +159,7 @@ def pick_encoder(ff: str) -> str:
     """h264_nvenc / h264_amf / h264_qsv if the GPU takes a test frame, else libx264."""
     for enc in ("h264_nvenc", "h264_amf", "h264_qsv"):
         r = subprocess.run([ff, "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "color=black:s=256x256:d=0.1", "-c:v", enc, "-f", "null", "-"],
-                           capture_output=True, text=True)
+                           capture_output=True, **text_utf8())
         if r.returncode == 0:
             return enc
     return "libx264"
@@ -186,7 +193,7 @@ def pid_of(name: str) -> int | None:
 
 def kill(pid: int):
     """By exact PID. (Pattern kills - pkill -f, taskkill /IM with wildcards - can hit the agent's own shell or other apps.)"""
-    r = subprocess.run(["taskkill.exe" if is_wsl() else "taskkill", "/PID", str(int(pid)), "/F"], capture_output=True, text=True)
+    r = subprocess.run(["taskkill.exe" if is_wsl() else "taskkill", "/PID", str(int(pid)), "/F"], capture_output=True, **text_console())
     print((r.stdout or r.stderr).strip())
 
 
@@ -196,19 +203,45 @@ def launch(target: str, args: list[str], steam: bool = False):
         subprocess.run(["cmd.exe" if is_wsl() else "cmd", "/c", "start", "", url], cwd="/mnt/c" if is_wsl() else None, timeout=30)
         return
     exe = to_win(target)
-    subprocess.run(["cmd.exe" if is_wsl() else "cmd", "/c", "start", "", exe, *args], cwd="/mnt/c" if is_wsl() else None, timeout=30)
+    # Start in the exe's own folder: games open their data files relative to the working directory
+    # (Tomb Raider: Legend dies with "Failed to open BIGFILE.000" when started from anywhere else).
+    exe_dir = ntpath.dirname(exe)
+    cmd = ["cmd.exe" if is_wsl() else "cmd", "/c", "start", ""]
+    if exe_dir:
+        cmd += ["/D", exe_dir]
+    subprocess.run([*cmd, exe, *args], cwd="/mnt/c" if is_wsl() else None, timeout=30)
 
 
 # --------------------------------------------------------------------------- capture
 
 
+def _ff_value(v: str) -> str:
+    r"""An option value as it has to appear in an ffmpeg filtergraph (`-f lavfi -i <graph>`, no shell in between).
+
+    ffmpeg-filters, "Notes on filtergraph escaping": the graph parser splits on [ ] , ; and unescapes \ and '
+    once, then the filter's option parser splits on : and unescapes \ and ' again. So escape for the option
+    list first, then for the graph: "Halo: MCC" -> Halo\\: MCC, and C:\Games -> C\\:\\\\Games."""
+    v = re.sub(r"([\\':])", r"\\\1", v)               # first level: the filter's options
+    return re.sub(r"([\\'\[\],;])", r"\\\1", v)       # second level: the filtergraph
+
+
+def _exe_name(exe: str) -> str:
+    r"""--exe as gfxcapture (window_exe), Get-Process and the Auto HDR check see it: the file name. A full path
+    (C:\Games\foo.exe, \\server\share\foo.exe, /mnt/c/.../foo.exe) is cut to its file name; anything else is
+    left alone, because it's a regex (Game\.exe)."""
+    return ntpath.basename(exe) if re.match(r"[A-Za-z]:[\\/]|\\\\|/", exe) else exe
+
+
 def _source(exe=None, hwnd=None, title=None, cursor=False, crop=None) -> str:
+    # window_exe and window_title are regexes (std::regex, ECMAScript) that gfxcapture matches against the exe's
+    # file name and the window title. A ':' or '\' in them must be escaped for the filtergraph (issue #370).
     if hwnd:
         sel = f"hwnd={hwnd}"
     elif exe:
-        sel = f"window_exe={exe if exe.lower().endswith('.exe') else exe + '.exe'}"
+        exe = _exe_name(exe)
+        sel = "window_exe=" + _ff_value(exe if exe.lower().endswith(".exe") else exe + ".exe")
     elif title:
-        sel = f"window_title={title}"
+        sel = "window_title=" + _ff_value(title)
     else:
         die("give --exe, --hwnd or --title")
     c = ""
@@ -240,7 +273,7 @@ def _gpu_prefs() -> dict:
             pass
     elif is_wsl():
         try:
-            text = subprocess.run(["reg.exe", "query", "HKCU\\" + GPU_PREFS], capture_output=True, text=True, timeout=15, cwd="/mnt/c").stdout
+            text = subprocess.run(["reg.exe", "query", "HKCU\\" + GPU_PREFS], capture_output=True, timeout=15, cwd="/mnt/c", **text_utf8()).stdout
         except (OSError, subprocess.TimeoutExpired):
             return out
         for line in text.splitlines():
@@ -273,13 +306,14 @@ def warn_auto_hdr(exe=None):
 
 def shot(out: str, exe=None, hwnd=None, title=None, scale: float | None = None, timeout=20) -> str:
     """One frame of a game window -> PNG. Returns the (posix) path; with scale also writes <out>_small.png."""
+    exe = _exe_name(exe) if exe else exe
     ff = ffmpeg_win()
     warn_auto_hdr(exe)
     dst = Path(out).resolve()
     dst.parent.mkdir(parents=True, exist_ok=True)
     target = to_win(dst) if is_wsl() else str(dst)
     r = subprocess.run([ff, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", _source(exe, hwnd, title), "-frames:v", "1", target],
-                       capture_output=True, text=True, timeout=timeout)
+                       capture_output=True, timeout=timeout, **text_utf8())
     if r.returncode or not dst.exists():
         die(f"capture failed (is the window open and not minimized?): {r.stderr.strip()[-800:]}")
     if scale:
@@ -301,6 +335,7 @@ class Recorder:
 
     def __init__(self, exe=None, out="take", hwnd=None, title=None, fps=30, audio=True, crop=None, max_width=None, cq=19, pid=None):
         self.pid = pid
+        exe = _exe_name(exe) if exe else exe
         self.exe, self.hwnd, self.title, self.fps, self.audio_on, self.crop, self.max_width, self.cq = exe, hwnd, title, fps, audio, crop, max_width, cq
         self.base = to_win(Path(out).resolve()) if is_wsl() and not (len(out) > 1 and out[1] == ":") else out
         self.video = self.audio = None
@@ -327,8 +362,8 @@ class Recorder:
             else:
                 self.audio = subprocess.Popen([ps_exe(), "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", tool_path("ProcLoopback.ps1"),
                                                "-TargetPid", str(pid), "-Out", self.base + ".audio.raw"],
-                                              stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                                              cwd="/mnt/c" if is_wsl() else None)
+                                              stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                              cwd="/mnt/c" if is_wsl() else None, **text_utf8())
                 self.header = json.loads(self.audio.stdout.readline() or "{}")
                 t_audio = time.time()
         self.t_video = time.time()
@@ -379,7 +414,7 @@ class Drive:
     def __init__(self, proc: str):
         _check_platform()
         self.p = subprocess.Popen([ps_exe(), "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", tool_path("WinDrive.ps1"), "-Proc", proc],
-                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=1, cwd="/mnt/c" if is_wsl() else None)
+                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE, bufsize=1, cwd="/mnt/c" if is_wsl() else None, **text_utf8())
         self.ready = self.p.stdout.readline().strip()
 
     def cmd(self, line: str, retry: bool = True) -> str:
@@ -443,7 +478,7 @@ def reg(action: str, key: str, value: str | None = None, data: str | None = None
         subprocess.run([exe, "export", key, to_win(bfile) if is_wsl() else str(bfile), "/y"], capture_output=True)
         print("backup:", bfile)
         cmd = [exe, "add", key, "/v", value, "/t", typ, "/d", data, "/f"]
-    r = subprocess.run(cmd, capture_output=True, text=True)
+    r = subprocess.run(cmd, capture_output=True, **text_console())
     print((r.stdout or r.stderr).replace("\r", "").strip())
 
 
@@ -516,7 +551,8 @@ def register(sub):
             q.add_argument("--no-audio", action="store_true")
             q.add_argument("--crop", help="left:top:right:bottom px to cut (e.g. ultrawide -> centre 16:9)")
             q.add_argument("--pid", type=int, help="process to capture audio from, when --exe is ambiguous (e.g. two java.exe)")
-        q.add_argument("--exe", help="window's executable name, e.g. AoE2DE_s.exe (regex)")
+        q.add_argument("--exe", help="window's executable name, e.g. AoE2DE_s.exe (regex; a full path is cut to "
+                                     "its file name)")
         q.add_argument("--hwnd", type=int)
         q.add_argument("--title", help="window title regex")
         q.set_defaults(func=main)
