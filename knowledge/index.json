@@ -11588,6 +11588,48 @@
   ]
  },
  {
+  "path": "games/unreal-tournament-2004/full-6dof-vr-in-unreal-tournament-2004-unrealscript-package-.md",
+  "kind": "game",
+  "title": "Full 6DoF VR in Unreal Tournament 2004: UnrealScript package plus a d3d9 proxy for SteamVR",
+  "game": "Unreal Tournament 2004",
+  "games_also": [],
+  "game_version": "OldUnreal patch 3374, 64-bit: built on Preview 9/23, released against Release Candidate 3 (build 2026-10-20, 185bad7f)",
+  "platform": "windows",
+  "engine": "unreal",
+  "route": "native-hook",
+  "tools": [
+   "UCC make",
+   "ucc batchexport",
+   "MSVC 2022 (x64, /MT)",
+   "OpenVR SDK",
+   "um win (launch, shot, kill)"
+  ],
+  "anti_cheat": "none (offline play against bots only; online play was never attempted)",
+  "status": "released",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "jmkokko"
+  ],
+  "date": "2026-11-20",
+  "links": [
+   "https://github.com/jmkokko/ut2004-vr",
+   "https://github.com/jmkokko/ut2004-vr/releases/tag/v0.1.0"
+  ],
+  "tags": [
+   "vr",
+   "openvr",
+   "steamvr",
+   "d3d9-proxy",
+   "unrealscript",
+   "ue2",
+   "motion-controllers",
+   "hud-capture",
+   "mock-headset"
+  ]
+ },
+ {
   "path": "games/valheim/mjolnir-frostner-rework.md",
   "kind": "game",
   "title": "Frostner into Mjolnir: the vanilla Frostner reworked into a returning thunder hammer",
@@ -15671,6 +15713,36 @@
    "https://github.com/kiselgra/rtgi",
    "https://github.com/NVIDIAGameWorks/RTXGI-DDGI",
    "https://github.com/NVIDIA-RTX/RTXGI"
+  ]
+ },
+ {
+  "path": "techniques/retrofitting-stereo-vr-into-an-old-d3d9-game-in-engine-eye-r.md",
+  "kind": "technique",
+  "title": "Retrofitting stereo VR into an old D3D9 game: in-engine eye renders, a d3d9 proxy and a mock headset",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [
+   "jmkokko"
+  ],
+  "date": "2026-11-20",
+  "links": [
+   "https://github.com/jmkokko/ut2004-vr",
+   "games/unreal-tournament-2004/full-6dof-vr-in-unreal-tournament-2004-unrealscript-package-.md"
+  ],
+  "tags": [
+   "vr",
+   "openvr",
+   "steamvr",
+   "d3d9",
+   "d3d9ex",
+   "proxy-dll",
+   "stereo",
+   "mock-headset",
+   "testing",
+   "hud",
+   "input"
   ]
  },
  {
