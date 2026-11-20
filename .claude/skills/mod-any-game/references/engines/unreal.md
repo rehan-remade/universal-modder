@@ -53,3 +53,27 @@ read the UE4SS example mods before prompting for features. Many are already ther
 - **Signatures:** games with `.sig` files verify paks. Community bypasses exist only for specific
   single-player games; don't bypass them where it's used as anti-tamper for online play.
 - UE5 games that stream everything through IoStore need retoc, not repak.
+
+## Older Unreal: UE1 and UE2 (UnrealScript games: Unreal, UT99, UT2004, Deus Ex, Splinter Cell...)
+These ship their game logic as UnrealScript bytecode in `System/*.u` and have an official mod route: write your
+own package of classes that extend the game's.
+- **Identify:** `System/<Game>.exe` with `Core.u`, `Engine.u` and `*.int` / `*.ini` beside it. Check
+  `System/Build.ini` (OldUnreal patches) and the exe's PE machine (UT2004 3374 and UT99 469 are maintained by
+  OldUnreal, with 64-bit builds).
+- **Read the game:** `ucc batchexport <Pkg>.u class .uc <outdir>` exports a package's script. Keep it outside
+  your repo; read it, don't copy it.
+- **Build:** put your package's `Classes/*.uc` in `<Game>/<Pkg>/Classes/`, add `EditPackages=<Pkg>` (after the
+  game's own packages) and run `ucc make`. A temporary ini (`ucc make -ini=Build.ini -userini=BuildUser.ini`) keeps
+  the player's ini stock. Packages compile against the installed patch's script: build releases against what
+  players have.
+- **Entry points:** a mutator (`?Mutator=Pkg.Class` on the map URL, or the menus), a game type
+  (`?Game=`), a replacement PlayerController/Pawn chosen by either, and the console class
+  (`[Engine.Engine] Console=`), which is the only hook alive in the main menus. Default values live in
+  `defaultproperties`; `config` variables are saved in the package's ini (`class X config(MyPkg)`).
+- **Testing without input:** an exec chain read from your ini and run a command every few frames (ending in
+  `exit`), plus log lines, gives a repeatable test; `-log` writes `System/<Game>.log` (flushed on exit).
+- **Native side:** no headers for the 64-bit OldUnreal builds, so prefer UnrealScript plus a proxy DLL (e.g.
+  `d3d9.dll`) over native packages. `IpDrv.UdpLink` on 127.0.0.1 talks to an external process.
+- **Pitfalls:** `set <Class> <var>` on a `globalconfig` variable writes the ini at once; console execs with
+  several float parameters may only receive the first (take a string and split it); `UdpLink.ReadText` can append
+  leftovers of an earlier, longer datagram. Field note: `games/unreal-tournament-2004/`.
