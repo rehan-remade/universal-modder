@@ -7330,6 +7330,99 @@
   ]
  },
  {
+  "path": "games/nuclear-option/damage-model-break-faces-skin-holes-and-internals.md",
+  "kind": "game",
+  "title": "Damage that looks like stock on custom Nuclear Option aircraft: open break faces, AircraftSkin hole maps and internal structure",
+  "game": "Nuclear Option",
+  "game_version": "Early Access 0.34.6 (Steam app 2168680, public build 26327221); the shader and part rules were read on 0.34.6 and re-checked against a later decompile of the same build",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "loader-api",
+  "tools": [
+   "Blueprinter 2.1.1 (NOBlueprinter-Editor project)",
+   "Unity 2022.3.62f2 (batch mode)",
+   "Blender 5.2.2 (bpy, BVHTree ray checks)",
+   "numpy",
+   "UnityPy (reading the compiled shader, locally only)",
+   "AssetRipper (stock prefab and mesh YAML, reference only)",
+   "ILSpy-style decompile of Assembly-CSharp (reference only)",
+   "BepInEx 5.4.23.5 + a local test helper plugin (in-game detach / damage commands)"
+  ],
+  "anti_cheat": "none found; single player only",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-22",
+  "links": [
+   "https://github.com/riseofthewolfremake-lgtm/HeritagePairs-NuclearOption",
+   "https://github.com/riseofthewolfremake-lgtm/HeritagePairs-NuclearOption/blob/main/blender/v2/textures/hole_damage189.py",
+   "https://github.com/riseofthewolfremake-lgtm/HeritagePairs-NuclearOption/blob/main/unity/Editor/DamageHoles189.cs",
+   "https://github.com/riseofthewolfremake-lgtm/HeritagePairs-NuclearOption/blob/main/unity/Editor/StockStructure.cs",
+   "https://github.com/riseofthewolfremake-lgtm/HeritagePairs-NuclearOption/blob/main/blender/check_breakfaces.py",
+   "https://github.com/nikkorap/NOBlueprinter-Releases"
+  ],
+  "tags": [
+   "aircraft",
+   "damage-model",
+   "break-up",
+   "shader",
+   "hole-map",
+   "alpha-clip",
+   "internals",
+   "blueprinter",
+   "model-checks",
+   "ray-casting"
+  ]
+ },
+ {
+  "path": "games/nuclear-option/flight-ground-handling-and-ai-for-custom-aircraft.md",
+  "kind": "game",
+  "title": "Making custom Nuclear Option aircraft fly, taxi, take off and land like stock: flight model, taildragger ground handling, carrier spawns and the AI",
+  "game": "Nuclear Option",
+  "game_version": "Early Access 0.34.6 (Steam app 2168680, public build 26327221); first findings on 0.34.3",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "loader-api",
+  "tools": [
+   "Blueprinter 2.1.1 (.nobp packs)",
+   "BepInEx 5.4.23.5",
+   "HarmonyX",
+   "Unity 2022.3.62f2 (batch mode, also used as an offline PhysX bench)",
+   "ILSpy (decompile of Assembly-CSharp, reference only)",
+   "Python 3 (offline flight / ground stubs)"
+  ],
+  "anti_cheat": "none found; single player only, never on public servers (see the overview note)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-22",
+  "links": [
+   "https://github.com/riseofthewolfremake-lgtm/HeritagePairs-NuclearOption",
+   "https://github.com/nikkorap/NOBlueprinter-Releases",
+   "https://github.com/BepInEx/BepInEx"
+  ],
+  "tags": [
+   "aircraft",
+   "flight-model",
+   "fly-by-wire",
+   "taildragger",
+   "ground-handling",
+   "landing-gear",
+   "carrier",
+   "spawn",
+   "wing-fold",
+   "ai",
+   "physx",
+   "joints",
+   "airbrake",
+   "blueprinter"
+  ]
+ },
+ {
   "path": "games/nuclear-option/ghpc-coop-survival-runtime-source-derived-integration-and-pe.md",
   "kind": "game",
   "title": "GHPC tanks in Nuclear Option: integration findings and unresolved runtime gaps",
@@ -7370,11 +7463,51 @@
   ]
  },
  {
+  "path": "games/nuclear-option/in-game-test-harness-for-aircraft-mods.md",
+  "kind": "game",
+  "title": "An in-game test harness for Nuclear Option aircraft mods: command-file test plugin, state restore, and rules learned the hard way",
+  "game": "Nuclear Option",
+  "game_version": "Early Access 0.34.3 to 0.34.6 (Steam app 2168680, Unity 2022.3.62f2 Mono); decompile checked against the 0.34.6 build",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "loader-api",
+  "tools": [
+   "BepInEx 5.4.23.5",
+   "HarmonyX (bundled with BepInEx 5.4.23.5)",
+   "dev plugin targeting netstandard2.1",
+   "universal-modder 0.2.0 (um win launch / drive / shot, um backup)",
+   "Python 3 offline stubs",
+   "Git Bash scripts"
+  ],
+  "anti_cheat": "none found; single player only (Free Flight / offline missions), never on public servers",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-22",
+  "links": [
+   "https://github.com/riseofthewolfremake-lgtm/HeritagePairs-NuclearOption",
+   "https://github.com/BepInEx/BepInEx"
+  ],
+  "tags": [
+   "test-harness",
+   "oracle",
+   "dev-plugin",
+   "command-file",
+   "flight-test",
+   "performance",
+   "state-restore",
+   "offline-stubs",
+   "aircraft"
+  ]
+ },
+ {
   "path": "games/nuclear-option/new-aircraft-with-blueprinter-nobp-b25h-ga25x-nimrod.md",
   "kind": "game",
-  "title": "Three new flyable aircraft in Nuclear Option with Blueprinter .nobp (B-25H, GA-25X, Hawker Nimrod)",
+  "title": "Six new flyable aircraft in Nuclear Option with Blueprinter .nobp (B-25H, GA-25X, Hawker Nimrod, FD-32, B-17G, MSB-17), released on NOMNOM",
   "game": "Nuclear Option",
-  "game_version": "Early Access 0.34.3 (Steam app 2168680); still working on the later 0.34 patches (0.34.6 = public build 26327221)",
+  "game_version": "Early Access 0.34.3 (Steam app 2168680); 0.34.6 (public build 26327221; Assembly-CSharp decompiled again 2026-11-19, byte-identical to the earlier 0.34.6 decompile)",
   "platform": "windows",
   "engine": "unity-mono",
   "route": "loader-api",
@@ -7389,13 +7522,14 @@
    "fal (nano-banana-2.1, image-to-3D)"
   ],
   "anti_cheat": "none found; played in single player only, and never for public servers (see Multiplayer in Setup)",
-  "status": "working",
+  "status": "released",
   "agents": [
    "Claude Code (Opus 5.5)"
   ],
   "humans": [],
-  "date": "2026-11-02",
+  "date": "2026-11-22",
   "links": [
+   "https://github.com/riseofthewolfremake-lgtm/HeritagePairs-NuclearOption",
    "https://github.com/nikkorap/NOBlueprinter-Releases",
    "https://github.com/nikkorap/NOBlueprinter-Editor",
    "https://github.com/Combat787/NOMM",
@@ -7414,7 +7548,58 @@
    "taildragger",
    "biplane",
    "hud",
-   "bombs"
+   "bombs",
+   "release",
+   "nomnom",
+   "taildragger-ground-handling",
+   "wing-fold",
+   "damage-holes"
+  ]
+ },
+ {
+  "path": "games/nuclear-option/publishing-a-blueprinter-addon-on-nomnom-and-nomm.md",
+  "kind": "game",
+  "title": "Publishing a Blueprinter aircraft addon plus BepInEx plugin for NOMM via NOMNOM: release layout, manifest rules and the EULA",
+  "game": "Nuclear Option",
+  "game_version": "Early Access 0.34.6 (Steam app 2168680, public build 26327221); Blueprinter 2.1.1; BepInEx 5.4.23.5",
+  "platform": "windows",
+  "engine": "unity-mono",
+  "route": "loader-api",
+  "tools": [
+   "Blueprinter 2.1.1",
+   "BepInEx 5.4.23.5",
+   "HarmonyX",
+   ".NET SDK 8.0.318 (-deterministic)",
+   "UnityPy (pack audit)",
+   "gh CLI",
+   "NOMNOM at ee196e9",
+   "NOMM (NuclearOptionModManager) at 8786356"
+  ],
+  "anti_cheat": "none found; the addon is client+host (everyone in a lobby needs it), nothing gives a multiplayer advantage",
+  "status": "released",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-22",
+  "links": [
+   "https://github.com/riseofthewolfremake-lgtm/HeritagePairs-NuclearOption",
+   "https://github.com/KopterBuzz/NOMNOM",
+   "https://github.com/KopterBuzz/NOMNOM/blob/main/Docs/SCHEMA.md",
+   "https://github.com/Combat787/NuclearOptionModManager",
+   "https://github.com/nikkorap/NOBlueprinter-Releases",
+   "https://store.steampowered.com/eula/2168680_eula_0"
+  ],
+  "tags": [
+   "publishing",
+   "nomnom",
+   "nomm",
+   "blueprinter",
+   "github-releases",
+   "manifest",
+   "eula",
+   "asset-audit",
+   "ship-gate"
   ]
  },
  {
@@ -15356,6 +15541,34 @@
   ],
   "humans": [],
   "links": []
+ },
+ {
+  "path": "techniques/procedural-game-aircraft-in-blender-checks-bakes-and-atlases.md",
+  "kind": "technique",
+  "title": "Procedural game aircraft in headless Blender: geometry checks, world-position bakes and livery atlases that survive rebuilds",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-22",
+  "links": [
+   "https://github.com/riseofthewolfremake-lgtm/HeritagePairs-NuclearOption",
+   "knowledge/games/nuclear-option/new-aircraft-with-blueprinter-nobp-b25h-ga25x-nimrod.md"
+  ],
+  "tags": [
+   "blender",
+   "bpy",
+   "procedural-modeling",
+   "uv-atlas",
+   "baking",
+   "liveries",
+   "mesh-checks",
+   "damage",
+   "reference-comparison",
+   "cockpit",
+   "unity"
+  ]
  },
  {
   "path": "techniques/prove-your-replay-bench-can-fail-mutant-builds-exposed-four-.md",
