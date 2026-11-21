@@ -36,6 +36,42 @@
   ]
  },
  {
+  "path": "games/007-first-light/complete-story-challenges-of-the-current-chapter-from-a-chea.md",
+  "kind": "game",
+  "title": "Complete story challenges of the current chapter from a Cheat Engine table",
+  "game": "007 First Light",
+  "games_also": [],
+  "game_version": "Steam 3768760, Retail\\007FirstLight.exe PE timestamp 0x6aeafdda (2026-11-04)",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "native-hook",
+  "tools": [
+   "Cheat Engine",
+   "Python pefile",
+   "Python capstone",
+   "Python ctypes"
+  ],
+  "anti_cheat": "none found (no Steam stub or Denuvo-looking sections); challenges are validated by IOI's online service",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-21",
+  "links": [
+   "https://github.com/cheat-engine/cheat-engine"
+  ],
+  "tags": [
+   "007-first-light",
+   "glacier-2",
+   "ioi",
+   "challenges",
+   "cheat-engine",
+   "rpkg",
+   "single-player"
+  ]
+ },
+ {
   "path": "games/age-of-empires-ii-de/san-franciscans-civ.md",
   "kind": "game",
   "title": "San Franciscans: a new civilization for Age of Empires II DE with units rendered from 3D",
@@ -2865,6 +2901,49 @@
    "procgen",
    "room-templates",
    "platformer"
+  ]
+ },
+ {
+  "path": "games/deathloop/lower-npc-awareness-sight-hearing-detection-meter-alert-spre.md",
+  "kind": "game",
+  "title": "Lower NPC awareness (sight, hearing, detection meter, alert spreading) as an ASI plugin with a live Cheat Engine table",
+  "game": "DEATHLOOP",
+  "games_also": [],
+  "game_version": "Steam 1252330, build 22517541, game version 1.820.5.1, Deathloop.exe PE timestamp 0x69b028fb",
+  "platform": "windows",
+  "engine": "idtech",
+  "route": "native-hook",
+  "tools": [
+   "Ultimate ASI Loader",
+   "Cheat Engine",
+   "Python pefile",
+   "Python capstone",
+   "Python ctypes",
+   "C (MSVC or MinGW)"
+  ],
+  "anti_cheat": "none for single-player; the exe is Denuvo-wrapped (not touched, see Setup)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-21",
+  "links": [
+   "https://github.com/Pacifier89/deathloop-npc-awareness",
+   "https://github.com/ThirteenAG/Ultimate-ASI-Loader",
+   "https://github.com/cheat-engine/cheat-engine"
+  ],
+  "tags": [
+   "deathloop",
+   "void-engine",
+   "arkane",
+   "stealth",
+   "ai-perception",
+   "npc-awareness",
+   "asi-plugin",
+   "cheat-engine",
+   "oodle",
+   "decl"
   ]
  },
  {
