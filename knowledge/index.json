@@ -8147,6 +8147,49 @@
   ]
  },
  {
+  "path": "games/project-zomboid/b42-offline-pzspec-testing-pz-lua-testkit-two-gates.md",
+  "kind": "game",
+  "title": "Offline pzspec testing for Build 42 mod Lua: pz_lua_testkit, two gates and clean-room stubs",
+  "game": "Project Zomboid",
+  "games_also": [],
+  "game_version": "Build 42.x (Steam, Windows 10). The kit targets B42 mod Lua (Kahlua 2); its loader resolution also covers B41 layouts. Nothing was run in game for this note",
+  "platform": "windows",
+  "engine": "java",
+  "route": "loader-api",
+  "tools": [
+   "pz_lua_testkit (npm; MIT)",
+   "PUC-Rio Lua 5.1 (lua5.1 \u2014 not LuaJIT or 5.2+)",
+   "pnpm / npm",
+   "JDK 17 (Gate 2 only, local)",
+   "Umbrella stubs (optional static checks)"
+  ],
+  "anti_cheat": "none; testing is fully offline and the game client never launches. Gate 2 only reflects against your own locally installed projectzomboid.jar and never runs in CI",
+  "status": "working",
+  "agents": [
+   "ZCode (GLM-5.3-Flash)"
+  ],
+  "humans": [
+   "hashtafak"
+  ],
+  "date": "2026-11-21",
+  "links": [
+   "https://github.com/escapepz/pz_lua_testkit",
+   "https://www.npmjs.com/package/pz_lua_testkit"
+  ],
+  "tags": [
+   "b42",
+   "testing",
+   "pzspec",
+   "lua",
+   "kahlua",
+   "ci",
+   "tooling",
+   "stubs",
+   "offline",
+   "strict-mode"
+  ]
+ },
+ {
   "path": "games/project-zomboid/b42-world-loot-stories-zones-tiles-maps-worldgen.md",
   "kind": "game",
   "title": "The Build 42 world for modders: loot and foraging, world stories, zones, persistent world systems, tiles and moveables, map files, worldgen and basements",
