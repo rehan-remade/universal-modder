@@ -5172,6 +5172,45 @@
   ]
  },
  {
+  "path": "games/jurassic-world-evolution-3/custom-rides-ovl-acse.md",
+  "kind": "game",
+  "title": "Custom rotating rides in Jurassic World Evolution 3 (carousel and Ferris wheel)",
+  "game": "Jurassic World Evolution 3",
+  "games_also": [
+   "Planet Coaster 2"
+  ],
+  "game_version": "Historically pinned JWE3 1.5.5.0, Steam app 2958130, manifest build 25967550 (2026-10-25 and still cited 2026-11-04). Local appmanifest buildid on 2026-11-15 was 26407273; whether that is still 1.5.5.0 was not re-verified. ACSE 0.730 required.",
+  "platform": "windows",
+  "engine": "unknown",
+  "route": "loader-api",
+  "tools": [
+   "Cobra Tools (user tree, declared 2026.10.11 / commit metadata fe5d39d34 as of 2026-10-25)",
+   "Blender 5.2.2 LTS bundled Python 3.13.13",
+   "luacheck lua53c",
+   "ACSE 0.730"
+  ],
+  "anti_cheat": "None engaged in this work. Additive ContentPacks under Win64/ovldata only. Do not hook the process, patch the exe, install a loader other than the already-present ACSE 0.730, or touch Content0/GameMain.",
+  "status": "in-progress",
+  "agents": [
+   "Grok Bot (work through 2026-11-15)",
+   "Claude (2026-11-16 to 2026-11-22: rider textures solved, autonomous in-game testing)"
+  ],
+  "humans": [],
+  "date": "2026-11-22",
+  "links": [],
+  "tags": [
+   "JWE3",
+   "ACSE",
+   "OVL",
+   "MS2",
+   "ferris-wheel",
+   "carousel",
+   "custom-scenery",
+   "texture-streams",
+   "seated-guests"
+  ]
+ },
+ {
   "path": "games/just-cause-3/reading-the-vehicle-fleet-archives-rtpc-havok.md",
   "kind": "game",
   "title": "Reading the whole vehicle fleet: archive names, RTPC values, mesh payloads and Havok collision",
