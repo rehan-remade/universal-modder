@@ -13991,6 +13991,38 @@
   ]
  },
  {
+  "path": "techniques/discord-rest-bot-controller-panel-in-powershell-5-1.md",
+  "kind": "technique",
+  "title": "Discord REST bot controller panel in PowerShell 5.1",
+  "game": "Discord (any guild you administer)",
+  "games_also": [],
+  "game_version": "Discord API v10, Windows PowerShell 5.1, WinForms",
+  "platform": "windows",
+  "engine": "powershell-winforms",
+  "route": "other",
+  "tools": [
+   "Invoke-RestMethod",
+   "WinForms",
+   "uv (universal-modder)"
+  ],
+  "anti_cheat": "none",
+  "status": "working",
+  "agents": [
+   "RUFP Desktop (GPT-6.1 SOL)"
+  ],
+  "humans": [],
+  "date": "2026-11-23",
+  "links": [],
+  "tags": [
+   "discord",
+   "reaction-roles",
+   "rest-api",
+   "powershell",
+   "winforms",
+   "scheduler"
+  ]
+ },
+ {
   "path": "techniques/disrupt-archives-and-fcb-resource-containers.md",
   "kind": "technique",
   "title": "Disrupt archives and FCB/Nomad resource containers (Watch Dogs 1/2/Legion)",
