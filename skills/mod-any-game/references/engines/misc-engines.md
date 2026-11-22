@@ -78,3 +78,26 @@ The game is native, but everything it shows comes from plain-text raws and PNG t
 - Defold: `game.arcd`/`.arci` archives, Lua scripts. Unpackers exist.
 - Cocos2d-x: Lua/JS bundles (sometimes XXTEA-encrypted, with the key in the binary), otherwise native.
 - HaxeFlixel/OpenFL: `assets/` overrides. Some games embed Polymod (hscript) mod support.
+
+## Haxe / HashLink (HLB bytecode, Heaps `res.pak`)
+HashLink games ship Haxe code as one bytecode blob, run by HashLink's JIT. The blob is embedded in the exe (an
+`hl.exe` host; *Dead Cells* 1.0 keeps it as the PE resource `RT_RCDATA` `HLBOOT.DAT`) or kept in a separate
+`hlboot.dat` (later and Linux builds).
+Assets are usually in a Heaps `res.pak` (`PAK` + version byte, u32 header length, u32 data length, file tree,
+`DATA`). Game data is often a CastleDB `data.cdb` (plain JSON) inside it.
+- **Look first:** search the exe for `HLB` + version byte, and check for an official mod loader (some later
+  builds ship their own mod tools). Data edits (CastleDB JSON in the pak, same length in place) are the cheapest route.
+- **Read:** `hlbc` (Rust crate/CLI) disassembles and decompiles. With debug info (flag bit 0), every op has a Haxe
+  file:line. Dump once to text and grep. findex = global function index; virtual calls take proto slots, not
+  findexes.
+- **Patch in place.** `hlbc`'s writer works (same size; object bindings come back reordered), but only if you
+  write it back over the resource without cutting the file, and small same-size patches combine better. Same
+  byte length,
+  same op count per function (debug info is run-length over `nops`; drift gives `Outside range` at startup),
+  register writes that match the declared types (else `JIT ERROR n (jit.c line m)`), backward jumps onto
+  `Label`, and no reads of unwritten registers. Spare bytes: padded varints (`80 xx`), `Label`/`JAlways +0`.
+  Room for new logic: never-called functions (dev/debug classes) used as helper slots.
+- **Verify:** re-parse, then a headless boot (`xvfb-run wine game.exe` until the game's "assets loaded" line),
+  then a live check. Under Wine/Proton, `/proc/<pid>/mem` + ptrace breakpoints on JIT'd entries work.
+- Full rules and tooling: `knowledge/techniques/hashlink-in-place-bytecode-patching.md`. Worked game:
+  `knowledge/games/dead-cells/dead-cells-v1-0-modding-reference.md`.
