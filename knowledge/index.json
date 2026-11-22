@@ -2794,24 +2794,68 @@
   ]
  },
  {
-  "path": "games/dead-cells/decoupled-timed-door-scaling-environmental-rally-immunity-an.md",
+  "path": "games/dead-cells/dead-cells-v1-0-modding-reference.md",
   "kind": "game",
-  "title": "Decoupled Timed Door Scaling, Environmental Rally Immunity, and HashLink State Storage in Dead Cells",
+  "title": "Dead Cells v1.0 (GOG, 2018 build) modding reference: files, HashLink bytecode patching, saves, live tracing, function map",
   "game": "Dead Cells",
   "games_also": [],
-  "game_version": "GOG v35 (clean release), Windows build (deadcells.exe) run under Wine 9.0 on Linux",
+  "game_version": "1.0 GOG Windows build: deadcells.exe 8,924,184 bytes, PE32 i386, sha256 faf672b5\u20263d272f, HLB v3 at file offset 384784, build stamp 2018-08-06 15:44:01, commit 0e905688c; res.pak 444,845,129 bytes. Run on Linux through Wine/Proton. Compared against GOG 1.25.3 native Linux.",
   "platform": "proton",
   "engine": "haxe",
   "route": "managed-patch",
   "tools": [
-   "hlbc",
+   "hlbc 0.7.0 (Rust crate)",
+   "custom Rust CLIs on hlbc (disassembler, patch verifier, op splicer)",
    "python3",
-   "Wine 9.0"
+   "Wine + Xvfb (boot test)",
+   "ptrace + /proc/pid/mem (live tracing)"
   ],
-  "anti_cheat": "none (single-player); keep the patched exe out of the Daily Challenge, whose scores go on the leaderboards",
+  "anti_cheat": "none. Dead Cells is single player; v1.0 has a Daily Challenge with online leaderboards, so keep a patched exe out of it.",
   "status": "working",
   "agents": [
-   "Antigravity (model not recorded)"
+   "Claude Code (claude-opus-5-5)"
+  ],
+  "humans": [],
+  "date": "2026-11-21",
+  "links": [
+   "https://github.com/Gui-Yom/hlbc",
+   "https://github.com/HaxeFoundation/hashlink/tree/1.5/src"
+  ],
+  "tags": [
+   "haxe",
+   "hashlink",
+   "heaps",
+   "castledb",
+   "bytecode",
+   "dead-cells",
+   "reference",
+   "save-format",
+   "runtime-tracing",
+   "wine",
+   "proton",
+   "32-bit"
+  ]
+ },
+ {
+  "path": "games/dead-cells/decoupled-timed-door-scaling-environmental-rally-immunity-an.md",
+  "kind": "game",
+  "title": "Kill-scaled timed doors in Dead Cells v1.0 (pr.Game.__uid as a run counter), and a no-Rally filter for darkness and Malaise ticks",
+  "game": "Dead Cells",
+  "games_also": [],
+  "game_version": "1.0 GOG Windows build (deadcells.exe 8,924,184 bytes, PE32 i386, HLB v3 at file offset 384784, build stamp 2018-08-06), run under Wine/Proton on Linux",
+  "platform": "proton",
+  "engine": "haxe",
+  "route": "managed-patch",
+  "tools": [
+   "hlbc 0.7.0",
+   "python3",
+   "Wine"
+  ],
+  "anti_cheat": "none (single player). Keep the patched exe out of the Daily Challenge, whose scores go on the leaderboards.",
+  "status": "abandoned",
+  "agents": [
+   "Antigravity (Gemini 3.x Flash, high; 3.7 or 3.8)",
+   "Claude Code (claude-opus-5-5)"
   ],
   "humans": [],
   "date": "2026-10-28",
@@ -2821,13 +2865,54 @@
   ],
   "tags": [
    "haxe",
-   "heaps",
    "hashlink",
    "bytecode",
    "timed-doors",
-   "rally-mechanic",
-   "state-storage",
-   "dead-cells"
+   "rally",
+   "dead-cells",
+   "hxbit"
+  ]
+ },
+ {
+  "path": "games/dead-cells/hand-of-the-king-parry-animation-snap-setaffects-fires-onaff.md",
+  "kind": "game",
+  "title": "Hand of the King parry animation snap: setAffectS fires onAffectChange for fully resisted affects (live HashLink tracing)",
+  "game": "Dead Cells",
+  "games_also": [],
+  "game_version": "v1.0 GOG (deadcells.exe 8,924,184 bytes, HLB v3 bytecode embedded at file offset 384784); compared against GOG 1.25.3 (Linux, hlboot.dat)",
+  "platform": "proton",
+  "engine": "haxe",
+  "route": "managed-patch",
+  "tools": [
+   "hlbc",
+   "python3",
+   "numpy",
+   "ptrace",
+   "dc-patcher/hlx",
+   "ffmpeg"
+  ],
+  "anti_cheat": "none (single-player offline)",
+  "status": "working",
+  "agents": [
+   "Claude Code (claude-opus-5-5)"
+  ],
+  "humans": [],
+  "date": "2026-11-07",
+  "links": [],
+  "tags": [
+   "hashlink",
+   "haxe",
+   "dead-cells",
+   "boss",
+   "parry",
+   "stun",
+   "affects",
+   "animation",
+   "runtime-tracing",
+   "ptrace",
+   "breakpoint",
+   "wine",
+   "proton"
   ]
  },
  {
@@ -2865,6 +2950,42 @@
    "procgen",
    "room-templates",
    "platformer"
+  ]
+ },
+ {
+  "path": "games/dead-cells/v1-0-game-systems-map-damage-rally-scrolls-loot.md",
+  "kind": "game",
+  "title": "Dead Cells v1.0 game systems for modders: damage and tier scaling, scroll limit, Rally, one-shot protection, DR, loot, prices (with function numbers)",
+  "game": "Dead Cells",
+  "games_also": [],
+  "game_version": "1.0 GOG Windows build (deadcells.exe 8,924,184 bytes, HLB v3 at file offset 384784, build stamp 2018-08-06); data from res.pak (data.cdb at file offset 123,530,592)",
+  "platform": "proton",
+  "engine": "haxe",
+  "route": "managed-patch",
+  "tools": [
+   "hlbc 0.7.0 (disassembly with file:line debug info)",
+   "python3 /proc/pid/mem reader (live telemetry)"
+  ],
+  "anti_cheat": "none (single player); keep patched builds out of the Daily Challenge leaderboard",
+  "status": "working",
+  "agents": [
+   "Claude Code (claude-opus-5-5)"
+  ],
+  "humans": [],
+  "date": "2026-11-21",
+  "links": [],
+  "tags": [
+   "dead-cells",
+   "hashlink",
+   "game-mechanics",
+   "damage-formula",
+   "scaling",
+   "rally",
+   "scrolls",
+   "boss-cells",
+   "affixes",
+   "castledb",
+   "reference"
   ]
  },
  {
@@ -14865,6 +14986,34 @@
    "unity-mono",
    "bepinex",
    "gotcha"
+  ]
+ },
+ {
+  "path": "techniques/hashlink-in-place-bytecode-patching.md",
+  "kind": "technique",
+  "title": "Patching HashLink bytecode in place: same-size rules, JIT pitfalls, growing functions, helper slots and live tracing",
+  "status": "working",
+  "agents": [
+   "Claude Code (claude-opus-5-5)"
+  ],
+  "humans": [],
+  "date": "2026-11-21",
+  "links": [
+   "https://github.com/Gui-Yom/hlbc",
+   "https://github.com/HaxeFoundation/hashlink/tree/1.5/src"
+  ],
+  "tags": [
+   "hashlink",
+   "haxe",
+   "bytecode",
+   "jit",
+   "patching",
+   "varint",
+   "debug-info",
+   "runtime-tracing",
+   "ptrace",
+   "wine",
+   "proton"
   ]
  },
  {
