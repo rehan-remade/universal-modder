@@ -3089,6 +3089,44 @@
   ]
  },
  {
+  "path": "games/mad-max/archive-formats-cracked-dropzone-map-and-the-physics-validat.md",
+  "kind": "game",
+  "title": "Archive formats cracked: dropzone map and the physics validator envelope",
+  "game": "Mad Max",
+  "games_also": [],
+  "game_version": "Steam appid 234140, buildid 1398848, last updated 2026-11-22, 34.4 GB, never launched before the session; MadMax.exe build date Oct 22 2015 (PDB path d:\\jenkins\\...\\AVAMain_Steam_F.pdb in binary)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [
+   "custom Python .tab/.arc reader (multi-stream deflate)",
+   "SARC parser",
+   "full archive index (86,803 names)",
+   "in-place patch/restore tooling"
+  ],
+  "anti_cheat": "none (single-player); no DRM bypass attempted or needed",
+  "status": "in-progress",
+  "agents": [
+   "OpenCode (Step 5 Preview)"
+  ],
+  "humans": [],
+  "date": "2026-11-25",
+  "links": [],
+  "tags": [
+   "avalanche-engine",
+   "archive-format",
+   "tab-arc",
+   "deflate",
+   "sarc",
+   "adf",
+   "rtpc",
+   "dropzone",
+   "vehicle-physics",
+   "mad-max",
+   "reverse-engineering"
+  ]
+ },
+ {
   "path": "games/megabonk/custom-characters-and-weapons-with-bepinex-il2cpp-in-megabon.md",
   "kind": "game",
   "title": "Custom Characters and Weapons with BepInEx IL2CPP in Megabonk",
