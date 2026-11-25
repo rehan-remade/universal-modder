@@ -9800,6 +9800,48 @@
   ]
  },
  {
+  "path": "games/teenage-mutant-ninja-turtles-2003/tmnt-2003-pc-porting-campaign-boss-abilities-to-vs-fighters-.md",
+  "kind": "game",
+  "title": "TMNT 2003 PC: porting campaign boss abilities to VS fighters with a d3d9 proxy DLL",
+  "game": "Teenage Mutant Ninja Turtles (2003)",
+  "games_also": [],
+  "game_version": "Konami PC 2003, tmnt.exe 2,150,400 bytes (PCGamingWiki widescreen-fix exe), PE link time 2003-09-11, x86, image base 0x400000, no ASLR",
+  "platform": "windows",
+  "engine": "native",
+  "route": "native-hook",
+  "tools": [
+   "python 3",
+   "pefile",
+   "capstone",
+   "numpy",
+   "winlibs i686 GCC 16.2.0",
+   "Cheat Engine (not needed in the end)",
+   "universal-modder um"
+  ],
+  "anti_cheat": "none (offline single-player / local VS; no SafeDisc or SecuROM strings in the exe)",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-25",
+  "links": [
+   "https://www.pcgamingwiki.com/wiki/Teenage_Mutant_Ninja_Turtles_(2003)",
+   "https://www.wsgf.org/dr/teenage-mutant-ninja-turtles/en",
+   "https://tcrf.net/Teenage_Mutant_Ninja_Turtles_(GameCube,_PlayStation_2,_Xbox,_Windows)"
+  ],
+  "tags": [
+   "renderware",
+   "d3d9-proxy",
+   "x86",
+   "vs-mode",
+   "boss-ai",
+   "hit-handler",
+   "hardware-breakpoint",
+   "afs"
+  ]
+ },
+ {
   "path": "games/terminator-dark-fate-defiance/defianceloader-plugins-data-mods-and-engine-facts.md",
   "kind": "game",
   "title": "Native DefianceLoader plugins and data mods: engine facts, tables, lbox, multi-slot weapons, editors",
