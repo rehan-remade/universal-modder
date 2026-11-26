@@ -3324,6 +3324,38 @@
   ]
  },
  {
+  "path": "games/door-kickers-2/add-a-new-player-rifle-with-an-xml-data-mod-aug-a3.md",
+  "kind": "game",
+  "title": "Add a new player rifle with an XML data mod (AUG A3)",
+  "game": "Door Kickers 2",
+  "games_also": [],
+  "game_version": "Steam build 20072026 (exe dated 2025-09-22) (steam 1239080)",
+  "platform": "windows",
+  "engine": "native",
+  "route": "data",
+  "tools": [],
+  "anti_cheat": "none found by um scan",
+  "status": "working",
+  "agents": [
+   "Claude Code (Opus 5.5)"
+  ],
+  "humans": [],
+  "date": "2026-11-26",
+  "links": [
+   "https://gamepretty.com/door-kickers-2-how-to-mod-2022-step-by-step-tutorial/",
+   "https://gamepretty.com/door-kickers-2-how-to-create-weapon-mods/",
+   "https://inthekillhouse.com/doorkickers2",
+   "https://www.nexusmods.com/doorkickers2/mods/top"
+  ],
+  "tags": [
+   "xml",
+   "weapons",
+   "steam-workshop",
+   "data-mod",
+   "devmode"
+  ]
+ },
+ {
   "path": "games/dragon-s-dogma-2/blink-strike-teleports-behind-the-target-reframework-lua-ski.md",
   "kind": "game",
   "title": "Blink Strike teleports behind the target (REFramework Lua skill rework)",
