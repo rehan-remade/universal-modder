@@ -40,6 +40,11 @@ backpack tree deployed under the pack, and the slide lock engaged after every em
   resource only says 1.0.0.0, so identify it by hash (sha1 `9c349fc1c0d9bb721f1d28e6c77dee08f1a32abe`).
   TR7-Menu-Hook v2.5 (`TR7-Menu-Hook.asi`, sha1 `bcc67ed1642f32ff07da91313d42b0dcd7f7d668`) serves `pc-w\X.drm`
   from `<game>\mods\X.drm` by hooking archive init.
+- That copy of the loader carries RAD's Bink DLLs built in, so overwriting the game's `binkw32.dll` with it (the menu
+  hook's own install) needs no `binkw32Hooked.dll`. Current Ultimate ASI Loader builds don't carry Bink and need the
+  original as `binkw32Hooked.dll`. A drag-and-drop folder therefore needs no copy of the game's Bink DLL; FMVs played
+  through the built-in Bink are untested. See
+  [film-outfit-pack-drm-rebuild-idles-release.md](film-outfit-pack-drm-rebuild-idles-release.md).
 - tr7.pdb (from a different build) gives struct layouts only; every address was re-derived from this exe and is
   checked at startup against byte signatures ("sites"), with the mod refusing to install on a mismatch.
 - Tooling:
@@ -158,6 +163,12 @@ the idea. Decompiling the whole game was never needed: eight hooked functions an
 10. **The 8-frame blend-in performs your first move for you.** A hosted reload that starts far from the aim pose
     looks like it teleports into the first key; start and end every variant on the centre aim pose so the blend
     overlaps an authored rise.
+11. **A twirl reload spins the pistol one extra full turn at the very end.** **Cause:** the spin's last keys sit at a
+    360-degree rotation vector (the identity), and blends average rotation vectors component-wise with no unwrap, so
+    360 -> 0 toward the ready pose is one more roll in a few frames. Between keys the engine lerps after unwrapping by
+    whole turns along the previous key's own axis (0x472F0C-0x472FD9). **Fix:** end spins on 0, or wrap every key into
+    (-180, 180]. An inventory that reads a grab joint's translation track as radians reports absurd "1,634-degree"
+    spins: check which channel you are reading.
 
 ## Assets
 Pistol models rebuilt from our own mesh (no game geometry shipped); magazines and the backpack tree are our meshes;

@@ -68,7 +68,8 @@ Two channels, both local-only. Nothing ever leaves `127.0.0.1` or the machine.
 
 ### 1. State/control — WebSocket on `127.0.0.1:25599`
 JSON, one object per message, UTF-8. Guest runs the server (as the GTA V example does); host
-connects as client. Versioned handshake.
+connects as client. Versioned handshake. The server refuses any handshake with an `Origin` header, which keeps
+web pages off the link, so a client must not send one.
 
 Host → Guest:
 | `t` | Payload | Meaning |

@@ -6,9 +6,10 @@ import locale
 import os
 import platform
 import shutil
+import stat
 import subprocess
 import sys
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 
 def is_windows() -> bool:
@@ -65,6 +66,49 @@ def data_dir() -> Path:
     d = Path(os.environ.get("UM_HOME", Path.home() / ".universal-modder"))
     d.mkdir(parents=True, exist_ok=True)
     return d
+
+
+# a reparse tag with this bit names another file or folder: symlinks, junctions, mount points, WSL symlinks
+NAME_SURROGATE = 0x20000000
+
+
+def is_link(p: Path) -> bool:
+    """A symlink, a junction or another Windows reparse point that leads somewhere else."""
+    try:
+        st = os.lstat(p)
+    except (FileNotFoundError, NotADirectoryError):
+        return False
+    if stat.S_ISLNK(st.st_mode) or (hasattr(p, "is_junction") and p.is_junction()):
+        return True
+    # Python < 3.12 has no is_junction. OneDrive's files on demand are reparse points too, but writes stay in place
+    return bool(getattr(st, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+                and getattr(st, "st_reparse_tag", NAME_SURROGATE) & NAME_SURROGATE)
+
+
+def inside(root: Path, name: str) -> Path:
+    """root / name for a write that must stay in root. ValueError if name is absolute or has a drive or a '..', if a
+    folder on the way or the file itself is a symlink or junction, or if it resolves outside root.
+
+    Pass root resolved: it may be a link itself (a saves folder on another drive), but nothing below it is followed."""
+    win = PureWindowsPath(name)  # splits on / and \ and knows drives, on every OS
+    path = root / name
+    if "\0" in name or win.anchor or ".." in win.parts or path == root:
+        raise ValueError("not a relative path inside the folder")
+    p = root
+    for part in path.relative_to(root).parts:
+        p = p / part
+        if is_link(p):
+            raise ValueError(f"{p} is a symlink or junction")
+    if not path.resolve().is_relative_to(root):
+        raise ValueError(f"resolves outside {root}")
+    return path
+
+
+def open_out(path: Path):
+    """open(path, "wb"), except that a symlink at path fails instead of being written through. Windows has no
+    O_NOFOLLOW: there, check with inside() first."""
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
+    return open(os.open(path, flags, 0o666), "wb")
 
 
 def text_utf8(**kw) -> dict:

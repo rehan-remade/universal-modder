@@ -14,8 +14,8 @@ status: released
 agents:
 - Claude Code (Opus 5.5)
 humans: []
-date: '2026-10-25'
-links: ["https://github.com/etkramer/SplitScreenMod", "https://github.com/etkramer/SplitScreenMod/pull/21", "https://github.com/etkramer/SplitScreenMod/pull/22", "https://github.com/etkramer/SplitScreenMod/pull/23", "https://github.com/etkramer/SplitScreenMod/pull/25", "https://github.com/etkramer/SplitScreenMod/pull/26", "https://github.com/Kendoismebutmaybenot/SplitScreenMod-fixes", "https://github.com/Team-BmSDK/BmSDK-AC"]
+date: '2026-11-01'
+links: ["https://github.com/etkramer/SplitScreenMod", "https://github.com/etkramer/SplitScreenMod/pull/21", "https://github.com/etkramer/SplitScreenMod/pull/22", "https://github.com/etkramer/SplitScreenMod/pull/23", "https://github.com/etkramer/SplitScreenMod/pull/25", "https://github.com/etkramer/SplitScreenMod/pull/26", "https://github.com/etkramer/SplitScreenMod/pull/30", "https://github.com/Kendoismebutmaybenot/SplitScreenMod-fixes", "https://github.com/Team-BmSDK/BmSDK-AC"]
 tags: [split-screen, co-op, unreal-engine-3, bmsdk, wwise, audio, camera, possession, redirect, detour]
 ---
 # Split-screen co-op fixes for Arkham City (BmSDK C# scripts: cameras, P2 gadgets and suits, final boss, per-player Wwise listeners)
@@ -24,9 +24,10 @@ tags: [split-screen, co-op, unreal-engine-3, bmsdk, wwise, audio, camera, posses
 > (UnrealScript function redirects, plus two native detours for sound). They cover unstretched per-player cameras,
 > P2 gadgets, suits and characters, playing the story through to the final boss in co-op, and per-player sound.
 > Every fix except the Clayface one was played and confirmed by the human in the real game (Steam build). PRs #21,
-> #22, #25 (no teleport when sliding under gaps; solo kept like the normal game) and #26 (the extra player ragdolls
-> on death instead of P1; no teleport to P1 after a fight) were merged upstream. #23 (finding the sound range check
-> by its bytes, so it can work on Epic) is still open there, so that part is only in the author's fork for now.
+> #22, #25 (no teleport when sliding under gaps; solo kept like the normal game), #26 (the extra player ragdolls
+> on death instead of P1; no teleport to P1 after a fight) and #30 (doors; remote batarang range; finding players
+> after a controller swap) were merged upstream. #23 (finding the sound range check by its bytes, so it can work on
+> Epic) is still open there, so that part is only in the author's fork for now.
 
 ## Setup
 - Batman: Arkham City GOTY, Steam, Windows 11. The game runs as 32-bit DX11.
@@ -91,6 +92,15 @@ the boost.
 step ignores `ThrowSpeed` and `Velocity`, so it flew about 3x too fast; scale its step by the slow-mo factor
 instead. Extra players don't load P1's options, so copy `RPlayerInput.bInvertBatarang` from P1 each tick.
 
+The flight also has two limits, and which one you hit depends on slow-mo:
+- a 10 second `HomingFinished` timer on the batarang (`Actor.Timers` lists it, rate 10), which runs on game time;
+- `OverworldRCBatarangRange` (8000 uu, warning from about 6500).
+
+Solo's x0.3 slow-mo stretches the timer to about 33 real seconds, so at 450 uu/s the range limit ends the flight
+after about 18 seconds. With slow-mo removed the timer ran out after a real 10 seconds, at about 4500 uu. Fix: read
+the timer from `Owner.Timers` once it exists and restart it with `SetTimer((Rate - Count) / scale, ...)`. Stop
+scaling the step once the game asks for normal speed again, because the flight is over by then (Gotcha 14).
+
 **Cutscenes** only unlock P1's controls when they end. Afterwards, release any other player still flagged
 cinematic, forced or ignoring move/look, and teleport them to P1 if they're over 5000 uu away. Only teleport players
 that were locked during the cutscene too: the slow-motion finish of a fight locks only P1 (Gotcha 11).
@@ -116,6 +126,10 @@ the player through a transition, and the original mod's redirect then moved ever
 also calls it with `bForSavingOnly = true` just to record a spot (e.g. when Batman slides under a gap), and the
 redirect moved everyone anyway, P1 included, even in solo. Return early when `bForSavingOnly` is set or in solo,
 and skip the player the game already moved (Gotcha 12).
+
+That save-only call was also the one that pulled P2 through `RLevelTransitionDoubleDoors` with P1, so the fix let
+the players end up on opposite sides of a door for the first time, which exposed Gotcha 13. Building entrances
+(`RLevelTransitionDoor`) call it with `bForSavingOnly = false`, so they still bring everyone.
 
 **Keep solo exactly like the normal game.** Several split-screen workarounds ran with one player too:
 - investigation scenes: AI X-ray sprites turned off and `StartInvestigateMovie` rewritten;
@@ -165,9 +179,10 @@ They are cdecl, game object IDs are 32-bit, and there are 8 listeners. The mangl
    executables).
 
 ## Verification
-- The oracle is the human playing 2P on two controllers plus `BmSDK.log`. Every fix logs what it did, for example
+- The oracle is the human playing 2P on two controllers plus `BmSDK.log`. Most fixes log what they did, for example
   `SplitScreenDeathGuard: P2 died: cause=..., N from P1`, `SplitScreenSkin: P2 slot had ..., set to ...` and
-  `SplitScreenAudio: range check found at +0x7BB410`.
+  `SplitScreenAudio: range check found at +0x7BB410`. The door and remote batarang fixes (SplitScreenMod #30) don't:
+  their logging was temporary, and the numbers in Gotcha 14 come from it.
 - For audio, temporary every-2-seconds logging compared player and camera positions with the game's listener
   records, and read back Wwise's own listener positions and an object's active-listener mask. That showed the
   listener ends on P2, and that the mask fix worked but sounds were still dropped before reaching Wwise.
@@ -215,13 +230,31 @@ They are cdecl, game object IDs are 32-bit, and there are 8 listeners. The mangl
 12. **Every player, P1 too, snapped to a spot when Batman slid under a gap, even in solo.** **Cause:** the
     `SetPlayerLocation` redirect moved all players without checking `bForSavingOnly`, which the game sets when it
     only records the spot. **Fix:** do nothing when `bForSavingOnly` is set or with one player, and move only the
-    players the game didn't. Confirmed in game.
+    players the game didn't. Confirmed in game. It has a side effect: see Gotcha 13.
+13. **P2 played the door animation and ended up in the same room.** **Cause:** the door picks the direction from
+    `GetPC()`, which is always P1, so with P1 already through it sent P2 back to the side they were on. The mod's swap
+    only covered `TriggerPlayerAnim`, which was too late. **Fix:** swap `GamePlayers[0]` and `[i]` around the whole of
+    `RLevelTransitionDoorBase.Interact`. Confirmed in game. A released version (SplitScreenMod #25) shipped this bug
+    because the fix for Gotcha 12 was tested in solo, so test level-transition changes on double doors in co-op too.
+14. **Remote batarang flight about half as long as solo.** **Cause:** the `HomingFinished` timer above. Two wrong
+    turns: `ControlledTime` reads 10.00 and never changes, and raising it did nothing, so it isn't the live limit; and
+    a batarang left flying kept the mod's slowdown after control ended, which made logged distances look fine.
+    **Fix:** log `Actor.Timers` for the batarang, controller, camera and pawn to find the timer by name, then restart
+    it with `SetTimer`. `ModifyTimerTimeDilation` crashed the game when called from a component's `OnTick`. Measured:
+    solo 17.8 s, 8002 uu; co-op before 10.0 s, 4524 uu; co-op after 18.2-18.4 s, 7658-8453 uu.
+15. **After swapping controllers, P2 was left behind at a building door and fell out of the world.** **Cause:**
+    BmSDK's `Game.GetPlayerPawn(i)` goes through `FindPlayerByControllerId`, so `i` is a controller, not a
+    `GamePlayers` slot. After rotating `ControllerId`, the "move the other players" loop moved P1 again and skipped P2.
+    **Fix:** use `GamePlayers[i].Actor`'s `CombatPawn` everywhere. The symptom looked like a door bug, and only logging
+    both pawns through the transition showed P2 never moved. `RLevelTransitionDoor` takes everyone together based on
+    P1, so an extra player opening one now makes P1 open it, which also keeps P2's camera off the door's cinematic
+    camera. Confirmed in game.
 
 ## Assets
 None.
 
 ## Cost and time
-Several long sessions over 2026-10-12 to 10-25. Each test needs a game restart, because scripts compile only at
+Several long sessions over 2026-10-12 to 11-01. Each test needs a game restart, because scripts compile only at
 start.
 
 ## Open questions
@@ -229,6 +262,9 @@ start.
 - Audio with 3–4 players. Listeners 1–3 should cover it, but it's untested.
 - The Clayface mud-men retargeting is unverified.
 - Does Wwise take the maximum or the sum across listeners in this version? It sounded normal in testing.
+- Was `ModifyTimerTimeDilation` crashing because of that function, or because of how it was called from `OnTick`?
+- Removing slow-mo also makes line-launcher turns harder and Ra's clones hard to counter (etkramer/SplitScreenMod#29).
+  Those are unfixed, and slowing a whole world for one player has no clean answer yet.
 
 ## Related and credits
 - [etkramer/SplitScreenMod](https://github.com/etkramer/SplitScreenMod), the split-screen mod these fixes build on,

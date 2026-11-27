@@ -19,7 +19,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends ffmpeg
       - run: uv run --with pytest pytest -q tests
-      - run: ./bin/um --help && for g in scan fal comfy sprixen voidless sprite render3d video win backup publish kb; do ./bin/um $g --help > /dev/null; done
+      - run: ./bin/um --help && for g in scan fal comfy sprixen voidless sprite render3d video win backup publish kb fastfile iwi weapon; do ./bin/um $g --help > /dev/null; done
       - name: knowledge base
         run: ./bin/um kb check --index
       - name: nothing that shouldn't ship
