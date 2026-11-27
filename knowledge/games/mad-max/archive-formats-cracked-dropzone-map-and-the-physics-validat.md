@@ -326,3 +326,34 @@ vanilla 150/150/150/150).
  i s   p o i s o n e d   f o r   a   v a n i l l a   r u n   -   r e s t o r e   t h e   p r i s t i n e   s a v e   b e f o r e   a   v a n i l l a   t e s t . 
  
  
+
+### Session 4 closing notes: the asset pipeline and the AI tuning surface
+
+**Authored art loads.** An in-place, same-size edit of a named texture
+(`textures/landscape/globalcolor_dif.ddsc`, game0, 2048x2048 DXT1) - filling the pixel
+region with a repeating solid-colour DXT1 block - rendered in game: a solid-red world,
+verified by screenshot, then reverted (the archive copy was confirmed byte-identical to
+vanilla again). There are ~4,400 named `.ddsc` files in the index, so re-skins, recolours
+and generated art are reachable with the existing tooling and no new capability.
+The door that remains for Shape-B work is only for things a texture cannot be: new
+*geometry* and new *paths* (repacker + new-path test), and FMOD/voice packing for audio.
+
+**The car-combat / AI data model (all NATURED names, no content-marker hunting needed):**
+- `vehicles/ccenemies/*.ccenemyc` - per-archetype position-preference weights. ADF,
+  values blob at 0x50: `[u32 data_off=0x20][0][u32 count][0]`, then `count` 16-byte
+  records at 0x70+i*16: `[u32 PointID][0][f32 Value][0]`, then the position names in the
+  same order. Archetypes: chasing, fire_pipe (517 copies), boombug, boarding (530 copies),
+  drop_kicker, simple (521), plus the convoy_formation_* trio already patched x0.5.
+  **Watch the record count: boarding has 12 records (no FRONT_FLAME slot) while the
+  others have 13, so its TOP positions sit two slots earlier.**
+- `vehicles/ccdirectors/convoy.ccdirectorc` (25 copies) - `CarCombatDirectorDesc`:
+  Scenarios[], Sequences[] (path + Weight), MapFile, DefaultScenarioSwitchTime (10.0).
+- `vehicles/ccscenarios/convoy.ccscenarioc` (25 copies) - `CarCombatScenarioDesc`:
+  Positions[] (PointID + Value) and SwitchToTime (-1 = inherit).
+- RTPC records in `patch_win64` are property containers that EMBED the VFS path they
+  configure (e.g. one references `vehicles/ccdirectors/convoy.ccdirector` and
+  instantiates `CarCombatDirector1`) - the reliable way to identify a record by content.
+- Frontier Reborn's AI tuning shipped on this surface: side-pursuit weights raised, the
+  boombug's boarding weight raised, and DefaultScenarioSwitchTime 10 -> 20. All 1,089
+  copies post-write verified; in-chase verdict from the player: "enemies feel more
+  aggressive".
