@@ -13,7 +13,7 @@ status: in-progress
 agents:
 - OpenCode (Step 5 Preview)
 humans: []
-date: '2026-11-25'
+date: '2026-11-26'
 links: []
 tags: ['avalanche-engine', 'archive-format', 'tab-arc', 'deflate', 'sarc', 'adf', 'rtpc', 'dropzone', 'vehicle-physics', 'mad-max', 'reverse-engineering']
 ---
@@ -154,3 +154,100 @@ One long session (~8 hours wall clock with the human), 34 GB install, 4 Steam ve
   (`excel_data/gating_profiles.gatingc` — unlock timing, garage-visible), convoy formations
   (`vehicles/ccenemies/*.ccenemyc`), `AiConstantsProfiles*` raw records, and textures via the
   dropzone (`legend/`/`gui/`-adjacent asset paths).
+
+## Session 2 (2026-11-26): the data formats are fully cracked and three live mods shipped
+
+**ADF (` FDA`, version 4) container — the general case**, and the schema is in the exe (strings
+near 0x92427 carry the same type/field names the files do, so the reflection table can be
+cross-checked):
+- header `[magic][ver=4][1][secA_off][root_type_count][secB_off][0][0][name_count]
+  [name_len_table_off][eof]` (0x28 bytes);
+- name table `[nlen x N][N nul-terminated names]` — nlen counts the bytes of the name field,
+  and eof is hit exactly;
+- section A: 24-byte records `[name_hash][type_hash][offset][size][name_idx][0]` = the root
+  blob(s), one per root type (an `.xvmc` is just 3 of these: module/debug_info/debug_strings);
+- section B: 32-byte field descriptors `[name_idx][0][type_hash][size][offset][flags][?][0]`.
+  **Anchor them by finding the first valid `[name_idx=0..N][0][type_hash][size][offset]`
+  record** — the section is padded by other 24/32-byte array/enum records that do not fit the
+  shape; the ccenemy file's `Value` float@offset 8 is a good anchor test;
+- the values blob: `[u32 data_off][u32 record_count][u32 id_hash][0]` header then
+  `record_count` records of the struct size implied by the field offsets.
+  Verified on 4 files; pools close exactly on their sheet names.
+
+**`excel_data/gating_profiles.gatingc` — decoded and patched** (5,513 B, ONE copy:
+game1 rec94, SARC-inner at offset 13,248,988 — it shares the record with
+`legend/player_upgrades.xlsc`, so re-deflating that 13.2 MB record is the cost of a patch).
+23 names, and the `GatingProfile` record is **40 bytes**:
+`ID u32@0 | JimmyBar..Explosion u8@4..11 (Max's upgrade levels) | StructureLevel@12 |
+Type@13 | HasRequirements@14 | JacketLevel@15 | MapIconIndex@16 | IconType@17 |
+VisualRange f32@20 | HeaderTextId u32@24 | DescriptionTextId u32@28 | RaycastValidation u8@32
+| RaycastSafeHitDistance f32@36`. **107 records**, not the 9 the early recon guessed.
+Exe corroboration: `CGatingProfilesManager` + `GatingGetJimmyBar/Pliers/NightVision/
+RammingLvl/HarpoonLvl/ExplosionLvl/VisualRange/RaycastValidationInfo` sit next to
+`CreateScoutableIcons`, i.e. this table drives scoutable map icons and upgrade levels. The
+name-hash function is still uncracked (not fnv/djb2/sdbm/oaat/crc32/xxhash/sfh), so records
+must be addressed by index, not name.
+
+**XLSBook ADLs (`legend/*.xlsc`) — the spreadsheet variant**, and these are the real
+progression/economy files. Blob layout `[u32 dir_off=0x80][0][u32 pool_count][0]` + per-sheet
+`[off][0][size][0]`; the pool directory at 0x80 is `pool_count x [u32 cols][count][off][0]
+[bytes][0][end][0]` where **cols = u32s per row**; each pool is one sheet's rows (row-major,
+one u32 per column = a string-pool index) and the **sheet name is a nul-terminated string
+right after the pool**; the shared string pool sits after the last sheet region:
+- `legend/player_upgrades.xlsc` — 4 sheets: categories (2 cols, 14 categories), **upgrades
+  (5 cols, 42 rows) = Max's 41 Legend abilities** with the unlock event that gates each,
+  character_stats (9 cols), max_stats (4 cols).
+- `legend/upgradeable_values.xlsc` — 'Blad1' (24 cols = Name ID, type, then 11 x
+  (lvl event, lvl value)) + 'Sheet1'; 38 upgradeables including
+  `project_prize_modulation` (the stronghold-project cost multiplier).
+- `encampment_upgrades/encampment_projects.xlsc` — sheets enc1000/enc1010/enc1020/enc2010/
+  enc2020 (17 cols each) plus **'All projects' (16 cols, 101 rows)** + Requirements +
+  EncampLevelReq: Name, Desc, Reward, Category, IconIndex, Completion Event, req 1/2/3
+  (name, id, amount), contribution — the stronghold menu, with story-gated completion
+  events (`msy.sm_jeet_02.completed`).
+
+**`global/economyresources.economyresourcesc` — the economy core** (68,485 B, ONE copy:
+game1 rec81): 3 root blobs (profiles / resource_table / positions).
+`EconomyResourceProfile` = **36 bytes**: `Profile u32@0, Type enum@4, RegenerationRate
+f32@8, StartAmountMin f32@12, StartAmountMax f32@16, Capacity f32@20, CoolDownTime f32@24,
+Infinite u8@28, FillChance f32@32` — enum confirmed 0-based from section B:
+Water 0, Food 1, Fuel 2, Scrap 3, Threat 4, Ammo_Shotgun 5, Ammo_Sniper 6,
+Ammo_Thunderstick 7, Shiv 8. Profile counts: Scrap 27, Threat 12, Fuel 8, Water 7, Ammo 12,
+Food 3, Shiv 2; scrap nodes hold 1-100, r68 (capacity 1,000,000) is Max's wallet, r70 is the
+only RegenerationRate != 0.
+
+**Three mods shipped and verified in memory** (all same-size float/byte edits via the
+in-place archive patcher, boot-verified by screenshot to the attract screen each time):
+1. gating — VisualRange 455→1500 on the 7 long-range records, and StructureLevel −1 across
+   the 30 records of Types 16-19 (that table's 1,1,2,2,3,3,4,4 progression shifts one level
+   earlier);
+2. economy — the 24 lootable scrap profiles x2 on StartAmountMin/Max/Capacity
+   (world scrap doubled);
+3. convoys — `vehicles/ccenemies/convoy_formation_{frontline,midfield,back}.ccenemyc`
+   distances x0.5 (records at `0x70 + slot*16`, float at +8; SUPPORT1/2 = 1.0 are flags, not
+   distances).
+
+**Verification without eyeballing the screen** — a memory-scanning monitor replaces
+"did it change?". Swap a value for a **unique marker** (1337.5 / 1337.0) that the game would
+never produce naturally, then scan the running process (ctypes `VirtualQueryEx` /
+`ReadProcessMemory`, ~3.7 GB in under a minute) — if the marker is resident, the game loaded
+our data. Two hard-won rules: (a) markers must live in **inert tables only** — a wild value
+in a spawned/placed structure (a convoy formation distance) hangs the loader, which is how
+one fast-travel hang was caused and fixed; (b) where a marker is undesirable, use a
+**fingerprint** instead (the convoy formation's four identical floats 75/75/75/75 vs the
+vanilla 150/150/150/150).
+
+**Tool gotchas worth passing on:**
+- `inflate()` must stop at the tab's `c`: records carry trailing slack that otherwise gets
+  mis-parsed as extra deflate streams, inflating the payload far past `c` (game16 rec3: one
+  stream alone = 84.9 MB against a `c` of 22.8 MB) and forcing spurious SKIPs.
+- The winnt.h `MEMORY_BASIC_INFORMATION` (x64) field order is BaseAddress / AllocationBase /
+  **AllocationProtect** / align / RegionSize / State / Protect / Type — putting the pad
+  before AllocationProtect makes State/Protect read 0 and the scan silently finds nothing.
+- `wmic` is gone on modern Windows; enumerate PIDs with a CreateToolhelp32Snapshot.
+- Copy coverage matters: `convoy_formation_*ccenemyc` exists in 127/61/26 copies and only
+  85/42/15 were patchable — the rest live in records whose index entry points PAST the
+  record's own payload (game16 rec3: index off 152,290,600 vs payload 84.9 MB), i.e. those
+  SARCs span MULTIPLE records. **Open: decode the multi-record SARC layout** in `mmx.py`;
+  until then multi-copy patches are only partially covered and must be judged by the
+  fingerprint/hash scan rather than assumed.
