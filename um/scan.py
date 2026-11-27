@@ -275,22 +275,24 @@ def pe_info(path: Path) -> dict | None:
 
 def grep_file(path: Path, patterns: list[bytes], limit_mb: int = 400, budget_s: float = 6.0) -> dict[bytes, bytes]:
     """First match of each regex in a (big) binary, read in chunks, bounded by size and time."""
-    found, t0, tail = {}, time.time(), b""
+    found, t0 = {}, time.time()
     try:
         with open(path, "rb") as f:
-            read = 0
+            chunk, overlap = 16 << 20, 256
+            read, keep, view = 0, 0, memoryview(bytearray(overlap + chunk))
             while len(found) < len(patterns) and read < limit_mb << 20 and time.time() - t0 < budget_s:
-                chunk = f.read(16 << 20)
-                if not chunk:
+                n = f.readinto(view[keep:keep + chunk])
+                if not n:
                     break
-                read += len(chunk)
-                buf = tail + chunk
+                read += n
+                end = keep + n
                 for p in patterns:
                     if p not in found:
-                        m = re.search(p, buf)
+                        m = re.search(p, view[:end])
                         if m:
                             found[p] = m.group(0)
-                tail = buf[-256:]
+                keep = min(end, overlap)
+                view[:keep] = view[end - keep:end]  # the window's last bytes lead the next one, in the same buffer
     except OSError:
         pass
     return found
