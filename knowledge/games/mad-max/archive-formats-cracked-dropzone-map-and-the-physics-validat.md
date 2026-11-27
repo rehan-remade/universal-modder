@@ -13,7 +13,7 @@ status: in-progress
 agents:
 - OpenCode (Step 5 Preview)
 humans: []
-date: '2026-11-26'
+date: '2026-11-27'
 links: []
 tags: ['avalanche-engine', 'archive-format', 'tab-arc', 'deflate', 'sarc', 'adf', 'rtpc', 'dropzone', 'vehicle-physics', 'mad-max', 'reverse-engineering']
 ---
@@ -49,14 +49,20 @@ first pass; reimplementation obviously so.
   `dlc_win64/{ripper,rockstar,rockstar_hoodornament1,2}` (different record layout — unparsed),
   plus the `dropzone/` fs mount. The game reads game0..38 with later archives winning (unverified
   priority, but multi-copy patch-everything works).
-- **`.tab`**: `u32 0x800`, `u32 0`, then 16-byte records `(name_hash, x, b, c)`. `x` = 512-aligned
-  offset in the `.arc`; `b` = raw-DEFLATE span; `c` = decompressed size.
+- **`.tab`**: `u32 0x800`, `u32 <n2>`, then **one of two layouts** (Session 4):
+  - A "flat" (game0/3/4/5/6/7/38/patch): `u32 0x800`, `u32 0`, then M 16-byte records
+    `(name_hash, x, b, c)`.
+  - B "grouped" (everything from game2 up): `u32 0x800`, `u32 n2`, then n2 variable-length
+    **chunk-map group entries**, then M 16-byte records `(name_hash, x, b, c)`.
+  `x` = 512-aligned offset in the `.arc`; `b` = raw-DEFLATE span; `c` = decompressed size.
 - **`.arc` records: MULTIPLE concatenated raw-DEFLATE streams** (zlib wbits −15; records can be
   2–3 streams). Single-stream decompression silently truncates the payload and loses SARC file
   entries. Feed `unused_data` back until consumed; assert total == `c`.
 - **Payloads**: either a SARC container — `[u32=4]['SARC'][u32 ver][u32 table_end=file-data
-  start][u32 namelen][name \0][u32 off][u32 size]…` — or a raw file (histogram: 20,077 ×
-  `W\xE0\xE0W`, 5,090 × **RTPC**, 2,413 × **ADF** (` FDA`), 1,935 × `DDS `, 313 × FMOD `FSB5`).
+  start]` then per entry **`[u32 nlen][name: nlen bytes, NUL-padded][u32 off][u32 size]`**
+  (the name field is nlen bytes wide, NOT NUL-terminated-then-scan — see the Session 4
+  correction) — or a raw file (histogram: 20,077 x
+  `W\xE0\xE0W`, 5,090 x **RTPC**, 2,413 x **ADF** (` FDA`), 1,935 x `DDS `, 313 x FMOD `FSB5`).
 - **ADF (` FDA`, ver 4) modules**: `[magic][ver][?][type_sec_a][?][type_sec_b][0][0][name_count]
   [name_len_table_off][eof]`; names are null-terminated with a length-prefix table before them;
   values live before the type-descriptor section. Junk fill (0x00 / 0x30) after names — same
@@ -144,7 +150,8 @@ One long session (~8 hours wall clock with the human), 34 GB install, 4 Steam ve
 ## Open questions
 - The `.tab` name-hash function (custom; would let raw records be addressed directly by name —
   currently identified by content markers only).
-- `game37` `.tab` layout change at rec3925+; the DLC `.tab` record layout.
+- The DLC `.tab` record layout (the game37 "layout change at rec3925+" was just
+  layout B, see Session 4).
 - The physics validator's location in `MadMax.exe` (PDB path known) — patching it (native hook)
   would open the whole properties envelope.
 - The ADF type-descriptor decode (field-name → value-offset map) is half-done
@@ -245,9 +252,77 @@ vanilla 150/150/150/150).
   **AllocationProtect** / align / RegionSize / State / Protect / Type — putting the pad
   before AllocationProtect makes State/Protect read 0 and the scan silently finds nothing.
 - `wmic` is gone on modern Windows; enumerate PIDs with a CreateToolhelp32Snapshot.
-- Copy coverage matters: `convoy_formation_*ccenemyc` exists in 127/61/26 copies and only
-  85/42/15 were patchable — the rest live in records whose index entry points PAST the
-  record's own payload (game16 rec3: index off 152,290,600 vs payload 84.9 MB), i.e. those
-  SARCs span MULTIPLE records. **Open: decode the multi-record SARC layout** in `mmx.py`;
-  until then multi-copy patches are only partially covered and must be judged by the
-  fingerprint/hash scan rather than assumed.
+- Copy coverage: `convoy_formation_*ccenemyc` exists in 149/67/21 copies (not 127/61/26 — the
+  first index under-counted). They were only 85/42/15 patchable until the .tab layout-B decode
+  landed (Session 4); that is what the "index entry points PAST the record's own payload" symptom
+  really was. After the fix every copy is patchable and all 237 hold our values with a consistent
+  chunk map.
+
+ 
+ # #   S e s s i o n   4   ( 2 0 2 6 - 1 1 - 2 7 ) :   t h e   . t a b   l a y o u t - B   d e c o d e ,   c h u n k   m a p s ,   a n d   t h e   c o n v o y   p a t c h   f u l l y   l i v e 
+ 
+ * * T h e   \ 
+ 
+ m u l t i - r e c o r d 
+ 
+ S A R C \   b l o c k e r   i s   s o l v e d   -   i t   w a s   n e v e r   t h e   . a r c ,   i t   w a s   t h e   . t a b . * *   E v e r y 
+ a r c h i v e   f r o m   g a m e 2   u p   u s e s   l a y o u t   B ,   a n d   t h e   o l d   f l a t - o n l y   r e a d i n g   m i s a l i g n e d   m o s t   o f   t h e m 
+ ( w h i c h   i s   e x a c t l y   w h a t   m a d e   s o m e   c o p i e s '   i n d e x   e n t r i e s   p o i n t   p a s t   t h e i r   p a y l o a d ) : 
+ 
+ ` 
+ . t a b :     u 3 2   m a g i c ( 0 x 8 0 0 ) 
+               u 3 2   n 2                                               < -   c o u n t   o f   C H U N K - M A P P E D   r e c o r d s   o n l y 
+               n 2   x   g r o u p   e n t r y   ( v a r i a b l e ) :   [ h a s h ] [ n ] [ 0 ] [ 0 ]   +   ( n - 1 )   x   8 - b y t e   ( t a g ,   v a l u e ) 
+               M     x   1 6 - b y t e   r e c o r d   ( n a m e _ h a s h ,   x ,   b ,   c ) 
+ ` 
+ -   g r o u p   e n t r y :   [ n a m e _ h a s h ] [ n ] [ 0 ] [ 0 ] ,   t h e n   ( n - 1 )   p a i r s .   * * t a g   =   k   *   0 x 0 2 c 0 0 0 0 0 * *   ( c u m u l a t i v e 
+     D E C O M P R E S S E D   s i z e   a f t e r   c h u n k   k ,   i . e .   4 6 , 1 3 7 , 3 4 4 - b y t e   c h u n k s ) ,   * * v a l u e   =   t h e   c h u n k ' s 
+     c u m u l a t i v e   C O M P R E S S E D   e n d   o f f s e t * *   i n s i d e   t h e   r e c o r d ' s   s p a n .   S o   a   c h u n k e d   r e c o r d   h o l d s   n 
+     c o n c a t e n a t e d   r a w - d e f l a t e   s t r e a m s   a n d   t h e   g a m e   r e a l l y   r e a d s   i t   t h r o u g h   t h i s   m a p   -   M a d M a x . e x e 
+     c a r r i e s   d e c o m p r e s s _ z l i b _ f r a g m e n t   a t   0 x 2 5 c d 5 b   n e x t   t o   E _ S E _ U N H A N D L E D _ D E C O M P R E S S I O N _ E R R O R , 
+     E _ S E _ U N P A C K B U F F E R _ T O O _ S M A L L ,   E _ S E _ S T R E A M B U F F E R _ T O O _ S M A L L . 
+ -   g r o u p   h a s h e s   a r e   a   s u b s e t   o f   t h e   r e c o r d   h a s h e s ;   M   > =   n 2 ;   g r o u p   e n t r i e s   a r e   1 6   +   8 * ( n - 1 ) 
+     b y t e s ,   s o   t h e   r e c o r d s   s t a r t   a t   a   p e r - a r c h i v e   o f f s e t   ( t h i s   i s   t h e   t r a p   t h a t   b i t   u s   b e l o w ) . 
+ -   D i s c r i m i n a t o r :   t r y   l a y o u t   B   f i r s t   ( t h e   g r o u p s   m u s t   t i l e   t h e   t a b   i n   8 - b y t e   s t e p s   a n d   e v e r y 
+     r e c o r d   m u s t   b e   s a n e :   x   +   b   < =   a r c   s i z e ) ,   t h e n   f a l l   b a c k   t o   l a y o u t   A . 
+ 
+ * * S A R C   e n t r y   s t r i d e   c o r r e c t i o n * *   ( t h e   o l d   N U L - s e a r c h   r e a d i n g   w a s   w r o n g ) :   e n t r i e s   a r e 
+ [ u 3 2   n l e n ] [ n a m e :   n l e n   b y t e s ,   N U L - p a d d e d ] [ u 3 2   o f f ] [ u 3 2   s i z e ] .   V e r i f i e d   o n   t h e   g a t i n g   r e c o r d : 
+ 3 2 0   e n t r i e s ,   e v e r y   o f f + s i z e   i n s i d e   t h e   p a y l o a d ,   a n d   e x c e l _ d a t a / g a t i n g _ p r o f i l e s . g a t i n g c   a t 
+ o f f   1 3 , 2 4 8 , 9 8 8   s i z e   5 , 5 1 3   -   t h e   e x a c t   v a l u e s   t h e   s h i p p i n g   p a t c h   u s e s . 
+ 
+ * * U n d e c o d a b l e   r e g i o n s   e x i s t   a n d   a r e   p r e s e r v e d ,   n o t   f i x e d . * *   g a m e 1 9 / 2 2 / 2 7 / 2 8 / 3 1 / 3 5   r e c 0   c a r r y   a 
+ r e g i o n   i n s i d e   c h u n k   0   t h a t   i s   n o t   r a w   d e f l a t e   ( n o   d i c t i o n a r y   s e t t i n g   d e c o d e s   i t ;   n o   z l i b / g z i p 
+ s t a r t   a n y w h e r e   i n   t h e   7 . 9   M B ) .   C h u n k s   1 +   a r e   c l e a n   s i n g l e   s t r e a m s .   T h e   g a m e   r e a d s   i t ,   s o   t h e 
+ c h u n k   m a p   i s   a u t h o r i t a t i v e   t h e r e ;   o u r   p a t c h e r   c o p i e s   t h e   r e g i o n   b y t e - e x a c t   a n d   r e w r i t e s   o n l y 
+ t h e   c h u n k   t h a t   h o l d s   t h e   t a r g e t   f i l e .   A l l   s i x   c o n v o y   f i l e s   h a p p e n   t o   s i t   i n   t h e   f i n a l   c l e a n 
+ c h u n k ,   s o   t h e y   a r e   p a t c h a b l e . 
+ 
+ * * R e s u l t :   t h e   c o n v o y   m o d   i s   n o w   l i v e ,   f i n g e r p r i n t - v e r i f i e d . * *   T h e   1 4 9 / 6 7 / 2 1   a r c h i v e   c o p i e s   o f 
+ c o n v o y _ f o r m a t i o n _ * c c e n e m y c   a l l   h o l d   t h e   h a l v e d   d i s t a n c e s   ( F R O N T / L E F T / R I G H T / B A C K   1 5 0 - > 7 5 , 
+ F O L L O W 1   1 0 0 - > 5 0 ,   F O L L O W   7 0 - > 3 5 ,   F O L L O W 2   2 0 - > 1 0 )   w i t h   a   c o n s i s t e n t   c h u n k   m a p   o n   e v e r y   r e c o r d , 
+ a n d   t h e   r u n n i n g   g a m e ' s   m e m o r y   s h o w s   7 5 . 0 x 4   ( O U R S )   x 2   |   1 5 0 . 0 x 4   ( v a n i l l a )   x 0   -   t h e   4 - f l o a t 
+ f i n g e r p r i n t   i s   t h e   A / B   s t a n d a r d   ( a   s i n g l e   v a n i l l a   1 5 0 x 4   h i t   i s   a   c o i n c i d e n t a l   r u n   f r o m   o t h e r 
+ d a t a ) .   F e e l   r e p o r t s   ( \ m a y b e 
+ 
+ t i g h t e r \ ,   \ s c r a p 
+ 
+ f e e l s 
+ 
+ h i g h e r \ )   c a n n o t   d i s c r i m i n a t e ;   t h e 
+ f i n g e r p r i n t   c a n . 
+ 
+ * * T w o   t o o l   l e s s o n s   w o r t h   t h e   s p a c e : * * 
+ 1 .   T h e   t a b   r e c o r d   o f f s e t   d e p e n d s   o n   t h e   l a y o u t :   w r i t i n g   a   r e c o r d ' s      a t   t h e   f l a t   o f f s e t 
+       ( 8   +   r e c n o * 1 6 )   i n s t e a d   o f   t h e   g r o u p e d   o n e   c o r r u p t e d   t h e   g r o u p   t a b l e s   o f   1 7   . t a b   f i l e s   a n d 
+       c o s t   a   S t e a m   v e r i f y   c y c l e .   * * A n y   p a t c h   t o o l   m u s t   l o c a t e   r e c o r d s   t h r o u g h   a   l a y o u t - a w a r e 
+       p a r s e r ,   n e v e r   a   h a r d c o d e d   8   +   r e c n o * 1 6 . * * 
+ 2 .   A   p a t c h   t o o l   m u s t   r e - r e a d   ( v e r i f y )   w h a t   i t   j u s t   w r o t e .   T h e   f i x e d   p a t c h e r   i n f l a t e s   t h e 
+       r e c o r d   a g a i n   a n d   a s s e r t s   t h e   t a r g e t   f i l e ' s   v a l u e s ,   w h i c h   i s   w h a t   c a u g h t   t h i s   c l a s s   o f   b u g 
+       i m m e d i a t e l y   o n   t h e   n e x t   r u n . 
+ 
+ * * S a v e   h y g i e n e   ( r e - c o n f i r m e d ) : * *   t h e   g a m e   r o t a t e s   G a m e S a v e 0 2 . s a v   i n t o   B a c k u p   S a v e s \   o n 
+ a u t o s a v e ,   s o   a n y   a u t o s a v e   t a k e n   w i t h   t h e   e c o n o m y   p a t c h   l i v e   h o l d s   d o u b l e d   r e s o u r c e   a m o u n t s   a n d 
+ i s   p o i s o n e d   f o r   a   v a n i l l a   r u n   -   r e s t o r e   t h e   p r i s t i n e   s a v e   b e f o r e   a   v a n i l l a   t e s t . 
+ 
+ 
