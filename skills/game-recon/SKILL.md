@@ -63,7 +63,7 @@ Capture: the loader's name, repo, **current version and install steps**, the gam
 ## 4. Write MODDING_PLAN.md
 ```markdown
 # <Game> modding plan
-- Install: <path> (<store> <appid>), version <x>
+- Install: <path> (<store> <appid>), version <x> (measured <date> by `<command>`)
 - Engine: <engine + version>, code: managed .NET / IL2CPP / native, 64-bit
 - Anti-cheat / online: <none | what + verdict>
 - Host / compat (if not native): <host OS, CPU, GPU> vs <game CPU + graphics API>; layer: <name + version>;
@@ -74,4 +74,7 @@ Capture: the loader's name, repo, **current version and install steps**, the gam
 - Lab plan: backup <folders> (um backup), lab profile <how>, windowed <how>
 - Unknowns to resolve first: <list>
 ```
+Write every version, build number or count with the date it was measured and the command that measures it
+(`2.1.24 (build 87808), measured 2026-11-01 by factorio --version`). Games update under the plan, and a
+dated value with its command can be re-checked by running the command instead of trusting the prose.
 Then continue with the mod-any-game loop (lab setup → source of truth → vertical slice).
