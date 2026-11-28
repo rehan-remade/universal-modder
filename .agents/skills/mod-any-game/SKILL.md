@@ -51,6 +51,8 @@ Companion skills: **game-recon**, **reverse-engineering**, **fal-assets**, **ass
   (Workshop, creative/map editors).
 - Start `MODLOG.md` in the working folder as the journal. Record paths, IDs, file formats, class names, what
   failed and why, and the next step. Anything not in the journal is lost at the next context compaction.
+  Write each version, build number or count with the date and the command that measured it, so it can be
+  re-checked when the game updates.
 
 ### 1. Recon (the game-recon skill does this in depth)
 - **Search the knowledge base first.** Run `um kb search "<game>"` and `um kb search "<engine>"`. If
@@ -120,6 +122,9 @@ The running game is the oracle; your reading of the code is not.
   Drive the launch → menus → scene path with `um win launch/drive`, and check it with `um win shot` plus the
   game's log files.
 - Read screenshots at reduced scale (`--scale 0.33`) to save tokens; multiply coordinates back when clicking.
+- **Keep the evidence.** When MODLOG.md or a note cites a log or a capture, quote the lines that matter in
+  it, and keep any full log worth keeping in a named folder in the project (gitignored if it holds game
+  data). Never cite `/tmp` or a session scratch folder: they get cleaned up and the citation leads nowhere.
 - **Circuit breaker:** if the same failure repeats 3 times, stop. Write down what you know, then change
   approach or ask the user.
 - Common log locations:
