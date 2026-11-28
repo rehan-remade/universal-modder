@@ -86,6 +86,28 @@ the game window's **client area**.
 - **Out-of-process backend:** keep the in-game part thin and put the brains outside (HTTP/file-drop). That
   pattern scales to AI NPCs and cross-game mashups.
 
+## Check the effect, not the signal
+A "ready" reply, a command's text output or a re-run shows the game ran your code, not that the result
+happened. Check each one through a path that can see the result.
+- **The window is really shown.** A bridge that says ready and a screenshot taken by the engine can both
+  look fine while the user sees a black window: frames are rendered but never presented. Capture from
+  outside the game (`um win shot`, `grim`, `import`), never with the engine's own screenshot. On Linux with
+  NVIDIA, a stuck driver shows as a steady stream of `GspRmAlloc failed` lines in `journalctl -k` for as long
+  as the game runs. Closing the app that caused it may not clear it; a logout or reboot does.
+- **Commands did what they say.** A console reply containing "unknown command", "not found" or a parse error
+  is a failed step, not output. After a command that changes state, read the state back from the game (a
+  field, a flag, a position) and put it in the bridge reply. Many games register a console command only
+  while the object that owns it exists, so a command list taken in one mode or scene does not hold in
+  another, and only the read-back shows a command whose argument works the opposite way to its name.
+- **Always-on code works in every scene.** An overlay or a bridge status call also runs on menus and loading
+  screens, where game managers may not exist yet. Guard each game call (a scene check, or try/catch with a
+  placeholder). As a first check, launch to the main menu and count the exceptions in the loader log: a
+  noisy log hides the next real error.
+- **The game runs the build you are testing.** A harness that reuses a running game keeps testing whatever
+  that game loaded. Reload the changed content (a hot-reload command), or compare a build id or file time the
+  game reports with the files on disk, and print which one was done. When bisecting, launch fresh for each
+  variant unless reloading is verified.
+
 ## Crashes and cleanup
 - **Crash reporters** (BugSplat `BsSndRpt64.exe`, `CrashReportClient.exe`, `UnityCrashHandler64.exe`) can
   linger and make Steam say "already running". `um win ps` to spot them, `um win kill <pid>` to clear
