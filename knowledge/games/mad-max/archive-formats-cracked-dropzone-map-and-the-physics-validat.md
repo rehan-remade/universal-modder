@@ -357,3 +357,18 @@ The door that remains for Shape-B work is only for things a texture cannot be: n
   boombug's boarding weight raised, and DefaultScenarioSwitchTime 10 -> 20. All 1,089
   copies post-write verified; in-chase verdict from the player: "enemies feel more
   aggressive".
+
+
+## Session 5 (2026-11-28): the physics VM architecture, the band law, the save node table
+
+**The physics module + properties architecture** (the validator hunt): `vpdrivetrain.xvmc` is a VM module with a 16-byte-entry CONSTANT POOL (type 3 = f32 constant, type 4 = code reference); the per-car `interceptor001_vpdrivetrain_properties.xvmc` is an OVERRIDE LIST of (ref -> value) pairs targeting module code slots: 0x9->0.25, 0xf->2.13333, 0x12->10.6667, 0x15->1.0, 0x18->0.375, 0x1b->0.5, 0x21->PeakTorqueRpm, 0x24->PeakPowerRpm, 0x27->RevLimiter (value floats at entry+8: 0x2d8/0x2f8/0x318). The shared properties file maps the same slots to the shared defaults (1000/2000/3000).
+
+**The boot matrix collapses to one law**: the properties' RevLimiter - PeakPowerRpm must be in [1000, 2000] RPM (an ABSOLUTE band, not a ratio): vanilla 600/2000/3000 band 1000 boots; x2 (1200/4000/6000) band 2000 boots; x3 (1800/6000/9000) band 3000 hangs; limiter-only 1500 (band -500) hangs; band-narrow (600/1500/2500) band 500 hangs; and 600/2000/4000 band 2000 boots (shipped this session). Gear-pair scaling either direction still hangs (a separate check - unresolved). With the module's pool 1.5 -> 2.0 the vanilla properties still boot (rules out a ratio check against the pool constant).
+
+**Save format**: GameSaveXX.sav is XOR-masked (the key is the file's own empty tail) and DOUBLE-BUFFERED: a byte-identical copy of payload 1 follows a second copy of the header's section blocks (the header's 0x100 block = [magic 0x83a89d0d][0][offset 0x7990] names a fixed table). Every field edit must be written to BOTH copies. The resource-node table is 24-byte records (unaligned boundaries):
+    [u32 amount][u32 x-fixed][u32 packed][u32 node-id][u32 0][u32 packed2]
+1,514 records in every save (the static resource_table's ~1,519 nodes). The amount is frozen at instancing time (identical in pristine/poisoned/post-drive saves) - a fully-discovered save is therefore immune to economy-profile markers; a New Game is the fresh-instancing generator.
+
+**The economy loader has a sanity range**: wild marker values (4321) are silently REJECTED and fall back to the compiled-in defaults (proven by a memory A/B: 4321.0f = 0 hits above the ~15 floor while the vanilla triple is resident; the same file re-patched to 77.5 = 50 hits). In-range markers (77.5, and session 4's 137.0) load fine. Never ship a value outside the plausible range for its field.
+
+**Shipped/verified this session**: VisualRange 455 -> 600 passes fast travel (455 -> 1500 hung; the boundary is between); AI pillar 3 (convoy guard opportunist attacks 100->130, simple chaser sides 90->120/front 50->65/backs 30->45, convoy scenario LEFT/RIGHT/FRONT 50->75/BACK 50->65/FOLLOW* 25->40); a wider power band (600/2000/4000) boots and ships.
